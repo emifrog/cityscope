@@ -60,7 +60,11 @@ export function useMapLibre(
         const sourceId = (event as { sourceId?: string }).sourceId;
         if (sourceId && catalog.sources.some((source) => source.id === sourceId)) setBaseUnavailable(true);
       });
-      instance.on('load', () => setLoaded({ map: instance, lib }));
+      // Ready as soon as the style is: 'load' would also wait for the base map tiles, and a slow
+      // or failing base map must never delay the SIS data (architecture §14).
+      const ready = () => setLoaded({ map: instance, lib });
+      if (instance.isStyleLoaded()) ready();
+      else instance.once('style.load', ready);
     });
 
     return () => {

@@ -26,9 +26,10 @@ import {
   objectLayerId,
   objectLayers,
 } from '@/components/map/object-layers';
+import { describeWaterPoint, nearestWaterPoint } from '@/components/map/nearest-water';
 import { useBaseMap, useMapLibre } from '@/components/map/use-map';
 import { PageHeader } from '@/components/page-header';
-import { useMapCatalog, useMapFeatures, useMapSites, type MapSiteFilters } from '@/lib/queries';
+import { useMapCatalog, useMapFeatures, useMapSites, useSiteObjects, type MapSiteFilters } from '@/lib/queries';
 
 const isSiteType = (value: string | null): value is (typeof SITE_TYPES)[number] =>
   (SITE_TYPES as readonly (string | null)[]).includes(value);
@@ -102,6 +103,8 @@ export function SitesMapView() {
     (detailBbox && details.data?.objects.features.find((feature) => feature.id === selectedObjectId)) || null;
   const activeBase = base ?? catalog.data?.default_base ?? null;
   const selected = sites.data?.features.find((feature) => feature.id === selectedId) ?? null;
+  const selectedObjects = useSiteObjects(selectedId);
+  const nearestWater = nearestWaterPoint(selectedObjects.data ?? []);
   const { loaded, baseUnavailable, clearBaseUnavailable } = useMapLibre(containerRef, catalog.data, {});
   useBaseMap(loaded, catalog.data, activeBase);
   const fontStack = catalog.data?.glyphs.font_stack;
@@ -413,6 +416,14 @@ export function SitesMapView() {
             {selected.properties.etare_number ? (
               <p className="text-sm text-muted">N° ETARE {selected.properties.etare_number}</p>
             ) : null}
+            <p className="text-sm">
+              <span className="text-muted">Point d’eau le plus proche : </span>
+              {selectedObjects.isPending
+                ? '…'
+                : nearestWater
+                  ? describeWaterPoint(nearestWater)
+                  : 'aucun point d’eau en service renseigné'}
+            </p>
             <Button asChild size="sm" className="w-full">
               <Link href={`/sites/${selected.id}`}>Ouvrir le site</Link>
             </Button>
