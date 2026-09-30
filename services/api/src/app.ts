@@ -1,8 +1,37 @@
 import type { AccessTokenVerifier, Logger } from '@etare/adapters';
-import { getMe, getSite, listSites, type HealthProbe, type SessionFactory } from '@etare/application';
+import {
+  createBuilding,
+  createClassification,
+  createContact,
+  createExternalId,
+  createLevel,
+  createSite,
+  getMe,
+  getSite,
+  listBuildings,
+  listClassifications,
+  listContacts,
+  listExternalIds,
+  listSites,
+  updateBuilding,
+  updateClassification,
+  updateContact,
+  updateLevel,
+  updateSite,
+  type HealthProbe,
+  type SessionFactory,
+} from '@etare/application';
 import { API_BASE_PATH, TENANT_HEADER, endpoints, type EndpointContract } from '@etare/contracts';
-import { InvalidInput, TenantRequired, Unauthenticated, type RequestContext, type RequestOrigin } from '@etare/domain';
+import {
+  InvalidInput,
+  PreconditionRequired,
+  TenantRequired,
+  Unauthenticated,
+  type RequestContext,
+  type RequestOrigin,
+} from '@etare/domain';
 import { Hono, type Context } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
 import { toApiError } from './errors';
@@ -21,6 +50,16 @@ type Env = { Variables: { traceId: string } };
 const CLIENT_HEADER = 'x-client-platform';
 const tenantIdSchema = z.uuid();
 const originSchema = z.enum(['web', 'mobile', 'integration']);
+const MAX_JSON_BODY_BYTES = 64 * 1024;
+
+/** Accepts "3", W/"3" or 3 (the ETag previously returned by the API). */
+export function parseIfMatch(header: string | undefined): number {
+  if (!header) throw new PreconditionRequired();
+  const match = /^(?:W\/)?"?(\d{1,9})"?$/.exec(header.trim());
+  if (!match?.[1])
+    throw new InvalidInput('En-tête If-Match invalide.', [{ path: 'if-match', message: 'Version attendue, ex. "3".' }]);
+  return Number(match[1]);
+}
 
 /** Converts an OpenAPI path template (/sites/{id}) into a router path (/sites/:id). */
 export function routerPath(path: string): string {
@@ -44,6 +83,19 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     c.header('cache-control', 'no-store');
     c.header('x-content-type-options', 'nosniff');
   });
+
+  // JSON bodies are small: bigger payloads (files) go to object storage through signed URLs.
+  app.use(
+    '*',
+    bodyLimit({
+      maxSize: MAX_JSON_BODY_BYTES,
+      onError: (c) =>
+        c.json(
+          { error: { code: 'PAYLOAD_TOO_LARGE', message: 'Requête trop volumineuse.', trace_id: c.get('traceId') } },
+          413,
+        ),
+    }),
+  );
 
   app.onError((error, c) => {
     const traceId = c.get('traceId');
@@ -88,8 +140,25 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
 
   function respond(c: Context<Env>, endpoint: EndpointContract, body: unknown) {
     // Output validation: an answer that breaks its contract is a server bug, never sent as is.
-    return c.json(endpoint.response.parse(body) as object, endpoint.successStatus);
+    const parsed: unknown = endpoint.response.parse(body);
+    if (endpoint.concurrency && typeof parsed === 'object' && parsed !== null && 'row_version' in parsed) {
+      c.header('etag', `"${String(parsed.row_version)}"`);
+    }
+    return c.json(parsed as object, endpoint.successStatus);
   }
+
+  async function readBody<S extends z.ZodType>(c: Context<Env>, schema: S): Promise<z.infer<S>> {
+    let raw: unknown;
+    try {
+      raw = await c.req.json();
+    } catch {
+      throw new InvalidInput('Corps de requête JSON invalide.');
+    }
+    return schema.parse(raw);
+  }
+
+  const idOf = (c: Context<Env>) => endpoints.getSite.params.parse(c.req.param()).id;
+  const expectedVersion = (c: Context<Env>) => parseIfMatch(c.req.header('if-match'));
 
   app.get(routerPath(endpoints.getHealth.path), async (c) => {
     const database = await deps.health.database();
@@ -117,6 +186,116 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     const context = await requestContext(c, endpoints.getSite);
     const { id } = endpoints.getSite.params.parse(c.req.param());
     return respond(c, endpoints.getSite, await getSite(deps.sessions, context, id));
+  });
+
+  // ---------------------------------------------------------------- sites (write)
+  app.post(routerPath(endpoints.createSite.path), async (c) => {
+    const context = await requestContext(c, endpoints.createSite);
+    const input = await readBody(c, endpoints.createSite.body);
+    const site = await createSite(deps.sessions, context, input);
+    c.header('location', `${API_BASE_PATH}/sites/${site.id}`);
+    return respond(c, endpoints.createSite, site);
+  });
+
+  app.patch(routerPath(endpoints.updateSite.path), async (c) => {
+    const context = await requestContext(c, endpoints.updateSite);
+    const version = expectedVersion(c);
+    const patch = await readBody(c, endpoints.updateSite.body);
+    return respond(c, endpoints.updateSite, await updateSite(deps.sessions, context, idOf(c), version, patch));
+  });
+
+  // ---------------------------------------------------------------- buildings and levels
+  app.get(routerPath(endpoints.listBuildings.path), async (c) => {
+    const context = await requestContext(c, endpoints.listBuildings);
+    const items = await listBuildings(deps.sessions, context, idOf(c));
+    return respond(c, endpoints.listBuildings, { items });
+  });
+
+  app.post(routerPath(endpoints.createBuilding.path), async (c) => {
+    const context = await requestContext(c, endpoints.createBuilding);
+    const input = await readBody(c, endpoints.createBuilding.body);
+    return respond(c, endpoints.createBuilding, await createBuilding(deps.sessions, context, idOf(c), input));
+  });
+
+  app.patch(routerPath(endpoints.updateBuilding.path), async (c) => {
+    const context = await requestContext(c, endpoints.updateBuilding);
+    const version = expectedVersion(c);
+    const patch = await readBody(c, endpoints.updateBuilding.body);
+    return respond(c, endpoints.updateBuilding, await updateBuilding(deps.sessions, context, idOf(c), version, patch));
+  });
+
+  app.post(routerPath(endpoints.createLevel.path), async (c) => {
+    const context = await requestContext(c, endpoints.createLevel);
+    const input = await readBody(c, endpoints.createLevel.body);
+    return respond(c, endpoints.createLevel, await createLevel(deps.sessions, context, idOf(c), input));
+  });
+
+  app.patch(routerPath(endpoints.updateLevel.path), async (c) => {
+    const context = await requestContext(c, endpoints.updateLevel);
+    const version = expectedVersion(c);
+    const patch = await readBody(c, endpoints.updateLevel.body);
+    return respond(c, endpoints.updateLevel, await updateLevel(deps.sessions, context, idOf(c), version, patch));
+  });
+
+  // ---------------------------------------------------------------- classifications
+  app.get(routerPath(endpoints.listClassifications.path), async (c) => {
+    const context = await requestContext(c, endpoints.listClassifications);
+    const items = await listClassifications(deps.sessions, context, idOf(c));
+    return respond(c, endpoints.listClassifications, { items });
+  });
+
+  app.post(routerPath(endpoints.createClassification.path), async (c) => {
+    const context = await requestContext(c, endpoints.createClassification);
+    const input = await readBody(c, endpoints.createClassification.body);
+    return respond(
+      c,
+      endpoints.createClassification,
+      await createClassification(deps.sessions, context, idOf(c), input),
+    );
+  });
+
+  app.patch(routerPath(endpoints.updateClassification.path), async (c) => {
+    const context = await requestContext(c, endpoints.updateClassification);
+    const version = expectedVersion(c);
+    const patch = await readBody(c, endpoints.updateClassification.body);
+    return respond(
+      c,
+      endpoints.updateClassification,
+      await updateClassification(deps.sessions, context, idOf(c), version, patch),
+    );
+  });
+
+  // ---------------------------------------------------------------- contacts
+  app.get(routerPath(endpoints.listContacts.path), async (c) => {
+    const context = await requestContext(c, endpoints.listContacts);
+    const items = await listContacts(deps.sessions, context, idOf(c));
+    return respond(c, endpoints.listContacts, { items });
+  });
+
+  app.post(routerPath(endpoints.createContact.path), async (c) => {
+    const context = await requestContext(c, endpoints.createContact);
+    const input = await readBody(c, endpoints.createContact.body);
+    return respond(c, endpoints.createContact, await createContact(deps.sessions, context, idOf(c), input));
+  });
+
+  app.patch(routerPath(endpoints.updateContact.path), async (c) => {
+    const context = await requestContext(c, endpoints.updateContact);
+    const version = expectedVersion(c);
+    const patch = await readBody(c, endpoints.updateContact.body);
+    return respond(c, endpoints.updateContact, await updateContact(deps.sessions, context, idOf(c), version, patch));
+  });
+
+  // ---------------------------------------------------------------- external identifiers
+  app.get(routerPath(endpoints.listExternalIds.path), async (c) => {
+    const context = await requestContext(c, endpoints.listExternalIds);
+    const items = await listExternalIds(deps.sessions, context, idOf(c));
+    return respond(c, endpoints.listExternalIds, { items });
+  });
+
+  app.post(routerPath(endpoints.createExternalId.path), async (c) => {
+    const context = await requestContext(c, endpoints.createExternalId);
+    const input = await readBody(c, endpoints.createExternalId.body);
+    return respond(c, endpoints.createExternalId, await createExternalId(deps.sessions, context, idOf(c), input));
   });
 
   return app;

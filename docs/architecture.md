@@ -64,8 +64,12 @@ paramètres, réponse). Le même objet sert : à la validation serveur, au clien
 de `openapi.json` (OpenAPI 3.1, servi aussi sur `/api/v1/openapi.json`). Un test vérifie que chaque
 endpoint du contrat est routé ; la CI échoue si `openapi.json` n’est pas à jour.
 
-Endpoints du Sprint 0 : `GET /health`, `GET /me`, `GET /sites` (pagination par curseur opaque),
-`GET /sites/{id}`.
+Endpoints : `GET /health`, `GET /me` ; sites (`GET/POST /sites` avec recherche `q`, `site_type`,
+`status`, `city` et pagination par curseur opaque ; `GET/PATCH /sites/{id}`) ; bâtiments et niveaux
+(`GET/POST /sites/{id}/buildings`, `PATCH /buildings/{id}`, `POST /buildings/{id}/levels`,
+`PATCH /levels/{id}`) ; classifications, contacts et identifiants externes (`/sites/{id}/…`,
+`PATCH /classifications/{id}`, `PATCH /contacts/{id}`). Les `PATCH` exigent `If-Match` (412 si la
+version est périmée), les corps JSON sont limités à 64 Kio.
 
 ## Web (apps/web)
 

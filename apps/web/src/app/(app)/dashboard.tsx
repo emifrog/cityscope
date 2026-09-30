@@ -17,7 +17,7 @@ const PLANNED_INDICATORS = [
 
 export function Dashboard() {
   const { me, activeTenant, loading, error } = useTenant();
-  const sites = useSites(10);
+  const sites = useSites({}, 10);
 
   if (loading) return <LoadingCard lines={4} />;
   if (error) return <ApiErrorAlert error={error} />;

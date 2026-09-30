@@ -1,5 +1,6 @@
 import { createLogger, type AccessTokenVerifier } from '@etare/adapters';
 import type { RequestSession, SessionFactory } from '@etare/application';
+import { stubSession } from '@etare/application/testing';
 import { API_BASE_PATH, apiErrorSchema, endpoints, type SiteDetail } from '@etare/contracts';
 import { AccessDenied, Unauthenticated, permissionsForRoles, type RequestContext, type Role } from '@etare/domain';
 import { describe, expect, it } from 'vitest';
@@ -18,7 +19,13 @@ const site: SiteDetail = {
   site_type: 'health',
   sensitivity: 'normal',
   etare_number: '06-0428',
-  address: { label: '12 avenue des Mimosas, 06000 Nice', city: 'Nice', postal_code: '06000' },
+  address: {
+    label: '12 avenue des Mimosas, 06000 Nice',
+    street: '12 avenue des Mimosas',
+    city: 'Nice',
+    postal_code: '06000',
+    insee_code: '06088',
+  },
   location: { type: 'Point', coordinates: [7.2518, 43.7079] },
   updated_at: '2026-09-27T10:00:00.000Z',
   footprint: null,
@@ -37,23 +44,27 @@ function sessions(roles: Role[]): SessionFactory & { contexts: RequestContext[] 
       contexts.push(context);
       if (context.tenantId && context.tenantId !== tenant06)
         throw new AccessDenied('Vous n’êtes pas membre de ce SIS.');
-      return work({
-        access: { userId: 'u', tenantId: context.tenantId, permissions: permissionsForRoles(roles) },
-        identity: {
-          me: async () => ({
-            user: {
-              id: '00000000-0000-4000-b000-000000000002',
-              email: 'redacteur06@demo.etare.test',
-              display_name: null,
+      return work(
+        stubSession(
+          { userId: 'u', tenantId: context.tenantId, permissions: permissionsForRoles(roles) },
+          {
+            identity: {
+              me: async () => ({
+                user: {
+                  id: '00000000-0000-4000-b000-000000000002',
+                  email: 'redacteur06@demo.etare.test',
+                  display_name: null,
+                },
+                memberships: [{ tenant_id: tenant06, tenant_slug: 'sdis-demo-06', tenant_name: 'SDIS DEMO 06', roles }],
+              }),
             },
-            memberships: [{ tenant_id: tenant06, tenant_slug: 'sdis-demo-06', tenant_name: 'SDIS DEMO 06', roles }],
-          }),
-        },
-        sites: {
-          list: async () => ({ items: [site], next_cursor: null }),
-          get: async (id: string) => (id === siteId ? site : null),
-        },
-      });
+            sites: {
+              list: async () => ({ items: [site], next_cursor: null }),
+              get: async (id: string) => (id === siteId ? site : null),
+            },
+          },
+        ),
+      );
     },
   };
 }

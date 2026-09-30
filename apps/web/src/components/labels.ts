@@ -1,4 +1,12 @@
-import type { Role, Sensitivity, SiteStatus, SiteType } from '@etare/domain';
+import type {
+  ClassificationType,
+  ContactVisibility,
+  RecordStatus,
+  Role,
+  Sensitivity,
+  SiteStatus,
+  SiteType,
+} from '@etare/domain';
 
 export const SITE_TYPE_LABELS: Readonly<Record<SiteType, string>> = {
   erp: 'ERP',
@@ -30,4 +38,25 @@ export const SENSITIVITY_LABELS: Readonly<Record<Sensitivity, string>> = {
   normal: 'Normale',
   restricted: 'Restreinte',
   high: 'Élevée',
+};
+
+export const CLASSIFICATION_TYPE_LABELS: Readonly<Record<ClassificationType, string>> = {
+  ERP: 'ERP',
+  IGH: 'IGH',
+  ICPE: 'ICPE',
+  SEVESO: 'SEVESO',
+  ETARE: 'ETARE',
+  PPI: 'PPI',
+  OTHER: 'Autre',
+};
+
+export const CONTACT_VISIBILITY_LABELS: Readonly<Record<ContactVisibility, string>> = {
+  ops: 'Diffusé aux intervenants',
+  prevision: 'Interne au SIS',
+  operator: 'Partagé avec l’exploitant',
+};
+
+export const RECORD_STATUS_LABELS: Readonly<Record<RecordStatus, string>> = {
+  active: 'Actif',
+  archived: 'Archivé',
 };

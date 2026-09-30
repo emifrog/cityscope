@@ -59,6 +59,10 @@ export const addressSummarySchema = z
   })
   .meta({ id: 'AddressSummary' });
 
+export const addressDetailSchema = addressSummarySchema
+  .extend({ street: z.string().nullable(), insee_code: z.string().nullable() })
+  .meta({ id: 'AddressDetail' });
+
 export const siteSummarySchema = z
   .object({
     id: uuidSchema,
@@ -86,6 +90,7 @@ export const activePublicationSchema = z
 
 export const siteDetailSchema = siteSummarySchema
   .extend({
+    address: addressDetailSchema.nullable(),
     footprint: multiPolygonSchema.nullable(),
     last_verified_at: isoDateTimeSchema.nullable(),
     building_count: z.number().int().nonnegative(),
@@ -98,6 +103,11 @@ export type SiteDetail = z.infer<typeof siteDetailSchema>;
 export const siteListQuerySchema = z.object({
   limit: pageLimitSchema,
   cursor: cursorSchema.optional(),
+  /** Free text: name, address or ETARE number (typo-tolerant search is planned with the map). */
+  q: z.string().trim().min(2).max(100).optional(),
+  site_type: siteTypeSchema.optional(),
+  status: siteStatusSchema.optional(),
+  city: z.string().trim().min(1).max(120).optional(),
 });
 export type SiteListQuery = z.infer<typeof siteListQuerySchema>;
 

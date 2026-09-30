@@ -192,6 +192,19 @@ from (values
 ) as r (id, type_code, building, level, object, severity, description, quantity, unit)
 join app.risk_type t on t.code = r.type_code and t.tenant_id is null;
 
+-- Classifications and contacts (phone numbers from the ranges ARCEP reserves for fiction).
+insert into app.site_classification (tenant_id, site_id, classification_type, code, category, label, valid_from, source) values
+  ('06000000-0000-4000-8000-000000000000', '06000002-0000-4000-8000-000000000001',
+   'ERP', 'J', '3', 'Établissement médico-social, locaux à sommeil', '2019-06-01', 'Commission de sécurité (démo)');
+
+insert into app.contact (tenant_id, site_id, name, role, phone, availability, visibility, sort_order, verified_at) values
+  ('06000000-0000-4000-8000-000000000000', '06000002-0000-4000-8000-000000000001',
+   'PC sécurité (démo)', 'Accueil de nuit', '01 99 00 12 34', '24/7', 'ops', 1, '2026-09-18T09:00:00Z'),
+  ('06000000-0000-4000-8000-000000000000', '06000002-0000-4000-8000-000000000001',
+   'Astreinte technique (démo)', 'Maintenance', '06 39 98 12 34', '24/7', 'ops', 2, '2026-09-18T09:00:00Z'),
+  ('06000000-0000-4000-8000-000000000000', '06000002-0000-4000-8000-000000000001',
+   'Direction de l''établissement (démo)', 'Directrice', '01 99 00 56 78', 'Heures ouvrées', 'prevision', 3, null);
+
 -- -----------------------------------------------------------------------------
 -- Referential data of SDIS DEMO 83 (must never be visible from SDIS DEMO 06)
 -- -----------------------------------------------------------------------------

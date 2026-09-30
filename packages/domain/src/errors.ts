@@ -72,3 +72,29 @@ export class InvalidInput extends DomainError {
     this.name = 'InvalidInput';
   }
 }
+
+export class Conflict extends DomainError {
+  readonly code = 'CONFLICT';
+  constructor(message = 'Cette opération entre en conflit avec des données existantes.') {
+    super(message);
+    this.name = 'Conflict';
+  }
+}
+
+/** Optimistic concurrency: the record changed since the caller read it (HTTP 412). */
+export class PreconditionFailed extends DomainError {
+  readonly code = 'PRECONDITION_FAILED';
+  constructor(message = 'Cette fiche a été modifiée entre-temps : rechargez-la avant d’enregistrer.') {
+    super(message);
+    this.name = 'PreconditionFailed';
+  }
+}
+
+/** A modification must state the version it is based on (HTTP 428, header If-Match). */
+export class PreconditionRequired extends DomainError {
+  readonly code = 'PRECONDITION_REQUIRED';
+  constructor(message = 'La version attendue doit être fournie (en-tête If-Match).') {
+    super(message);
+    this.name = 'PreconditionRequired';
+  }
+}

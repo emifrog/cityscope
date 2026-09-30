@@ -6,18 +6,20 @@ pas exposé par la Data API Supabase (`supabase/config.toml` → `api.schemas`),
 
 ## Migrations
 
-| Fichier                                           | Contenu                                                                                                                                             |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `…0100_foundation.sql`                            | extensions (schéma `extensions`), schéma `app`, rôles applicatifs, accesseurs de contexte, triggers génériques                                      |
-| `…0200_tenancy_and_rbac.sql`                      | `tenant`, `user_account`, `membership`, `role`, `permission`, `role_binding`, `platform_admin`, `has_permission`, `begin_request`, `my_memberships` |
-| `…0300_audit.sql`                                 | `audit_event` (ajout seul), trigger d’audit générique, `record_audit_event`                                                                         |
-| `…0400_site_referential.sql`                      | `address`, `site`, `building`, `level`, `asset`, `plan`, `plan_revision`, `zone`                                                                    |
-| `…0500_operational_objects_and_documents.sql`     | catalogues `object_type` / `risk_type` (+ données initiales du modèle §12), `operational_object`, `risk_occurrence`, `document`, `document_version` |
-| `…0600_etare_publication.sql`                     | `etare`, `etare_revision`, `etare_revision_contributor`, `approval`, `publication` + gardes                                                         |
-| `…0700_jobs.sql`                                  | file de tâches `job` et fonctions `enqueue/claim/heartbeat/complete/fail`                                                                           |
-| `…0800_storage_supabase.sql`                      | seule migration spécifique Supabase : bucket privé `etare-assets` (gardée)                                                                          |
-| `20260930084922_publication_access_hardening.sql` | lecture OPS limitée aux publications actives, références au même site, métadonnées publiées immuables                                               |
-| `20260930085355_revision_authorship.sql`          | attribution des contributions par trigger, contrôle de l’auteur et du soumetteur, modification d’un brouillon réservée aux rédacteurs               |
+| Fichier                                           | Contenu                                                                                                                                                                       |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `…0100_foundation.sql`                            | extensions (schéma `extensions`), schéma `app`, rôles applicatifs, accesseurs de contexte, triggers génériques                                                                |
+| `…0200_tenancy_and_rbac.sql`                      | `tenant`, `user_account`, `membership`, `role`, `permission`, `role_binding`, `platform_admin`, `has_permission`, `begin_request`, `my_memberships`                           |
+| `…0300_audit.sql`                                 | `audit_event` (ajout seul), trigger d’audit générique, `record_audit_event`                                                                                                   |
+| `…0400_site_referential.sql`                      | `address`, `site`, `building`, `level`, `asset`, `plan`, `plan_revision`, `zone`                                                                                              |
+| `…0500_operational_objects_and_documents.sql`     | catalogues `object_type` / `risk_type` (+ données initiales du modèle §12), `operational_object`, `risk_occurrence`, `document`, `document_version`                           |
+| `…0600_etare_publication.sql`                     | `etare`, `etare_revision`, `etare_revision_contributor`, `approval`, `publication` + gardes                                                                                   |
+| `…0700_jobs.sql`                                  | file de tâches `job` et fonctions `enqueue/claim/heartbeat/complete/fail`                                                                                                     |
+| `…0800_storage_supabase.sql`                      | seule migration spécifique Supabase : bucket privé `etare-assets` (gardée)                                                                                                    |
+| `20260930084922_publication_access_hardening.sql` | lecture OPS limitée aux publications actives, références au même site, métadonnées publiées immuables                                                                         |
+| `20260930085355_revision_authorship.sql`          | attribution des contributions par trigger, contrôle de l’auteur et du soumetteur, modification d’un brouillon réservée aux rédacteurs                                         |
+| `20260930120000_role_timeouts.sql`                | délais `statement` / `idle in transaction` / `lock` portés par les rôles applicatifs (indépendants du pooler)                                                                 |
+| `20261001000100_referential_editing.sql`          | Sprint 1 : `site_edit` (auteurs des données de travail), contributeurs collectés à la soumission, `site_classification`, `contact`, `external_identifier`, index de recherche |
 
 ## Correspondance avec les documents de cadrage
 
@@ -37,9 +39,12 @@ pas exposé par la Data API Supabase (`supabase/config.toml` → `api.schemas`),
 | Publication       | `published_snapshot`, `etare_version`   | `publication` (charge utile, manifeste, numéro par site)                           |
 | AuditEvent        | `audit_event`                           | `audit_event`                                                                      |
 
-Non créés au Sprint 0 (hors besoin immédiat) : `organization`, `sector`, `contact`, `scenario`,
-`site_classification`, `external_identifier`, `contribution`, `field_report`, `device`, synchronisation,
-`access_event`, intégrations.
+Ajoutés au Sprint 1 : `site_classification` (classifications datées, historique par l’audit), `contact`
+(audience explicite, interne par défaut), `external_identifier` (clés SIG/SGO/DECI, uniques par système
+dans le SIS), `site_edit` (auteurs des modifications de chaque site).
+
+Pas encore créés : `organization`, `sector`, `scenario`, `contribution`, `field_report`, `device`,
+synchronisation, `access_event`, intégrations.
 
 ## Règles structurantes
 
@@ -84,6 +89,21 @@ Garanties SQL (`tg_etare_revision_guard`, `tg_approval_guard`, `tg_publication_g
 - un profil OPS ne voit que les publications au statut `published`, jamais les brouillons,
   les paquets en construction ni les publications retirées. La consultation des états intermédiaires
   est réservée aux profils disposant aussi de `etare:read`.
+
+## Auteurs des données de travail et séparation des tâches
+
+Chaque écriture d’une donnée de travail (site, bâtiment, niveau, zone, plan, objet, risque, document,
+contact, classification, identifiant externe) enregistre son auteur dans `app.site_edit`, par trigger
+PostgreSQL : l’API ne peut ni écrire ni effacer cette table. Les mises à jour purement techniques (pointeur
+de publication active) ne comptent pas. À la soumission d’une révision, tous les auteurs de modifications
+postérieures à la dernière révision approuvée deviennent contributeurs de cette révision : aucun d’eux ne
+peut l’approuver (test `60_referential_editing`).
+
+## Concurrence optimiste
+
+Les modifications (`PATCH`) exigent l’en-tête `If-Match` avec la `row_version` lue (réponse 428 sinon).
+L’adaptateur verrouille la ligne (`SELECT … FOR UPDATE`, sous RLS), compare la version et répond 412 si
+quelqu’un a modifié la fiche entre-temps : jamais d’écrasement silencieux. Les réponses portent un `ETag`.
 
 ## Audit
 

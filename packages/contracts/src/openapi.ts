@@ -1,6 +1,6 @@
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
-import { API_BASE_PATH, API_VERSION, endpoints } from './endpoints';
+import { API_BASE_PATH, API_VERSION, endpoints, type EndpointContract } from './endpoints';
 import { apiErrorSchema } from './errors';
 import { TENANT_HEADER } from './resources';
 
@@ -19,14 +19,27 @@ export function buildOpenApiDocument() {
     description: 'Jeton d’accès du fournisseur d’identité (Supabase Auth au MVP).',
   });
 
-  for (const endpoint of Object.values(endpoints)) {
-    const headers = endpoint.tenantScoped
-      ? z.object({
-          [TENANT_HEADER]: z.uuid().meta({
-            description: 'SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.',
-          }),
-        })
-      : undefined;
+  for (const endpoint of Object.values(endpoints) as EndpointContract[]) {
+    const headerFields: Record<string, z.ZodType> = {};
+    if (endpoint.tenantScoped) {
+      headerFields[TENANT_HEADER] = z.uuid().meta({
+        description: 'SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.',
+      });
+    }
+    if (endpoint.concurrency === 'if-match') {
+      headerFields['if-match'] = z.string().meta({
+        description: 'Version sur laquelle porte la modification (valeur de l’ETag reçu), ex. "3".',
+        example: '"3"',
+      });
+    }
+    const etag =
+      endpoint.concurrency !== undefined
+        ? {
+            headers: {
+              ETag: { description: 'Version de la ressource (row_version)', schema: { type: 'string' as const } },
+            },
+          }
+        : {};
 
     registry.registerPath({
       operationId: endpoint.operationId,
@@ -36,23 +49,34 @@ export function buildOpenApiDocument() {
       tags: [...endpoint.tags],
       security: endpoint.auth === 'user' ? [{ [bearer.name]: [] }] : [],
       request: {
-        ...('params' in endpoint ? { params: endpoint.params } : {}),
-        ...('query' in endpoint ? { query: endpoint.query } : {}),
-        ...(headers ? { headers } : {}),
+        ...(endpoint.params ? { params: endpoint.params } : {}),
+        ...(endpoint.query ? { query: endpoint.query } : {}),
+        ...(Object.keys(headerFields).length > 0 ? { headers: z.object(headerFields) } : {}),
+        ...(endpoint.body
+          ? { body: { required: true, content: { 'application/json': { schema: endpoint.body } } } }
+          : {}),
       },
       responses: {
         [endpoint.successStatus]: {
           description: 'Succès',
+          ...etag,
           content: { 'application/json': { schema: endpoint.response } },
         },
         400: errorResponse('Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)'),
         ...(endpoint.auth === 'user'
           ? {
               401: errorResponse('Authentification requise'),
-              403: errorResponse('Accès refusé'),
+              403: errorResponse('Accès refusé (FORBIDDEN, MFA_REQUIRED)'),
             }
           : {}),
-        ...('params' in endpoint ? { 404: errorResponse('Ressource introuvable ou non autorisée') } : {}),
+        ...(endpoint.params ? { 404: errorResponse('Ressource introuvable ou non autorisée') } : {}),
+        ...(endpoint.body ? { 409: errorResponse('Conflit avec des données existantes (CONFLICT)') } : {}),
+        ...(endpoint.concurrency === 'if-match'
+          ? {
+              412: errorResponse('Modifiée entre-temps : relire puis réessayer (PRECONDITION_FAILED)'),
+              428: errorResponse('En-tête If-Match manquant (PRECONDITION_REQUIRED)'),
+            }
+          : {}),
         500: errorResponse('Erreur interne (sans détail)'),
       },
     });

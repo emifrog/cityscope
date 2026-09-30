@@ -10,6 +10,7 @@ import {
 } from '@etare/domain';
 import { describe, expect, it, vi } from 'vitest';
 import type { RequestSession, SessionFactory } from './ports';
+import { stubSession } from './testing';
 import { getMe, getSite, listSites, requirePermission } from './use-cases';
 
 const tenantId = '06000000-0000-4000-8000-000000000000';
@@ -27,11 +28,12 @@ function fakeSessions(roles: Role[], site: SiteDetail | null = null) {
   const sessions: SessionFactory = {
     run: async <T>(ctx: RequestContext, work: (session: RequestSession) => Promise<T>) => {
       calls.push(ctx);
-      return work({
-        access: { userId: 'u', tenantId: ctx.tenantId, permissions: permissionsForRoles(roles) },
-        sites,
-        identity,
-      });
+      return work(
+        stubSession(
+          { userId: 'u', tenantId: ctx.tenantId, permissions: permissionsForRoles(roles) },
+          { sites, identity },
+        ),
+      );
     },
   };
   return { sessions, sites, identity, calls };

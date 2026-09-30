@@ -3,8 +3,8 @@
 import { Badge, Button, cn } from '@etare/ui';
 import { LogOut, Menu, Search } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useState, type ReactNode } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { brand } from '@/config/brand';
 import { NAV_ITEMS, isActivePath } from '@/lib/navigation';
 import { useSession } from '@/providers/session-provider';
@@ -38,6 +38,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { session, signOut } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const router = useRouter();
+
+  function search(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const q = String(new FormData(event.currentTarget).get('q') ?? '').trim();
+    router.push(q ? `/sites?q=${encodeURIComponent(q)}` : '/sites');
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -59,17 +66,19 @@ export function AppShell({ children }: { children: ReactNode }) {
           </span>
           <span>{brand.productName}</span>
         </Link>
-        <div className="mx-auto hidden w-full max-w-xl lg:block">
+        <form role="search" onSubmit={search} className="mx-auto hidden w-full max-w-xl lg:block">
           <label className="relative block">
-            <span className="sr-only">Recherche</span>
+            <span className="sr-only">Rechercher un site</span>
             <Search aria-hidden="true" className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-white/60" />
             <input
-              disabled
-              placeholder="Rechercher un site, une adresse, un ETARE… (bientôt)"
+              name="q"
+              type="search"
+              minLength={2}
+              placeholder="Rechercher un site, une adresse, un n° ETARE…"
               className="h-10 w-full rounded-md border border-white/15 bg-brand-navy-soft pr-3 pl-9 text-sm text-white placeholder:text-white/60"
             />
           </label>
-        </div>
+        </form>
         <div className="ml-auto flex items-center gap-3">
           <TenantSwitcher />
           <span className="hidden text-sm text-white/80 xl:inline">{session?.user.email}</span>

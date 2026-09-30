@@ -1,30 +1,31 @@
 'use client';
 
-import { Badge, Card, CardContent, CardHeader, CardTitle } from '@etare/ui';
+import { Badge } from '@etare/ui';
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
-import { SENSITIVITY_LABELS, SITE_STATUS_LABELS, SITE_TYPE_LABELS } from '@/components/labels';
 import { PageHeader } from '@/components/page-header';
+import { TabLinks } from '@/components/tab-links';
 import { useSite } from '@/lib/queries';
+import { BuildingsPanel } from './buildings-panel';
+import { ClassificationsPanel } from './classifications-panel';
+import { ContactsPanel } from './contacts-panel';
+import { SummaryPanel } from './summary-panel';
 
-const dateFormat = new Intl.DateTimeFormat('fr-FR', {
-  dateStyle: 'long',
-  timeStyle: 'short',
-  timeZone: 'Europe/Paris',
-});
+const TABS = [
+  { key: 'synthese', label: 'Synthèse' },
+  { key: 'batiments', label: 'Bâtiments & niveaux' },
+  { key: 'classifications', label: 'Classifications' },
+  { key: 'contacts', label: 'Contacts' },
+] as const;
+type TabKey = (typeof TABS)[number]['key'];
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <dt className="text-xs font-semibold tracking-wide text-muted uppercase">{label}</dt>
-      <dd className="mt-1 text-sm text-foreground">{children}</dd>
-    </div>
-  );
-}
+const isTab = (value: string | null): value is TabKey => TABS.some((tab) => tab.key === value);
 
 export function SiteDetailView({ id }: { id: string }) {
   const site = useSite(id);
+  const requested = useSearchParams().get('onglet');
+  const tab: TabKey = isTab(requested) ? requested : 'synthese';
 
   if (site.isPending) return <LoadingCard lines={6} />;
   if (site.error) {
@@ -52,45 +53,11 @@ export function SiteDetailView({ id }: { id: string }) {
           )
         }
       />
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Référentiel site</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid grid-cols-2 gap-4">
-              <Field label="N° ETARE">{data.etare_number ?? '—'}</Field>
-              <Field label="Type">{SITE_TYPE_LABELS[data.site_type]}</Field>
-              <Field label="Statut">{SITE_STATUS_LABELS[data.status]}</Field>
-              <Field label="Bâtiments">{data.building_count}</Field>
-              <Field label="Dernière vérification">
-                {data.last_verified_at ? dateFormat.format(new Date(data.last_verified_at)) : '—'}
-              </Field>
-              <Field label="Sensibilité">{SENSITIVITY_LABELS[data.sensitivity]}</Field>
-            </dl>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Publication</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            {data.active_publication ? (
-              <p>
-                Version n° {data.active_publication.publication_number} publiée le{' '}
-                {dateFormat.format(new Date(data.active_publication.published_at))}. C’est la seule version consultée
-                par les intervenants ; elle ne sera jamais modifiée.
-              </p>
-            ) : (
-              <p className="text-muted">Ce site n’a pas encore de version publiée.</p>
-            )}
-            <p className="text-xs text-muted">
-              Les informations ci-contre sont les données de travail ; l’édition et le circuit de validation arrivent
-              aux sprints suivants.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <TabLinks tabs={TABS} active={tab} param="onglet" basePath={`/sites/${id}`} />
+      {tab === 'synthese' ? <SummaryPanel site={data} /> : null}
+      {tab === 'batiments' ? <BuildingsPanel siteId={id} /> : null}
+      {tab === 'classifications' ? <ClassificationsPanel siteId={id} /> : null}
+      {tab === 'contacts' ? <ContactsPanel siteId={id} /> : null}
     </>
   );
 }

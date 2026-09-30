@@ -9,7 +9,7 @@ import {
   type RequestContext,
   type ResolvedAccess,
 } from '@etare/domain';
-import type { SessionFactory } from './ports';
+import type { RequestSession, SessionFactory } from './ports';
 
 /**
  * Application-level authorization. The database enforces the same rules
@@ -23,8 +23,27 @@ export function requirePermission(access: ResolvedAccess, context: RequestContex
   throw new AccessDenied();
 }
 
-function requireTenant(context: RequestContext): void {
+/**
+ * Runs work in a tenant-scoped session after checking the permission. Every
+ * tenant use case goes through here, so none can forget either check.
+ */
+export async function inTenant<T>(
+  sessions: SessionFactory,
+  context: RequestContext,
+  permission: Permission,
+  work: (session: RequestSession) => Promise<T>,
+): Promise<T> {
   if (!context.tenantId) throw new TenantRequired();
+  return sessions.run(context, async (session) => {
+    requirePermission(session.access, context, permission);
+    return work(session);
+  });
+}
+
+/** Same answer for "does not exist" and "belongs to another SIS": identifiers reveal nothing. */
+export function found<T>(value: T | null | undefined, message: string): T {
+  if (value === null || value === undefined) throw new NotFound(message);
+  return value;
 }
 
 export async function getMe(sessions: SessionFactory, context: RequestContext): Promise<MeResponse> {
@@ -36,20 +55,11 @@ export async function listSites(
   context: RequestContext,
   query: SiteListQuery,
 ): Promise<SiteListResponse> {
-  requireTenant(context);
-  return sessions.run(context, async (session) => {
-    requirePermission(session.access, context, 'site:read');
-    return session.sites.list(query);
-  });
+  return inTenant(sessions, context, 'site:read', (session) => session.sites.list(query));
 }
 
 export async function getSite(sessions: SessionFactory, context: RequestContext, id: string): Promise<SiteDetail> {
-  requireTenant(context);
-  return sessions.run(context, async (session) => {
-    requirePermission(session.access, context, 'site:read');
-    const site = await session.sites.get(id);
-    // Same answer for "does not exist" and "belongs to another SIS": ids reveal nothing.
-    if (!site) throw new NotFound('Site introuvable.');
-    return site;
-  });
+  return inTenant(sessions, context, 'site:read', async (session) =>
+    found(await session.sites.get(id), 'Site introuvable.'),
+  );
 }

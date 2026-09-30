@@ -24,6 +24,9 @@ Deux machines à états séparées, appliquées à la fois dans `packages/domain
   plus récente ; jamais supprimée.
 - `etare.status` ne porte que le cycle de vie du dossier (`active`, `archived`).
 - Le numéro de version est un entier par site (le « v4.2 » de la maquette est un format d’affichage).
+- Complément Sprint 1 : les contributeurs d’une révision sont **tous les auteurs des données de travail
+  du site** depuis la dernière révision approuvée (table `site_edit`, alimentée par PostgreSQL), et pas
+  seulement ceux qui ont touché la ligne de révision.
 
 ## Conséquences
 
