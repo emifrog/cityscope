@@ -40,6 +40,9 @@ révèlent rien). Tests : `supabase/tests/database/10_tenant_isolation.test.sql`
   `SECURITY DEFINER` qui revérifient `member:manage` en `aal2` ; ni auto-attribution ni auto-retrait,
   jamais `SUPER_ADMIN` ni `EXPLOITANT` à l’échelle du SIS, au moins un administrateur actif conservé,
   concurrence optimiste, historique des rôles révoqués. Le lien d’invitation n’est vérifié qu’au clic.
+- **Catalogue des risques** (ADR-012) : `catalog:manage` (administrateur du SIS) ajoute ou retire des
+  types propres au SIS ; le catalogue national reste en lecture seule (RLS, refus explicite) et ses codes
+  sont réservés. Les champs sont déclarés par une liste typée, jamais par un schéma libre.
 
 ## Accès à la base
 

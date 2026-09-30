@@ -8,3 +8,4 @@ export * from './objects';
 export * from './plans';
 export * from './referential';
 export * from './resources';
+export * from './risks';

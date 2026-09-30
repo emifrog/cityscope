@@ -17,6 +17,8 @@ import { PostgresIdentityReader } from './identity-reader';
 import { PostgresMemberRepository } from './member-repository';
 import { PostgresOperationalObjectRepository } from './operational-object-repository';
 import { PostgresPlanRepository } from './plan-repository';
+import { PostgresRiskRepository } from './risk-repository';
+import { PostgresZoneRepository } from './zone-repository';
 import { sqlState, type Pool, type PoolClient } from './pool';
 import { PostgresAuditRecorder, PostgresJobScheduler } from './request-services';
 import {
@@ -60,6 +62,8 @@ export class PostgresSessionFactory implements SessionFactory {
         members: new PostgresMemberRepository(client),
         objects: new PostgresOperationalObjectRepository(client),
         plans: new PostgresPlanRepository(client),
+        zones: new PostgresZoneRepository(client),
+        risks: new PostgresRiskRepository(client),
         jobs: new PostgresJobScheduler(client),
         audit: new PostgresAuditRecorder(client),
       });
@@ -107,6 +111,25 @@ const UNIQUE_MESSAGES: Readonly<Record<string, string>> = {
   external_identifier_tenant_id_system_code_external_id_key: 'Cet identifiant externe est déjà utilisé dans votre SIS.',
   membership_tenant_id_user_id_key: 'Cette personne est déjà membre de votre SIS (réactivez-la si elle est suspendue).',
   user_account_auth_provider_email_key: 'Cette adresse est rattachée à une autre identité : contactez le support.',
+  catalog_code_national: 'Ce code appartient au catalogue national : choisissez-en un autre.',
+  risk_type_tenant_code_uq: 'Ce code est déjà utilisé dans le catalogue de votre SIS.',
+};
+
+/** Messages of the placement rules (plans, scope of objects and risks). */
+const CHECK_MESSAGES: Readonly<Record<string, string>> = {
+  operational_object_geometry_kind: 'La géométrie ne correspond pas au type d’objet (point, ligne ou surface).',
+  operational_object_position_check: 'Un point opérationnel doit être placé sur la carte ou sur un plan.',
+  risk_occurrence_geometry_kind: 'Un risque se place comme un point ou une surface.',
+  plan_position_current: 'Le fond de ce plan a été remplacé : placez l’élément sur le fond actuel.',
+  plan_position_bounds: 'L’élément doit rester sur le fond du plan.',
+  plan_position_level:
+    'Ce plan ne correspond pas au niveau de l’élément (les zones se dessinent sur un plan de niveau).',
+  plan_position_missing: 'Position sur le plan manquante.',
+  placement_scope: 'Bâtiment, niveau et zone ne concordent pas.',
+  // Validity of the geometries drawn on plans (st_isvalid, unnamed checks of the initial schema).
+  zone_check: 'Tracé invalide sur le plan : le contour ne doit pas se recouper.',
+  operational_object_check: 'Tracé invalide sur le plan : le contour ne doit pas se recouper.',
+  risk_occurrence_check2: 'Tracé invalide sur le plan : le contour ne doit pas se recouper.',
 };
 
 function constraintOf(error: unknown): string | undefined {
@@ -139,11 +162,8 @@ export function translateDatabaseError(error: unknown): unknown {
       return new NotFound('Élément lié introuvable dans votre SIS.');
     case '23514':
       // PostGIS validity checks (st_isvalid) on drawn geometries.
-      if (constraintOf(error) === 'operational_object_geometry_kind') {
-        return new InvalidInput('La géométrie ne correspond pas au type d’objet (point, ligne ou surface).');
-      }
-      if (constraintOf(error) === 'operational_object_position_check') {
-        return new InvalidInput('Un point opérationnel doit être placé sur la carte ou sur un plan.');
+      if (CHECK_MESSAGES[constraintOf(error) ?? '']) {
+        return new InvalidInput(CHECK_MESSAGES[constraintOf(error) ?? ''] ?? '');
       }
       if (/_(geom|footprint)_check$/.test(constraintOf(error) ?? '')) {
         return new InvalidInput('Contour invalide : il ne doit pas se recouper ni se refermer sur lui-même.');

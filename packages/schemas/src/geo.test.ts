@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bboxParamSchema, localPointSchema, parseBbox, pointSchema, polygonSchema, surfaceSchema } from './geo';
+import { bboxParamSchema, localGeometrySchema, parseBbox, pointSchema, polygonSchema, surfaceSchema } from './geo';
 
 describe('GeoJSON schemas', () => {
   it('uses longitude then latitude', () => {
@@ -35,21 +35,39 @@ describe('GeoJSON schemas', () => {
   });
 });
 
-describe('local plan coordinates', () => {
-  const plan = '06000007-0000-4000-8000-000000000001';
-
-  it('accepts pixel positions tied to a plan revision', () => {
-    expect(localPointSchema.safeParse({ plan_revision_id: plan, unit: 'pixel', x: 412, y: 288 }).success).toBe(true);
+describe('plan coordinates (pixels of the background)', () => {
+  it('accepts points, lines and closed polygons', () => {
+    expect(localGeometrySchema.safeParse({ type: 'Point', coordinates: [412, 288.5] }).success).toBe(true);
+    expect(
+      localGeometrySchema.safeParse({
+        type: 'Polygon',
+        coordinates: [
+          [
+            [380, 250],
+            [460, 250],
+            [460, 330],
+            [380, 250],
+          ],
+        ],
+      }).success,
+    ).toBe(true);
   });
 
-  it('bounds normalized coordinates', () => {
-    expect(localPointSchema.safeParse({ plan_revision_id: plan, unit: 'normalized', x: 1.2, y: 0.5 }).success).toBe(
-      false,
-    );
-  });
-
-  it('requires the plan revision', () => {
-    expect(localPointSchema.safeParse({ unit: 'pixel', x: 1, y: 1 }).success).toBe(false);
+  it('refuses negative pixels and open rings', () => {
+    expect(localGeometrySchema.safeParse({ type: 'Point', coordinates: [-1, 10] }).success).toBe(false);
+    expect(
+      localGeometrySchema.safeParse({
+        type: 'Polygon',
+        coordinates: [
+          [
+            [0, 0],
+            [10, 0],
+            [10, 10],
+            [0, 10],
+          ],
+        ],
+      }).success,
+    ).toBe(false);
   });
 });
 

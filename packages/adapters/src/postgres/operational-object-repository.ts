@@ -11,6 +11,13 @@ import {
   type OperationalObjectUpdate,
 } from '@etare/contracts';
 import { parseBbox } from '@etare/schemas';
+import {
+  placementAssignments,
+  placementValues,
+  planPositionColumn,
+  planPositionJoin,
+  localGeometry,
+} from './plan-position';
 import type { PoolClient } from './pool';
 import { applyAssignments, asGeoJsonText, assignments, lockVersion, toIso } from './versioned';
 
@@ -21,8 +28,9 @@ const TYPE_COLUMNS = 't.id, t.code, t.name, t.category, t.geometry_kind, t.icon_
 
 /** Distances in metres on the ellipsoid (geography), never in degrees. */
 const OBJECT_SELECT = `
-  select o.id, o.site_id, o.building_id, o.object_type_id, t.code as type_code, t.name as type_name, t.category,
-         o.name, o.label, extensions.st_asgeojson(o.geom, 7)::json as geometry, o.properties, o.instructions,
+  select o.id, o.site_id, o.building_id, o.level_id, o.zone_id, o.object_type_id, t.code as type_code,
+         t.name as type_name, t.category, o.name, o.label, extensions.st_asgeojson(o.geom, 7)::json as geometry,
+         ${planPositionColumn('o')}, o.properties, o.instructions,
          o.criticality, o.status, o.verified_at, o.row_version,
          case when o.geom is not null and s.geom is not null
               then round(extensions.st_distance(o.geom::extensions.geography, s.geom::extensions.geography))::float8
@@ -30,11 +38,13 @@ const OBJECT_SELECT = `
   from app.operational_object o
   join app.object_type t on t.id = o.object_type_id
   join app.site s on s.tenant_id = o.tenant_id and s.id = o.site_id
+  ${planPositionJoin('o')}
   where o.tenant_id = app.current_tenant_id()`;
 
-/** GeoJSON (WGS 84) parameter to a PostGIS geometry of any kind. */
+/** GeoJSON (WGS 84) parameter to a PostGIS geometry of any kind (null stays null). */
 const geoJsonGeometry = (parameter: string) =>
-  `extensions.st_setsrid(extensions.st_geomfromgeojson(${parameter}::text), 4326)`;
+  `case when ${parameter}::text is null then null
+   else extensions.st_setsrid(extensions.st_geomfromgeojson(${parameter}::text), 4326) end`;
 
 interface ObjectRow extends Omit<OperationalObject, 'verified_at'> {
   verified_at: Date | null;
@@ -80,8 +90,10 @@ export class PostgresOperationalObjectRepository implements OperationalObjectRep
     if (!(await this.siteVisible(siteId))) return null;
     const { rows } = await this.client.query<{ id: string }>(
       `insert into app.operational_object
-         (tenant_id, site_id, building_id, object_type_id, name, label, geom, properties, instructions, criticality, status)
-       values (app.current_tenant_id(), $1, $2, $3, $4, $5, ${geoJsonGeometry('$6')}, $7::jsonb, $8, $9, $10)
+         (tenant_id, site_id, building_id, object_type_id, name, label, geom, properties, instructions, criticality, status,
+          plan_revision_id, local_geom)
+       values (app.current_tenant_id(), $1, $2, $3, $4, $5, ${geoJsonGeometry('$6')}, $7::jsonb, $8, $9, $10,
+               $11, ${localGeometry('$12')})
        returning id`,
       [
         siteId,
@@ -89,11 +101,12 @@ export class PostgresOperationalObjectRepository implements OperationalObjectRep
         input.object_type_id,
         input.name ?? null,
         input.label ?? null,
-        JSON.stringify(input.geometry),
+        input.geometry ? JSON.stringify(input.geometry) : null,
         JSON.stringify(input.properties),
         input.instructions ?? null,
         input.criticality,
         input.status,
+        ...placementValues(input.plan_position),
       ],
     );
     return this.get(rows[0]?.id ?? '');
@@ -113,6 +126,7 @@ export class PostgresOperationalObjectRepository implements OperationalObjectRep
     }).map((assignment) =>
       assignment.column === 'geom' || assignment.column === 'properties' ? asGeoJsonText(assignment) : assignment,
     );
+    values.push(...placementAssignments(patch.plan_position));
     if (patch.verified) values.push({ column: 'verified_at', raw: 'now()' });
     await applyAssignments(this.client, 'app.operational_object', id, values);
     return this.get(id);

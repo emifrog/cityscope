@@ -9,4 +9,5 @@ export * from './objects';
 export * from './plans';
 export * from './ports';
 export * from './referential';
+export * from './risks';
 export * from './use-cases';

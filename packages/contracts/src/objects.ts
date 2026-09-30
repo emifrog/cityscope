@@ -9,6 +9,7 @@ import {
   uuidSchema,
 } from '@etare/schemas';
 import { z } from 'zod';
+import { planPlacementSchema, planPositionSchema } from './plans';
 
 const text = (max: number) => z.string().trim().min(1).max(max);
 
@@ -37,6 +38,9 @@ export const operationalObjectSchema = z
     id: uuidSchema,
     site_id: uuidSchema,
     building_id: uuidSchema.nullable(),
+    level_id: uuidSchema.nullable(),
+    /** Zone of the plan containing the object (derived from its position). */
+    zone_id: uuidSchema.nullable(),
     object_type_id: uuidSchema,
     type_code: z.string(),
     type_name: z.string(),
@@ -46,6 +50,8 @@ export const operationalObjectSchema = z
     label: z.string().nullable(),
     /** Null for objects placed only on a plan (interior). */
     geometry: exteriorGeometrySchema.nullable(),
+    /** Position on a plan (interior), null for objects placed only on the map. */
+    plan_position: planPositionSchema.nullable(),
     properties: z.record(z.string(), z.unknown()),
     instructions: z.string().nullable(),
     criticality: z.enum(CRITICALITIES),
@@ -70,11 +76,18 @@ export const operationalObjectCreateSchema = z
     building_id: uuidSchema.nullable().optional(),
     name: text(200).nullable().optional(),
     label: text(40).nullable().optional(),
-    geometry: exteriorGeometrySchema,
+    /** On the map… */
+    geometry: exteriorGeometrySchema.optional(),
+    /** …and/or on the current background of a plan. */
+    plan_position: planPlacementSchema.optional(),
     properties: properties.default({}),
     instructions: text(2000).nullable().optional(),
     criticality: z.enum(CRITICALITIES).default('info'),
     status: z.enum(OBJECT_STATUSES).exclude(['archived']).default('active'),
+  })
+  .refine((object) => object.geometry !== undefined || object.plan_position !== undefined, {
+    message: 'Placez l’objet sur la carte ou sur un plan.',
+    path: ['geometry'],
   })
   .meta({ id: 'OperationalObjectCreate' });
 export type OperationalObjectCreateInput = z.input<typeof operationalObjectCreateSchema>;
@@ -86,6 +99,8 @@ export const operationalObjectUpdateSchema = z
     name: text(200).nullable().optional(),
     label: text(40).nullable().optional(),
     geometry: exteriorGeometrySchema.optional(),
+    /** Places the object (again) on the current background of a plan; null removes it from the plan. */
+    plan_position: planPlacementSchema.nullable().optional(),
     /** Replaces all type-specific properties. */
     properties: properties.optional(),
     instructions: text(2000).nullable().optional(),

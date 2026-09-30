@@ -48,7 +48,16 @@ import {
   type PlanRevisionCreateInput,
   type PlanUpdate,
   type PlanUploadResponse,
+  type Risk,
+  type RiskCreateInput,
+  type RiskType,
+  type RiskTypeCreateInput,
+  type RiskTypeUpdate,
+  type RiskUpdate,
   type UploadConfirmation,
+  type Zone,
+  type ZoneCreate,
+  type ZoneUpdate,
 } from '@etare/contracts';
 import type { z } from 'zod';
 
@@ -313,6 +322,56 @@ export const api = {
 
   updatePlan: (options: ApiCallOptions, id: string, version: number, patch: PlanUpdate): Promise<Plan> =>
     call(endpoints.updatePlan.response, pathOf(endpoints.updatePlan.path, { id }), options, {
+      method: 'PATCH',
+      body: patch,
+      ifMatch: version,
+    }),
+
+  listSiteZones: (options: ApiCallOptions, siteId: string): Promise<Zone[]> =>
+    itemsOf(call(endpoints.listSiteZones.response, pathOf(endpoints.listSiteZones.path, { id: siteId }), options)),
+
+  createZone: (options: ApiCallOptions, siteId: string, input: ZoneCreate): Promise<Zone> =>
+    call(endpoints.createZone.response, pathOf(endpoints.createZone.path, { id: siteId }), options, {
+      method: 'POST',
+      body: input,
+    }),
+
+  updateZone: (options: ApiCallOptions, id: string, version: number, patch: ZoneUpdate): Promise<Zone> =>
+    call(endpoints.updateZone.response, pathOf(endpoints.updateZone.path, { id }), options, {
+      method: 'PATCH',
+      body: patch,
+      ifMatch: version,
+    }),
+
+  // ---------------------------------------------------------------- risks
+  listRiskTypes: (options: ApiCallOptions, includeDeprecated = false): Promise<RiskType[]> =>
+    itemsOf(
+      call(endpoints.listRiskTypes.response, endpoints.listRiskTypes.path, options, {
+        query: { include_deprecated: includeDeprecated ? 'true' : undefined },
+      }),
+    ),
+
+  createRiskType: (options: ApiCallOptions, input: RiskTypeCreateInput): Promise<RiskType> =>
+    call(endpoints.createRiskType.response, endpoints.createRiskType.path, options, { method: 'POST', body: input }),
+
+  updateRiskType: (options: ApiCallOptions, id: string, version: number, patch: RiskTypeUpdate): Promise<RiskType> =>
+    call(endpoints.updateRiskType.response, pathOf(endpoints.updateRiskType.path, { id }), options, {
+      method: 'PATCH',
+      body: patch,
+      ifMatch: version,
+    }),
+
+  listSiteRisks: (options: ApiCallOptions, siteId: string): Promise<Risk[]> =>
+    itemsOf(call(endpoints.listSiteRisks.response, pathOf(endpoints.listSiteRisks.path, { id: siteId }), options)),
+
+  createSiteRisk: (options: ApiCallOptions, siteId: string, input: RiskCreateInput): Promise<Risk> =>
+    call(endpoints.createSiteRisk.response, pathOf(endpoints.createSiteRisk.path, { id: siteId }), options, {
+      method: 'POST',
+      body: input,
+    }),
+
+  updateRisk: (options: ApiCallOptions, id: string, version: number, patch: RiskUpdate): Promise<Risk> =>
+    call(endpoints.updateRisk.response, pathOf(endpoints.updateRisk.path, { id }), options, {
       method: 'PATCH',
       body: patch,
       ifMatch: version,

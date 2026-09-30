@@ -25,11 +25,8 @@ import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { MEMBERSHIP_STATUS_LABELS, ROLE_DESCRIPTIONS, ROLE_LABELS } from '@/components/labels';
-import { PageHeader } from '@/components/page-header';
 import { api } from '@/lib/api-client';
-import { queryKeys, useApiMutation, useMembers, usePermissions } from '@/lib/queries';
-import { useSession } from '@/providers/session-provider';
-import { useTenant } from '@/providers/tenant-provider';
+import { queryKeys, useApiMutation, useMembers } from '@/lib/queries';
 
 const inviteForm = z.object({
   email: z.email('Adresse e-mail invalide.').max(254),
@@ -247,43 +244,26 @@ function MemberRow({ member }: { member: Member }) {
   );
 }
 
+/** Members of the SIS and their roles (shown to member:manage holders only). */
 export function MembersAdmin() {
-  const { ready } = useSession();
-  const { loading } = useTenant();
-  const canManage = usePermissions().has('member:manage');
   const members = useMembers();
   const [inviting, setInviting] = useState(false);
   const [result, setResult] = useState<MemberInvitation | null>(null);
 
-  // Roles come with the active SIS: do not conclude anything before it is known.
-  if (!ready || loading) return <LoadingCard lines={5} />;
-  if (!canManage) {
-    return (
-      <>
-        <PageHeader title="Administration" />
-        <Alert tone="info">L’administration du SIS est réservée à ses administrateurs.</Alert>
-      </>
-    );
-  }
-
   return (
     <>
-      <PageHeader
-        title="Administration"
-        description="Membres du SIS et leurs rôles. Terminaux, catalogues et paramètres : à venir."
-        actions={
-          !inviting && members.data ? (
-            <Button
-              onClick={() => {
-                setResult(null);
-                setInviting(true);
-              }}
-            >
-              Inviter une personne
-            </Button>
-          ) : null
-        }
-      />
+      {!inviting && members.data ? (
+        <div className="mb-4 flex justify-end">
+          <Button
+            onClick={() => {
+              setResult(null);
+              setInviting(true);
+            }}
+          >
+            Inviter une personne
+          </Button>
+        </div>
+      ) : null}
       <div className="space-y-4">
         {result ? (
           <Alert tone="info">

@@ -4,15 +4,19 @@ import type { ObjectType, OperationalObject } from '@etare/contracts';
 import {
   CRITICALITIES,
   OBJECT_STATUSES,
-  propertyDefinitions,
   validateObjectProperties,
   type Criticality,
   type ObjectStatus,
-  type PropertyDefinition,
 } from '@etare/domain';
 import { Button, Field, Input, Select, Textarea } from '@etare/ui';
 import { useState } from 'react';
 import { ApiErrorAlert } from '@/components/feedback';
+import {
+  PropertyFields,
+  fromPropertyDraft,
+  toPropertyDraft,
+  type PropertyDraft,
+} from '@/components/forms/property-fields';
 import { CRITICALITY_LABELS, OBJECT_STATUS_LABELS } from '@/components/labels';
 
 export interface ObjectFormValues {
@@ -24,84 +28,15 @@ export interface ObjectFormValues {
   readonly properties: Record<string, string | number | boolean>;
 }
 
-type Draft = Record<string, string | boolean>;
+const SURFACE_NAMES = { carte: 'la carte', plan: 'le plan' } as const;
 
-const toDraft = (definitions: Readonly<Record<string, PropertyDefinition>>, values: Record<string, unknown>): Draft =>
-  Object.fromEntries(
-    Object.entries(definitions).map(([name, definition]) => {
-      const value = values[name];
-      if (definition.type === 'boolean') return [name, value === true];
-      return [name, value === undefined || value === null ? '' : String(value)];
-    }),
-  );
-
-/** Empty inputs are left out; numbers accept a decimal comma. */
-function fromDraft(definitions: Readonly<Record<string, PropertyDefinition>>, draft: Draft) {
-  const properties: Record<string, string | number | boolean> = {};
-  for (const [name, definition] of Object.entries(definitions)) {
-    const value = draft[name];
-    if (definition.type === 'boolean') {
-      if (value === true) properties[name] = true;
-      continue;
-    }
-    const text = typeof value === 'string' ? value.trim() : '';
-    if (text === '') continue;
-    const isNumber = definition.type === 'number' || definition.type === 'integer';
-    const numeric = Number(text.replace(',', '.'));
-    properties[name] = isNumber
-      ? numeric
-      : definition.oneOf?.some((choice) => choice.const === numeric)
-        ? numeric
-        : text;
-  }
-  return properties;
-}
-
-function PropertyInput({
-  id,
-  definition,
-  value,
-  onChange,
-}: {
-  id: string;
-  definition: PropertyDefinition;
-  value: string | boolean;
-  onChange: (value: string | boolean) => void;
-}) {
-  if (definition.type === 'boolean') {
-    return (
-      <input
-        id={id}
-        type="checkbox"
-        className="size-4 accent-brand-accent"
-        checked={value === true}
-        onChange={(event) => onChange(event.target.checked)}
-      />
-    );
-  }
-  if (definition.oneOf) {
-    return (
-      <Select id={id} value={String(value)} onChange={(event) => onChange(event.target.value)}>
-        <option value="">—</option>
-        {definition.oneOf.map((choice) => (
-          <option key={String(choice.const)} value={String(choice.const)}>
-            {choice.title ?? String(choice.const)}
-          </option>
-        ))}
-      </Select>
-    );
-  }
-  const numeric = definition.type === 'number' || definition.type === 'integer';
-  return (
-    <Input
-      id={id}
-      type={definition.format === 'date' ? 'date' : 'text'}
-      inputMode={numeric ? 'decimal' : undefined}
-      maxLength={definition.maxLength}
-      value={String(value)}
-      onChange={(event) => onChange(event.target.value)}
-    />
-  );
+/** How to draw each kind of geometry, on the map or on a plan. */
+export function drawingHint(kind: ObjectType['geometry_kind'], surface: 'carte' | 'plan') {
+  return kind === 'point'
+    ? `Cliquez sur ${SURFACE_NAMES[surface]} pour placer le point.`
+    : kind === 'line'
+      ? 'Cliquez pour poser les points de la ligne, double-cliquez pour la terminer.'
+      : 'Cliquez pour poser les sommets, puis sur le premier pour fermer la surface.';
 }
 
 /** Form of an operational object: common fields, then the properties declared by its type. */
@@ -114,6 +49,8 @@ export function ObjectForm({
   onSave,
   onCancel,
   onVerify,
+  onDelete,
+  surface = 'carte',
 }: {
   type: ObjectType;
   object: OperationalObject | null;
@@ -123,19 +60,23 @@ export function ObjectForm({
   onSave: (values: ObjectFormValues) => void;
   onCancel: () => void;
   onVerify?: (() => void) | undefined;
+  /** Archives the object (deletion of working data is an explicit transition). */
+  onDelete?: (() => void) | undefined;
+  surface?: 'carte' | 'plan';
 }) {
-  const definitions = propertyDefinitions(type.properties_schema);
   const [label, setLabel] = useState(object?.label ?? '');
   const [name, setName] = useState(object?.name ?? '');
   const [criticality, setCriticality] = useState<Criticality>(object?.criticality ?? 'info');
   const [status, setStatus] = useState<ObjectStatus>(object?.status ?? 'active');
   const [instructions, setInstructions] = useState(object?.instructions ?? '');
-  const [draft, setDraft] = useState<Draft>(() => toDraft(definitions, object?.properties ?? {}));
+  const [draft, setDraft] = useState<PropertyDraft>(() =>
+    toPropertyDraft(type.properties_schema, object?.properties ?? {}),
+  );
   const [issues, setIssues] = useState<Record<string, string>>({});
   const prefix = `object-${object?.id ?? 'new'}`;
 
   function submit() {
-    const properties = fromDraft(definitions, draft);
+    const properties = fromPropertyDraft(type.properties_schema, draft);
     const found = validateObjectProperties(type.properties_schema, properties);
     setIssues(Object.fromEntries(found.map((issue) => [issue.path.replace('properties.', ''), issue.message])));
     if (found.length > 0) return;
@@ -161,18 +102,14 @@ export function ObjectForm({
       <p className="text-sm font-semibold">{type.name}</p>
       {!geometryReady ? (
         <p className="rounded-md bg-info-soft px-3 py-2 text-sm text-info">
-          {type.geometry_kind === 'point'
-            ? 'Cliquez sur la carte pour placer le point.'
-            : type.geometry_kind === 'line'
-              ? 'Cliquez pour poser les points de la ligne, double-cliquez pour la terminer.'
-              : 'Cliquez pour poser les sommets, puis sur le premier pour fermer la surface.'}
+          {drawingHint(type.geometry_kind, surface)}
         </p>
       ) : (
         <p className="text-xs text-muted">Faites glisser l’objet ou ses sommets pour le déplacer.</p>
       )}
       {error ? <ApiErrorAlert error={error} /> : null}
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Libellé sur la carte" htmlFor={`${prefix}-label`} hint="Ex. PEI 2, P1">
+        <Field label={`Libellé sur ${SURFACE_NAMES[surface]}`} htmlFor={`${prefix}-label`} hint="Ex. PEI 2, P1">
           <Input
             id={`${prefix}-label`}
             maxLength={40}
@@ -209,22 +146,13 @@ export function ObjectForm({
             ))}
           </Select>
         </Field>
-        {Object.entries(definitions).map(([property, definition]) => (
-          <Field
-            key={property}
-            label={`${definition.title ?? property}${definition.unit ? ` (${definition.unit})` : ''}`}
-            htmlFor={`${prefix}-${property}`}
-            error={issues[property]}
-            className={definition.type === 'string' && !definition.oneOf ? 'col-span-2' : undefined}
-          >
-            <PropertyInput
-              id={`${prefix}-${property}`}
-              definition={definition}
-              value={draft[property] ?? ''}
-              onChange={(value) => setDraft((current) => ({ ...current, [property]: value }))}
-            />
-          </Field>
-        ))}
+        <PropertyFields
+          prefix={prefix}
+          schema={type.properties_schema}
+          draft={draft}
+          issues={issues}
+          onChange={(property, value) => setDraft((current) => ({ ...current, [property]: value }))}
+        />
         <Field label="Consignes" htmlFor={`${prefix}-instructions`} className="col-span-2">
           <Textarea
             id={`${prefix}-instructions`}
@@ -248,6 +176,11 @@ export function ObjectForm({
         <Button type="button" size="sm" variant="secondary" onClick={onCancel}>
           Annuler
         </Button>
+        {onDelete ? (
+          <Button type="button" size="sm" variant="ghost" disabled={saving} onClick={onDelete}>
+            Supprimer
+          </Button>
+        ) : null}
       </div>
     </form>
   );

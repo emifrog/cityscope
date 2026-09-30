@@ -12,6 +12,9 @@ import {
   createPlan,
   createSite,
   createSiteObject,
+  createRiskType,
+  createSiteRisk,
+  createZone,
   getAssetDownload,
   getMe,
   getMapCatalog,
@@ -30,6 +33,9 @@ import {
   listPlans,
   listObjectTypes,
   listSiteObjects,
+  listRiskTypes,
+  listSiteRisks,
+  listSiteZones,
   listSites,
   updateBuilding,
   updateClassification,
@@ -39,6 +45,9 @@ import {
   updateMember,
   updatePlan,
   updateSiteObject,
+  updateRiskType,
+  updateSiteRisk,
+  updateZone,
   updateSite,
   type CartographyCatalog,
   type Geocoder,
@@ -411,6 +420,65 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     const context = await requestContext(c, endpoints.createPlanRevision);
     const input = await readBody(c, endpoints.createPlanRevision.body);
     return respond(c, endpoints.createPlanRevision, await addPlanRevision(plans, context, idOf(c), input));
+  });
+
+  app.get(routerPath(endpoints.listSiteZones.path), async (c) => {
+    const context = await requestContext(c, endpoints.listSiteZones);
+    return respond(c, endpoints.listSiteZones, { items: await listSiteZones(deps.sessions, context, idOf(c)) });
+  });
+
+  app.post(routerPath(endpoints.createZone.path), async (c) => {
+    const context = await requestContext(c, endpoints.createZone);
+    const input = await readBody(c, endpoints.createZone.body);
+    return respond(c, endpoints.createZone, await createZone(deps.sessions, context, idOf(c), input));
+  });
+
+  app.patch(routerPath(endpoints.updateZone.path), async (c) => {
+    const context = await requestContext(c, endpoints.updateZone);
+    const version = expectedVersion(c);
+    const patch = await readBody(c, endpoints.updateZone.body);
+    return respond(c, endpoints.updateZone, await updateZone(deps.sessions, context, idOf(c), version, patch));
+  });
+
+  // ---------------------------------------------------------------- risks
+  app.get(routerPath(endpoints.listRiskTypes.path), async (c) => {
+    const context = await requestContext(c, endpoints.listRiskTypes);
+    const query = endpoints.listRiskTypes.query.parse(c.req.query());
+    const items = await listRiskTypes(deps.sessions, context, {
+      includeDeprecated: query.include_deprecated === 'true',
+    });
+    return respond(c, endpoints.listRiskTypes, { items });
+  });
+
+  app.post(routerPath(endpoints.createRiskType.path), async (c) => {
+    const context = await requestContext(c, endpoints.createRiskType);
+    const input = await readBody(c, endpoints.createRiskType.body);
+    return respond(c, endpoints.createRiskType, await createRiskType(deps.sessions, context, input));
+  });
+
+  app.patch(routerPath(endpoints.updateRiskType.path), async (c) => {
+    const context = await requestContext(c, endpoints.updateRiskType);
+    const version = expectedVersion(c);
+    const patch = await readBody(c, endpoints.updateRiskType.body);
+    return respond(c, endpoints.updateRiskType, await updateRiskType(deps.sessions, context, idOf(c), version, patch));
+  });
+
+  app.get(routerPath(endpoints.listSiteRisks.path), async (c) => {
+    const context = await requestContext(c, endpoints.listSiteRisks);
+    return respond(c, endpoints.listSiteRisks, { items: await listSiteRisks(deps.sessions, context, idOf(c)) });
+  });
+
+  app.post(routerPath(endpoints.createSiteRisk.path), async (c) => {
+    const context = await requestContext(c, endpoints.createSiteRisk);
+    const input = await readBody(c, endpoints.createSiteRisk.body);
+    return respond(c, endpoints.createSiteRisk, await createSiteRisk(deps.sessions, context, idOf(c), input));
+  });
+
+  app.patch(routerPath(endpoints.updateRisk.path), async (c) => {
+    const context = await requestContext(c, endpoints.updateRisk);
+    const version = expectedVersion(c);
+    const patch = await readBody(c, endpoints.updateRisk.body);
+    return respond(c, endpoints.updateRisk, await updateSiteRisk(deps.sessions, context, idOf(c), version, patch));
   });
 
   // ---------------------------------------------------------------- documents and files

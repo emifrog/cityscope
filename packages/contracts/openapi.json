@@ -2852,6 +2852,20 @@
             ],
             "format": "uuid"
           },
+          "level_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "zone_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
           "object_type_id": {
             "type": "string",
             "format": "uuid"
@@ -2999,6 +3013,9 @@
               }
             ]
           },
+          "plan_position": {
+            "$ref": "#/components/schemas/PlanPosition"
+          },
           "properties": {
             "type": "object",
             "additionalProperties": {}
@@ -3048,6 +3065,8 @@
           "id",
           "site_id",
           "building_id",
+          "level_id",
+          "zone_id",
           "object_type_id",
           "type_code",
           "type_name",
@@ -3055,6 +3074,7 @@
           "name",
           "label",
           "geometry",
+          "plan_position",
           "properties",
           "instructions",
           "criticality",
@@ -3062,6 +3082,143 @@
           "verified_at",
           "distance_m",
           "row_version"
+        ]
+      },
+      "PlanPosition": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "plan_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "plan_revision_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision_no": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "is_current": {
+            "type": "boolean"
+          },
+          "geometry": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "Point"
+                    ]
+                  },
+                  "coordinates": {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100000
+                      },
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100000
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "type",
+                  "coordinates"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "LineString"
+                    ]
+                  },
+                  "coordinates": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "prefixItems": [
+                        {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 100000
+                        },
+                        {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 100000
+                        }
+                      ]
+                    },
+                    "minItems": 2,
+                    "maxItems": 2000
+                  }
+                },
+                "required": [
+                  "type",
+                  "coordinates"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "Polygon"
+                    ]
+                  },
+                  "coordinates": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "prefixItems": [
+                          {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100000
+                          },
+                          {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100000
+                          }
+                        ]
+                      },
+                      "minItems": 4
+                    },
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "type",
+                  "coordinates"
+                ]
+              }
+            ]
+          }
+        },
+        "required": [
+          "plan_id",
+          "plan_revision_id",
+          "revision_no",
+          "is_current",
+          "geometry"
         ]
       },
       "OperationalObjectCreate": {
@@ -3201,6 +3358,9 @@
               }
             ]
           },
+          "plan_position": {
+            "$ref": "#/components/schemas/PlanPlacement"
+          },
           "properties": {
             "type": "object",
             "additionalProperties": {
@@ -3249,7 +3409,126 @@
           }
         },
         "required": [
-          "object_type_id",
+          "object_type_id"
+        ]
+      },
+      "PlanPlacement": {
+        "type": "object",
+        "properties": {
+          "plan_revision_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "geometry": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "Point"
+                    ]
+                  },
+                  "coordinates": {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100000
+                      },
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100000
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "type",
+                  "coordinates"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "LineString"
+                    ]
+                  },
+                  "coordinates": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "prefixItems": [
+                        {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 100000
+                        },
+                        {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 100000
+                        }
+                      ]
+                    },
+                    "minItems": 2,
+                    "maxItems": 2000
+                  }
+                },
+                "required": [
+                  "type",
+                  "coordinates"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "Polygon"
+                    ]
+                  },
+                  "coordinates": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "prefixItems": [
+                          {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100000
+                          },
+                          {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100000
+                          }
+                        ]
+                      },
+                      "minItems": 4
+                    },
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "type",
+                  "coordinates"
+                ]
+              }
+            ]
+          }
+        },
+        "required": [
+          "plan_revision_id",
           "geometry"
         ]
       },
@@ -3382,6 +3661,19 @@
                 "required": [
                   "type",
                   "coordinates"
+                ]
+              }
+            ]
+          },
+          "plan_position": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlanPlacement"
+              },
+              {
+                "type": [
+                  "object",
+                  "null"
                 ]
               }
             ]
@@ -3851,6 +4143,1144 @@
           "height",
           "file"
         ]
+      },
+      "ZoneList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Zone"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "Zone": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "site_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "level_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "zone_type": {
+            "type": "string",
+            "enum": [
+              "room",
+              "refuge",
+              "technical",
+              "storage",
+              "public",
+              "circulation",
+              "other"
+            ]
+          },
+          "plan_position": {
+            "$ref": "#/components/schemas/PlanPosition"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "archived"
+            ]
+          },
+          "row_version": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "site_id",
+          "level_id",
+          "name",
+          "zone_type",
+          "plan_position",
+          "status",
+          "row_version"
+        ]
+      },
+      "ZoneCreate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "zone_type": {
+            "type": "string",
+            "enum": [
+              "room",
+              "refuge",
+              "technical",
+              "storage",
+              "public",
+              "circulation",
+              "other"
+            ]
+          },
+          "plan_position": {
+            "type": "object",
+            "properties": {
+              "plan_revision_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "geometry": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "Point"
+                        ]
+                      },
+                      "coordinates": {
+                        "type": "array",
+                        "prefixItems": [
+                          {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100000
+                          },
+                          {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100000
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "coordinates"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "LineString"
+                        ]
+                      },
+                      "coordinates": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "prefixItems": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 100000
+                            },
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 100000
+                            }
+                          ]
+                        },
+                        "minItems": 2,
+                        "maxItems": 2000
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "coordinates"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "Polygon"
+                        ]
+                      },
+                      "coordinates": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 100000
+                              },
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 100000
+                              }
+                            ]
+                          },
+                          "minItems": 4
+                        },
+                        "minItems": 1
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "coordinates"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "plan_revision_id",
+              "geometry"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "zone_type",
+          "plan_position"
+        ]
+      },
+      "ZoneUpdate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "zone_type": {
+            "type": "string",
+            "enum": [
+              "room",
+              "refuge",
+              "technical",
+              "storage",
+              "public",
+              "circulation",
+              "other"
+            ]
+          },
+          "plan_position": {
+            "type": "object",
+            "properties": {
+              "plan_revision_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "geometry": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "Point"
+                        ]
+                      },
+                      "coordinates": {
+                        "type": "array",
+                        "prefixItems": [
+                          {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100000
+                          },
+                          {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100000
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "coordinates"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "LineString"
+                        ]
+                      },
+                      "coordinates": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "prefixItems": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 100000
+                            },
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 100000
+                            }
+                          ]
+                        },
+                        "minItems": 2,
+                        "maxItems": 2000
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "coordinates"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "Polygon"
+                        ]
+                      },
+                      "coordinates": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 100000
+                              },
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 100000
+                              }
+                            ]
+                          },
+                          "minItems": 4
+                        },
+                        "minItems": 1
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "coordinates"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "plan_revision_id",
+              "geometry"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "archived"
+            ]
+          }
+        }
+      },
+      "RiskTypeList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RiskType"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "RiskType": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "default_severity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "icon_key": {
+            "type": "string"
+          },
+          "properties_schema": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "owner": {
+            "type": "string",
+            "enum": [
+              "national",
+              "sis"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "deprecated"
+            ]
+          },
+          "row_version": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "default_severity",
+          "icon_key",
+          "properties_schema",
+          "owner",
+          "status",
+          "row_version"
+        ]
+      },
+      "RiskTypeCreate": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]{1,39}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "default_severity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "icon_key": {
+            "type": "string",
+            "enum": [
+              "risk-flammable",
+              "risk-explosive",
+              "risk-toxic",
+              "risk-corrosive",
+              "risk-oxidizing",
+              "risk-pressurized-gas",
+              "risk-high-voltage",
+              "risk-lithium",
+              "risk-photovoltaic",
+              "risk-radioactive",
+              "risk-biological",
+              "risk-oxygen",
+              "risk-fragile-structure",
+              "risk-vulnerable-public",
+              "risk-heritage",
+              "risk-generic"
+            ]
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogField"
+            },
+            "maxItems": 20,
+            "default": []
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "default_severity",
+          "icon_key"
+        ]
+      },
+      "CatalogField": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,39}$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "text",
+              "number",
+              "integer",
+              "boolean",
+              "date",
+              "choice"
+            ]
+          },
+          "unit": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "minItems": 2,
+            "maxItems": 30
+          },
+          "required": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "kind"
+        ]
+      },
+      "RiskTypeUpdate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "default_severity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "icon_key": {
+            "type": "string",
+            "enum": [
+              "risk-flammable",
+              "risk-explosive",
+              "risk-toxic",
+              "risk-corrosive",
+              "risk-oxidizing",
+              "risk-pressurized-gas",
+              "risk-high-voltage",
+              "risk-lithium",
+              "risk-photovoltaic",
+              "risk-radioactive",
+              "risk-biological",
+              "risk-oxygen",
+              "risk-fragile-structure",
+              "risk-vulnerable-public",
+              "risk-heritage",
+              "risk-generic"
+            ]
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogField"
+            },
+            "maxItems": 20
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "deprecated"
+            ]
+          }
+        }
+      },
+      "RiskList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Risk"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "Risk": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "site_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "risk_type_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type_code": {
+            "type": "string"
+          },
+          "type_name": {
+            "type": "string"
+          },
+          "icon_key": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "quantity": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "building_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "level_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "zone_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "plan_position": {
+            "$ref": "#/components/schemas/PlanPosition"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "archived"
+            ]
+          },
+          "row_version": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "site_id",
+          "risk_type_id",
+          "type_code",
+          "type_name",
+          "icon_key",
+          "severity",
+          "label",
+          "description",
+          "quantity",
+          "unit",
+          "properties",
+          "building_id",
+          "level_id",
+          "zone_id",
+          "plan_position",
+          "status",
+          "row_version"
+        ]
+      },
+      "RiskCreate": {
+        "type": "object",
+        "properties": {
+          "risk_type_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "severity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "quantity": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1000000000
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 20
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "default": {}
+          },
+          "building_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "level_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "zone_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "plan_position": {
+            "type": "object",
+            "properties": {
+              "plan_revision_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "geometry": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "Point"
+                        ]
+                      },
+                      "coordinates": {
+                        "type": "array",
+                        "prefixItems": [
+                          {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100000
+                          },
+                          {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100000
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "coordinates"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "LineString"
+                        ]
+                      },
+                      "coordinates": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "prefixItems": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 100000
+                            },
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 100000
+                            }
+                          ]
+                        },
+                        "minItems": 2,
+                        "maxItems": 2000
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "coordinates"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "Polygon"
+                        ]
+                      },
+                      "coordinates": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 100000
+                              },
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 100000
+                              }
+                            ]
+                          },
+                          "minItems": 4
+                        },
+                        "minItems": 1
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "coordinates"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "plan_revision_id",
+              "geometry"
+            ]
+          }
+        },
+        "required": [
+          "risk_type_id"
+        ]
+      },
+      "RiskUpdate": {
+        "type": "object",
+        "properties": {
+          "severity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "quantity": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1000000000
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 20
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "building_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "level_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "zone_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "plan_position": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "plan_revision_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "geometry": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "Point"
+                        ]
+                      },
+                      "coordinates": {
+                        "type": "array",
+                        "prefixItems": [
+                          {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100000
+                          },
+                          {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100000
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "coordinates"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "LineString"
+                        ]
+                      },
+                      "coordinates": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "prefixItems": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 100000
+                            },
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 100000
+                            }
+                          ]
+                        },
+                        "minItems": 2,
+                        "maxItems": 2000
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "coordinates"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "Polygon"
+                        ]
+                      },
+                      "coordinates": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 100000
+                              },
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 100000
+                              }
+                            ]
+                          },
+                          "minItems": 4
+                        },
+                        "minItems": 1
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "coordinates"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "plan_revision_id",
+              "geometry"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "archived"
+            ]
+          }
+        }
       },
       "DocumentList": {
         "type": "object",
@@ -7331,7 +8761,7 @@
       },
       "post": {
         "operationId": "createSiteObject",
-        "summary": "Placer un point opérationnel sur la carte",
+        "summary": "Placer un point opérationnel sur la carte et/ou sur un plan",
         "tags": [
           "objects"
         ],
@@ -8071,6 +9501,1093 @@
           },
           "409": {
             "description": "Conflit avec des données existantes (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sites/{id}/zones": {
+      "get": {
+        "operationId": "listSiteZones",
+        "summary": "Zones des niveaux d’un site (locaux, refuges, circulations…) dessinées sur les plans",
+        "tags": [
+          "plans"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ZoneList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ressource introuvable ou non autorisée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createZone",
+        "summary": "Dessiner une zone sur le fond actuel d’un plan de niveau",
+        "tags": [
+          "plans"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZoneCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Zone"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ressource introuvable ou non autorisée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflit avec des données existantes (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/zones/{id}": {
+      "patch": {
+        "operationId": "updateZone",
+        "summary": "Renommer, redessiner ou archiver une zone",
+        "tags": [
+          "plans"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Version sur laquelle porte la modification (valeur de l’ETag reçu), ex. \"3\".",
+              "example": "\"3\""
+            },
+            "required": true,
+            "description": "Version sur laquelle porte la modification (valeur de l’ETag reçu), ex. \"3\".",
+            "name": "if-match",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZoneUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "headers": {
+              "ETag": {
+                "description": "Version de la ressource (row_version)",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Zone"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ressource introuvable ou non autorisée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflit avec des données existantes (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Modifiée entre-temps : relire puis réessayer (PRECONDITION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "En-tête If-Match manquant (PRECONDITION_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/risk-types": {
+      "get": {
+        "operationId": "listRiskTypes",
+        "summary": "Catalogue des types de risques (national et propre au SIS)",
+        "tags": [
+          "risks"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "include_deprecated",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskTypeList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createRiskType",
+        "summary": "Ajouter un type de risque propre au SIS, avec ses champs",
+        "tags": [
+          "risks"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RiskTypeCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskType"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflit avec des données existantes (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/risk-types/{id}": {
+      "patch": {
+        "operationId": "updateRiskType",
+        "summary": "Modifier ou retirer un type de risque propre au SIS",
+        "tags": [
+          "risks"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Version sur laquelle porte la modification (valeur de l’ETag reçu), ex. \"3\".",
+              "example": "\"3\""
+            },
+            "required": true,
+            "description": "Version sur laquelle porte la modification (valeur de l’ETag reçu), ex. \"3\".",
+            "name": "if-match",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RiskTypeUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "headers": {
+              "ETag": {
+                "description": "Version de la ressource (row_version)",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskType"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ressource introuvable ou non autorisée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflit avec des données existantes (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Modifiée entre-temps : relire puis réessayer (PRECONDITION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "En-tête If-Match manquant (PRECONDITION_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sites/{id}/risks": {
+      "get": {
+        "operationId": "listSiteRisks",
+        "summary": "Risques d’un site, leur portée (site, bâtiment, niveau, zone) et leur position sur les plans",
+        "tags": [
+          "risks"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ressource introuvable ou non autorisée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createSiteRisk",
+        "summary": "Localiser un risque sur un site, un bâtiment, un niveau, une zone ou un plan",
+        "tags": [
+          "risks"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RiskCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Risk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ressource introuvable ou non autorisée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflit avec des données existantes (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/risks/{id}": {
+      "patch": {
+        "operationId": "updateRisk",
+        "summary": "Modifier, déplacer ou archiver un risque",
+        "tags": [
+          "risks"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Version sur laquelle porte la modification (valeur de l’ETag reçu), ex. \"3\".",
+              "example": "\"3\""
+            },
+            "required": true,
+            "description": "Version sur laquelle porte la modification (valeur de l’ETag reçu), ex. \"3\".",
+            "name": "if-match",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RiskUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "headers": {
+              "ETag": {
+                "description": "Version de la ressource (row_version)",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Risk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ressource introuvable ou non autorisée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflit avec des données existantes (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Modifiée entre-temps : relire puis réessayer (PRECONDITION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "En-tête If-Match manquant (PRECONDITION_REQUIRED)",
             "content": {
               "application/json": {
                 "schema": {

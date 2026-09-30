@@ -1,6 +1,7 @@
-import { LOCAL_UNITS } from '@etare/domain';
 import { z } from 'zod';
-import { uuidSchema } from './primitives';
+
+/** Largest plan coordinate accepted in a request (the background size is checked by the database). */
+const MAX_LOCAL_COORDINATE = 100_000;
 
 /** GeoJSON position in WGS 84: [longitude, latitude] (RFC 7946 axis order). */
 export const positionSchema = z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)]);
@@ -34,25 +35,45 @@ export const multiPolygonSchema = z.object({
   coordinates: z.array(z.array(linearRingSchema).min(1)).min(1),
 });
 
+/** Maximum number of positions of a drawn surface (keeps a request well under the 64 KiB body limit). */
+export const MAX_SURFACE_POSITIONS = 2000;
+
+const positionCount = (rings: readonly (readonly unknown[])[]) => rings.reduce((total, ring) => total + ring.length, 0);
+
 /**
- * Position drawn on a plan revision, in local coordinates (origin top-left,
- * x to the right, y downwards). Never converted to GPS implicitly.
+ * Positions on a plan, in pixels of its background (origin top-left, x to the
+ * right, y downwards), GeoJSON-shaped. Never converted to GPS implicitly; the
+ * database checks that they lie inside the background of their revision.
  */
-export const localPointSchema = z
-  .object({
-    plan_revision_id: uuidSchema,
-    unit: z.enum(LOCAL_UNITS),
-    x: z.number().finite(),
-    y: z.number().finite(),
-  })
-  .superRefine((point, ctx) => {
-    if (point.unit === 'normalized' && (point.x < 0 || point.x > 1 || point.y < 0 || point.y > 1)) {
-      ctx.addIssue({ code: 'custom', message: 'Les coordonnées normalisées sont comprises entre 0 et 1.' });
-    }
-    if (point.unit === 'pixel' && (point.x < 0 || point.y < 0)) {
-      ctx.addIssue({ code: 'custom', message: 'Les coordonnées en pixels sont positives.' });
-    }
-  });
+export const localPositionSchema = z.tuple([
+  z.number().finite().min(0).max(MAX_LOCAL_COORDINATE),
+  z.number().finite().min(0).max(MAX_LOCAL_COORDINATE),
+]);
+
+const closedRing = <T extends z.ZodType<readonly [number, number]>>(position: T) =>
+  z
+    .array(position)
+    .min(4)
+    .refine((ring) => {
+      const first = ring[0];
+      const last = ring.at(-1);
+      return first !== undefined && last !== undefined && first[0] === last[0] && first[1] === last[1];
+    }, 'Un anneau doit être fermé.');
+
+export const localPointGeometrySchema = z.object({ type: z.literal('Point'), coordinates: localPositionSchema });
+export const localLineStringSchema = z.object({
+  type: z.literal('LineString'),
+  coordinates: z.array(localPositionSchema).min(2).max(MAX_SURFACE_POSITIONS),
+});
+export const localPolygonSchema = z
+  .object({ type: z.literal('Polygon'), coordinates: z.array(closedRing(localPositionSchema)).min(1) })
+  .refine(
+    (polygon) => positionCount(polygon.coordinates) <= MAX_SURFACE_POSITIONS,
+    `Contour trop détaillé (${MAX_SURFACE_POSITIONS} sommets au plus).`,
+  );
+
+export const localGeometrySchema = z.union([localPointGeometrySchema, localLineStringSchema, localPolygonSchema]);
+export type LocalGeometry = z.infer<typeof localGeometrySchema>;
 
 /** Rectangle in WGS 84: [west, south, east, north] (GeoJSON bbox order). */
 export type Bbox = readonly [number, number, number, number];
@@ -76,11 +97,6 @@ export function parseBbox(value: string): Bbox | null {
     [west, east].every((lon) => lon >= -180 && lon <= 180) && [south, north].every((lat) => lat >= -90 && lat <= 90);
   return inBounds && west < east && south < north ? [west, south, east, north] : null;
 }
-
-/** Maximum number of positions of a drawn surface (keeps a request well under the 64 KiB body limit). */
-export const MAX_SURFACE_POSITIONS = 2000;
-
-const positionCount = (rings: readonly (readonly unknown[])[]) => rings.reduce((total, ring) => total + ring.length, 0);
 
 /**
  * Footprint drawn on the map: a Polygon or a MultiPolygon (stored as

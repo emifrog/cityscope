@@ -58,9 +58,10 @@ export function useMapLibre(
       const { style: ownStyle, scale = true, maxBounds } = initialOptions.current;
       const style = ownStyle ?? baseMapStyle(catalog, catalog.default_base);
       const backgroundSources = new Set(Object.keys(style.sources));
+      // The style is applied once the listeners are in place: a style given as an object can be
+      // loaded synchronously, and its readiness must not depend on its sources (a plan image, tiles).
       const instance = new lib.Map({
         container: element,
-        style,
         center: start.center ?? FRANCE_VIEW.center,
         zoom: start.zoom ?? FRANCE_VIEW.zoom,
         ...(start.bounds ? { bounds: start.bounds, fitBoundsOptions: { padding: 48, maxZoom: 18 } } : {}),
@@ -78,9 +79,8 @@ export function useMapLibre(
       });
       // Ready as soon as the style is: 'load' would also wait for the background tiles, and a slow
       // or failing background must never delay the SIS data (architecture §14).
-      const ready = () => setLoaded({ map: instance, lib });
-      if (instance.isStyleLoaded()) ready();
-      else instance.once('style.load', ready);
+      instance.once('style.load', () => setLoaded({ map: instance, lib }));
+      instance.setStyle(style);
     });
 
     return () => {

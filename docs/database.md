@@ -6,23 +6,24 @@ pas exposé par la Data API Supabase (`supabase/config.toml` → `api.schemas`),
 
 ## Migrations
 
-| Fichier                                           | Contenu                                                                                                                                                                       |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `…0100_foundation.sql`                            | extensions (schéma `extensions`), schéma `app`, rôles applicatifs, accesseurs de contexte, triggers génériques                                                                |
-| `…0200_tenancy_and_rbac.sql`                      | `tenant`, `user_account`, `membership`, `role`, `permission`, `role_binding`, `platform_admin`, `has_permission`, `begin_request`, `my_memberships`                           |
-| `…0300_audit.sql`                                 | `audit_event` (ajout seul), trigger d’audit générique, `record_audit_event`                                                                                                   |
-| `…0400_site_referential.sql`                      | `address`, `site`, `building`, `level`, `asset`, `plan`, `plan_revision`, `zone`                                                                                              |
-| `…0500_operational_objects_and_documents.sql`     | catalogues `object_type` / `risk_type` (+ données initiales du modèle §12), `operational_object`, `risk_occurrence`, `document`, `document_version`                           |
-| `…0600_etare_publication.sql`                     | `etare`, `etare_revision`, `etare_revision_contributor`, `approval`, `publication` + gardes                                                                                   |
-| `…0700_jobs.sql`                                  | file de tâches `job` et fonctions `enqueue/claim/heartbeat/complete/fail`                                                                                                     |
-| `…0800_storage_supabase.sql`                      | seule migration spécifique Supabase : bucket privé `etare-assets` (gardée)                                                                                                    |
-| `20260930084922_publication_access_hardening.sql` | lecture OPS limitée aux publications actives, références au même site, métadonnées publiées immuables                                                                         |
-| `20260930085355_revision_authorship.sql`          | attribution des contributions par trigger, contrôle de l’auteur et du soumetteur, modification d’un brouillon réservée aux rédacteurs                                         |
-| `20260930120000_role_timeouts.sql`                | délais `statement` / `idle in transaction` / `lock` portés par les rôles applicatifs (indépendants du pooler)                                                                 |
-| `20261001000100_referential_editing.sql`          | Sprint 1 : `site_edit` (auteurs des données de travail), contributeurs collectés à la soumission, `site_classification`, `contact`, `external_identifier`, index de recherche |
-| `20261001000200_document_uploads.sql`             | Sprint 1 : clé de quarantaine et verdict de contrôle des `asset`, verdict réservé au worker et définitif, fonctions `worker_*_asset_verification`                             |
-| `20261001000300_member_administration.sql`        | Sprint 1 : `admin_add_member`, `admin_update_member` (anti-escalade, dernier administrateur), `holds_with_second_factor`, unicité des seules liaisons de rôle actives         |
-| `20261002000100_operational_object_geometry.sql`  | Sprint 2 : objet toujours placé (carte ou plan), géométrie conforme au type (point, ligne, surface), propriétés typées des types clés (PEI, réserve, portail, voie engins…)   |
+| Fichier                                           | Contenu                                                                                                                                                                            |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `…0100_foundation.sql`                            | extensions (schéma `extensions`), schéma `app`, rôles applicatifs, accesseurs de contexte, triggers génériques                                                                     |
+| `…0200_tenancy_and_rbac.sql`                      | `tenant`, `user_account`, `membership`, `role`, `permission`, `role_binding`, `platform_admin`, `has_permission`, `begin_request`, `my_memberships`                                |
+| `…0300_audit.sql`                                 | `audit_event` (ajout seul), trigger d’audit générique, `record_audit_event`                                                                                                        |
+| `…0400_site_referential.sql`                      | `address`, `site`, `building`, `level`, `asset`, `plan`, `plan_revision`, `zone`                                                                                                   |
+| `…0500_operational_objects_and_documents.sql`     | catalogues `object_type` / `risk_type` (+ données initiales du modèle §12), `operational_object`, `risk_occurrence`, `document`, `document_version`                                |
+| `…0600_etare_publication.sql`                     | `etare`, `etare_revision`, `etare_revision_contributor`, `approval`, `publication` + gardes                                                                                        |
+| `…0700_jobs.sql`                                  | file de tâches `job` et fonctions `enqueue/claim/heartbeat/complete/fail`                                                                                                          |
+| `…0800_storage_supabase.sql`                      | seule migration spécifique Supabase : bucket privé `etare-assets` (gardée)                                                                                                         |
+| `20260930084922_publication_access_hardening.sql` | lecture OPS limitée aux publications actives, références au même site, métadonnées publiées immuables                                                                              |
+| `20260930085355_revision_authorship.sql`          | attribution des contributions par trigger, contrôle de l’auteur et du soumetteur, modification d’un brouillon réservée aux rédacteurs                                              |
+| `20260930120000_role_timeouts.sql`                | délais `statement` / `idle in transaction` / `lock` portés par les rôles applicatifs (indépendants du pooler)                                                                      |
+| `20261001000100_referential_editing.sql`          | Sprint 1 : `site_edit` (auteurs des données de travail), contributeurs collectés à la soumission, `site_classification`, `contact`, `external_identifier`, index de recherche      |
+| `20261001000200_document_uploads.sql`             | Sprint 1 : clé de quarantaine et verdict de contrôle des `asset`, verdict réservé au worker et définitif, fonctions `worker_*_asset_verification`                                  |
+| `20261001000300_member_administration.sql`        | Sprint 1 : `admin_add_member`, `admin_update_member` (anti-escalade, dernier administrateur), `holds_with_second_factor`, unicité des seules liaisons de rôle actives              |
+| `20261002000100_operational_object_geometry.sql`  | Sprint 2 : objet toujours placé (carte ou plan), géométrie conforme au type (point, ligne, surface), propriétés typées des types clés (PEI, réserve, portail, voie engins…)        |
+| `20261003000100_plan_placement_and_risks.sql`     | Sprint 3 : placement sur plan (fond courant, dans l’image, niveau du plan, zone déduite), portée zone ⊂ niveau ⊂ bâtiment, champs et libellé des risques, codes nationaux réservés |
 
 ## Correspondance avec les documents de cadrage
 
@@ -131,6 +132,16 @@ l’application (`packages/domain/src/objects.ts`) : seules les propriétés dé
 Les distances au point du site se calculent en `geography` (mètres). Voir le test
 `90_operational_objects`.
 
+## Éléments des plans et risques
+
+Le trigger `placement` (`zone`, `operational_object`, `risk_occurrence`) applique les règles de
+l’ADR-012 : une position sur plan reste dans le fond de sa révision et n’est posée ou déplacée que sur la
+révision courante ; le niveau et le bâtiment viennent du plan, la zone d’un objet ou d’un risque est la plus
+petite zone active qui le contient ; zone, niveau et bâtiment doivent concorder (`placement_scope`). Les
+risques (point ou surface) portent un libellé et les champs propres à leur type
+(`risk_type.properties_schema`). Un type propre au SIS (`catalog:manage`) ne peut pas reprendre un code
+national (`catalog_code_guard`). Voir le test `100_plan_placement`.
+
 ## Habilitations des membres
 
 Les tables d’identité restent en lecture seule pour `etare_api` (RLS : un membre voit sa propre
@@ -153,5 +164,5 @@ les tables métier et par `app.record_audit_event()`. Aucun rôle applicatif ne 
 
 `supabase/tests/database/*.test.sql` (pgTAP, `pnpm test:db`) : invariants structurels, isolation
 multi-SIS, RBAC/MFA/séparation des tâches, immutabilité des publications, audit, file de tâches,
-édition du référentiel, verdict des fichiers, habilitations. Les tests d’intégration ajoutent des données à la base
+édition du référentiel, verdict des fichiers, habilitations, placement sur les plans et catalogue des risques. Les tests d’intégration ajoutent des données à la base
 locale : les assertions portent sur l’isolation, pas sur des listes exactes.

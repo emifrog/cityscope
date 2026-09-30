@@ -78,7 +78,10 @@ géocodage (`GET /geocoding/search`, `GET /geocoding/reverse`, géocodeur IGN ap
 points opérationnels (`GET /object-types`, `GET/POST /sites/{id}/objects`, `PATCH /objects/{id}`) et
 détails de carte (`GET /map/features?bbox=…` : emprises des bâtiments et points d’une zone de 0,2° au
 plus, affichés à partir du zoom 15) ; plans (`GET/POST /sites/{id}/plans`, `PATCH /plans/{id}`,
-`POST /plans/{id}/revisions` : fond déposé comme un document, image seulement, voir ADR-011).
+`POST /plans/{id}/revisions` : fond déposé comme un document, image seulement, voir ADR-011) ; zones
+(`GET/POST /sites/{id}/zones`, `PATCH /zones/{id}`) ; risques (`GET /risk-types`, `POST /risk-types`,
+`PATCH /risk-types/{id}` pour le catalogue du SIS, `GET/POST /sites/{id}/risks`, `PATCH /risks/{id}`) ;
+les objets acceptent aussi une position sur plan (`plan_position`), voir ADR-012.
 Les emprises du site et des bâtiments (`footprint`, Polygon ou MultiPolygon) passent par
 `PATCH /sites/{id}`, `POST /sites/{id}/buildings` et `PATCH /buildings/{id}`.
 Les `PATCH` exigent
@@ -111,7 +114,11 @@ Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4, composants de sty
 - Plans (onglet « Plans » de la fiche site, ADR-011) : même moteur MapLibre dans un repère local
   synthétique (`src/components/plan/local-frame.ts`, 1 pixel du plan = 1e-5°), sans fond cartographique.
   Un PDF est rendu page par page dans le navigateur avec pdf.js (`src/lib/plan-image.ts`, worker copié
-  vers `public/pdfjs/` par le même script) ; seul le PNG obtenu est déposé.
+  vers `public/pdfjs/` par le même script) ; seul le PNG obtenu est déposé. Espace de travail du plan
+  (`plan-workspace.tsx`) : calques, ajout d’objets, de zones et de risques (Terra Draw), suppression,
+  annulation de la dernière action, liste des éléments à replacer après un changement de fond et liste
+  accessible au clavier des éléments du fond affiché ; pictogrammes de risques dessinés à la volée.
+- Administration : onglets selon les permissions (Membres, Catalogue des risques du SIS).
 - Thème remplaçable : jetons dans `packages/ui/src/styles/globals.css`, nom/logo dans `src/config/brand.ts`.
 
 ## Worker (services/worker)

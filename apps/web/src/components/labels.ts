@@ -1,5 +1,8 @@
 import type {
   ClassificationType,
+  FieldKind,
+  RiskIconKey,
+  ZoneType,
   Criticality,
   ObjectCategory,
   ObjectStatus,
@@ -155,4 +158,50 @@ export const PLAN_TYPE_LABELS: Readonly<Record<PlanType, string>> = {
   network: 'Plan de réseaux',
   evacuation: 'Plan d’évacuation',
   other: 'Autre plan',
+};
+
+export const ZONE_TYPE_LABELS: Readonly<Record<ZoneType, string>> = {
+  room: 'Local',
+  refuge: 'Zone refuge',
+  technical: 'Local technique',
+  storage: 'Stockage',
+  public: 'Espace recevant du public',
+  circulation: 'Circulation',
+  other: 'Autre zone',
+};
+
+export const RISK_SEVERITY_LABELS: Readonly<Record<number, string>> = {
+  1: '1 · faible',
+  2: '2 · modérée',
+  3: '3 · notable',
+  4: '4 · forte',
+  5: '5 · majeure',
+};
+
+export const RISK_ICON_LABELS: Readonly<Record<RiskIconKey, string>> = {
+  'risk-flammable': 'Inflammable',
+  'risk-explosive': 'Explosif',
+  'risk-toxic': 'Toxique',
+  'risk-corrosive': 'Corrosif',
+  'risk-oxidizing': 'Comburant',
+  'risk-pressurized-gas': 'Gaz sous pression',
+  'risk-high-voltage': 'Électrique',
+  'risk-lithium': 'Batteries',
+  'risk-photovoltaic': 'Photovoltaïque',
+  'risk-radioactive': 'Radioactif',
+  'risk-biological': 'Biologique',
+  'risk-oxygen': 'Oxygène',
+  'risk-fragile-structure': 'Structure fragile',
+  'risk-vulnerable-public': 'Public vulnérable',
+  'risk-heritage': 'Patrimoine',
+  'risk-generic': 'Danger',
+};
+
+export const FIELD_KIND_LABELS: Readonly<Record<FieldKind, string>> = {
+  text: 'Texte',
+  number: 'Nombre',
+  integer: 'Nombre entier',
+  boolean: 'Oui / non',
+  date: 'Date',
+  choice: 'Liste de choix',
 };

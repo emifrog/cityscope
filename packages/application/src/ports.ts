@@ -30,6 +30,15 @@ import type {
   PlanCreate,
   PlanRevisionCreate,
   PlanUpdate,
+  Risk,
+  RiskCreate,
+  RiskType,
+  RiskTypeCreate,
+  RiskTypeUpdate,
+  RiskUpdate,
+  Zone,
+  ZoneCreate,
+  ZoneUpdate,
   MeResponse,
   Member,
   MemberInvite,
@@ -60,6 +69,8 @@ export interface RequestSession {
   readonly members: MemberRepository;
   readonly objects: OperationalObjectRepository;
   readonly plans: PlanRepository;
+  readonly zones: ZoneRepository;
+  readonly risks: RiskRepository;
   readonly jobs: JobScheduler;
   readonly audit: AuditRecorder;
 }
@@ -187,7 +198,36 @@ export interface PlanRepository {
   update(id: string, expectedVersion: number, patch: PlanUpdate): Promise<Plan | null>;
 }
 
-/** Operational objects of the sites (placed on the map; plans come with the ETARE editor). */
+/** Zones of the levels, drawn on level plans. */
+export interface ZoneRepository {
+  /** Null when the site is not visible. */
+  listBySite(siteId: string): Promise<Zone[] | null>;
+  get(id: string): Promise<Zone | null>;
+  /** Null when the site or the plan revision is not visible. */
+  create(siteId: string, input: ZoneCreate): Promise<Zone | null>;
+  update(id: string, expectedVersion: number, patch: ZoneUpdate): Promise<Zone | null>;
+}
+
+/** Risk catalogue (national and SIS entries) and risk occurrences of the sites. */
+export interface RiskRepository {
+  /** National types and those of the SIS; deprecated SIS types only when asked. */
+  types(options?: { includeDeprecated?: boolean }): Promise<RiskType[]>;
+  type(id: string): Promise<RiskType | null>;
+  createType(input: RiskTypeCreate & { properties_schema: Record<string, unknown> }): Promise<RiskType>;
+  updateType(
+    id: string,
+    expectedVersion: number,
+    patch: Omit<RiskTypeUpdate, 'fields'> & { properties_schema?: Record<string, unknown> },
+  ): Promise<RiskType | null>;
+  /** Null when the site is not visible. */
+  listBySite(siteId: string): Promise<Risk[] | null>;
+  get(id: string): Promise<Risk | null>;
+  /** Null when the site is not visible. */
+  create(siteId: string, input: RiskCreate & { severity: number }): Promise<Risk | null>;
+  update(id: string, expectedVersion: number, patch: RiskUpdate): Promise<Risk | null>;
+}
+
+/** Operational objects of the sites, placed on the map and/or on plans. */
 export interface OperationalObjectRepository {
   /** Catalogue visible in the SIS: global types and its own. */
   types(): Promise<ObjectType[]>;

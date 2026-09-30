@@ -7,7 +7,6 @@ import { useState } from 'react';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { PLAN_TYPE_LABELS, REJECTION_REASON_LABELS, SCAN_STATUS_LABELS } from '@/components/labels';
 import { BackgroundPicker } from '@/components/plan/background-picker';
-import { PlanViewer } from '@/components/plan/plan-viewer';
 import { api } from '@/lib/api-client';
 import type { UploadStep } from '@/lib/file-upload';
 import type { PlanBackground } from '@/lib/plan-image';
@@ -21,6 +20,7 @@ import {
   useSiteFileUpload,
   useSitePlans,
 } from '@/lib/queries';
+import { PlanWorkspace } from './plan-workspace';
 
 const dateFormat = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeZone: 'Europe/Paris' });
 
@@ -153,8 +153,11 @@ function ImportForm({
   );
 }
 
+/** Items placed on a plan: their positions leave the current background when it is replaced. */
+const PLAN_ITEMS = ['objects', 'zones', 'risks'] as const;
+
 function ReplaceBackgroundForm({ siteId, plan, onDone }: { siteId: string; plan: Plan; onDone: () => void }) {
-  const upload = useSiteFileUpload<PlanUploadResponse>(siteId, 'plans');
+  const upload = useSiteFileUpload<PlanUploadResponse>(siteId, 'plans', PLAN_ITEMS);
   const [background, setBackground] = useState<PlanBackground | null>(null);
 
   async function submit() {
@@ -272,12 +275,14 @@ function PlanView({ siteId, plan, canWrite }: { siteId: string; plan: Plan; canW
       ) : null}
       {image.error ? <ApiErrorAlert error={image.error} /> : null}
       {clean && revision && image.data && catalog.data ? (
-        <PlanViewer
+        <PlanWorkspace
           key={revision.id}
-          catalog={catalog.data}
+          siteId={siteId}
+          plan={plan}
           revision={revision}
+          catalog={catalog.data}
           imageUrl={image.data.url}
-          label={`Plan ${plan.title}`}
+          canWrite={canWrite}
         />
       ) : clean ? (
         <LoadingCard lines={6} />
@@ -315,7 +320,7 @@ export function PlansPanel({ siteId }: { siteId: string }) {
   ].filter((group) => group.items.length > 0);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
+    <div className="grid gap-4 lg:grid-cols-[15rem_minmax(0,1fr)]">
       <aside className="space-y-3">
         {canWrite && !importing ? (
           <Button className="w-full" onClick={() => setImporting(true)}>

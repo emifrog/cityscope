@@ -1,5 +1,4 @@
 import type {
-  ExteriorGeometry,
   MapFeaturesQuery,
   MapFeaturesResponse,
   ObjectType,
@@ -13,16 +12,26 @@ import { found, inTenant } from './use-cases';
 
 const GEOMETRY_LABELS = { point: 'un point', line: 'une ligne', polygon: 'une surface' } as const;
 
-/** The drawn geometry and the properties must follow the object type (PostgreSQL re-checks the geometry). */
-function checkAgainstType(
-  type: ObjectType,
-  geometry: ExteriorGeometry | undefined,
-  properties: Readonly<Record<string, unknown>> | undefined,
-): void {
-  if (geometry && !geometryMatchesKind(geometry.type, type.geometry_kind)) {
-    throw new InvalidInput(`« ${type.name} » se place comme ${GEOMETRY_LABELS[type.geometry_kind]}.`, [
-      { path: 'geometry', message: `Géométrie attendue : ${GEOMETRY_LABELS[type.geometry_kind]}.` },
-    ]);
+interface Drawn {
+  readonly geometry?: { readonly type: string } | undefined;
+  readonly plan_position?: { readonly geometry: { readonly type: string } } | null | undefined;
+  readonly properties?: Readonly<Record<string, unknown>> | undefined;
+}
+
+/**
+ * The geometries drawn on the map and on a plan, and the properties, must
+ * follow the object type (PostgreSQL re-checks the geometries).
+ */
+function checkAgainstType(type: ObjectType, { geometry, plan_position: onPlan, properties }: Drawn): void {
+  for (const [path, drawn] of [
+    ['geometry', geometry],
+    ['plan_position.geometry', onPlan?.geometry],
+  ] as const) {
+    if (drawn && !geometryMatchesKind(drawn.type, type.geometry_kind)) {
+      throw new InvalidInput(`« ${type.name} » se place comme ${GEOMETRY_LABELS[type.geometry_kind]}.`, [
+        { path, message: `Géométrie attendue : ${GEOMETRY_LABELS[type.geometry_kind]}.` },
+      ]);
+    }
   }
   if (properties) {
     const issues = validateObjectProperties(type.properties_schema, properties);
@@ -55,7 +64,7 @@ export async function createSiteObject(
     if (!type) {
       throw new InvalidInput('Type d’objet inconnu.', [{ path: 'object_type_id', message: 'Type d’objet inconnu.' }]);
     }
-    checkAgainstType(type, input.geometry, input.properties);
+    checkAgainstType(type, input);
     return found(await session.objects.create(siteId, input), 'Site introuvable.');
   });
 }
@@ -69,9 +78,9 @@ export async function updateSiteObject(
 ): Promise<OperationalObject> {
   return inTenant(sessions, context, 'site:write', async (session) => {
     const current = found(await session.objects.get(id), 'Objet introuvable.');
-    if (patch.geometry || patch.properties) {
+    if (patch.geometry || patch.plan_position || patch.properties) {
       const type = found(await session.objects.type(current.object_type_id), 'Type d’objet introuvable.');
-      checkAgainstType(type, patch.geometry, patch.properties);
+      checkAgainstType(type, patch);
     }
     return found(await session.objects.update(id, expectedVersion, patch), 'Objet introuvable.');
   });

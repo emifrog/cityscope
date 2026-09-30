@@ -30,6 +30,10 @@ export const queryKeys = {
   site: (tenantId: string, id: string) => ['tenant', tenantId, 'site', id] as const,
   siteRecords: (tenantId: string, id: string, kind: string) => ['tenant', tenantId, 'site', id, kind] as const,
   members: (tenantId: string) => ['tenant', tenantId, 'members'] as const,
+  riskTypes: (tenantId: string, includeDeprecated?: boolean) =>
+    includeDeprecated === undefined
+      ? (['tenant', tenantId, 'risk-types'] as const)
+      : (['tenant', tenantId, 'risk-types', includeDeprecated] as const),
 };
 
 export type SiteFilters = Pick<SiteListQuery, 'q' | 'site_type' | 'status' | 'city'>;
@@ -149,6 +153,20 @@ export function useSiteObjects(siteId: string | null) {
   });
 }
 
+export const useSiteZones = (siteId: string) => useSiteList(siteId, 'zones', api.listSiteZones);
+export const useSiteRisks = (siteId: string) => useSiteList(siteId, 'risks', api.listSiteRisks);
+
+/** Risk catalogue of the active SIS; retired SIS types only for the catalogue screen. */
+export function useRiskTypes(includeDeprecated = false) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.riskTypes(tenantId ?? 'none', includeDeprecated),
+    enabled,
+    staleTime: 5 * 60_000,
+    queryFn: ({ signal }) => api.listRiskTypes({ ...options, signal }, includeDeprecated),
+  });
+}
+
 /** Catalogue of operational object types of the active SIS (rarely changes). */
 export function useObjectTypes() {
   const { tenantId, options, enabled } = useApiContext();
@@ -252,9 +270,14 @@ export type DocumentUploadVariables = UploadVariables<DocumentUploadResponse>;
 /**
  * Uploads a file of a site (document version, plan background) and exposes
  * the current step. The records are refreshed even on failure: the
- * declaration may already exist when the transfer itself fails.
+ * declaration may already exist when the transfer itself fails. `related`:
+ * other records the upload changes (a new background supersedes positions).
  */
-export function useSiteFileUpload<T extends { readonly upload: UploadTicket }>(siteId: string, kind: string) {
+export function useSiteFileUpload<T extends { readonly upload: UploadTicket }>(
+  siteId: string,
+  kind: string,
+  related: readonly string[] = [],
+) {
   const { tenantId, options } = useApiContext();
   const queryClient = useQueryClient();
   const [step, setStep] = useState<UploadStep | null>(null);
@@ -262,7 +285,11 @@ export function useSiteFileUpload<T extends { readonly upload: UploadTicket }>(s
     mutationFn: ({ file, declare }: UploadVariables<T>) => uploadFile(options, file, declare, setStep),
     onSettled: async () => {
       setStep(null);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.siteRecords(tenantId ?? 'none', siteId, kind) });
+      await Promise.all(
+        [kind, ...related].map((records) =>
+          queryClient.invalidateQueries({ queryKey: queryKeys.siteRecords(tenantId ?? 'none', siteId, records) }),
+        ),
+      );
     },
   });
   return { ...mutation, step };
