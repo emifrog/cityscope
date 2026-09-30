@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "pnpm --filter @etare/web dev",
     "dev:worker": "pnpm --filter @etare/worker dev",
+    "dev:integration": "tsx scripts/with-env.ts .env.integration -- pnpm --filter @etare/web dev",
     "build": "pnpm -r --if-present run build",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc -p tsconfig.json && pnpm -r --if-present run typecheck",
@@ -25,7 +26,9 @@
     "db:status": "supabase status",
     "contracts:generate": "tsx scripts/generate-openapi.ts",
     "contracts:check": "tsx scripts/generate-openapi.ts --check",
-    "setup:local": "tsx scripts/setup-local.ts"
+    "setup:local": "tsx scripts/setup-local.ts",
+    "integration": "tsx scripts/integration.ts",
+    "db:push:integration": "supabase db push --linked"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",

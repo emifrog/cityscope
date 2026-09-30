@@ -10,7 +10,7 @@ export default defineConfig({
         test: {
           name: 'node',
           environment: 'node',
-          include: ['packages/*/src/**/*.test.ts', 'services/*/src/**/*.test.ts'],
+          include: ['packages/*/src/**/*.test.ts', 'services/*/src/**/*.test.ts', 'scripts/**/*.test.ts'],
         },
       },
       {

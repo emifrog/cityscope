@@ -46,6 +46,16 @@ révèlent rien). Tests : `supabase/tests/database/10_tenant_isolation.test.sql`
   explicitement (vérifié par test).
 - Les identifiants de connexion locaux de `supabase/seed.sql` ne valent que pour la stack locale ; en
   environnement partagé, les mots de passe sont posés hors migrations et injectés depuis un coffre.
+- Délais côté serveur portés par les rôles (`statement_timeout`, `idle_in_transaction_session_timeout`,
+  `lock_timeout`) : ils s’appliquent quel que soit le pooler de connexions.
+
+## Environnement d’intégration
+
+Projet Supabase hébergé partagé (procédure : `docs/development.md`). Données fictives uniquement ; seed
+interdit ; inscriptions désactivées et TOTP activé à la main (le `config.toml` ne s’y applique pas) ;
+mots de passe des rôles générés aléatoirement par `pnpm integration roles` et transmis en empreinte
+SCRAM ; URL d’administration jamais écrite sur disque ; configuration dans `.env.integration`, ignoré par
+Git. Les tests automatisés et `pnpm setup:local` refusent de viser ce projet.
 
 ## Clés Supabase
 

@@ -39,6 +39,8 @@ Détails, dépannage, mobile et worker : [`docs/development.md`](docs/developmen
 | `pnpm db:reset`                   | rejoue toutes les migrations et le seed                                 |
 | `pnpm build`                      | build de production du web et du worker                                 |
 | `pnpm dev:worker`                 | worker asynchrone en mode développement                                 |
+| `pnpm dev:integration`            | web + API locaux contre l’environnement d’intégration partagé           |
+| `pnpm integration check`          | vérifie l’environnement d’intégration (voir `docs/development.md`)      |
 | `pnpm contracts:generate`         | régénère `packages/contracts/openapi.json`                              |
 | `flutter analyze && flutter test` | dans `apps/mobile`                                                      |
 

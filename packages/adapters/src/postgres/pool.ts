@@ -9,7 +9,12 @@ export interface PoolOptions {
   readonly max?: number;
 }
 
-/** Bounded pool: timeouts protect the database from slow or stuck requests. */
+/**
+ * Bounded pool. Server-side timeouts (statement, idle transaction, lock) are
+ * set on the database roles themselves (migration 20260930120000), not sent as
+ * startup parameters, so that they also apply behind a connection pooler.
+ * The client keeps its own query timeout as a last resort.
+ */
 export function createPool(options: PoolOptions): pg.Pool {
   return new pg.Pool({
     connectionString: options.connectionString,
@@ -17,7 +22,6 @@ export function createPool(options: PoolOptions): pg.Pool {
     max: options.max ?? 10,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 5_000,
-    statement_timeout: 5_000,
     query_timeout: 10_000,
   });
 }

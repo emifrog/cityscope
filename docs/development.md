@@ -88,6 +88,87 @@ flutter build apk --debug
 L’APK est créé dans `apps/mobile/build/app/outputs/flutter-apk/app-debug.apk`. Sans les paramètres
 `--dart-define` de connexion, il compile mais affiche l’écran de configuration manquante au démarrage.
 
+## Environnement d’intégration partagé
+
+Projet Supabase hébergé, commun à l’équipe, pour tester l’application hors du poste de développement.
+Le développement quotidien, les tests automatisés et la CI restent sur la stack locale.
+
+Règles :
+
+- **données fictives uniquement** tant que la région et le mode d’hébergement ne sont pas validés avec
+  le SIS (architecture §33) ;
+- **le seed ne s’exécute jamais sur ce projet** (il pose des mots de passe publics) : jamais
+  `supabase db push --include-seed`, jamais `supabase db reset --linked` ;
+- configuration dans `.env.integration` (ignoré par Git, modèle : `.env.integration.example`) ;
+  `.env.local` reste réservé à la stack locale ;
+- les tests d’intégration automatisés refusent de viser ce projet (garde-fou dans `tests/integration`).
+
+### 1. Réglages du projet (tableau de bord Supabase, une fois)
+
+Le `supabase/config.toml` ne s’applique qu’en local : reporter ces réglages à la main.
+
+- Authentication → Sign In / Providers : **désactiver les inscriptions** (« Allow new users to sign
+  up »), garder le fournisseur e-mail actif, mots de passe ≥ 12 caractères avec lettres minuscules,
+  majuscules, chiffres et symboles.
+- Authentication → Multi-Factor : activer **TOTP**.
+- Authentication → URL Configuration : Site URL `http://127.0.0.1:3000` (tant que l’intégration est
+  utilisée depuis un poste de développement).
+- JWT Keys : clés **asymétriques** (ES256 ; c’est déjà le cas).
+- Data API : schémas exposés `public` et `graphql_public` seulement ; **ne jamais exposer `app`**.
+
+### 2. Appliquer les migrations (sans le seed)
+
+```bash
+pnpm exec supabase login
+pnpm exec supabase link --project-ref <project-ref>
+pnpm exec supabase db push --linked --dry-run
+pnpm db:push:integration
+```
+
+### 3. Mots de passe des rôles applicatifs
+
+Récupérer l’URL « Session pooler » (bouton **Connect** du tableau de bord, utilisateur
+`postgres.<project-ref>`) et le certificat CA du projet (Database → Settings → SSL), rangé **hors du
+dépôt**. Définir l’URL d’administration **dans le terminal uniquement** (jamais dans un fichier), puis :
+
+```bash
+export INTEGRATION_ADMIN_DATABASE_URL='postgresql://postgres.<project-ref>:<mot-de-passe>@<hôte-pooler>:5432/postgres?sslmode=verify-full&sslrootcert=<chemin>/prod-ca-2021.crt'
+pnpm integration roles
+```
+
+En PowerShell : `$env:INTEGRATION_ADMIN_DATABASE_URL = '…'`. La commande génère des mots de passe
+aléatoires pour `etare_api` et `etare_worker`, les envoie sous forme d’empreinte SCRAM (le mot de passe
+en clair ne quitte pas le poste), vérifie la connexion et écrit `DATABASE_URL` / `WORKER_DATABASE_URL`
+dans `.env.integration`. Rien n’est affiché. Relancer la commande fait tourner les mots de passe.
+Fermer le terminal ensuite.
+
+### 4. SIS et comptes de test
+
+Créer les comptes (adresses fictives ou de l’équipe) dans Authentication → Users (« Add user » ou
+« Invite »), puis les rattacher :
+
+```bash
+pnpm integration tenant --slug sdis-integration-06 --name "SDIS INTÉGRATION 06"
+pnpm integration grant --email prenom.nom@exemple.fr --tenant sdis-integration-06 --role PREVISION_EDITOR
+pnpm integration grant --email autre@exemple.fr --tenant sdis-integration-06 --role EXPLOITANT --site <uuid-du-site>
+pnpm integration members
+```
+
+Rôles possibles : `SIS_ADMIN`, `PREVISION_EDITOR`, `PREVISION_VALIDATOR`, `OPS_USER`, `EXPLOITANT`,
+`READER` (`SUPER_ADMIN` n’est jamais lié à un SIS). Cet outil sera remplacé par l’écran
+d’administration (Sprint 4).
+
+### 5. Vérifier et utiliser
+
+```bash
+pnpm integration check     # schéma, migrations, rôles, absence de données de démo, .env.integration
+pnpm dev:integration       # web + API locaux contre le projet d’intégration
+```
+
+`pnpm integration check` échoue si des données du seed local sont présentes : dans ce cas, relancer
+`pnpm integration roles` (les mots de passe publics ne valent plus rien) et supprimer les comptes
+`@demo.etare.test` depuis le tableau de bord.
+
 ## Dépannage
 
 | Symptôme                                                  | Cause / solution                                                                   |

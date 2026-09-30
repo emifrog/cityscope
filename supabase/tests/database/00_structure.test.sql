@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = extensions, public;
 
-select plan(14);
+select plan(15);
 
 select has_extension('postgis', 'PostGIS is installed');
 
@@ -76,6 +76,19 @@ select set_eq(
 select ok(
   (select not public from storage.buckets where id = 'etare-assets'),
   'the document bucket is private'
+);
+
+select set_eq(
+  $$ select r.rolname::text || ':' || split_part(s.setting, '=', 1)
+     from pg_db_role_setting d
+     join pg_roles r on r.oid = d.setrole
+     cross join unnest(d.setconfig) as s (setting)
+     where d.setdatabase = 0 and r.rolname in ('etare_api', 'etare_worker') $$,
+  array[
+    'etare_api:statement_timeout', 'etare_api:idle_in_transaction_session_timeout', 'etare_api:lock_timeout',
+    'etare_worker:statement_timeout', 'etare_worker:idle_in_transaction_session_timeout', 'etare_worker:lock_timeout'
+  ],
+  'application roles carry server-side timeouts (independent of the connection pooler)'
 );
 
 select * from finish();

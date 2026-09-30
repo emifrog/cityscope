@@ -2,7 +2,8 @@ import { z } from 'zod';
 
 export type Env = Readonly<Record<string, string | undefined>>;
 
-const APP_ENVS = ['development', 'test', 'staging', 'production'] as const;
+// Distinct environments with their own database, buckets and keys (architecture §26).
+const APP_ENVS = ['development', 'test', 'integration', 'staging', 'production'] as const;
 export type AppEnv = (typeof APP_ENVS)[number];
 
 /**
