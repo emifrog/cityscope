@@ -9,7 +9,8 @@
     "./logging": "./src/logging/logger.ts",
     "./auth": "./src/auth/token-verifier.ts",
     "./storage": "./src/storage/supabase-object-storage.ts",
-    "./cartography": "./src/cartography/ign.ts"
+    "./cartography": "./src/cartography/ign.ts",
+    "./pdf": "./src/pdf/etare-pdf.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"
@@ -22,6 +23,7 @@
     "@etare/schemas": "workspace:*",
     "@supabase/supabase-js": "2.117.2",
     "jose": "6.2.12",
+    "pdf-lib": "1.17.1",
     "pg": "8.23.0",
     "zod": "4.6.5"
   },

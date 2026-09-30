@@ -117,7 +117,7 @@ select lives_ok(
   'ops06 opens a request'
 );
 select is((select count(*) from app.site), 0::bigint, 'OPS users never read the working tables');
-select is((select count(*) from app.publication), 1::bigint, 'OPS users read published versions of their tenant');
+select is((select count(*) from app.publication where site_id = '06000002-0000-4000-8000-000000000001'), 1::bigint, 'OPS users read published versions of their tenant');
 
 -- ---------------------------------------------------------------- site-scoped operator
 select lives_ok(

@@ -43,6 +43,10 @@ révèlent rien). Tests : `supabase/tests/database/10_tenant_isolation.test.sql`
 - **Catalogue des risques** (ADR-012) : `catalog:manage` (administrateur du SIS) ajoute ou retire des
   types propres au SIS ; le catalogue national reste en lecture seule (RLS, refus explicite) et ses codes
   sont réservés. Les champs sont déclarés par une liste typée, jamais par un schéma libre.
+- **Workflow ETARE** (ADR-013) : décision et publication exigent le second facteur ; le validateur ne peut
+  être ni l’auteur, ni le soumetteur, ni un contributeur ; il décide sur l’empreinte exacte relue. Le
+  worker fabrique la publication par des fonctions réservées à `etare_worker`, filtrées par SIS, à partir
+  du seul contenu figé. Le PDF (ADR-014) se télécharge par URL signée de 60 s, accès tracé.
 
 ## Accès à la base
 

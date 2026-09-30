@@ -392,6 +392,9 @@ export const api = {
       body: input,
     }),
 
+  getPublicationPdf: (options: ApiCallOptions, id: string): Promise<AssetDownload> =>
+    call(endpoints.getPublicationPdf.response, pathOf(endpoints.getPublicationPdf.path, { id }), options),
+
   publishRevision: (options: ApiCallOptions, id: string): Promise<EtareRevision> =>
     call(endpoints.publishRevision.response, pathOf(endpoints.publishRevision.path, { id }), options, {
       method: 'POST',

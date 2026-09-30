@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { hostname } from 'node:os';
 import { antivirusNotConfigured } from '@etare/application';
 import { createLogger } from '@etare/adapters/logging';
+import { PdfLibEtareRenderer } from '@etare/adapters/pdf';
 import {
   PostgresAssetVerificationStore,
   PostgresJobQueue,
@@ -23,25 +24,28 @@ const pool = createPool({
 });
 
 const sha256 = async (content: Uint8Array | string) => createHash('sha256').update(content).digest('hex');
+const objects = env.storage ? SupabaseObjectStorage.fromSecretKey(env.storage.url, env.storage.secretKey) : null;
 const registry = new HandlerRegistry([
   noopHandler,
   publicationBuildHandler({
     store: new PostgresPublicationBuildStore(pool),
     tools: { sha256, byteLength: (text) => Buffer.byteLength(text, 'utf8'), now: () => new Date() },
+    // Without storage, publications are built without their PDF (said at startup).
+    artifacts: objects ? { renderer: new PdfLibEtareRenderer(), objects, sha256Bytes: sha256 } : null,
   }),
 ]);
-if (env.storage) {
+if (objects) {
   registry.register(
     assetVerificationHandler({
       store: new PostgresAssetVerificationStore(pool),
-      objects: SupabaseObjectStorage.fromSecretKey(env.storage.url, env.storage.secretKey),
+      objects,
       scanner: antivirusNotConfigured,
       sha256,
     }),
   );
   logger.warn('antivirus engine not configured: files are checked for size, SHA-256 and real type only');
 } else {
-  logger.warn('object storage not configured: file verification jobs are not handled by this worker');
+  logger.warn('object storage not configured: no file verification, publications are built without their PDF');
 }
 
 const worker = createWorker({

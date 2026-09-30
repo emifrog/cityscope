@@ -6,6 +6,7 @@ import {
   verifyAsset,
   type BuildTools,
   type Job,
+  type PublicationArtifacts,
   type PublicationBuildStore,
   type VerificationDependencies,
 } from '@etare/application';
@@ -114,14 +115,25 @@ export function assetVerificationHandler(deps: VerificationDependencies): JobHan
  * payload, manifest and SHA-256, then activation (a newer publication is
  * never replaced). The working tables are never read (architecture §09).
  */
-export function publicationBuildHandler(deps: { store: PublicationBuildStore; tools: BuildTools }): JobHandler {
+export function publicationBuildHandler(deps: {
+  store: PublicationBuildStore;
+  tools: BuildTools;
+  /** The ETARE PDF is produced when object storage is available. */
+  artifacts?: PublicationArtifacts | null;
+}): JobHandler {
   return defineHandler({
     type: PUBLICATION_BUILD_JOB,
     payloadVersion: 1,
     payload: z.object({ publication_id: z.uuid() }),
     async handle(payload, { job, logger }) {
       if (!job.tenantId) throw new PermanentJobError('TENANT_REQUIRED');
-      const outcome = await buildPublication(deps.store, deps.tools, payload.publication_id, job.tenantId);
+      const outcome = await buildPublication(
+        deps.store,
+        deps.tools,
+        payload.publication_id,
+        job.tenantId,
+        deps.artifacts ?? null,
+      );
       logger.info('publication build', { publication_id: payload.publication_id, outcome });
     },
   });

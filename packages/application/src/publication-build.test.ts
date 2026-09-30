@@ -3,7 +3,11 @@ import { canonicalJson } from '@etare/domain';
 import { describe, expect, it, vi } from 'vitest';
 import { PermanentJobError } from './jobs';
 import {
+  PDF_FILE,
   buildPublication,
+  generateEtarePdf,
+  publicationPdfKey,
+  type PublicationArtifacts,
   buildPublicationContent,
   type BuildTools,
   type PublicationBuildStore,
@@ -132,10 +136,75 @@ describe('publication job', () => {
       start: vi.fn().mockResolvedValueOnce(altered).mockResolvedValueOnce(null),
       complete: vi.fn(),
       fail: vi.fn().mockResolvedValue(true),
+      assetFiles: vi.fn(),
     };
     await expect(buildPublication(store, tools, altered.id, altered.tenantId)).rejects.toThrow('SNAPSHOT_INVALID');
     expect(store.fail).toHaveBeenCalledWith(altered.id, 'SNAPSHOT_INVALID');
     expect(await buildPublication(store, tools, altered.id, altered.tenantId)).toBe('already_built');
     expect(store.complete).not.toHaveBeenCalled();
+  });
+});
+
+describe('ETARE PDF', () => {
+  const background = snapshot.plans[0]?.background;
+  const pngBytes = new Uint8Array([137, 80, 78, 71]);
+  const bytesHash = async (content: Uint8Array) => fakeHash(String.fromCharCode(...content));
+
+  const setup = (stored: Uint8Array) => {
+    const objects = { download: vi.fn().mockResolvedValue(stored), upload: vi.fn(), copy: vi.fn(), remove: vi.fn() };
+    const store: PublicationBuildStore = {
+      start: vi.fn(),
+      complete: vi.fn(),
+      fail: vi.fn(),
+      assetFiles: vi
+        .fn()
+        .mockResolvedValue([
+          { id: background?.asset.id, storageKey: 'tenants/t/assets/a/b', sha256: 'x', mimeType: 'image/png' },
+        ]),
+    };
+    const artifacts: PublicationArtifacts = {
+      renderer: {
+        templateVersion: 'etare-pdf/test',
+        render: vi.fn().mockResolvedValue(new Uint8Array([37, 80, 68, 70])),
+      },
+      objects,
+      sha256Bytes: bytesHash,
+    };
+    return { objects, store, artifacts };
+  };
+
+  it('draws the checked plan backgrounds, stores the PDF and lists it in the manifest', async () => {
+    const expected = await bytesHash(pngBytes);
+    const withHash = {
+      ...snapshot,
+      plans: snapshot.plans.map((plan) => ({
+        ...plan,
+        background: { ...plan.background, asset: { ...plan.background.asset, sha256: expected } },
+      })),
+    };
+    const publication = { ...(await toBuild(withHash)), contentHash: await tools.sha256(canonicalJson(withHash)) };
+    const { objects, store, artifacts } = setup(pngBytes);
+    const generated = await generateEtarePdf(store, artifacts, publication, withHash, new Date('2026-09-30T12:00:00Z'));
+    expect(generated.file).toMatchObject({
+      path: PDF_FILE,
+      media_type: 'application/pdf',
+      required: true,
+      size_bytes: 4,
+    });
+    expect(objects.upload).toHaveBeenCalledWith(
+      publicationPdfKey(publication.tenantId, publication.id),
+      expect.any(Uint8Array),
+      'application/pdf',
+      { upsert: true },
+    );
+    const input = vi.mocked(artifacts.renderer.render).mock.calls[0]?.[0];
+    expect([...(input?.planImages.keys() ?? [])]).toEqual([background?.revision_id]);
+  });
+
+  it('stops when a stored background is not the approved one', async () => {
+    const { store, artifacts } = setup(new Uint8Array([1, 2, 3]));
+    await expect(generateEtarePdf(store, artifacts, await toBuild(), snapshot, new Date())).rejects.toThrow(
+      'PLAN_BACKGROUND_HASH_MISMATCH',
+    );
   });
 });

@@ -21,6 +21,7 @@ import {
   getRevision,
   getSiteEtare,
   getMe,
+  getPublicationPdf,
   getMapCatalog,
   getSite,
   inviteMember,
@@ -535,6 +536,12 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     const context = await requestContext(c, endpoints.decideRevision);
     const input = await readBody(c, endpoints.decideRevision.body);
     return respond(c, endpoints.decideRevision, await decideRevision(deps.sessions, context, idOf(c), input));
+  });
+
+  app.get(routerPath(endpoints.getPublicationPdf.path), async (c) => {
+    const context = await requestContext(c, endpoints.getPublicationPdf);
+    const pdf = await getPublicationPdf({ sessions: deps.sessions, storage: deps.storage }, context, idOf(c));
+    return respond(c, endpoints.getPublicationPdf, pdf);
   });
 
   app.post(routerPath(endpoints.publishRevision.path), async (c) => {

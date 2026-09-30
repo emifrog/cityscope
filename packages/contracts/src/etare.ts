@@ -220,6 +220,8 @@ export const publicationSummarySchema = z
     published_at: isoDateTimeSchema.nullable(),
     failure_code: z.string().nullable(),
     manifest_hash: z.string().nullable(),
+    /** The ETARE PDF generated with the publication (ETARE-02). */
+    has_pdf: z.boolean(),
   })
   .meta({ id: 'PublicationSummary' });
 export type PublicationSummary = z.infer<typeof publicationSummarySchema>;

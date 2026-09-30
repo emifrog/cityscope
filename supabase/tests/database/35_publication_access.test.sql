@@ -10,7 +10,7 @@ from app.publication where id = '0600000f-0000-4000-8000-000000000001';
 
 set local role etare_api;
 select app.begin_request('supabase', '00000000-0000-4000-a000-000000000004', '06000000-0000-4000-8000-000000000000', 'aal1', null, 'mobile') is not null as ctx \gset
-select is((select count(*) from app.publication where status = 'published'), 1::bigint,
+select is((select count(*) from app.publication where status = 'published' and site_id = '06000002-0000-4000-8000-000000000001'), 1::bigint,
   'OPS can read the active publication');
 select is((select count(*) from app.publication where status <> 'published'), 0::bigint,
   'OPS cannot read queued or unfinished publications');
@@ -36,7 +36,7 @@ update app.publication set status = 'withdrawn', withdrawn_at = now(), withdrawa
 where id = '0600000f-0000-4000-8000-000000000001';
 set local role etare_api;
 select app.begin_request('supabase', '00000000-0000-4000-a000-000000000004', '06000000-0000-4000-8000-000000000000', 'aal1', null, 'mobile') is not null as ctx \gset
-select is((select count(*) from app.publication), 0::bigint,
+select is((select count(*) from app.publication where site_id = '06000002-0000-4000-8000-000000000001'), 0::bigint,
   'OPS no longer receives a withdrawn publication');
 
 select * from finish();

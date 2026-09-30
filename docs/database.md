@@ -25,6 +25,7 @@ pas exposé par la Data API Supabase (`supabase/config.toml` → `api.schemas`),
 | `20261002000100_operational_object_geometry.sql`  | Sprint 2 : objet toujours placé (carte ou plan), géométrie conforme au type (point, ligne, surface), propriétés typées des types clés (PEI, réserve, portail, voie engins…)        |
 | `20261003000100_plan_placement_and_risks.sql`     | Sprint 3 : placement sur plan (fond courant, dans l’image, niveau du plan, zone déduite), portée zone ⊂ niveau ⊂ bâtiment, champs et libellé des risques, codes nationaux réservés |
 | `20261003000200_etare_workflow.sql`               | Sprint 3 : `member_name` (noms des membres du SIS pour le workflow), fabrication des publications par le worker (`worker_start/complete/fail_publication`)                         |
+| `20261003000300_publication_pdf.sql`              | Sprint 3 : `worker_publication_assets` (clés de stockage des fonds de plans contrôlés d’une publication, pour le PDF)                                                              |
 
 ## Correspondance avec les documents de cadrage
 

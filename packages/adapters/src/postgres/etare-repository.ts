@@ -1,4 +1,4 @@
-import type { EtareRepository, RevisionRecord } from '@etare/application';
+import type { EtareRepository, PublicationRecord, RevisionRecord } from '@etare/application';
 import {
   etareDossierSchema,
   etareRevisionSchema,
@@ -18,7 +18,11 @@ const person = (column: string) =>
   `case when ${column} is null then null
    else json_build_object('id', ${column}, 'name', coalesce(app.member_name(${column}), 'Ancien membre')) end`;
 
-const PUBLICATION_COLUMNS = `p.id, p.publication_number, p.status, p.requested_at, p.published_at, p.failure_code, p.manifest_hash`;
+/** The PDF is listed in the manifest by the worker (ETARE-02). */
+const HAS_PDF = `coalesce(p.manifest -> 'files' @> '[{"path": "etare.pdf"}]'::jsonb, false)`;
+
+const PUBLICATION_COLUMNS = `p.id, p.publication_number, p.status, p.requested_at, p.published_at, p.failure_code, p.manifest_hash,
+  ${HAS_PDF} as has_pdf`;
 
 const REVISION_SELECT = `
   select r.id, r.site_id, r.revision_no, r.status, r.change_summary, r.content_hash,
@@ -30,7 +34,8 @@ const REVISION_SELECT = `
             from app.approval a where a.revision_id = r.id order by a.created_at desc limit 1) as decision,
          (select json_build_object('id', p.id, 'publication_number', p.publication_number, 'status', p.status,
                                    'requested_at', p.requested_at, 'published_at', p.published_at,
-                                   'failure_code', p.failure_code, 'manifest_hash', p.manifest_hash)
+                                   'failure_code', p.failure_code, 'manifest_hash', p.manifest_hash,
+                                   'has_pdf', ${HAS_PDF})
             from app.publication p where p.revision_id = r.id order by p.publication_number desc limit 1) as publication,
          r.row_version
   from app.etare_revision r
@@ -59,6 +64,7 @@ interface PublicationRow {
   published_at: Date | null;
   failure_code: string | null;
   manifest_hash: string | null;
+  has_pdf: boolean;
 }
 
 export class PostgresEtareRepository implements EtareRepository {
@@ -249,6 +255,36 @@ export class PostgresEtareRepository implements EtareRepository {
     const approvalId = approval.rows[0]?.id;
     if (!approvalId) throw new Error('Approval not recorded.');
     return approvalId;
+  }
+
+  async publication(id: string): Promise<PublicationRecord | null> {
+    const { rows } = await this.client.query<{
+      tenant_id: string;
+      site_id: string;
+      site_name: string;
+      etare_number: string | null;
+      publication_number: number;
+      has_pdf: boolean;
+    }>(
+      // Names come from the published content itself: OPS profiles never read the working tables.
+      `select p.tenant_id, p.site_id, coalesce(p.payload #>> '{data,site,name}', 'site') as site_name,
+              p.payload #>> '{data,site,etare_number}' as etare_number, p.publication_number, ${HAS_PDF} as has_pdf
+       from app.publication p
+       where p.id = $1 and p.tenant_id = app.current_tenant_id()`,
+      [id],
+    );
+    const row = rows[0];
+    return row
+      ? {
+          id,
+          tenantId: row.tenant_id,
+          siteId: row.site_id,
+          siteName: row.site_name,
+          etareNumber: row.etare_number,
+          publicationNumber: row.publication_number,
+          hasPdf: row.has_pdf,
+        }
+      : null;
   }
 
   async approvalOf(revisionId: string): Promise<string | null> {

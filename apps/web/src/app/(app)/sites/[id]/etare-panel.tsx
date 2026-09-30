@@ -17,6 +17,7 @@ import {
 import Link from 'next/link';
 import { useState } from 'react';
 import { EtareDocument } from '@/components/etare/etare-document';
+import { PublicationPdfButton } from '@/components/etare/publication-pdf-button';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { PUBLICATION_STATUS_LABELS, REVISION_STATUS_LABELS } from '@/components/labels';
 import { api } from '@/lib/api-client';
@@ -235,6 +236,11 @@ export function EtarePanel({ siteId }: { siteId: string }) {
             ) : (
               <p className="text-sm text-muted">Aucune version publiée : rien n’est encore diffusé sur le terrain.</p>
             )}
+            {active?.has_pdf ? (
+              <div className="mt-3">
+                <PublicationPdfButton publicationId={active.id} number={active.publication_number} />
+              </div>
+            ) : null}
           </CardContent>
         </Card>
         <Card>

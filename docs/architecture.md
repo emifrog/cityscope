@@ -85,8 +85,8 @@ les objets acceptent aussi une position sur plan (`plan_position`), voir ADR-012
 (`GET /etare` : dossiers du SIS ; `GET /sites/{id}/etare`, `GET /sites/{id}/etare/preview` : contrôles
 et aperçu ; `POST /sites/{id}/etare/revisions` ; `POST /etare-revisions/{id}/submit` ;
 `GET /validations` ; `GET /etare-revisions/{id}` ; `POST /etare-revisions/{id}/decision` : validation
-ou correction motivée, second facteur ; `POST /etare-revisions/{id}/publication` : relance après échec),
-voir ADR-013.
+ou correction motivée, second facteur ; `POST /etare-revisions/{id}/publication` : relance après échec ;
+`GET /publications/{id}/pdf` : PDF de la version publiée, URL signée de 60 s), voir ADR-013 et ADR-014.
 Les emprises du site et des bâtiments (`footprint`, Polygon ou MultiPolygon) passent par
 `PATCH /sites/{id}`, `POST /sites/{id}/buildings` et `PATCH /buildings/{id}`.
 Les `PATCH` exigent
@@ -136,7 +136,8 @@ Boucle de réservation (`app.claim_jobs`, `FOR UPDATE SKIP LOCKED`), bail avec h
 exponentielle avec aléa, erreurs permanentes → état `dead`, arrêt propre sur SIGTERM. Les handlers
 valident leur payload avant tout effet et doivent être idempotents (livraison « au moins une fois »).
 Handlers : `system.noop`, `publication.build` (fabrication d’une publication à partir de la révision
-figée : charge utile, manifeste, empreintes, activation — ADR-013) et `asset.verify` (contrôle des
+figée : charge utile, manifeste, empreintes, PDF ETARE dessiné avec `pdf-lib`, activation — ADR-013,
+ADR-014) et `asset.verify` (contrôle des
 fichiers déposés, ADR-009), enregistré dès que `SUPABASE_URL` et `SUPABASE_SECRET_KEY` sont fournis. PDF, paquets hors ligne, miniatures, imports,
 notifications et empreintes s’ajouteront comme handlers. Voir ADR-007.
 

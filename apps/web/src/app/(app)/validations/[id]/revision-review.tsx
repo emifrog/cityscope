@@ -16,6 +16,7 @@ import {
 import Link from 'next/link';
 import { useState } from 'react';
 import { EtareDocument } from '@/components/etare/etare-document';
+import { PublicationPdfButton } from '@/components/etare/publication-pdf-button';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import {
   CHANGE_LABELS,
@@ -192,6 +193,12 @@ export function RevisionReview({ id }: { id: string }) {
                     <span className="font-medium">{PUBLICATION_STATUS_LABELS[revision.publication.status]}</span>
                     {revision.publication.published_at ? ` le ${when(revision.publication.published_at)}` : ''}.
                   </p>
+                ) : null}
+                {revision.publication?.has_pdf ? (
+                  <PublicationPdfButton
+                    publicationId={revision.publication.id}
+                    number={revision.publication.publication_number}
+                  />
                 ) : null}
               </CardContent>
             </Card>

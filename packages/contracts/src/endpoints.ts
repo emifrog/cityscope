@@ -681,6 +681,16 @@ export const endpoints = {
     successStatus: 200,
     response: etareRevisionSchema,
   }),
+  getPublicationPdf: tenantEndpoint({
+    operationId: 'getPublicationPdf',
+    method: 'get',
+    path: '/publications/{id}/pdf',
+    summary: 'PDF ETARE d’une version publiée : URL signée de 60 s, accès tracé',
+    tags: ['etare'],
+    params: idParamsSchema,
+    successStatus: 200,
+    response: assetDownloadSchema,
+  }),
   publishRevision: tenantEndpoint({
     operationId: 'publishRevision',
     method: 'post',

@@ -5,7 +5,14 @@
  * from the snapshot only, activation. Runs on a site created for the test.
  */
 import { createHash } from 'node:crypto';
-import { PostgresJobQueue, PostgresPublicationBuildStore, createLogger, createPool } from '@etare/adapters';
+import {
+  PdfLibEtareRenderer,
+  PostgresJobQueue,
+  PostgresPublicationBuildStore,
+  SupabaseObjectStorage,
+  createLogger,
+  createPool,
+} from '@etare/adapters';
 import { createApiApp, createApiDependencies } from '@etare/api';
 import { API_BASE_PATH, endpoints, type EtareRevision } from '@etare/contracts';
 import { canonicalJson } from '@etare/domain';
@@ -28,6 +35,11 @@ const worker = createWorker({
     publicationBuildHandler({
       store: new PostgresPublicationBuildStore(workerPool),
       tools: { sha256, byteLength: (text) => Buffer.byteLength(text, 'utf8'), now: () => new Date() },
+      artifacts: {
+        renderer: new PdfLibEtareRenderer(),
+        objects: SupabaseObjectStorage.fromSecretKey(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SECRET_KEY')),
+        sha256Bytes: sha256,
+      },
     }),
   ]),
   logger: createLogger({}, { write: () => undefined }),
@@ -59,17 +71,20 @@ let reader06: Call;
 let validator06: Call;
 let validatorWithMfa: Call;
 let editor83: Call;
+let ops06: Call;
 let validatorFactor: { token: string; factorId: string } | undefined;
 let siteId = '';
 
 beforeAll(async () => {
   await admin.connect();
-  const [editor, reader, validator, other] = await Promise.all([
+  const [editor, reader, validator, other, ops] = await Promise.all([
     signIn('redacteur06@demo.etare.test'),
     signIn('lecteur06@demo.etare.test'),
     signIn('validateur06@demo.etare.test'),
     signIn('redacteur83@demo.etare.test'),
+    signIn('ops06@demo.etare.test'),
   ]);
+  ops06 = as(ops, TENANT_06);
   editor06 = as(editor, TENANT_06);
   reader06 = as(reader, TENANT_06);
   validator06 = as(validator, TENANT_06);
@@ -194,6 +209,22 @@ describe('ETARE workflow', () => {
       sha256: await sha256(canonicalJson(row?.payload)),
     });
     expect((row?.payload as { data: unknown }).data).toEqual(detail.snapshot);
+
+    // The ETARE PDF is listed by hash, served by a short-lived URL, readable by OPS (published version).
+    expect(publication?.has_pdf).toBe(true);
+    const pdfEntry = row?.manifest.files.find((file) => file.path === 'etare.pdf');
+    expect(pdfEntry).toBeDefined();
+    const link = await ops06('GET', `/publications/${publication?.id}/pdf`);
+    expect(link.status).toBe(200);
+    const download = endpoints.getPublicationPdf.response.parse(await link.json());
+    expect(download).toMatchObject({
+      mime_type: 'application/pdf',
+      filename: expect.stringMatching(/^ETARE-.+-v1\.pdf$/),
+    });
+    const pdf = new Uint8Array(await (await fetch(download.url)).arrayBuffer());
+    expect(new TextDecoder().decode(pdf.slice(0, 5))).toBe('%PDF-');
+    expect(await sha256(pdf)).toBe(pdfEntry?.sha256);
+    expect((await editor83('GET', `/publications/${publication?.id}/pdf`)).status).toBe(404);
   });
 
   it('sends a revision back with a reason, then a new revision can start', async () => {

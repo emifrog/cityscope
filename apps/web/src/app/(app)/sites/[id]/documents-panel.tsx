@@ -17,6 +17,7 @@ import {
   SCAN_STATUS_LABELS,
 } from '@/components/labels';
 import { api } from '@/lib/api-client';
+import { openInNewTab } from '@/lib/open-link';
 import { UPLOAD_ACCEPT, type UploadStep } from '@/lib/file-upload';
 import {
   queryKeys,
@@ -68,13 +69,6 @@ type NewDocumentValues = z.infer<typeof newDocumentSchema>;
 type VersionValues = z.infer<typeof versionSchema>;
 
 /** Opens a short-lived URL without giving the new tab access to this page. */
-function openInNewTab(url: string) {
-  const link = window.document.createElement('a');
-  link.href = url;
-  link.target = '_blank';
-  link.rel = 'noopener noreferrer';
-  link.click();
-}
 
 /** File choice and upload progress shared by the "new document" and "new version" forms. */
 function useUploadForm(siteId: string) {

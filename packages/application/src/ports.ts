@@ -214,6 +214,16 @@ export interface RevisionRecord {
   readonly contributors: readonly { readonly id: string; readonly name: string }[];
 }
 
+export interface PublicationRecord {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly siteId: string;
+  readonly siteName: string;
+  readonly etareNumber: string | null;
+  readonly publicationNumber: number;
+  readonly hasPdf: boolean;
+}
+
 /**
  * ETARE dossiers, revisions, decisions and publication requests. PostgreSQL
  * enforces the state machines, the frozen snapshot, the separation of duties
@@ -244,6 +254,8 @@ export interface EtareRepository {
       readonly revisionHash: string;
     },
   ): Promise<string>;
+  /** A publication visible to the caller (RLS: OPS only see the active ones). */
+  publication(id: string): Promise<PublicationRecord | null>;
   /** Latest approval of an approved revision (to publish it again after a failed build). */
   approvalOf(revisionId: string): Promise<string | null>;
   /** Queues the publication of an approved revision; returns its id. */

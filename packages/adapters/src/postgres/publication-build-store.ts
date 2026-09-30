@@ -61,6 +61,23 @@ export class PostgresPublicationBuildStore implements PublicationBuildStore {
     return rows[0]?.outcome ?? null;
   }
 
+  async assetFiles(
+    tenantId: string,
+    assetIds: readonly string[],
+  ): Promise<{ id: string; storageKey: string; sha256: string; mimeType: string }[]> {
+    if (assetIds.length === 0) return [];
+    const { rows } = await this.pool.query<{ id: string; storage_key: string; sha256: string; mime_type: string }>(
+      'select id, storage_key, sha256, mime_type from app.worker_publication_assets($1, $2::uuid[])',
+      [tenantId, [...assetIds]],
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      storageKey: row.storage_key,
+      sha256: row.sha256,
+      mimeType: row.mime_type,
+    }));
+  }
+
   async fail(publicationId: string, failureCode: string): Promise<boolean> {
     const { rows } = await this.pool.query<{ ok: boolean }>('select app.worker_fail_publication($1, $2) as ok', [
       publicationId,

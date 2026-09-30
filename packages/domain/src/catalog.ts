@@ -57,7 +57,7 @@ const TEXT_MAX_LENGTH = 200;
 export const fieldKeyFromTitle = (title: string) =>
   title
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/\p{M}/gu, '')
     .replace(/³/g, '3')
     .replace(/²/g, '2')
     .toLowerCase()

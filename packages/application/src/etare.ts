@@ -1,5 +1,6 @@
 import {
   etareSnapshotSchema,
+  type AssetDownload,
   type EtareDossier,
   type EtareOverview,
   type EtarePreview,
@@ -13,6 +14,8 @@ import {
 import {
   AccessDenied,
   Conflict,
+  NotFound,
+  ServiceUnavailable,
   InvalidInput,
   PreconditionFailed,
   assertIndependentValidator,
@@ -21,7 +24,8 @@ import {
 } from '@etare/domain';
 import { buildSnapshot, compareSnapshots, preSubmissionChecks, type WorkingData } from './etare-snapshot';
 import type { RequestSession, SessionFactory } from './ports';
-import { PUBLICATION_BUILD_JOB } from './publication-build';
+import { PUBLICATION_BUILD_JOB, publicationPdfKey } from './publication-build';
+import type { ObjectStorage } from './ports';
 import { found, inTenant } from './use-cases';
 
 /**
@@ -229,4 +233,44 @@ export function publishRevision(
     await queuePublication(session, revisionId, approvalId);
     return found(await session.etare.revision(revisionId), 'Révision introuvable.').revision;
   });
+}
+
+const PDF_URL_SECONDS = 60;
+
+const fileName = (text: string) =>
+  text
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^A-Za-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+/**
+ * ETARE PDF of a publication (ETARE-02): authorized in PostgreSQL (OPS only
+ * reach active publications), traced, then served by a 60 s signed URL.
+ */
+export async function getPublicationPdf(
+  deps: { readonly sessions: SessionFactory; readonly storage: ObjectStorage | null },
+  context: RequestContext,
+  publicationId: string,
+): Promise<AssetDownload> {
+  if (!deps.storage) throw new ServiceUnavailable('Le stockage des fichiers n’est pas configuré.');
+  const storage = deps.storage;
+  const publication = await inTenant(deps.sessions, context, 'publication:read', async (session) => {
+    const record = found(await session.etare.publication(publicationId), 'Publication introuvable.');
+    if (!record.hasPdf) throw new NotFound('Aucun PDF pour cette version.');
+    await session.audit.record('publication.pdf_download', 'publication', record.id, {
+      publication_number: record.publicationNumber,
+    });
+    return record;
+  });
+  const { url, expiresAt } = await storage.createDownloadUrl(
+    publicationPdfKey(publication.tenantId, publication.id),
+    PDF_URL_SECONDS,
+  );
+  return {
+    url,
+    expires_at: expiresAt.toISOString(),
+    filename: `ETARE-${fileName(publication.etareNumber ?? publication.siteName)}-v${publication.publicationNumber}.pdf`,
+    mime_type: 'application/pdf',
+  };
 }

@@ -14,6 +14,10 @@ export interface StorageBucketApi {
 }
 
 const KEY_PATTERN = /^tenants\/[0-9a-f-]{36}\/(assets|quarantine)\/[0-9a-f-]{36}\/[0-9a-f-]{36}$/;
+/** Files produced by the worker for a publication (the ETARE PDF). */
+const PUBLICATION_KEY_PATTERN = /^tenants\/[0-9a-f-]{36}\/publications\/[0-9a-f-]{36}\/[a-z0-9-]+\.pdf$/;
+/** Readable objects: verified assets and publication files, never the quarantine. */
+const isReadable = (key: string) => key.includes('/assets/') || PUBLICATION_KEY_PATTERN.test(key);
 const MAX_DOWNLOAD_TTL_SECONDS = 300;
 /** Lifetime of Supabase signed upload URLs (fixed by the provider). */
 const UPLOAD_URL_LIFETIME_MS = 2 * 60 * 60 * 1000;
@@ -41,7 +45,7 @@ export class SupabaseObjectStorage implements ObjectStorage, ObjectStoreAdmin {
 
   async createDownloadUrl(key: string, expiresInSeconds: number): Promise<{ url: string; expiresAt: Date }> {
     assertKey(key);
-    if (!key.includes('/assets/')) throw new Error('Only verified assets can be downloaded.');
+    if (!isReadable(key)) throw new Error('Only verified assets and publication files can be downloaded.');
     if (!Number.isInteger(expiresInSeconds) || expiresInSeconds < 1 || expiresInSeconds > MAX_DOWNLOAD_TTL_SECONDS) {
       throw new Error(`Signed URL lifetime must be between 1 and ${MAX_DOWNLOAD_TTL_SECONDS} seconds.`);
     }
@@ -89,7 +93,7 @@ export class SupabaseObjectStorage implements ObjectStorage, ObjectStoreAdmin {
     options: { upsert?: boolean } = {},
   ): Promise<void> {
     assertKey(key);
-    if (!key.includes('/assets/')) throw new Error('Server-side uploads go to verified asset keys only.');
+    if (!isReadable(key)) throw new Error('Server-side uploads go to verified asset or publication keys only.');
     const { error } = await this.bucket.upload(key, content, { contentType, upsert: options.upsert ?? false });
     if (error) throw new Error('STORAGE_UNAVAILABLE');
   }
@@ -102,7 +106,7 @@ export class SupabaseObjectStorage implements ObjectStorage, ObjectStoreAdmin {
 }
 
 function assertKey(key: string): void {
-  if (!KEY_PATTERN.test(key)) throw new Error('Invalid storage key.');
+  if (!KEY_PATTERN.test(key) && !PUBLICATION_KEY_PATTERN.test(key)) throw new Error('Invalid storage key.');
 }
 
 function isNotFound(error: unknown): boolean {

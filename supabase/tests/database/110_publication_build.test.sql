@@ -8,7 +8,7 @@ language sql as $$
   select from app.begin_request('supabase', p_subject, p_tenant, 'aal1', null, 'web')
 $$;
 
-select plan(12);
+select plan(14);
 
 -- Names of members: only within the current SIS.
 set local role etare_api;
@@ -43,6 +43,16 @@ select is(
   (select count(*) from app.worker_start_publication('0600009f-0000-4000-8000-000000000002', '83000000-0000-4000-8000-000000000000')),
   0::bigint,
   'a job of another SIS does not start the build'
+);
+select is(
+  (select storage_key from app.worker_publication_assets('06000000-0000-4000-8000-000000000000', array['06000005-0000-4000-8000-000000000001'::uuid])),
+  'tenants/06000000-0000-4000-8000-000000000000/assets/06000005-0000-4000-8000-000000000001/06000005-0000-4000-8000-0000000000a1',
+  'the worker reads the key of a checked plan background of the SIS'
+);
+select is(
+  (select count(*) from app.worker_publication_assets('83000000-0000-4000-8000-000000000000', array['06000005-0000-4000-8000-000000000001'::uuid])),
+  0::bigint,
+  'never a file of another SIS'
 );
 select results_eq(
   $$ select publication_number, content_hash, approved_by_name

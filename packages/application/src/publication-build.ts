@@ -1,12 +1,18 @@
 import { etareSnapshotSchema, type EtareSnapshot } from '@etare/contracts';
 import { canonicalJson } from '@etare/domain';
 import { PermanentJobError } from './jobs';
+import type { ObjectStoreAdmin } from './ports';
 
 export const PUBLICATION_BUILD_JOB = 'publication.build';
 export const MANIFEST_VERSION = 1;
 export const PUBLICATION_SCHEMA_VERSION = 1;
 export const MIN_READER_VERSION = '1.0.0';
 export const DATA_FILE = 'data/site.json';
+export const PDF_FILE = 'etare.pdf';
+
+/** Storage key of the ETARE PDF of a publication (produced by the worker, served by signed URL). */
+export const publicationPdfKey = (tenantId: string, publicationId: string) =>
+  `tenants/${tenantId}/publications/${publicationId}/etare.pdf`;
 
 export interface PersonStamp {
   readonly id: string | null;
@@ -43,6 +49,46 @@ export interface PublicationBuildStore {
   /** building -> ready -> published (or superseded when a newer one exists). */
   complete(publicationId: string, built: BuiltPublication): Promise<'published' | 'superseded' | null>;
   fail(publicationId: string, failureCode: string): Promise<boolean>;
+  /** Checked files of the SIS referenced by the snapshot (plan backgrounds), with their storage keys. */
+  assetFiles(
+    tenantId: string,
+    assetIds: readonly string[],
+  ): Promise<{ id: string; storageKey: string; sha256: string; mimeType: string }[]>;
+}
+
+export interface PlanImage {
+  readonly bytes: Uint8Array;
+  readonly mimeType: string;
+}
+
+/** What the ETARE PDF is drawn from: the frozen snapshot and the stamp of the publication (ETARE-02). */
+export interface EtarePdfInput {
+  readonly publication: {
+    readonly id: string;
+    readonly number: number;
+    readonly revisionNo: number;
+    readonly contentHash: string;
+    readonly submittedBy: string;
+    readonly submittedAt: Date;
+    readonly approvedBy: string;
+    readonly approvedAt: Date;
+    readonly createdAt: Date;
+  };
+  readonly snapshot: EtareSnapshot;
+  /** Plan backgrounds by background revision id (PNG or JPEG), checked against their hash. */
+  readonly planImages: ReadonlyMap<string, PlanImage>;
+}
+
+export interface EtarePdfRenderer {
+  readonly templateVersion: string;
+  render(input: EtarePdfInput): Promise<Uint8Array>;
+}
+
+/** Optional outputs of a build: the ETARE PDF, stored next to the publication. */
+export interface PublicationArtifacts {
+  readonly renderer: EtarePdfRenderer;
+  readonly objects: ObjectStoreAdmin;
+  readonly sha256Bytes: (content: Uint8Array) => Promise<string>;
 }
 
 export interface ManifestFile {
@@ -101,23 +147,34 @@ export interface BuildTools {
   readonly now: () => Date;
 }
 
-/**
- * Builds the payload and the manifest of a publication from its frozen
- * snapshot only, after checking that the snapshot is still the one that was
- * approved (schema and SHA-256). The manifest is serialized canonically and
- * hashed; its Ed25519 signature comes with the offline packages.
- */
-export async function buildPublicationContent(
-  publication: PublicationToBuild,
-  tools: BuildTools,
-): Promise<BuiltPublication> {
+/** The snapshot must still be the one that was approved (schema and SHA-256). */
+export async function verifiedSnapshot(publication: PublicationToBuild, tools: BuildTools): Promise<EtareSnapshot> {
   const parsed = etareSnapshotSchema.safeParse(publication.snapshot);
   if (!parsed.success) throw new PermanentJobError('SNAPSHOT_INVALID');
   if ((await tools.sha256(canonicalJson(publication.snapshot))) !== publication.contentHash) {
     throw new PermanentJobError('SNAPSHOT_HASH_MISMATCH');
   }
-  const snapshot = parsed.data;
-  const createdAt = tools.now().toISOString();
+  return parsed.data;
+}
+
+export interface GeneratedFile {
+  readonly file: ManifestFile;
+  readonly templateVersion: string;
+}
+
+/**
+ * Builds the payload and the manifest of a publication from its frozen
+ * snapshot only. The manifest lists every file by hash (the generated PDF
+ * included), is serialized canonically and hashed; its Ed25519 signature
+ * comes with the offline packages.
+ */
+export async function buildPublicationContent(
+  publication: PublicationToBuild,
+  tools: BuildTools,
+  generated: GeneratedFile | null = null,
+  createdAt = tools.now().toISOString(),
+): Promise<BuiltPublication> {
+  const snapshot = await verifiedSnapshot(publication, tools);
 
   const payload = {
     schema_version: PUBLICATION_SCHEMA_VERSION,
@@ -149,13 +206,82 @@ export async function buildPublicationContent(
     schema_version: PUBLICATION_SCHEMA_VERSION,
     min_reader_version: MIN_READER_VERSION,
     data_file: DATA_FILE,
-    files: publicationFiles(snapshot, { sha256: await tools.sha256(dataText), sizeBytes: tools.byteLength(dataText) }),
+    files: [
+      ...publicationFiles(snapshot, { sha256: await tools.sha256(dataText), sizeBytes: tools.byteLength(dataText) }),
+      ...(generated ? [generated.file] : []),
+    ],
   };
   return {
     payload,
     manifest,
     manifestHash: await tools.sha256(canonicalJson(manifest)),
-    templateVersion: null,
+    templateVersion: generated?.templateVersion ?? null,
+  };
+}
+
+const PDF_IMAGE_TYPES = new Set(['image/png', 'image/jpeg']);
+
+/**
+ * Renders the ETARE PDF from the snapshot and stores it. The plan backgrounds
+ * drawn are read from storage and checked against the hash the snapshot
+ * approved: a mismatch stops the publication.
+ */
+export async function generateEtarePdf(
+  store: PublicationBuildStore,
+  artifacts: PublicationArtifacts,
+  publication: PublicationToBuild,
+  snapshot: EtareSnapshot,
+  createdAt: Date,
+): Promise<GeneratedFile> {
+  const backgrounds = snapshot.plans
+    .map((plan) => plan.background)
+    .filter((background) => PDF_IMAGE_TYPES.has(background.asset.mime_type));
+  const files = new Map(
+    (
+      await store.assetFiles(
+        publication.tenantId,
+        backgrounds.map((background) => background.asset.id),
+      )
+    ).map((file) => [file.id, file]),
+  );
+  const planImages = new Map<string, PlanImage>();
+  for (const background of backgrounds) {
+    const file = files.get(background.asset.id);
+    const bytes = file ? await artifacts.objects.download(file.storageKey) : null;
+    if (!file || !bytes) throw new Error('PLAN_BACKGROUND_UNAVAILABLE');
+    if ((await artifacts.sha256Bytes(bytes)) !== background.asset.sha256) {
+      throw new PermanentJobError('PLAN_BACKGROUND_HASH_MISMATCH');
+    }
+    planImages.set(background.revision_id, { bytes, mimeType: background.asset.mime_type });
+  }
+
+  const pdf = await artifacts.renderer.render({
+    publication: {
+      id: publication.id,
+      number: publication.publicationNumber,
+      revisionNo: publication.revisionNo,
+      contentHash: publication.contentHash,
+      submittedBy: publication.submittedBy.name,
+      submittedAt: publication.submittedAt,
+      approvedBy: publication.approvedBy.name,
+      approvedAt: publication.approvedAt,
+      createdAt,
+    },
+    snapshot,
+    planImages,
+  });
+  await artifacts.objects.upload(publicationPdfKey(publication.tenantId, publication.id), pdf, 'application/pdf', {
+    upsert: true,
+  });
+  return {
+    file: {
+      path: PDF_FILE,
+      sha256: await artifacts.sha256Bytes(pdf),
+      size_bytes: pdf.byteLength,
+      media_type: 'application/pdf',
+      required: true,
+    },
+    templateVersion: artifacts.renderer.templateVersion,
   };
 }
 
@@ -167,11 +293,15 @@ export async function buildPublication(
   tools: BuildTools,
   publicationId: string,
   tenantId: string,
+  artifacts: PublicationArtifacts | null = null,
 ): Promise<PublicationBuildOutcome> {
   const publication = await store.start(publicationId, tenantId);
   if (!publication) return 'already_built';
   try {
-    const built = await buildPublicationContent(publication, tools);
+    const createdAt = tools.now();
+    const snapshot = await verifiedSnapshot(publication, tools);
+    const generated = artifacts ? await generateEtarePdf(store, artifacts, publication, snapshot, createdAt) : null;
+    const built = await buildPublicationContent(publication, tools, generated, createdAt.toISOString());
     return (await store.complete(publicationId, built)) ?? 'already_built';
   } catch (error) {
     if (error instanceof PermanentJobError) await store.fail(publicationId, error.code);

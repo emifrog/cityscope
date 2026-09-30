@@ -107,6 +107,7 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       submit: unstubbed('etare.submit'),
       queue: unstubbed('etare.queue'),
       decide: unstubbed('etare.decide'),
+      publication: unstubbed('etare.publication'),
       approvalOf: unstubbed('etare.approvalOf'),
       requestPublication: unstubbed('etare.requestPublication'),
       ...overrides.etare,
