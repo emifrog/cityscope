@@ -3,6 +3,7 @@ import {
   TENANT_HEADER,
   apiErrorSchema,
   endpoints,
+  type AddressCandidates,
   type ApiErrorCode,
   type Building,
   type BuildingCreate,
@@ -131,6 +132,13 @@ export const api = {
 
   listMapSites: (options: ApiCallOptions, query: Partial<MapSitesQuery> = {}): Promise<MapSitesResponse> =>
     call(endpoints.listMapSites.response, endpoints.listMapSites.path, options, { query }),
+
+  /** Address search through the server (IGN geocoder). */
+  searchAddresses: (options: ApiCallOptions, q: string, limit = 5): Promise<AddressCandidates> =>
+    call(endpoints.searchAddresses.response, endpoints.searchAddresses.path, options, { query: { q, limit } }),
+
+  reverseGeocode: (options: ApiCallOptions, lon: number, lat: number): Promise<AddressCandidates> =>
+    call(endpoints.reverseGeocode.response, endpoints.reverseGeocode.path, options, { query: { lon, lat } }),
 
   // ---------------------------------------------------------------- sites
   listSites: (options: ApiCallOptions, query: Partial<SiteListQuery> = {}): Promise<SiteListResponse> =>

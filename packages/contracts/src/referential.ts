@@ -2,11 +2,13 @@ import { CLASSIFICATION_TYPES, CONTACT_VISIBILITIES, EXTERNAL_ENTITY_TYPES, RECO
 import {
   etareNumberSchema,
   isoDateTimeSchema,
+  multiPolygonSchema,
   pointSchema,
   sensitivitySchema,
   siteNameSchema,
   siteStatusSchema,
   siteTypeSchema,
+  surfaceSchema,
   uuidSchema,
 } from '@etare/schemas';
 import { z } from 'zod';
@@ -69,6 +71,8 @@ export const siteUpdateSchema = nonEmptyPatch(
     etare_number: etareNumberSchema.nullable().optional(),
     address: addressInputSchema.nullable().optional(),
     location: pointSchema.nullable().optional(),
+    /** Site footprint drawn on the map (Polygon or MultiPolygon); null removes it. */
+    footprint: surfaceSchema.nullable().optional(),
     /** Records an on-site check now (feeds "vérifié < 12 mois" on the map). */
     verified: z.literal(true).optional(),
   }),
@@ -102,6 +106,7 @@ export const buildingSchema = z
     floors_above: z.number().int().nullable(),
     floors_below: z.number().int().nullable(),
     notes: z.string().nullable(),
+    footprint: multiPolygonSchema.nullable(),
     row_version: rowVersion,
     levels: z.array(levelSchema),
   })
@@ -117,6 +122,8 @@ const buildingFields = {
   floors_above: z.number().int().min(0).max(200).nullable().optional(),
   floors_below: z.number().int().min(0).max(50).nullable().optional(),
   notes: optionalText(2000),
+  /** Footprint drawn on the map (Polygon or MultiPolygon); null removes it. */
+  footprint: surfaceSchema.nullable().optional(),
 };
 
 export const buildingCreateSchema = z.object(buildingFields).meta({ id: 'BuildingCreate' });

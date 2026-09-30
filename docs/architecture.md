@@ -73,7 +73,10 @@ Endpoints : `GET /health`, `GET /me` ; sites (`GET/POST /sites` avec recherche `
 `POST /assets/{id}/uploaded`, `GET /assets/{id}/download`, voir ADR-009) ; membres du SIS
 (`GET/POST /members`, `PATCH /members/{id}`, voir ADR-010) ; carte (`GET /map/sources` : catalogue
 des fonds ; `GET /map/sites` : sites positionnés en GeoJSON, filtres de la liste, `bbox`
-ouest,sud,est,nord, emprise de tous les résultats et nombre de sites sans position ; voir ADR-006).
+ouest,sud,est,nord, emprise de tous les résultats et nombre de sites sans position ; voir ADR-006) ;
+géocodage (`GET /geocoding/search`, `GET /geocoding/reverse`, géocodeur IGN appelé par le serveur).
+Les emprises du site et des bâtiments (`footprint`, Polygon ou MultiPolygon) passent par
+`PATCH /sites/{id}`, `POST /sites/{id}/buildings` et `PATCH /buildings/{id}`.
 Les `PATCH` exigent
 `If-Match` (412 si la version est périmée), les corps JSON sont limités à 64 Kio : les fichiers ne
 passent jamais par l’API mais par des URL signées.
@@ -95,7 +98,10 @@ Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4, composants de sty
 - Carte : MapLibre GL JS chargé à la demande côté navigateur ; son worker et le module qu’il importe sont
   copiés depuis le paquet installé vers `public/maplibre/` (`scripts/copy-map-worker.mjs`, avant `dev`
   et `build`), le bundler ne pouvant pas les résoudre. Le style est construit depuis le catalogue
-  serveur (`src/components/map/map-style.ts`), les couleurs depuis les jetons du thème.
+  serveur (`src/components/map/map-style.ts`), les couleurs depuis les jetons du thème. Création de la
+  carte partagée (`use-map.ts`) ; onglet « Localisation » de la fiche site : point de référence
+  (déplacement, adresse la plus proche proposée), emprises du site et des bâtiments tracées avec
+  Terra Draw ; recherche d’adresse (`address-search.tsx`, motif combobox accessible au clavier).
 - Thème remplaçable : jetons dans `packages/ui/src/styles/globals.css`, nom/logo dans `src/config/brand.ts`.
 
 ## Worker (services/worker)

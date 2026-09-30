@@ -1,6 +1,7 @@
 export * from './asset-verification';
 export * from './cartography';
 export * from './documents';
+export * from './geocoding';
 export * from './jobs';
 export * from './map';
 export * from './members';

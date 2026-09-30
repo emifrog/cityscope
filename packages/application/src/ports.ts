@@ -1,4 +1,5 @@
 import type {
+  AddressCandidate,
   Building,
   Document,
   DocumentCreate,
@@ -160,6 +161,14 @@ export interface MemberRepository {
    */
   add(input: MemberInvite, identitySubject: string | null): Promise<Member | null>;
   update(id: string, expectedVersion: number, patch: MemberUpdate): Promise<Member | null>;
+}
+
+/** Address search (geocoding). Called outside any database transaction: it is a remote service. */
+export interface Geocoder {
+  search(text: string, limit: number): Promise<AddressCandidate[]>;
+  reverse(lon: number, lat: number): Promise<AddressCandidate | null>;
+  /** Attribution to display with the results. */
+  attribution(): string;
 }
 
 /** Administration of the identity provider (server-side secret, never exposed to clients). */

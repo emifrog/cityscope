@@ -9,6 +9,7 @@ import {
   documentVersionCreateSchema,
   uploadConfirmationSchema,
 } from './documents';
+import { addressCandidatesSchema, addressSearchQuerySchema, reverseGeocodingQuerySchema } from './geocoding';
 import { mapCatalogSchema, mapSitesQuerySchema, mapSitesResponseSchema } from './map';
 import {
   memberInvitationSchema,
@@ -130,6 +131,27 @@ export const endpoints = {
     query: mapSitesQuerySchema,
     successStatus: 200,
     response: mapSitesResponseSchema,
+  }),
+
+  searchAddresses: tenantEndpoint({
+    operationId: 'searchAddresses',
+    method: 'get',
+    path: '/geocoding/search',
+    summary: 'Rechercher une adresse (géocodeur IGN, appelé par le serveur)',
+    tags: ['map'],
+    query: addressSearchQuerySchema,
+    successStatus: 200,
+    response: addressCandidatesSchema,
+  }),
+  reverseGeocode: tenantEndpoint({
+    operationId: 'reverseGeocode',
+    method: 'get',
+    path: '/geocoding/reverse',
+    summary: 'Adresse la plus proche d’un point (géocodeur IGN, appelé par le serveur)',
+    tags: ['map'],
+    query: reverseGeocodingQuerySchema,
+    successStatus: 200,
+    response: addressCandidatesSchema,
   }),
 
   // ---------------------------------------------------------------- sites

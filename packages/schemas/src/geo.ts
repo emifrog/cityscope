@@ -71,3 +71,23 @@ export function parseBbox(value: string): Bbox | null {
     [west, east].every((lon) => lon >= -180 && lon <= 180) && [south, north].every((lat) => lat >= -90 && lat <= 90);
   return inBounds && west < east && south < north ? [west, south, east, north] : null;
 }
+
+/** Maximum number of positions of a drawn surface (keeps a request well under the 64 KiB body limit). */
+export const MAX_SURFACE_POSITIONS = 2000;
+
+const positionCount = (rings: readonly (readonly unknown[])[]) => rings.reduce((total, ring) => total + ring.length, 0);
+
+/**
+ * Footprint drawn on the map: a Polygon or a MultiPolygon (stored as
+ * MultiPolygon). Validity (no self-intersection) is checked by PostGIS.
+ */
+export const surfaceSchema = z
+  .union([polygonSchema, multiPolygonSchema])
+  .refine(
+    (surface) =>
+      (surface.type === 'Polygon'
+        ? positionCount(surface.coordinates)
+        : surface.coordinates.reduce((total, polygon) => total + positionCount(polygon), 0)) <= MAX_SURFACE_POSITIONS,
+    `Contour trop détaillé (${MAX_SURFACE_POSITIONS} sommets au plus).`,
+  );
+export type Surface = z.infer<typeof surfaceSchema>;

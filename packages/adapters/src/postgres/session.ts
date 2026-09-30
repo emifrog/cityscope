@@ -133,8 +133,13 @@ export function translateDatabaseError(error: unknown): unknown {
       return new Conflict(UNIQUE_MESSAGES[constraintOf(error) ?? ''] ?? 'Cet élément existe déjà.');
     case '23503':
       return new NotFound('Élément lié introuvable dans votre SIS.');
-    case '23502':
     case '23514':
+      // PostGIS validity checks (st_isvalid) on drawn geometries.
+      if (/_(geom|footprint)_check$/.test(constraintOf(error) ?? '')) {
+        return new InvalidInput('Contour invalide : il ne doit pas se recouper ni se refermer sur lui-même.');
+      }
+      return new InvalidInput('Valeur refusée par une règle de cohérence des données.');
+    case '23502':
     case '22P02':
     case '22023':
       return new InvalidInput('Valeur refusée par une règle de cohérence des données.');

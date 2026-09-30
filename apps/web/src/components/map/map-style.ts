@@ -160,7 +160,7 @@ export function siteLayers(colors: MapColors, fontStack: readonly string[]): Lay
 
 export interface SiteSourceData {
   readonly type: 'FeatureCollection';
-  readonly features: readonly {
+  readonly features: {
     readonly type: 'Feature';
     readonly geometry: MapSitesResponse['features'][number]['geometry'];
     readonly properties: MapSitesResponse['features'][number]['properties'] & { readonly site_id: string };

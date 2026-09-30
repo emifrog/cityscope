@@ -16,7 +16,7 @@ import {
 import { parseBbox } from '@etare/schemas';
 import { decodeCursor, encodeCursor } from './cursor';
 import type { PoolClient } from './pool';
-import { applyAssignments, assignments, geoJsonPoint, lockVersion } from './versioned';
+import { applyAssignments, asGeoJsonText, assignments, geoJsonPoint, geoJsonSurface, lockVersion } from './versioned';
 
 interface SiteRow {
   id: string;
@@ -257,10 +257,9 @@ export class PostgresSiteRepository implements SiteRepository {
       sensitivity: 'sensitivity',
       etare_number: 'etare_number',
       location: { column: 'geom', expression: geoJsonPoint },
+      footprint: { column: 'footprint', expression: geoJsonSurface },
     }).map((assignment) =>
-      assignment.column === 'geom' && assignment.value !== null
-        ? { ...assignment, value: JSON.stringify(assignment.value) }
-        : assignment,
+      assignment.column === 'geom' || assignment.column === 'footprint' ? asGeoJsonText(assignment) : assignment,
     );
 
     if (patch.address !== undefined) {

@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { AddressSearch } from '@/components/address-search';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { isStaleVersion } from '@/components/form-helpers';
 import { SENSITIVITY_LABELS, SITE_STATUS_LABELS, SITE_TYPE_LABELS } from '@/components/labels';
@@ -81,6 +82,7 @@ export function SummaryPanel({ site }: { site: SiteDetail }) {
               <SiteForm
                 key={site.row_version}
                 mode="edit"
+                addressSearch={(apply) => <AddressSearch id="address-search" onSelect={apply} />}
                 initial={site}
                 submitting={update.isPending}
                 error={isStaleVersion(update.error) ? null : update.error}

@@ -2,6 +2,7 @@
 
 import { Alert, Card, CardContent } from '@etare/ui';
 import { useRouter } from 'next/navigation';
+import { AddressSearch } from '@/components/address-search';
 import { PageHeader } from '@/components/page-header';
 import { api } from '@/lib/api-client';
 import { queryKeys, useApiMutation, usePermissions } from '@/lib/queries';
@@ -26,6 +27,7 @@ export function NewSite() {
         <CardContent>
           <SiteForm
             mode="create"
+            addressSearch={(apply) => <AddressSearch id="address-search" onSelect={apply} />}
             submitting={create.isPending}
             error={create.error}
             onSubmit={async (payload) => {

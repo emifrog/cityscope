@@ -1,6 +1,6 @@
 'use client';
 
-import type { SiteDetail, SiteUpdate } from '@etare/contracts';
+import type { AddressCandidate, SiteDetail, SiteUpdate } from '@etare/contracts';
 import {
   SENSITIVITY_LEVELS,
   SITE_STATUSES,
@@ -11,6 +11,7 @@ import {
 } from '@etare/domain';
 import { Button, Field, Input, Select } from '@etare/ui';
 import { zodResolver } from '@hookform/resolvers/zod';
+import type { ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { ApiErrorAlert } from '@/components/feedback';
@@ -105,6 +106,7 @@ export function SiteForm({
   error,
   onSubmit,
   onCancel,
+  addressSearch,
 }: {
   mode: 'create' | 'edit';
   initial?: SiteDetail | undefined;
@@ -112,11 +114,14 @@ export function SiteForm({
   error: unknown;
   onSubmit: (payload: SitePayload) => Promise<unknown>;
   onCancel?: (() => void) | undefined;
+  /** Address search field (needs the API): fills the address and the reference point. */
+  addressSearch?: ((apply: (candidate: AddressCandidate) => void) => ReactNode) | undefined;
 }) {
   const {
     register,
     handleSubmit,
     setError,
+    setValue,
     formState: { errors },
   } = useForm<SiteFormValues>({ resolver: zodResolver(siteFormSchema), defaultValues: siteFormDefaults(initial) });
 
@@ -134,6 +139,17 @@ export function SiteForm({
       });
     }
   });
+
+  const applyCandidate = (candidate: AddressCandidate) => {
+    const [longitude, latitude] = candidate.location.coordinates;
+    const options = { shouldDirty: true, shouldValidate: true };
+    setValue('street', candidate.street ?? '', options);
+    setValue('postal_code', candidate.postal_code ?? '', options);
+    setValue('city', candidate.city, options);
+    setValue('insee_code', candidate.insee_code ?? '', options);
+    setValue('latitude', String(latitude), options);
+    setValue('longitude', String(longitude), options);
+  };
 
   const statuses = mode === 'create' ? (['draft', 'active'] as const) : SITE_STATUSES;
   const invalid = (name: keyof SiteFormValues) => (errors[name] ? true : undefined);
@@ -193,6 +209,16 @@ export function SiteForm({
 
       <fieldset className="grid gap-4 md:grid-cols-4">
         <legend className="mb-2 text-sm font-semibold text-foreground">Adresse</legend>
+        {addressSearch ? (
+          <Field
+            label="Rechercher l’adresse"
+            htmlFor="address-search"
+            hint="Remplit l’adresse, le code INSEE et le point de référence."
+            className="md:col-span-4"
+          >
+            {addressSearch(applyCandidate)}
+          </Field>
+        ) : null}
         <Field label="Voie" htmlFor="street" error={errors.street?.message} className="md:col-span-4">
           <Input id="street" autoComplete="off" {...register('street')} />
         </Field>
@@ -221,7 +247,7 @@ export function SiteForm({
           <Input id="longitude" inputMode="decimal" aria-invalid={invalid('longitude')} {...register('longitude')} />
         </Field>
         <p className="text-xs text-muted md:col-span-2">
-          Le positionnement sur la carte IGN arrivera avec le module carte (Sprint 2).
+          Le point peut aussi être déplacé sur la carte, onglet « Localisation » de la fiche.
         </p>
       </fieldset>
 

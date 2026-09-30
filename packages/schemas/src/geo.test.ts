@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bboxParamSchema, localPointSchema, parseBbox, pointSchema, polygonSchema } from './geo';
+import { bboxParamSchema, localPointSchema, parseBbox, pointSchema, polygonSchema, surfaceSchema } from './geo';
 
 describe('GeoJSON schemas', () => {
   it('uses longitude then latitude', () => {
@@ -65,4 +65,24 @@ describe('map extent parameter', () => {
       expect(bboxParamSchema.safeParse(value).success).toBe(false);
     },
   );
+});
+
+describe('drawn surfaces', () => {
+  const square = [
+    [0, 0],
+    [0.001, 0],
+    [0.001, 0.001],
+    [0, 0],
+  ];
+
+  it('accepts a Polygon or a MultiPolygon', () => {
+    expect(surfaceSchema.safeParse({ type: 'Polygon', coordinates: [square] }).success).toBe(true);
+    expect(surfaceSchema.safeParse({ type: 'MultiPolygon', coordinates: [[square], [square]] }).success).toBe(true);
+    expect(surfaceSchema.safeParse({ type: 'Point', coordinates: [0, 0] }).success).toBe(false);
+  });
+
+  it('refuses a contour with too many vertices', () => {
+    const ring = [...Array.from({ length: 2000 }, (_, index) => [index / 1e6, index / 1e6]), [0, 0]];
+    expect(surfaceSchema.safeParse({ type: 'Polygon', coordinates: [ring] }).success).toBe(false);
+  });
 });

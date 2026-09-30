@@ -11,10 +11,12 @@ import { BuildingsPanel } from './buildings-panel';
 import { ClassificationsPanel } from './classifications-panel';
 import { ContactsPanel } from './contacts-panel';
 import { DocumentsPanel } from './documents-panel';
+import { LocationPanel } from './location-panel';
 import { SummaryPanel } from './summary-panel';
 
 const TABS = [
   { key: 'synthese', label: 'Synthèse' },
+  { key: 'localisation', label: 'Localisation' },
   { key: 'batiments', label: 'Bâtiments & niveaux' },
   { key: 'classifications', label: 'Classifications' },
   { key: 'contacts', label: 'Contacts' },
@@ -57,6 +59,7 @@ export function SiteDetailView({ id }: { id: string }) {
       />
       <TabLinks tabs={TABS} active={tab} param="onglet" basePath={`/sites/${id}`} />
       {tab === 'synthese' ? <SummaryPanel site={data} /> : null}
+      {tab === 'localisation' ? <LocationPanel site={data} /> : null}
       {tab === 'batiments' ? <BuildingsPanel siteId={id} /> : null}
       {tab === 'classifications' ? <ClassificationsPanel siteId={id} /> : null}
       {tab === 'contacts' ? <ContactsPanel siteId={id} /> : null}

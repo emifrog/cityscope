@@ -15,6 +15,8 @@ import {
   getSite,
   inviteMember,
   listBuildings,
+  reverseGeocode,
+  searchAddresses,
   listClassifications,
   listContacts,
   listDocuments,
@@ -30,6 +32,7 @@ import {
   updateMember,
   updateSite,
   type CartographyCatalog,
+  type Geocoder,
   type HealthProbe,
   type IdentityProvisioner,
   type ObjectStorage,
@@ -59,6 +62,7 @@ export interface ApiDependencies {
   /** Null when identity administration is not configured (invitations of new addresses answer 503). */
   readonly identities: IdentityProvisioner | null;
   readonly cartography: CartographyCatalog;
+  readonly geocoder: Geocoder;
   readonly logger: Logger;
   readonly version: string;
   readonly openApiDocument: () => unknown;
@@ -204,6 +208,20 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     const context = await requestContext(c, endpoints.listMapSites);
     const query = endpoints.listMapSites.query.parse(c.req.query());
     return respond(c, endpoints.listMapSites, await listMapSites(deps.sessions, context, query));
+  });
+
+  app.get(routerPath(endpoints.searchAddresses.path), async (c) => {
+    const context = await requestContext(c, endpoints.searchAddresses);
+    const query = endpoints.searchAddresses.query.parse(c.req.query());
+    const geocoding = { sessions: deps.sessions, geocoder: deps.geocoder };
+    return respond(c, endpoints.searchAddresses, await searchAddresses(geocoding, context, query));
+  });
+
+  app.get(routerPath(endpoints.reverseGeocode.path), async (c) => {
+    const context = await requestContext(c, endpoints.reverseGeocode);
+    const query = endpoints.reverseGeocode.query.parse(c.req.query());
+    const geocoding = { sessions: deps.sessions, geocoder: deps.geocoder };
+    return respond(c, endpoints.reverseGeocode, await reverseGeocode(geocoding, context, query));
   });
 
   app.get(routerPath(endpoints.listSites.path), async (c) => {

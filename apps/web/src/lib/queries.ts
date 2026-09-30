@@ -83,6 +83,28 @@ export function useMapSites(filters: MapSiteFilters, bbox: string | null) {
   });
 }
 
+/** Address suggestions (IGN geocoder through the API); starts at 3 characters. */
+export function useAddressSearch(text: string) {
+  const { tenantId, options, enabled } = useApiContext();
+  const query = text.trim();
+  return useQuery({
+    queryKey: ['tenant', tenantId ?? 'none', 'geocoding', query],
+    enabled: enabled && query.length >= 3,
+    staleTime: 5 * 60_000,
+    retry: false,
+    queryFn: ({ signal }) => api.searchAddresses({ ...options, signal }, query),
+  });
+}
+
+/** Imperative geocoding calls (e.g. the address nearest to a point that was just moved). */
+export function useGeocodingClient() {
+  const { token, tenantId } = useApiContext();
+  return useMemo(() => {
+    const options: ApiCallOptions = { token: token ?? '', tenantId: tenantId ?? '' };
+    return { reverse: (lon: number, lat: number) => api.reverseGeocode(options, lon, lat) };
+  }, [token, tenantId]);
+}
+
 export function useSite(id: string) {
   const { tenantId, options, enabled } = useApiContext();
   return useQuery({

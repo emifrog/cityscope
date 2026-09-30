@@ -1,29 +1,19 @@
 'use client';
 
 import 'maplibre-gl/dist/maplibre-gl.css';
-import type { MapCatalog, MapSitesResponse } from '@etare/contracts';
+import type { MapSitesResponse } from '@etare/contracts';
 import { SITE_STATUSES, SITE_TYPES } from '@etare/domain';
-import { Alert, Badge, Button, Card, Input, Label, Select, cn } from '@etare/ui';
-import type { GeoJSONSource, LngLatBoundsLike, Map as MapLibreMap } from 'maplibre-gl';
+import { Badge, Button, Card, Input, Label, Select, cn } from '@etare/ui';
+import type { GeoJSONSource, LngLatBoundsLike } from 'maplibre-gl';
 import { X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ApiErrorAlert } from '@/components/feedback';
 import { SITE_STATUS_LABELS, SITE_TYPE_LABELS } from '@/components/labels';
-import {
-  FRANCE_VIEW,
-  MAP_WORKER_URL,
-  SITE_LAYERS,
-  SITE_SOURCE,
-  baseLayerId,
-  baseMapStyle,
-  baseMaps,
-  bboxParam,
-  mapColors,
-  siteLayers,
-  toSourceData,
-} from '@/components/map/map-style';
+import { BaseMapSwitch, BaseMapUnavailable } from '@/components/map/map-overlays';
+import { SITE_LAYERS, SITE_SOURCE, bboxParam, mapColors, siteLayers, toSourceData } from '@/components/map/map-style';
+import { useBaseMap, useMapLibre } from '@/components/map/use-map';
 import { PageHeader } from '@/components/page-header';
 import { useMapCatalog, useMapSites, type MapSiteFilters } from '@/lib/queries';
 
@@ -69,35 +59,6 @@ function Legend() {
   );
 }
 
-function BaseMapSwitch({
-  catalog,
-  active,
-  onChange,
-}: {
-  catalog: MapCatalog;
-  active: string;
-  onChange: (id: string) => void;
-}) {
-  return (
-    <div role="group" aria-label="Fond de carte" className="flex overflow-hidden rounded-md bg-surface shadow">
-      {baseMaps(catalog).map((source) => (
-        <button
-          key={source.id}
-          type="button"
-          aria-pressed={source.id === active}
-          onClick={() => onChange(source.id)}
-          className={cn(
-            'px-3 py-1.5 text-xs font-semibold',
-            source.id === active ? 'bg-brand-navy text-white' : 'text-foreground hover:bg-subtle',
-          )}
-        >
-          {source.product}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 export function SitesMapView() {
   const filters = useFiltersFromUrl();
   const filtersKey = JSON.stringify(filters);
@@ -109,114 +70,68 @@ export function SitesMapView() {
   const [bbox, setBbox] = useState<string | null>(null);
   const sites = useMapSites(filters, bbox);
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<MapLibreMap | null>(null);
   const truncatedRef = useRef(false);
   const fittedFor = useRef<string | null>(null);
-  const [ready, setReady] = useState(false);
   const [base, setBase] = useState<string | null>(null);
-  const [baseUnavailable, setBaseUnavailable] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const activeBase = base ?? catalog.data?.default_base ?? null;
   const selected = sites.data?.features.find((feature) => feature.id === selectedId) ?? null;
+  const { loaded, baseUnavailable, clearBaseUnavailable } = useMapLibre(containerRef, catalog.data, {});
+  useBaseMap(loaded, catalog.data, activeBase);
+  const fontStack = catalog.data?.glyphs.font_stack;
 
-  // Create the map once the catalogue is known (MapLibre needs the browser: loaded on demand).
+  // Business layers and interactions, once the base style is ready.
   useEffect(() => {
-    const container = containerRef.current;
-    const data = catalog.data;
-    if (!data || !container || mapRef.current) return;
-    let disposed = false;
-    let map: MapLibreMap | undefined;
-
-    void import('maplibre-gl').then((maplibre) => {
-      if (disposed) return;
-      maplibre.setWorkerUrl(MAP_WORKER_URL);
-      const instance = new maplibre.Map({
-        container,
-        style: baseMapStyle(data, data.default_base),
-        center: FRANCE_VIEW.center,
-        zoom: FRANCE_VIEW.zoom,
-        attributionControl: { compact: false },
-      });
-      map = instance;
-      mapRef.current = instance;
-      instance.addControl(new maplibre.NavigationControl({ showCompass: false }), 'top-right');
-      instance.addControl(new maplibre.ScaleControl({ unit: 'metric' }), 'bottom-right');
-
-      // A base map failure never hides the operational data (architecture §14).
-      instance.on('error', (event) => {
-        const sourceId = (event as { sourceId?: string }).sourceId;
-        if (sourceId && data.sources.some((source) => source.id === sourceId)) setBaseUnavailable(true);
-      });
-
-      instance.on('load', () => {
-        instance.addSource(SITE_SOURCE, {
-          type: 'geojson',
-          data: { type: 'FeatureCollection', features: [] },
-          cluster: true,
-          clusterRadius: 48,
-          clusterMaxZoom: 13,
-        });
-        const colors = mapColors(getComputedStyle(document.documentElement));
-        for (const layer of siteLayers(colors, data.glyphs.font_stack)) instance.addLayer(layer);
-
-        instance.on('click', SITE_LAYERS.clusters, (event) => {
-          const cluster = event.features?.[0];
-          const clusterId = cluster?.properties?.['cluster_id'] as number | undefined;
-          if (!cluster || clusterId === undefined || cluster.geometry.type !== 'Point') return;
-          const center = cluster.geometry.coordinates as [number, number];
-          void instance
-            .getSource<GeoJSONSource>(SITE_SOURCE)
-            ?.getClusterExpansionZoom(clusterId)
-            .then((zoom) => instance.easeTo({ center, zoom }));
-        });
-        instance.on('click', SITE_LAYERS.points, (event) => {
-          const siteId = event.features?.[0]?.properties?.['site_id'];
-          if (typeof siteId === 'string') setSelectedId(siteId);
-        });
-        for (const layer of [SITE_LAYERS.clusters, SITE_LAYERS.points]) {
-          instance.on('mouseenter', layer, () => (instance.getCanvas().style.cursor = 'pointer'));
-          instance.on('mouseleave', layer, () => (instance.getCanvas().style.cursor = ''));
-        }
-        instance.on('moveend', () => {
-          if (truncatedRef.current) setBbox(bboxParam(instance.getBounds()));
-        });
-        setReady(true);
-      });
+    if (!loaded || !fontStack) return;
+    const { map } = loaded;
+    map.addSource(SITE_SOURCE, {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+      cluster: true,
+      clusterRadius: 48,
+      clusterMaxZoom: 13,
     });
+    const colors = mapColors(getComputedStyle(document.documentElement));
+    for (const layer of siteLayers(colors, fontStack)) map.addLayer(layer);
 
-    return () => {
-      disposed = true;
-      map?.remove();
-      mapRef.current = null;
-    };
-  }, [catalog.data]);
+    map.on('click', SITE_LAYERS.clusters, (event) => {
+      const cluster = event.features?.[0];
+      const clusterId = cluster?.properties?.['cluster_id'] as number | undefined;
+      if (!cluster || clusterId === undefined || cluster.geometry.type !== 'Point') return;
+      const center = cluster.geometry.coordinates as [number, number];
+      void map
+        .getSource<GeoJSONSource>(SITE_SOURCE)
+        ?.getClusterExpansionZoom(clusterId)
+        .then((zoom) => map.easeTo({ center, zoom }));
+    });
+    map.on('click', SITE_LAYERS.points, (event) => {
+      const siteId = event.features?.[0]?.properties?.['site_id'];
+      if (typeof siteId === 'string') setSelectedId(siteId);
+    });
+    for (const layer of [SITE_LAYERS.clusters, SITE_LAYERS.points]) {
+      map.on('mouseenter', layer, () => (map.getCanvas().style.cursor = 'pointer'));
+      map.on('mouseleave', layer, () => (map.getCanvas().style.cursor = ''));
+    }
+    map.on('moveend', () => {
+      if (truncatedRef.current) setBbox(bboxParam(map.getBounds()));
+    });
+  }, [loaded, fontStack]);
 
   // Sites: new data replaces the source; a new search frames all its results once.
   useEffect(() => {
-    const map = mapRef.current;
     const data = sites.data;
-    if (!ready || !map || !data) return;
+    if (!loaded || !data) return;
     truncatedRef.current = data.truncated;
-    map.getSource<GeoJSONSource>(SITE_SOURCE)?.setData(toSourceData(data));
+    loaded.map.getSource<GeoJSONSource>(SITE_SOURCE)?.setData(toSourceData(data));
     if (fittedFor.current !== filtersKey && bbox === null && !sites.isPlaceholderData) {
       fittedFor.current = filtersKey;
-      if (data.extent) map.fitBounds(extentBounds(data.extent), { padding: 64, maxZoom: 15, duration: 0 });
+      if (data.extent) loaded.map.fitBounds(extentBounds(data.extent), { padding: 64, maxZoom: 15, duration: 0 });
     }
-  }, [ready, sites.data, sites.isPlaceholderData, filtersKey, bbox]);
+  }, [loaded, sites.data, sites.isPlaceholderData, filtersKey, bbox]);
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!ready || !map) return;
-    map.setFilter(SITE_LAYERS.selected, ['==', ['get', 'site_id'], selectedId ?? '']);
-  }, [ready, selectedId]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!ready || !map || !catalog.data || !activeBase) return;
-    for (const source of baseMaps(catalog.data)) {
-      map.setLayoutProperty(baseLayerId(source.id), 'visibility', source.id === activeBase ? 'visible' : 'none');
-    }
-  }, [ready, catalog.data, activeBase]);
+    loaded?.map.setFilter(SITE_LAYERS.selected, ['==', ['get', 'site_id'], selectedId ?? '']);
+  }, [loaded, selectedId]);
 
   function applyFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -299,7 +214,7 @@ export function SitesMapView() {
                 catalog={catalog.data}
                 active={activeBase}
                 onChange={(id) => {
-                  setBaseUnavailable(false);
+                  clearBaseUnavailable();
                   setBase(id);
                 }}
               />
@@ -308,11 +223,7 @@ export function SitesMapView() {
           <div className="pointer-events-auto">
             <Legend />
           </div>
-          {baseUnavailable ? (
-            <Alert tone="important" className="pointer-events-auto max-w-xs">
-              Fond de carte indisponible : les sites restent affichés. Essayez l’autre fond ou réessayez plus tard.
-            </Alert>
-          ) : null}
+          {baseUnavailable ? <BaseMapUnavailable /> : null}
         </div>
 
         <p

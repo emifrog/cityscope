@@ -36,6 +36,14 @@ quatre choix distincts. Mapbox est exclu comme fournisseur principal.
 - La panne d’un fond affiche « fond de carte indisponible » sans masquer les sites.
 - Le catalogue reste une configuration serveur versionnée ; la table `map_source` renseignée par le
   responsable SIG (dates de contrôle, échéances de contrat) viendra avec les paquets hors ligne.
+- **Géocodage** : géocodeur de la Géoplateforme (Base Adresse Nationale) appelé **par le serveur**
+  (`GET /geocoding/search`, `GET /geocoding/reverse`), proxy limité au sens de l’architecture §14 :
+  l’IGN reçoit l’adresse saisie mais pas l’adresse réseau de l’agent ; délai de 5 s, une reprise, 429
+  signalé comme indisponibilité temporaire ; le texte recherché n’est jamais journalisé ; réservé aux
+  membres ayant `site:read`. Attribution affichée avec les suggestions.
+- **Tracé des emprises** : Terra Draw (MIT) sur MapLibre, polygones uniquement, auto-intersections
+  refusées au tracé ; l’API accepte Polygon ou MultiPolygon (2 000 sommets au plus) et PostGIS garde le
+  dernier mot (`st_isvalid`, message « contour invalide »). Stockage en MultiPolygon WGS 84.
 
 ## Conséquences
 

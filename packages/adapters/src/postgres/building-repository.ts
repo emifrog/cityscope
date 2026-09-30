@@ -10,10 +10,11 @@ import {
   type LevelUpdate,
 } from '@etare/contracts';
 import type { PoolClient } from './pool';
-import { applyAssignments, assignments, lockVersion } from './versioned';
+import { applyAssignments, asGeoJsonText, assignments, geoJsonSurface, lockVersion } from './versioned';
 
 const BUILDING_COLUMNS = `b.id, b.site_id, b.name, b.code, b.status, b.sort_order, b.construction_type,
-  b.height_m::float8 as height_m, b.floors_above, b.floors_below, b.notes, b.row_version`;
+  b.height_m::float8 as height_m, b.floors_above, b.floors_below, b.notes, b.row_version,
+  extensions.st_asgeojson(b.geom, 7)::json as footprint`;
 const LEVEL_COLUMNS = `l.id, l.building_id, l.label, l.sort_order, l.elevation_m::float8 as elevation_m, l.status, l.row_version`;
 
 type BuildingRow = Omit<Building, 'levels'>;
@@ -47,8 +48,8 @@ export class PostgresBuildingRepository implements BuildingRepository {
     if (site.rowCount !== 1) return null;
     const result = await this.client.query<{ id: string }>(
       `insert into app.building
-         (tenant_id, site_id, name, code, sort_order, construction_type, height_m, floors_above, floors_below, notes)
-       values (app.current_tenant_id(), $1, $2, $3, $4, $5, $6, $7, $8, $9)
+         (tenant_id, site_id, name, code, sort_order, construction_type, height_m, floors_above, floors_below, notes, geom)
+       values (app.current_tenant_id(), $1, $2, $3, $4, $5, $6, $7, $8, $9, ${geoJsonSurface('$10')})
        returning id`,
       [
         siteId,
@@ -60,6 +61,7 @@ export class PostgresBuildingRepository implements BuildingRepository {
         input.floors_above ?? null,
         input.floors_below ?? null,
         input.notes ?? null,
+        input.footprint ? JSON.stringify(input.footprint) : null,
       ],
     );
     return this.getBuilding(result.rows[0]?.id ?? '');
@@ -81,7 +83,8 @@ export class PostgresBuildingRepository implements BuildingRepository {
         floors_below: 'floors_below',
         notes: 'notes',
         status: 'status',
-      }),
+        footprint: { column: 'geom', expression: geoJsonSurface },
+      }).map((assignment) => (assignment.column === 'geom' ? asGeoJsonText(assignment) : assignment)),
     );
     return this.getBuilding(id);
   }
