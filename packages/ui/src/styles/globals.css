@@ -1,0 +1,46 @@
+/*
+ * Design tokens of the product (provisional identity, see apps/web/src/config/brand.ts).
+ * Replacing the visual identity = editing this block only: every component uses these tokens.
+ * Direction (mockup v0.1): sober, institutional, highly readable on tablets.
+ */
+@theme {
+  --color-brand-navy: #13233f;
+  --color-brand-navy-soft: #1f3354;
+  --color-brand-accent: #e8601c;
+  --color-brand-accent-strong: #c24e12;
+  --color-background: #f5f7fa;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-foreground: #0f172a;
+  --color-muted: #475569;
+  --color-subtle: #eef2f7;
+  --color-focus: #1d4ed8;
+
+  /* Operational criticality: always paired with a text label, never color alone. */
+  --color-critical: #b91c1c;
+  --color-critical-soft: #fee2e2;
+  --color-important: #b45309;
+  --color-important-soft: #fef3c7;
+  --color-info: #1d4ed8;
+  --color-info-soft: #dbeafe;
+  --color-success: #15803d;
+  --color-success-soft: #dcfce7;
+
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --radius-card: 0.75rem;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+}

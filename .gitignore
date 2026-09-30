@@ -20,3 +20,10 @@ supabase/.branches/
 *.keystore
 key.properties
 .DS_Store
+supabase/signing_keys.json
+supabase/.env
+apps/web/next-env.d.ts
+*.log
+# JVM crash dumps can contain secrets and are never source artifacts.
+*.hprof
+hs_err_pid*

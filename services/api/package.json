@@ -1,0 +1,24 @@
+{
+  "name": "@etare/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "start": "tsx --env-file-if-exists=../../.env.local src/server.ts"
+  },
+  "dependencies": {
+    "@etare/adapters": "workspace:*",
+    "@etare/application": "workspace:*",
+    "@etare/config": "workspace:*",
+    "@etare/contracts": "workspace:*",
+    "@etare/domain": "workspace:*",
+    "@etare/schemas": "workspace:*",
+    "@hono/node-server": "2.1.1",
+    "hono": "4.13.9",
+    "zod": "4.6.5"
+  }
+}

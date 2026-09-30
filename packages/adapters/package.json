@@ -1,0 +1,31 @@
+{
+  "name": "@etare/adapters",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./postgres": "./src/postgres/index.ts",
+    "./logging": "./src/logging/logger.ts",
+    "./auth": "./src/auth/token-verifier.ts",
+    "./storage": "./src/storage/supabase-object-storage.ts",
+    "./cartography": "./src/cartography/ign.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@etare/application": "workspace:*",
+    "@etare/config": "workspace:*",
+    "@etare/contracts": "workspace:*",
+    "@etare/domain": "workspace:*",
+    "@etare/schemas": "workspace:*",
+    "@supabase/supabase-js": "2.117.2",
+    "jose": "6.2.12",
+    "pg": "8.23.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1"
+  }
+}

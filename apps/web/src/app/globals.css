@@ -1,0 +1,5 @@
+@import 'tailwindcss';
+@import '@etare/ui/globals.css';
+
+/* Components of the shared UI package use Tailwind classes too. */
+@source '../../../../packages/ui/src';

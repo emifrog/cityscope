@@ -1,0 +1,59 @@
+# Analyse statique de l'application OPS.
+# `flutter analyze` doit rester à ZÉRO avertissement (vérifié en CI).
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  errors:
+    # Ces règles signalent de vrais bugs potentiels : on les traite en erreurs.
+    unawaited_futures: error
+    discarded_futures: error
+    todo: ignore
+  exclude:
+    # Code généré (drift / build_runner) : versionné mais non analysé.
+    - "**/*.g.dart"
+    - build/**
+    - android/**
+    - ios/**
+
+linter:
+  rules:
+    # Robustesse / asynchronisme
+    - always_declare_return_types
+    - avoid_dynamic_calls
+    - avoid_returning_null_for_void
+    - avoid_type_to_string
+    - cancel_subscriptions
+    - close_sinks
+    - discarded_futures
+    - only_throw_errors
+    - test_types_in_equals
+    - throw_in_finally
+    - unawaited_futures
+    - use_build_context_synchronously
+    # Sécurité / hygiène
+    - avoid_print
+    - avoid_web_libraries_in_flutter
+    - no_adjacent_strings_in_list
+    - literal_only_boolean_expressions
+    # Lisibilité / style
+    - always_use_package_imports
+    - directives_ordering
+    - prefer_const_constructors
+    - prefer_const_declarations
+    - prefer_const_literals_to_create_immutables
+    - prefer_final_fields
+    - prefer_final_in_for_each
+    - prefer_final_locals
+    - prefer_single_quotes
+    - sort_child_properties_last
+    - sort_constructors_first
+    - type_annotate_public_apis
+    - unnecessary_lambdas
+    - unnecessary_parenthesis
+    - unnecessary_statements
+    - use_named_constants
+    - use_super_parameters

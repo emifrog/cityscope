@@ -1,0 +1,55 @@
+name: etare_ops
+description: "Application opérationnelle (OPS) ETARE numérique — squelette Sprint 0."
+# Application privée : ne jamais publier sur pub.dev.
+publish_to: 'none'
+
+# versionName+versionCode (Android) / CFBundleShortVersionString+CFBundleVersion (iOS).
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # HTTP (API produit + adaptateur Supabase Auth/GoTrue).
+  dio: ^5.11.1
+  # Base locale (ORM typé) + ouverture native Flutter.
+  drift: ^2.35.0
+  drift_flutter: ^0.3.1
+  # Stockage sécurisé (Android Keystore / iOS Keychain) pour tokens et clé de base.
+  flutter_secure_storage: ^11.2.0
+  # État et injection de dépendances.
+  flutter_riverpod: ^3.4.3
+  # Navigation déclarative avec redirection d'authentification.
+  go_router: ^18.0.1
+  # Bibliothèque Material découplée du SDK depuis Flutter 3.44 (remplace
+  # `package:flutter/material.dart`, utilisée aussi par go_router 18).
+  material_ui: ^1.4.0
+  path: ^1.9.1
+  path_provider: ^2.1.6
+  # Bindings SQLite ; la variante embarquée (SQLCipher) est choisie via
+  # `hooks.user_defines` ci-dessous.
+  sqlite3: ^3.6.0
+
+dev_dependencies:
+  build_runner: ^2.16.1
+  drift_dev: ^2.35.0
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+# Build hooks (https://dart.dev/tools/hooks) : package:sqlite3 >= 3.0 embarque
+# sa propre bibliothèque native. On sélectionne la build SQLCipher (community
+# edition) pour chiffrer la base locale dès le premier jour, sur toutes les
+# plateformes (y compris l'hôte qui exécute `flutter test`).
+# Les anciens paquets `sqlcipher_flutter_libs` / `sqlite3_flutter_libs` sont
+# obsolètes (versions `+eol` vides tirées transitivement par drift_flutter).
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlcipher
+
+flutter:
+  uses-material-design: true

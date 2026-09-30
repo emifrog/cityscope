@@ -1,0 +1,15 @@
+node_modules/
+.pnpm-store/
+.tools/
+tmp/
+dist/
+build/
+coverage/
+.next/
+pnpm-lock.yaml
+docs/reference/
+Prompt Sprint 0.md
+apps/mobile/
+supabase/
+packages/contracts/openapi.json
+**/next-env.d.ts

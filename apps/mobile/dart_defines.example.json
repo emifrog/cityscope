@@ -1,0 +1,6 @@
+{
+  "ENV": "dev",
+  "API_BASE_URL": "http://10.0.2.2:3000/api/v1",
+  "AUTH_URL": "http://10.0.2.2:54321/auth/v1",
+  "AUTH_PUBLISHABLE_KEY": "sb_publishable_REMPLACER_PAR_LA_CLE_LOCALE"
+}

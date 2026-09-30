@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Least privilege: CI only reads the repository and never needs production secrets.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  typescript:
+    name: TypeScript (lint, typecheck, tests, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: OpenAPI contract is up to date
+        run: pnpm contracts:check
+      - run: pnpm build
+
+  database:
+    name: Database (migrations, RLS tests, integration)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Start the local Supabase stack (migrations + synthetic seed replayed from scratch)
+        run: |
+          pnpm exec tsx scripts/ensure-signing-key.ts
+          pnpm exec supabase start -x studio,imgproxy,vector,logflare,supavisor,edge-runtime,realtime,postgres-meta,mailpit
+      - name: Lint the business schema
+        run: pnpm exec supabase db lint --schema app --level warning --fail-on warning
+      - name: Database tests (pgTAP)
+        run: pnpm test:db
+      - name: Integration tests (Auth -> API -> RLS, worker queue)
+        run: |
+          pnpm setup:local
+          pnpm test:integration
+      - if: always()
+        run: pnpm exec supabase stop --no-backup
+
+  flutter:
+    name: Flutter (analyze, tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.5
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Generated code is up to date
+        run: |
+          dart run build_runner build
+          git diff --exit-code -- lib
+      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: flutter analyze
+      - run: flutter test

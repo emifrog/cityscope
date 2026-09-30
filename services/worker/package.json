@@ -1,0 +1,27 @@
+{
+  "name": "@etare/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "build": "tsup",
+    "dev": "tsx watch --env-file-if-exists=../../.env.local src/main.ts",
+    "start": "node --env-file-if-exists=../../.env.local dist/main.js"
+  },
+  "dependencies": {
+    "@etare/adapters": "workspace:*",
+    "@etare/application": "workspace:*",
+    "@etare/config": "workspace:*",
+    "@etare/domain": "workspace:*",
+    "pg": "8.23.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1",
+    "tsup": "8.5.1"
+  }
+}
