@@ -265,10 +265,12 @@ export class PostgresEtareRepository implements EtareRepository {
       etare_number: string | null;
       publication_number: number;
       has_pdf: boolean;
+      pdf_storage_key: string | null;
     }>(
       // Names come from the published content itself: OPS profiles never read the working tables.
       `select p.tenant_id, p.site_id, coalesce(p.payload #>> '{data,site,name}', 'site') as site_name,
-              p.payload #>> '{data,site,etare_number}' as etare_number, p.publication_number, ${HAS_PDF} as has_pdf
+              p.payload #>> '{data,site,etare_number}' as etare_number, p.publication_number, ${HAS_PDF} as has_pdf,
+              p.pdf_storage_key
        from app.publication p
        where p.id = $1 and p.tenant_id = app.current_tenant_id()`,
       [id],
@@ -283,6 +285,7 @@ export class PostgresEtareRepository implements EtareRepository {
           etareNumber: row.etare_number,
           publicationNumber: row.publication_number,
           hasPdf: row.has_pdf,
+          pdfStorageKey: row.pdf_storage_key,
         }
       : null;
   }

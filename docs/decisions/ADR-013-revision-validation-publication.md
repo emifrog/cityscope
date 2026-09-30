@@ -42,6 +42,31 @@ de travail.
 8. Les noms des membres affichés dans le workflow passent par `app.member_name()` (membres du SIS courant,
    jamais leur adresse) : les tables d’identité restent fermées.
 
+## Complément — corrections du 30/09/2026 (revue technique)
+
+La revue du 30/09/2026 (`docs/bilan-alignement-2026-09-30.md`) a reproduit trois défauts, corrigés
+comme suit (migration `20261003000400_publication_build_consistency.sql`) :
+
+- **Instantané cohérent** : l’aperçu et la soumission lisent toutes les tables dans une seule transaction
+  `REPEATABLE READ` : un seul état validé de la base, y compris pour la collecte des contributeurs (le
+  déclencheur lit `site_edit` dans le même instantané). Une modification validée pendant la lecture est
+  exclue du contenu figé et son auteur n’en devient pas contributeur ; elle ira dans la révision suivante.
+  Un conflit de sérialisation est rejoué jusqu’à trois fois puis rendu en `CONFLICT`.
+- **Fencing de la fabrication** : `worker_start/complete/fail_publication` reçoivent l’identifiant du
+  travail et son numéro de tentative, revérifiés sous verrou de la ligne du travail (bail valide, clé
+  d’idempotence canonique, publication du même SIS). Une tentative dont le bail a expiré, ou remplacée
+  par une plus récente, ne peut ni publier ni faire échouer la publication ; le handler s’arrête aussi
+  dès que le runner signale la perte du bail. Les anciennes signatures sans jeton sont supprimées.
+- **Fichiers de sortie immuables** : le PDF est déposé sous une clé adressée par son empreinte
+  (`…/publications/{publication}/etare-{sha256}.pdf`), sans écrasement possible ; un dépôt identique déjà
+  présent est accepté après vérification de l’empreinte. La référence gagnante
+  (`publication.pdf_storage_key`) est enregistrée dans la même transaction que le manifeste, et la base
+  refuse une clé qui ne correspond pas au SIS, à la publication et à l’empreinte du PDF listé.
+- **Échec définitif** : un travail passé `dead` (erreur permanente, tentatives épuisées, dernier bail
+  expiré) fait passer la publication `failed` ; la version active reste en place. La relance
+  (`POST /etare-revisions/{id}/publication`) crée une nouvelle publication et l’événement d’audit
+  `publication.retry` (publication précédente, code d’échec).
+
 ## Conséquences
 
 - La signature Ed25519 du manifeste, le paquet hors ligne et la diffusion aux terminaux viennent avec le

@@ -18,7 +18,7 @@ import { API_BASE_PATH, endpoints, type EtareRevision } from '@etare/contracts';
 import { canonicalJson } from '@etare/domain';
 import { HandlerRegistry, createWorker, publicationBuildHandler } from '@etare/worker';
 import pg from 'pg';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { TENANT_06, TENANT_83, authApi, requireEnv, signIn, withSecondFactor } from './helpers';
 
 const app = createApiApp(createApiDependencies(process.env));
@@ -29,6 +29,7 @@ const workerPool = createPool({
 const admin = new pg.Client({ connectionString: requireEnv('LOCAL_DATABASE_ADMIN_URL') });
 
 const sha256 = async (content: string | Uint8Array) => createHash('sha256').update(content).digest('hex');
+const renderer = new PdfLibEtareRenderer();
 const worker = createWorker({
   queue: new PostgresJobQueue(workerPool, 'integration-etare'),
   registry: new HandlerRegistry([
@@ -36,7 +37,7 @@ const worker = createWorker({
       store: new PostgresPublicationBuildStore(workerPool),
       tools: { sha256, byteLength: (text) => Buffer.byteLength(text, 'utf8'), now: () => new Date() },
       artifacts: {
-        renderer: new PdfLibEtareRenderer(),
+        renderer,
         objects: SupabaseObjectStorage.fromSecretKey(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SECRET_KEY')),
         sha256Bytes: sha256,
       },
@@ -263,5 +264,52 @@ describe('ETARE workflow', () => {
     const open = overview.revisions.find((revision) => revision.status === 'draft');
     expect(open).toBeDefined();
     expect((await editor83('GET', `/etare-revisions/${open?.id}`)).status).toBe(404);
+  });
+
+  it('keeps the active version on terminal failure and allows a fresh publication request', async () => {
+    const before = endpoints.getSiteEtare.response.parse(
+      await (await editor06('GET', `/sites/${siteId}/etare`)).json(),
+    );
+    const draft = before.revisions.find((revision) => revision.status === 'draft');
+    if (!draft) throw new Error('Expected the correction draft');
+    const submitted = await submit(draft, 'Relance après panne de fabrication');
+    const approved = endpoints.decideRevision.response.parse(
+      await (
+        await validatorWithMfa('POST', `/etare-revisions/${draft.id}/decision`, {
+          decision: 'approved',
+          revision_hash: submitted.content_hash,
+          publish: true,
+        })
+      ).json(),
+    );
+    const publicationId = approved.publication?.id;
+    await admin.query(
+      "update app.job set max_attempts = 1 where job_type = 'publication.build' and payload ->> 'publication_id' = $1",
+      [publicationId],
+    );
+    const broken = vi.spyOn(renderer, 'render').mockRejectedValue(new Error('Temporary renderer outage'));
+    try {
+      await worker.runOnce();
+    } finally {
+      broken.mockRestore();
+    }
+    const failed = endpoints.getSiteEtare.response.parse(
+      await (await editor06('GET', `/sites/${siteId}/etare`)).json(),
+    );
+    expect(failed.publications.find((p) => p.id === publicationId)).toMatchObject({ status: 'failed' });
+    expect(failed.publications.find((p) => p.status === 'published')?.id).toBe(
+      before.publications.find((p) => p.status === 'published')?.id,
+    );
+    const retried = await validatorWithMfa('POST', `/etare-revisions/${draft.id}/publication`);
+    expect(retried.status).toBe(202);
+    const queued = endpoints.publishRevision.response.parse(await retried.json());
+    expect(queued.publication).toMatchObject({ status: 'queued' });
+    expect(queued.publication?.id).not.toBe(publicationId);
+    await worker.runOnce();
+    const after = endpoints.getSiteEtare.response.parse(await (await editor06('GET', `/sites/${siteId}/etare`)).json());
+    expect(after.publications.find((p) => p.id === queued.publication?.id)).toMatchObject({
+      status: 'published',
+      has_pdf: true,
+    });
   });
 });

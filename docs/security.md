@@ -47,6 +47,10 @@ révèlent rien). Tests : `supabase/tests/database/10_tenant_isolation.test.sql`
   être ni l’auteur, ni le soumetteur, ni un contributeur ; il décide sur l’empreinte exacte relue. Le
   worker fabrique la publication par des fonctions réservées à `etare_worker`, filtrées par SIS, à partir
   du seul contenu figé. Le PDF (ADR-014) se télécharge par URL signée de 60 s, accès tracé.
+- **Fichiers publiés immuables** (correctifs du 30/09/2026) : PDF déposé sous une clé adressée par son
+  empreinte, jamais écrasé ; une tentative de fabrication dont le bail a expiré ne peut plus rien publier,
+  faire échouer ni acquitter (jeton de fencing vérifié en base) ; l’instantané soumis correspond à un seul
+  état validé de la base (`REPEATABLE READ`).
 
 ## Accès à la base
 

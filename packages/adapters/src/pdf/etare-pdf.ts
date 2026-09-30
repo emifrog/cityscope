@@ -9,7 +9,7 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFImage, type PDFP
  * published and the SHA-256 of the approved content. Standard PDF fonts
  * (WinAnsi): characters they cannot encode are replaced by their closest form.
  */
-export const ETARE_PDF_TEMPLATE_VERSION = 'etare-pdf/1';
+export const ETARE_PDF_TEMPLATE_VERSION = 'etare-pdf/2';
 
 const PORTRAIT: [number, number] = [595.28, 841.89];
 const LANDSCAPE: [number, number] = [841.89, 595.28];
@@ -277,7 +277,7 @@ function drawPlan(
   writer: Writer,
   snapshot: EtareSnapshot,
   plan: EtareSnapshot['plans'][number],
-  image: PDFImage | null,
+  image: PDFImage,
 ): void {
   const { width, height } = plan.background;
   const page = writer.newPage(width > height ? LANDSCAPE : PORTRAIT);
@@ -291,10 +291,6 @@ function drawPlan(
   const boxTop = writer.cursor;
   const boxHeight = boxTop - MARGIN - FOOTER - legendHeight;
   const boxWidth = writer.width;
-  if (!image) {
-    writer.text('Fond au format WebP : non intégré au PDF, consultable dans l’application.', { color: COLORS.muted });
-    return;
-  }
   const scale = Math.min(boxWidth / width, boxHeight / height);
   const left = MARGIN + (boxWidth - width * scale) / 2;
   const top = boxTop;
@@ -438,10 +434,15 @@ function drawPlan(
   }
 }
 
-async function embed(doc: PDFDocument, image: PlanImage): Promise<PDFImage | null> {
+async function embed(doc: PDFDocument, image: PlanImage): Promise<PDFImage> {
   if (image.mimeType === 'image/png') return doc.embedPng(image.bytes);
   if (image.mimeType === 'image/jpeg') return doc.embedJpg(image.bytes);
-  return null;
+  if (image.mimeType === 'image/webp') {
+    // Lossless conversion of the checked WebP background (the PDF format has no WebP image).
+    const { default: sharp } = await import('sharp');
+    return doc.embedPng(await sharp(image.bytes).png().toBuffer());
+  }
+  throw new Error('PLAN_BACKGROUND_UNSUPPORTED');
 }
 
 export class PdfLibEtareRenderer implements EtarePdfRenderer {
@@ -585,7 +586,8 @@ export class PdfLibEtareRenderer implements EtarePdfRenderer {
 
     for (const plan of snapshot.plans) {
       const image = planImages.get(plan.background.revision_id);
-      drawPlan(writer, snapshot, plan, image ? await embed(doc, image) : null);
+      if (!image) throw new Error('PLAN_BACKGROUND_UNAVAILABLE');
+      drawPlan(writer, snapshot, plan, await embed(doc, image));
     }
 
     // Header and footer on every page: which published version, when, and its fingerprint.

@@ -81,8 +81,12 @@ export interface RequestSession {
   readonly audit: AuditRecorder;
 }
 
+export interface SessionOptions {
+  readonly isolation?: 'repeatable_read';
+}
+
 export interface SessionFactory {
-  run<T>(context: RequestContext, work: (session: RequestSession) => Promise<T>): Promise<T>;
+  run<T>(context: RequestContext, work: (session: RequestSession) => Promise<T>, options?: SessionOptions): Promise<T>;
 }
 
 export interface IdentityReader {
@@ -222,6 +226,7 @@ export interface PublicationRecord {
   readonly etareNumber: string | null;
   readonly publicationNumber: number;
   readonly hasPdf: boolean;
+  readonly pdfStorageKey: string | null;
 }
 
 /**

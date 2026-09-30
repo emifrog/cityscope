@@ -11,8 +11,8 @@ export const DATA_FILE = 'data/site.json';
 export const PDF_FILE = 'etare.pdf';
 
 /** Storage key of the ETARE PDF of a publication (produced by the worker, served by signed URL). */
-export const publicationPdfKey = (tenantId: string, publicationId: string) =>
-  `tenants/${tenantId}/publications/${publicationId}/etare.pdf`;
+export const publicationPdfKey = (tenantId: string, publicationId: string, sha256?: string) =>
+  `tenants/${tenantId}/publications/${publicationId}/etare${sha256 ? `-${sha256}` : ''}.pdf`;
 
 export interface PersonStamp {
   readonly id: string | null;
@@ -41,14 +41,25 @@ export interface BuiltPublication {
   readonly manifest: Record<string, unknown>;
   readonly manifestHash: string;
   readonly templateVersion: string | null;
+  readonly pdfStorageKey: string | null;
+}
+
+/** Monotonic attempt number of the running queue job: stale workers cannot commit. */
+export interface PublicationBuildLease {
+  readonly jobId: string;
+  readonly attempt: number;
 }
 
 export interface PublicationBuildStore {
   /** queued -> building; null when the publication is unknown, of another SIS or already built. */
-  start(publicationId: string, tenantId: string): Promise<PublicationToBuild | null>;
+  start(publicationId: string, tenantId: string, lease: PublicationBuildLease): Promise<PublicationToBuild | null>;
   /** building -> ready -> published (or superseded when a newer one exists). */
-  complete(publicationId: string, built: BuiltPublication): Promise<'published' | 'superseded' | null>;
-  fail(publicationId: string, failureCode: string): Promise<boolean>;
+  complete(
+    publicationId: string,
+    built: BuiltPublication,
+    lease: PublicationBuildLease,
+  ): Promise<'published' | 'superseded' | null>;
+  fail(publicationId: string, failureCode: string, lease: PublicationBuildLease): Promise<boolean>;
   /** Checked files of the SIS referenced by the snapshot (plan backgrounds), with their storage keys. */
   assetFiles(
     tenantId: string,
@@ -75,7 +86,7 @@ export interface EtarePdfInput {
     readonly createdAt: Date;
   };
   readonly snapshot: EtareSnapshot;
-  /** Plan backgrounds by background revision id (PNG or JPEG), checked against their hash. */
+  /** Plan backgrounds by background revision id (PNG, JPEG or WebP), checked against their original hash. */
   readonly planImages: ReadonlyMap<string, PlanImage>;
 }
 
@@ -160,6 +171,7 @@ export async function verifiedSnapshot(publication: PublicationToBuild, tools: B
 export interface GeneratedFile {
   readonly file: ManifestFile;
   readonly templateVersion: string;
+  readonly storageKey: string;
 }
 
 /**
@@ -216,10 +228,9 @@ export async function buildPublicationContent(
     manifest,
     manifestHash: await tools.sha256(canonicalJson(manifest)),
     templateVersion: generated?.templateVersion ?? null,
+    pdfStorageKey: generated?.storageKey ?? null,
   };
 }
-
-const PDF_IMAGE_TYPES = new Set(['image/png', 'image/jpeg']);
 
 /**
  * Renders the ETARE PDF from the snapshot and stores it. The plan backgrounds
@@ -233,9 +244,7 @@ export async function generateEtarePdf(
   snapshot: EtareSnapshot,
   createdAt: Date,
 ): Promise<GeneratedFile> {
-  const backgrounds = snapshot.plans
-    .map((plan) => plan.background)
-    .filter((background) => PDF_IMAGE_TYPES.has(background.asset.mime_type));
+  const backgrounds = snapshot.plans.map((plan) => plan.background);
   const files = new Map(
     (
       await store.assetFiles(
@@ -270,13 +279,21 @@ export async function generateEtarePdf(
     snapshot,
     planImages,
   });
-  await artifacts.objects.upload(publicationPdfKey(publication.tenantId, publication.id), pdf, 'application/pdf', {
-    upsert: true,
-  });
+  const sha256 = await artifacts.sha256Bytes(pdf);
+  const storageKey = publicationPdfKey(publication.tenantId, publication.id, sha256);
+  try {
+    // Never overwrite: another attempt may already have published a different PDF.
+    await artifacts.objects.upload(storageKey, pdf, 'application/pdf', { upsert: false });
+  } catch (error) {
+    // A retry producing identical bytes is safe, including an upload whose acknowledgement was lost.
+    const existing = await artifacts.objects.download(storageKey);
+    if (!existing || (await artifacts.sha256Bytes(existing)) !== sha256) throw error;
+  }
   return {
+    storageKey,
     file: {
       path: PDF_FILE,
-      sha256: await artifacts.sha256Bytes(pdf),
+      sha256,
       size_bytes: pdf.byteLength,
       media_type: 'application/pdf',
       required: true,
@@ -293,18 +310,22 @@ export async function buildPublication(
   tools: BuildTools,
   publicationId: string,
   tenantId: string,
+  lease: PublicationBuildLease,
   artifacts: PublicationArtifacts | null = null,
+  signal?: { throwIfAborted(): void },
 ): Promise<PublicationBuildOutcome> {
-  const publication = await store.start(publicationId, tenantId);
+  signal?.throwIfAborted();
+  const publication = await store.start(publicationId, tenantId, lease);
   if (!publication) return 'already_built';
   try {
     const createdAt = tools.now();
     const snapshot = await verifiedSnapshot(publication, tools);
     const generated = artifacts ? await generateEtarePdf(store, artifacts, publication, snapshot, createdAt) : null;
+    signal?.throwIfAborted();
     const built = await buildPublicationContent(publication, tools, generated, createdAt.toISOString());
-    return (await store.complete(publicationId, built)) ?? 'already_built';
+    return (await store.complete(publicationId, built, lease)) ?? 'already_built';
   } catch (error) {
-    if (error instanceof PermanentJobError) await store.fail(publicationId, error.code);
+    if (error instanceof PermanentJobError) await store.fail(publicationId, error.code, lease);
     throw error;
   }
 }

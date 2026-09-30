@@ -6,9 +6,16 @@ création, validation, publication immuable et consultation hors ligne des plans
 > Nom commercial et logo à définir : identité provisoire dans `apps/web/src/config/brand.ts`,
 > `packages/ui/src/styles/globals.css` et `apps/mobile/lib/src/core/theme/brand.dart`.
 
-**État : Sprint 0 — fondation technique.** Aucune fonctionnalité métier complète n’est encore livrée ;
-le socle est validé localement (données, sécurité, API, web, mobile). La CI est configurée ; son
-exécution sur GitHub reste à confirmer. Voir le [rapport du Sprint 0](docs/sprint-0-report.md).
+**État : Sprint 3 livré, corrections de la revue du 30 septembre 2026 appliquées.** Le back-office
+couvre la préparation d’un ETARE : référentiel des sites, carte IGN, plans de niveaux, objets, zones et
+risques, contrôle avant validation, validation par un validateur indépendant avec double
+authentification, publication immuable et PDF. **Restent à venir** : consultation OPS hors ligne sur
+l’application mobile (paquets signés, synchronisation), portail exploitant, signalements terrain.
+La CI GitHub (TypeScript et build, base et intégration, Flutter) s’exécute à chaque push sur `main`.
+Voir le [suivi des exigences](docs/suivi-exigences.md), le
+[bilan d’alignement](docs/bilan-alignement-2026-09-30.md) et les rapports des Sprints
+[0](docs/sprint-0-report.md), [1](docs/sprint-1-report.md), [2](docs/sprint-2-report.md) et
+[3](docs/sprint-3-report.md).
 
 ## Démarrage rapide
 
@@ -36,7 +43,7 @@ Détails, dépannage, mobile et worker : [`docs/development.md`](docs/developmen
 | `pnpm test`                       | tests unitaires (Vitest, sans réseau ni base)                           |
 | `pnpm test:db`                    | tests SQL pgTAP : RLS, isolation, audit, immutabilité, file de tâches   |
 | `pnpm test:integration`           | Auth → API → RLS de bout en bout, file de tâches (stack locale requise) |
-| `pnpm db:reset`                   | rejoue toutes les migrations et le seed                                 |
+| `pnpm db:reset`                   | rejoue toutes les migrations et le seed, redépose les fichiers de démo  |
 | `pnpm build`                      | build de production du web et du worker                                 |
 | `pnpm dev:worker`                 | worker asynchrone en mode développement                                 |
 | `pnpm dev:integration`            | web + API locaux contre l’environnement d’intégration partagé           |
@@ -53,7 +60,7 @@ services/api        API HTTP (Hono, Fetch API) : auth, SIS actif, validation, er
 services/worker     traitements asynchrones (file PostgreSQL)
 packages/domain     règles métier pures (rôles, workflow, séparation des tâches)
 packages/application cas d’usage et ports
-packages/adapters   PostgreSQL, JWT, stockage, IGN, journalisation
+packages/adapters   PostgreSQL, JWT, stockage, IGN, PDF, journalisation
 packages/contracts  contrats d’API (Zod) + OpenAPI généré
 packages/schemas    briques Zod partagées (GeoJSON, coordonnées locales...)
 packages/config     environnement, tsconfig de base
@@ -69,7 +76,9 @@ docs/               architecture, développement, base, sécurité, ADR
 - [Architecture](docs/architecture.md) · [Développement](docs/development.md) ·
   [Base de données](docs/database.md) · [Sécurité](docs/security.md)
 - [Décisions d’architecture (ADR)](docs/decisions/)
-- [Rapport du Sprint 0 et résultats de validation](docs/sprint-0-report.md)
+- [Suivi des exigences](docs/suivi-exigences.md) · [Bilan d’alignement du 30/09/2026](docs/bilan-alignement-2026-09-30.md)
+- Rapports de sprint : [0](docs/sprint-0-report.md) · [1](docs/sprint-1-report.md) ·
+  [2](docs/sprint-2-report.md) · [3](docs/sprint-3-report.md)
 - Documents de cadrage : [`docs/reference/`](docs/reference/)
 
 ## Sécurité en bref

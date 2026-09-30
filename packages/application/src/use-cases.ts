@@ -3,13 +3,14 @@ import {
   AccessDenied,
   NotFound,
   PRIVILEGED_PERMISSIONS,
+  SerializationConflict,
   StrongAuthenticationRequired,
   TenantRequired,
   type Permission,
   type RequestContext,
   type ResolvedAccess,
 } from '@etare/domain';
-import type { RequestSession, SessionFactory } from './ports';
+import type { RequestSession, SessionFactory, SessionOptions } from './ports';
 
 /**
  * Application-level authorization. The database enforces the same rules
@@ -35,19 +36,39 @@ export async function inTenant<T>(
   context: RequestContext,
   permission: Permission,
   work: (session: RequestSession) => Promise<T>,
+  options?: SessionOptions,
 ): Promise<T> {
   if (!context.tenantId) throw new TenantRequired();
-  return sessions.run(context, async (session) => {
-    // MFA_REQUIRED only for people whose roles grant the permission once the second factor is used;
-    // the others get FORBIDDEN (checked lazily: only when a privileged permission is missing).
-    const grantedWithSecondFactor =
-      !session.access.permissions.has(permission) &&
-      PRIVILEGED_PERMISSIONS.has(permission) &&
-      context.principal.assurance !== 'aal2' &&
-      (await session.identity.holdsWithSecondFactor(permission));
-    requirePermission(session.access, context, permission, grantedWithSecondFactor);
-    return work(session);
-  });
+  return sessions.run(
+    context,
+    async (session) => {
+      // MFA_REQUIRED only for people whose roles grant the permission once the second factor is used;
+      // the others get FORBIDDEN (checked lazily: only when a privileged permission is missing).
+      const grantedWithSecondFactor =
+        !session.access.permissions.has(permission) &&
+        PRIVILEGED_PERMISSIONS.has(permission) &&
+        context.principal.assurance !== 'aal2' &&
+        (await session.identity.holdsWithSecondFactor(permission));
+      requirePermission(session.access, context, permission, grantedWithSecondFactor);
+      return work(session);
+    },
+    options,
+  );
+}
+
+/**
+ * Runs a transaction again when it crossed another one (serialization failure
+ * under REPEATABLE READ): the rolled-back work is repeated on a fresh snapshot.
+ * Only for work without effects outside the database.
+ */
+export async function retryOnSerializationConflict<T>(work: () => Promise<T>, attempts = 3): Promise<T> {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await work();
+    } catch (error) {
+      if (!(error instanceof SerializationConflict) || attempt >= attempts) throw error;
+    }
+  }
 }
 
 /** Same answer for "does not exist" and "belongs to another SIS": identifiers reveal nothing. */

@@ -136,8 +136,9 @@ Boucle de réservation (`app.claim_jobs`, `FOR UPDATE SKIP LOCKED`), bail avec h
 exponentielle avec aléa, erreurs permanentes → état `dead`, arrêt propre sur SIGTERM. Les handlers
 valident leur payload avant tout effet et doivent être idempotents (livraison « au moins une fois »).
 Handlers : `system.noop`, `publication.build` (fabrication d’une publication à partir de la révision
-figée : charge utile, manifeste, empreintes, PDF ETARE dessiné avec `pdf-lib`, activation — ADR-013,
-ADR-014) et `asset.verify` (contrôle des
+figée : charge utile, manifeste, empreintes, PDF ETARE dessiné avec `pdf-lib` et déposé sous une clé
+adressée par son empreinte, activation — ADR-013, ADR-014 ; chaque écriture est protégée par le jeton de
+fencing du bail, et le handler s’arrête dès que le runner signale la perte du bail) et `asset.verify` (contrôle des
 fichiers déposés, ADR-009), enregistré dès que `SUPABASE_URL` et `SUPABASE_SECRET_KEY` sont fournis. PDF, paquets hors ligne, miniatures, imports,
 notifications et empreintes s’ajouteront comme handlers. Voir ADR-007.
 

@@ -125,14 +125,16 @@ export function publicationBuildHandler(deps: {
     type: PUBLICATION_BUILD_JOB,
     payloadVersion: 1,
     payload: z.object({ publication_id: z.uuid() }),
-    async handle(payload, { job, logger }) {
+    async handle(payload, { job, logger, signal }) {
       if (!job.tenantId) throw new PermanentJobError('TENANT_REQUIRED');
       const outcome = await buildPublication(
         deps.store,
         deps.tools,
         payload.publication_id,
         job.tenantId,
+        { jobId: job.id, attempt: job.attempts },
         deps.artifacts ?? null,
+        signal,
       );
       logger.info('publication build', { publication_id: payload.publication_id, outcome });
     },

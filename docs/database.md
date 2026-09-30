@@ -6,26 +6,27 @@ pas exposé par la Data API Supabase (`supabase/config.toml` → `api.schemas`),
 
 ## Migrations
 
-| Fichier                                           | Contenu                                                                                                                                                                            |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `…0100_foundation.sql`                            | extensions (schéma `extensions`), schéma `app`, rôles applicatifs, accesseurs de contexte, triggers génériques                                                                     |
-| `…0200_tenancy_and_rbac.sql`                      | `tenant`, `user_account`, `membership`, `role`, `permission`, `role_binding`, `platform_admin`, `has_permission`, `begin_request`, `my_memberships`                                |
-| `…0300_audit.sql`                                 | `audit_event` (ajout seul), trigger d’audit générique, `record_audit_event`                                                                                                        |
-| `…0400_site_referential.sql`                      | `address`, `site`, `building`, `level`, `asset`, `plan`, `plan_revision`, `zone`                                                                                                   |
-| `…0500_operational_objects_and_documents.sql`     | catalogues `object_type` / `risk_type` (+ données initiales du modèle §12), `operational_object`, `risk_occurrence`, `document`, `document_version`                                |
-| `…0600_etare_publication.sql`                     | `etare`, `etare_revision`, `etare_revision_contributor`, `approval`, `publication` + gardes                                                                                        |
-| `…0700_jobs.sql`                                  | file de tâches `job` et fonctions `enqueue/claim/heartbeat/complete/fail`                                                                                                          |
-| `…0800_storage_supabase.sql`                      | seule migration spécifique Supabase : bucket privé `etare-assets` (gardée)                                                                                                         |
-| `20260930084922_publication_access_hardening.sql` | lecture OPS limitée aux publications actives, références au même site, métadonnées publiées immuables                                                                              |
-| `20260930085355_revision_authorship.sql`          | attribution des contributions par trigger, contrôle de l’auteur et du soumetteur, modification d’un brouillon réservée aux rédacteurs                                              |
-| `20260930120000_role_timeouts.sql`                | délais `statement` / `idle in transaction` / `lock` portés par les rôles applicatifs (indépendants du pooler)                                                                      |
-| `20261001000100_referential_editing.sql`          | Sprint 1 : `site_edit` (auteurs des données de travail), contributeurs collectés à la soumission, `site_classification`, `contact`, `external_identifier`, index de recherche      |
-| `20261001000200_document_uploads.sql`             | Sprint 1 : clé de quarantaine et verdict de contrôle des `asset`, verdict réservé au worker et définitif, fonctions `worker_*_asset_verification`                                  |
-| `20261001000300_member_administration.sql`        | Sprint 1 : `admin_add_member`, `admin_update_member` (anti-escalade, dernier administrateur), `holds_with_second_factor`, unicité des seules liaisons de rôle actives              |
-| `20261002000100_operational_object_geometry.sql`  | Sprint 2 : objet toujours placé (carte ou plan), géométrie conforme au type (point, ligne, surface), propriétés typées des types clés (PEI, réserve, portail, voie engins…)        |
-| `20261003000100_plan_placement_and_risks.sql`     | Sprint 3 : placement sur plan (fond courant, dans l’image, niveau du plan, zone déduite), portée zone ⊂ niveau ⊂ bâtiment, champs et libellé des risques, codes nationaux réservés |
-| `20261003000200_etare_workflow.sql`               | Sprint 3 : `member_name` (noms des membres du SIS pour le workflow), fabrication des publications par le worker (`worker_start/complete/fail_publication`)                         |
-| `20261003000300_publication_pdf.sql`              | Sprint 3 : `worker_publication_assets` (clés de stockage des fonds de plans contrôlés d’une publication, pour le PDF)                                                              |
+| Fichier                                            | Contenu                                                                                                                                                                                                                            |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `…0100_foundation.sql`                             | extensions (schéma `extensions`), schéma `app`, rôles applicatifs, accesseurs de contexte, triggers génériques                                                                                                                     |
+| `…0200_tenancy_and_rbac.sql`                       | `tenant`, `user_account`, `membership`, `role`, `permission`, `role_binding`, `platform_admin`, `has_permission`, `begin_request`, `my_memberships`                                                                                |
+| `…0300_audit.sql`                                  | `audit_event` (ajout seul), trigger d’audit générique, `record_audit_event`                                                                                                                                                        |
+| `…0400_site_referential.sql`                       | `address`, `site`, `building`, `level`, `asset`, `plan`, `plan_revision`, `zone`                                                                                                                                                   |
+| `…0500_operational_objects_and_documents.sql`      | catalogues `object_type` / `risk_type` (+ données initiales du modèle §12), `operational_object`, `risk_occurrence`, `document`, `document_version`                                                                                |
+| `…0600_etare_publication.sql`                      | `etare`, `etare_revision`, `etare_revision_contributor`, `approval`, `publication` + gardes                                                                                                                                        |
+| `…0700_jobs.sql`                                   | file de tâches `job` et fonctions `enqueue/claim/heartbeat/complete/fail`                                                                                                                                                          |
+| `…0800_storage_supabase.sql`                       | seule migration spécifique Supabase : bucket privé `etare-assets` (gardée)                                                                                                                                                         |
+| `20260930084922_publication_access_hardening.sql`  | lecture OPS limitée aux publications actives, références au même site, métadonnées publiées immuables                                                                                                                              |
+| `20260930085355_revision_authorship.sql`           | attribution des contributions par trigger, contrôle de l’auteur et du soumetteur, modification d’un brouillon réservée aux rédacteurs                                                                                              |
+| `20260930120000_role_timeouts.sql`                 | délais `statement` / `idle in transaction` / `lock` portés par les rôles applicatifs (indépendants du pooler)                                                                                                                      |
+| `20261001000100_referential_editing.sql`           | Sprint 1 : `site_edit` (auteurs des données de travail), contributeurs collectés à la soumission, `site_classification`, `contact`, `external_identifier`, index de recherche                                                      |
+| `20261001000200_document_uploads.sql`              | Sprint 1 : clé de quarantaine et verdict de contrôle des `asset`, verdict réservé au worker et définitif, fonctions `worker_*_asset_verification`                                                                                  |
+| `20261001000300_member_administration.sql`         | Sprint 1 : `admin_add_member`, `admin_update_member` (anti-escalade, dernier administrateur), `holds_with_second_factor`, unicité des seules liaisons de rôle actives                                                              |
+| `20261002000100_operational_object_geometry.sql`   | Sprint 2 : objet toujours placé (carte ou plan), géométrie conforme au type (point, ligne, surface), propriétés typées des types clés (PEI, réserve, portail, voie engins…)                                                        |
+| `20261003000100_plan_placement_and_risks.sql`      | Sprint 3 : placement sur plan (fond courant, dans l’image, niveau du plan, zone déduite), portée zone ⊂ niveau ⊂ bâtiment, champs et libellé des risques, codes nationaux réservés                                                 |
+| `20261003000200_etare_workflow.sql`                | Sprint 3 : `member_name` (noms des membres du SIS pour le workflow), fabrication des publications par le worker (`worker_start/complete/fail_publication`)                                                                         |
+| `20261003000400_publication_build_consistency.sql` | Correctifs du 30/09/2026 : fencing de la fabrication par le bail du travail (`lock_publication_job`), PDF immuable (`publication.pdf_storage_key`), baux expirés sans effet, échec définitif d’un travail propagé à la publication |
+| `20261003000300_publication_pdf.sql`               | Sprint 3 : `worker_publication_assets` (clés de stockage des fonds de plans contrôlés d’une publication, pour le PDF)                                                                                                              |
 
 ## Correspondance avec les documents de cadrage
 
@@ -83,10 +84,15 @@ données de travail ──submit──► etare_revision (snapshot + SHA-256 fig
 ```
 
 Le contenu figé est l’instantané canonique de l’ADR-013 ; son SHA-256 (JSON canonique) est calculé par l’API
-à la soumission. Le worker fabrique la publication par `worker_start_publication` (queued → building,
-filtré par SIS), `worker_complete_publication` (charge utile, manifeste et empreinte, puis activation :
-la version précédente est remplacée, un build obsolète est classé `superseded`) et
-`worker_fail_publication` (la version active reste en place). Voir le test `110_publication_build`.
+à la soumission, dans une transaction `REPEATABLE READ` (un seul état de la base pour toutes les tables
+lues et pour les contributeurs collectés). Le worker fabrique la publication par
+`worker_start_publication` (queued → building, filtré par SIS), `worker_complete_publication` (charge
+utile, manifeste, empreinte et clé du PDF immuable, puis activation : la version précédente est remplacée,
+un build obsolète est classé `superseded`) et `worker_fail_publication` (la version active reste en place).
+Chacune revérifie, sous verrou de la ligne du travail, l’identifiant du travail, son numéro de tentative et
+la validité du bail (`lock_publication_job`) : une tentative périmée n’a aucun effet. Le déclencheur
+`job_publication_terminal_failure` fait passer `failed` une publication dont le travail est `dead`. Voir
+les tests `50_jobs` et `110_publication_build`.
 
 Garanties SQL (`tg_etare_revision_guard`, `tg_approval_guard`, `tg_publication_guard`) :
 

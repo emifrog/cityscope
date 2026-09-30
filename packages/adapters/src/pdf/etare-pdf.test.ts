@@ -1,7 +1,17 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { EtareSnapshot } from '@etare/contracts';
-import { PDFDocument } from 'pdf-lib';
+import {
+  PDFArray,
+  PDFDict,
+  PDFDocument,
+  PDFName,
+  PDFRawStream,
+  PDFRef,
+  decodePDFRawStream,
+  type PDFPage,
+} from 'pdf-lib';
+import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 import { ETARE_PDF_TEMPLATE_VERSION, PdfLibEtareRenderer } from './etare-pdf';
 
@@ -144,30 +154,99 @@ const snapshot: EtareSnapshot = {
   },
 };
 
+const PUBLICATION = {
+  id: '0600000f-0000-4000-8000-000000000002',
+  number: 2,
+  revisionNo: 2,
+  contentHash: 'c'.repeat(64),
+  submittedBy: 'Rédacteur',
+  submittedAt: new Date('2026-09-30T09:41:00Z'),
+  approvedBy: 'Validateur',
+  approvedAt: new Date('2026-09-30T11:00:00Z'),
+  createdAt: new Date('2026-09-30T11:00:05Z'),
+};
+
+/** A stream object of the document (content or image). */
+function streamAt(document: PDFDocument, ref: unknown): PDFRawStream {
+  const stream = ref instanceof PDFRef ? document.context.lookup(ref) : ref;
+  if (!(stream instanceof PDFRawStream)) throw new Error('Expected a PDF stream.');
+  return stream;
+}
+
+/** Operators of a page, decoded. */
+function contentOf(document: PDFDocument, page: PDFPage): string {
+  const contents = page.node.get(PDFName.of('Contents'));
+  const refs = contents instanceof PDFArray ? contents.asArray() : [contents];
+  return refs
+    .map((ref) => Buffer.from(decodePDFRawStream(streamAt(document, ref)).decode()).toString('latin1'))
+    .join('\n');
+}
+
+/** Texts drawn on a page (standard fonts: WinAnsi hex strings). */
+const textsOf = (content: string) =>
+  [...content.matchAll(/<([0-9A-Fa-f]+)> Tj/g)].map((match) => Buffer.from(match[1] ?? '', 'hex').toString('latin1'));
+
+/** The single image drawn on the page, with its dictionary and its stream. */
+function imageOf(document: PDFDocument, page: PDFPage) {
+  const images = page.node.Resources()?.lookup(PDFName.of('XObject'), PDFDict);
+  const keys = images?.keys() ?? [];
+  expect(keys).toHaveLength(1);
+  const [name] = keys;
+  const stream = streamAt(document, name ? images?.get(name) : undefined);
+  return { name: name?.asString() ?? '', stream };
+}
+
 describe('ETARE PDF', () => {
-  it('renders a stamped document with one page per plan, whatever the characters', async () => {
-    const renderer = new PdfLibEtareRenderer();
-    const bytes = await renderer.render({
-      publication: {
-        id: '0600000f-0000-4000-8000-000000000002',
-        number: 2,
-        revisionNo: 2,
-        contentHash: 'c'.repeat(64),
-        submittedBy: 'Rédacteur',
-        submittedAt: new Date('2026-09-30T09:41:00Z'),
-        approvedBy: 'Validateur',
-        approvedAt: new Date('2026-09-30T11:00:00Z'),
-        createdAt: new Date('2026-09-30T11:00:05Z'),
-      },
-      snapshot,
-      planImages: new Map([[REVISION, { bytes: DEMO_PLAN, mimeType: 'image/png' }]]),
-    });
-    expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe('%PDF-');
-    const document = await PDFDocument.load(bytes);
-    expect(document.getPageCount()).toBe(2);
-    expect(document.getTitle()).toBe('ETARE 06-0428 — EHPAD Les Oliviers — version publiée n° 2');
-    // The plan page is landscape (wider background).
-    expect(document.getPage(1).getWidth()).toBeGreaterThan(document.getPage(1).getHeight());
-    expect(renderer.templateVersion).toBe(ETARE_PDF_TEMPLATE_VERSION);
+  it.each(['image/png', 'image/jpeg', 'image/webp'])(
+    'draws the validated %s background and every item placed on the plan',
+    async (mimeType) => {
+      const renderer = new PdfLibEtareRenderer();
+      const image =
+        mimeType === 'image/webp'
+          ? await sharp(DEMO_PLAN).webp({ lossless: true }).toBuffer()
+          : mimeType === 'image/jpeg'
+            ? await sharp(DEMO_PLAN).jpeg().toBuffer()
+            : DEMO_PLAN;
+      const bytes = await renderer.render({
+        publication: PUBLICATION,
+        snapshot,
+        planImages: new Map([[REVISION, { bytes: image, mimeType }]]),
+      });
+      expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe('%PDF-');
+      const document = await PDFDocument.load(bytes);
+      expect(document.getPageCount()).toBe(2);
+      expect(document.getTitle()).toBe('ETARE 06-0428 — EHPAD Les Oliviers — version publiée n° 2');
+      expect(renderer.templateVersion).toBe(ETARE_PDF_TEMPLATE_VERSION);
+
+      const plan = document.getPage(1);
+      // The plan page is landscape (wider background).
+      expect(plan.getWidth()).toBeGreaterThan(plan.getHeight());
+
+      // Background: the validated image itself, at its size (JPEG kept as is, PNG and WebP pixel-exact).
+      const background = imageOf(document, plan);
+      expect(background.stream.dict.get(PDFName.of('Width'))?.toString()).toBe('1600');
+      expect(background.stream.dict.get(PDFName.of('Height'))?.toString()).toBe('1000');
+      if (mimeType === 'image/jpeg') {
+        expect(Buffer.from(background.stream.contents).equals(image)).toBe(true);
+      } else {
+        const pixels = await sharp(DEMO_PLAN).raw().toBuffer();
+        expect(Buffer.from(decodePDFRawStream(background.stream).decode()).equals(pixels)).toBe(true);
+      }
+
+      // Overlays drawn over the background: zone outline, object disc, risk diamond and their labels.
+      const content = contentOf(document, plan);
+      const drawn = content.indexOf(`${background.name} Do`);
+      expect(drawn).toBeGreaterThan(-1);
+      const overlays = content.slice(drawn);
+      expect(overlays.match(/ c\n/g)?.length ?? 0).toBeGreaterThanOrEqual(4); // Bézier arcs of the object disc
+      expect(overlays.match(/ l\n/g)?.length ?? 0).toBeGreaterThanOrEqual(7); // zone (4) and risk diamond (3) sides
+      expect(textsOf(overlays)).toEqual(expect.arrayContaining(['Local technique', 'O2 >= 18 bouteilles', 'O2', '!']));
+    },
+  );
+
+  it('refuses to render a plan without its background rather than leave it out', async () => {
+    await expect(
+      new PdfLibEtareRenderer().render({ publication: PUBLICATION, snapshot, planImages: new Map() }),
+    ).rejects.toThrow('PLAN_BACKGROUND_UNAVAILABLE');
   });
 });

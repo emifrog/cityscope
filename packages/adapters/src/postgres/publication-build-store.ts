@@ -1,4 +1,9 @@
-import type { BuiltPublication, PublicationBuildStore, PublicationToBuild } from '@etare/application';
+import type {
+  BuiltPublication,
+  PublicationBuildLease,
+  PublicationBuildStore,
+  PublicationToBuild,
+} from '@etare/application';
 import type { Pool } from './pool';
 
 interface StartRow {
@@ -23,10 +28,16 @@ interface StartRow {
 export class PostgresPublicationBuildStore implements PublicationBuildStore {
   constructor(private readonly pool: Pool) {}
 
-  async start(publicationId: string, tenantId: string): Promise<PublicationToBuild | null> {
-    const { rows } = await this.pool.query<StartRow>('select * from app.worker_start_publication($1, $2)', [
+  async start(
+    publicationId: string,
+    tenantId: string,
+    lease: PublicationBuildLease,
+  ): Promise<PublicationToBuild | null> {
+    const { rows } = await this.pool.query<StartRow>('select * from app.worker_start_publication($1, $2, $3, $4)', [
       publicationId,
       tenantId,
+      lease.jobId,
+      lease.attempt,
     ]);
     const row = rows[0];
     if (!row) return null;
@@ -47,15 +58,22 @@ export class PostgresPublicationBuildStore implements PublicationBuildStore {
     };
   }
 
-  async complete(publicationId: string, built: BuiltPublication): Promise<'published' | 'superseded' | null> {
+  async complete(
+    publicationId: string,
+    built: BuiltPublication,
+    lease: PublicationBuildLease,
+  ): Promise<'published' | 'superseded' | null> {
     const { rows } = await this.pool.query<{ outcome: 'published' | 'superseded' | null }>(
-      'select app.worker_complete_publication($1, $2::jsonb, $3::jsonb, $4, $5) as outcome',
+      'select app.worker_complete_publication($1, $2::jsonb, $3::jsonb, $4, $5, $6, $7, $8) as outcome',
       [
         publicationId,
         JSON.stringify(built.payload),
         JSON.stringify(built.manifest),
         built.manifestHash,
         built.templateVersion,
+        built.pdfStorageKey,
+        lease.jobId,
+        lease.attempt,
       ],
     );
     return rows[0]?.outcome ?? null;
@@ -78,11 +96,11 @@ export class PostgresPublicationBuildStore implements PublicationBuildStore {
     }));
   }
 
-  async fail(publicationId: string, failureCode: string): Promise<boolean> {
-    const { rows } = await this.pool.query<{ ok: boolean }>('select app.worker_fail_publication($1, $2) as ok', [
-      publicationId,
-      failureCode,
-    ]);
+  async fail(publicationId: string, failureCode: string, lease: PublicationBuildLease): Promise<boolean> {
+    const { rows } = await this.pool.query<{ ok: boolean }>(
+      'select app.worker_fail_publication($1, $2, $3, $4) as ok',
+      [publicationId, failureCode, lease.jobId, lease.attempt],
+    );
     return rows[0]?.ok === true;
   }
 }

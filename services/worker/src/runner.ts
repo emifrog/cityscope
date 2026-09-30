@@ -64,8 +64,8 @@ export function createWorker(options: WorkerOptions): Worker {
 
     try {
       await registry.execute({ job, logger: jobLogger, signal: lease.signal });
-      await queue.complete(job.id);
-      jobLogger.info('job succeeded');
+      if (await queue.complete(job.id)) jobLogger.info('job succeeded');
+      else jobLogger.warn('job completion ignored: lease lost');
     } catch (error) {
       const permanent = error instanceof PermanentJobError;
       const code = permanent ? error.code : 'HANDLER_ERROR';

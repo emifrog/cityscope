@@ -1,4 +1,4 @@
-import type { RequestSession, SessionFactory } from '@etare/application';
+import type { RequestSession, SessionFactory, SessionOptions } from '@etare/application';
 import {
   AccessDenied,
   Conflict,
@@ -6,6 +6,7 @@ import {
   NotFound,
   PreconditionFailed,
   SelfApprovalForbidden,
+  SerializationConflict,
   Unauthenticated,
   isPermission,
   type RequestContext,
@@ -45,11 +46,15 @@ const beginRequestRowSchema = z.object({
 export class PostgresSessionFactory implements SessionFactory {
   constructor(private readonly pool: Pool) {}
 
-  async run<T>(context: RequestContext, work: (session: RequestSession) => Promise<T>): Promise<T> {
+  async run<T>(
+    context: RequestContext,
+    work: (session: RequestSession) => Promise<T>,
+    options?: SessionOptions,
+  ): Promise<T> {
     const client = await this.pool.connect();
     let broken = false;
     try {
-      await client.query('begin');
+      await client.query(options?.isolation === 'repeatable_read' ? 'begin isolation level repeatable read' : 'begin');
       const access = await openRequest(client, context);
       const result = await work({
         access,
@@ -150,6 +155,9 @@ function constraintOf(error: unknown): string | undefined {
 /** Translates the SQLSTATEs raised by our guards and constraints into domain errors; anything else stays internal. */
 export function translateDatabaseError(error: unknown): unknown {
   switch (sqlState(error)) {
+    case '40001':
+    case '40P01':
+      return new SerializationConflict();
     case 'ET401':
       return new Unauthenticated('Compte inconnu ou désactivé.');
     case 'ET403':

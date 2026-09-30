@@ -173,3 +173,21 @@ signature Ed25519 du manifeste et catalogue de distribution des publications, pa
 (données, fonds de plans, PDF), synchronisation et vérification sur l’application mobile, écrans OPS
 (synthèse en moins de trois interactions, plans par niveau tactiles, recherche locale — OPS-01 à 03),
 puis photos attachées aux objets (PLAN-05).
+
+## Addendum — 30 septembre 2026, corrections après revue
+
+Ce rapport est conservé tel qu’établi à la livraison. La revue technique du même jour
+([bilan d’alignement](bilan-alignement-2026-09-30.md)) a relevé quatre défauts, corrigés depuis :
+
+- **A** — une tentative de fabrication devenue obsolète pouvait écraser le PDF publié : PDF désormais
+  immuable, adressé par son empreinte, référence gagnante enregistrée avec le manifeste, jeton de fencing
+  du bail vérifié en base ;
+- **B** — la soumission pouvait mélanger deux états des données : aperçu et soumission en `REPEATABLE
+READ`, contributeurs collectés dans le même instantané, conflits rejoués ;
+- **C** — une panne répétée laissait la publication « en fabrication » : l’échec définitif du travail
+  (y compris un dernier bail expiré) la fait passer en échec, relance auditée ;
+- **D** — un plan WebP disparaissait du PDF avec ses objets et risques : fond converti sans perte en PNG,
+  aucun plan omis, fabrication en échec si un fond manque.
+
+L’écart « fonds WebP non intégrés » ci-dessus est donc levé. Détails : ADR-007, ADR-013, ADR-014 ;
+état courant des exigences : [suivi des exigences](suivi-exigences.md).

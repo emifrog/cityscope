@@ -26,7 +26,7 @@ import { buildSnapshot, compareSnapshots, preSubmissionChecks, type WorkingData 
 import type { RequestSession, SessionFactory } from './ports';
 import { PUBLICATION_BUILD_JOB, publicationPdfKey } from './publication-build';
 import type { ObjectStorage } from './ports';
-import { found, inTenant } from './use-cases';
+import { found, inTenant, retryOnSerializationConflict } from './use-cases';
 
 /**
  * Revision, validation and publication of the ETARE of a site (WF-01, WF-02,
@@ -92,15 +92,24 @@ export function previewSiteEtare(
   context: RequestContext,
   siteId: string,
 ): Promise<EtarePreview> {
-  return inTenant(deps.sessions, context, 'etare:read', async (session) => {
-    const data = await workingData(session, siteId);
-    const snapshot = buildSnapshot(data);
-    return {
-      checks: preSubmissionChecks(data, new Date()),
-      snapshot,
-      content_hash: await deps.sha256(canonicalJson(snapshot)),
-    };
-  });
+  // One consistent database version for every table read, and for the contributors collected.
+  return retryOnSerializationConflict(() =>
+    inTenant(
+      deps.sessions,
+      context,
+      'etare:read',
+      async (session) => {
+        const data = await workingData(session, siteId);
+        const snapshot = buildSnapshot(data);
+        return {
+          checks: preSubmissionChecks(data, new Date()),
+          snapshot,
+          content_hash: await deps.sha256(canonicalJson(snapshot)),
+        };
+      },
+      { isolation: 'repeatable_read' },
+    ),
+  );
 }
 
 export function createRevision(
@@ -122,29 +131,38 @@ export function submitRevision(
   expectedVersion: number,
   input: RevisionSubmit,
 ): Promise<EtareRevision> {
-  return inTenant(deps.sessions, context, 'etare:submit', async (session) => {
-    const record = found(await session.etare.revision(revisionId), 'Révision introuvable.');
-    if (record.revision.status !== 'draft') {
-      throw new Conflict('Cette révision n’est plus un brouillon : elle a déjà été soumise ou remplacée.');
-    }
-    const data = await workingData(session, record.revision.site_id);
-    const blocking = preSubmissionChecks(data, new Date()).filter((check) => check.level === 'error');
-    if (blocking.length > 0) {
-      throw new InvalidInput(
-        'La révision ne peut pas être soumise : corrigez les points bloquants.',
-        blocking.map((check) => ({ path: `checks.${check.code}`, message: `${check.label} : ${check.detail}` })),
-      );
-    }
-    const snapshot = buildSnapshot(data);
-    return found(
-      await session.etare.submit(revisionId, expectedVersion, {
-        snapshot,
-        contentHash: await deps.sha256(canonicalJson(snapshot)),
-        changeSummary: input.change_summary,
-      }),
-      'Révision introuvable.',
-    );
-  });
+  // One consistent database version for every table read, and for the contributors collected.
+  return retryOnSerializationConflict(() =>
+    inTenant(
+      deps.sessions,
+      context,
+      'etare:submit',
+      async (session) => {
+        const record = found(await session.etare.revision(revisionId), 'Révision introuvable.');
+        if (record.revision.status !== 'draft') {
+          throw new Conflict('Cette révision n’est plus un brouillon : elle a déjà été soumise ou remplacée.');
+        }
+        const data = await workingData(session, record.revision.site_id);
+        const blocking = preSubmissionChecks(data, new Date()).filter((check) => check.level === 'error');
+        if (blocking.length > 0) {
+          throw new InvalidInput(
+            'La révision ne peut pas être soumise : corrigez les points bloquants.',
+            blocking.map((check) => ({ path: `checks.${check.code}`, message: `${check.label} : ${check.detail}` })),
+          );
+        }
+        const snapshot = buildSnapshot(data);
+        return found(
+          await session.etare.submit(revisionId, expectedVersion, {
+            snapshot,
+            contentHash: await deps.sha256(canonicalJson(snapshot)),
+            changeSummary: input.change_summary,
+          }),
+          'Révision introuvable.',
+        );
+      },
+      { isolation: 'repeatable_read' },
+    ),
+  );
 }
 
 export function listValidations(sessions: SessionFactory, context: RequestContext): Promise<ValidationQueueItem[]> {
@@ -207,13 +225,14 @@ export function decideRevision(
   });
 }
 
-async function queuePublication(session: RequestSession, revisionId: string, approvalId: string): Promise<void> {
+async function queuePublication(session: RequestSession, revisionId: string, approvalId: string): Promise<string> {
   const publicationId = await session.etare.requestPublication(revisionId, approvalId);
   await session.jobs.enqueue(
     PUBLICATION_BUILD_JOB,
     { publication_id: publicationId },
     `${PUBLICATION_BUILD_JOB}:${publicationId}`,
   );
+  return publicationId;
 }
 
 /** Publishes an approved revision again (after a failed build). */
@@ -230,7 +249,13 @@ export function publishRevision(
       throw new Conflict('Cette révision est déjà publiée ou en cours de publication.');
     }
     const approvalId = found(await session.etare.approvalOf(revisionId), 'Validation introuvable.');
-    await queuePublication(session, revisionId, approvalId);
+    const publicationId = await queuePublication(session, revisionId, approvalId);
+    // A new publication (new number, new files): the failed one stays in the history.
+    await session.audit.record('publication.retry', 'publication', publicationId, {
+      revision_id: revisionId,
+      previous_publication_id: current?.id ?? null,
+      previous_failure_code: current?.failure_code ?? null,
+    });
     return found(await session.etare.revision(revisionId), 'Révision introuvable.').revision;
   });
 }
@@ -264,7 +289,7 @@ export async function getPublicationPdf(
     return record;
   });
   const { url, expiresAt } = await storage.createDownloadUrl(
-    publicationPdfKey(publication.tenantId, publication.id),
+    publication.pdfStorageKey ?? publicationPdfKey(publication.tenantId, publication.id),
     PDF_URL_SECONDS,
   );
   return {

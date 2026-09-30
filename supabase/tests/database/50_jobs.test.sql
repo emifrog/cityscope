@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = extensions, public;
 
-select plan(11);
+select plan(14);
 
 set local role etare_api;
 select app.begin_request('supabase', '00000000-0000-4000-a000-000000000002', '06000000-0000-4000-8000-000000000000', 'aal1', null, 'web') is not null as ctx \gset
@@ -29,6 +29,9 @@ select is((select count(*) from app.claim_jobs('worker-1', 10, 30)), 1::bigint, 
 reset role;
 update app.job set lease_expires_at = now() - interval '1 second' where id = :'job_id';
 set local role etare_worker;
+select is(app.heartbeat_job(:'job_id', 'worker-1', 30), false, 'an expired owner cannot revive the lease');
+select is(app.complete_job(:'job_id', 'worker-1'), false, 'an expired owner cannot acknowledge success');
+select is(app.fail_job(:'job_id', 'worker-1', 'LATE_FAILURE', null), null, 'an expired owner cannot acknowledge failure');
 select is((select count(*) from app.claim_jobs('worker-3', 10, 30)), 0::bigint, 'an expired lease on the last attempt is not retried');
 reset role;
 select is((select status from app.job where id = :'job_id'), 'dead', 'exhausted jobs go to the dead state');

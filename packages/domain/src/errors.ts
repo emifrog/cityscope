@@ -81,6 +81,17 @@ export class Conflict extends DomainError {
   }
 }
 
+/**
+ * Two transactions crossed (serialization failure, deadlock): nothing was
+ * written, the whole operation can be run again on fresh data.
+ */
+export class SerializationConflict extends Conflict {
+  constructor() {
+    super('Les données ont changé pendant l’opération : réessayez.');
+    this.name = 'SerializationConflict';
+  }
+}
+
 /** Optimistic concurrency: the record changed since the caller read it (HTTP 412). */
 export class PreconditionFailed extends DomainError {
   readonly code = 'PRECONDITION_FAILED';

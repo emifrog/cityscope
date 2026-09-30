@@ -28,3 +28,15 @@ hors requête HTTP, de façon fiable et rejouable. L’architecture exclut Redis
 ## Critère de réexamen
 
 Âge de file ou débit mesurés incompatibles avec PostgreSQL, ou besoin de planification avancée.
+
+## Complément — 30/09/2026 (revue technique)
+
+- **Un bail expiré ne vaut plus rien** : `heartbeat_job`, `complete_job` et `fail_job` exigent un bail
+  encore valide (`lease_expires_at > clock_timestamp()`) ; un worker en retard ne peut ni prolonger, ni
+  acquitter, ni faire échouer un travail qui doit être repris. Le runner consigne un acquittement ignoré.
+- **Le numéro de tentative (`attempts`, incrémenté à chaque prise de bail) sert de jeton de
+  fencing** aux traitements qui écrivent un état métier : l’identifiant du travail et ce numéro sont
+  revérifiés, sous verrou de la ligne du travail, dans la transaction de l’écriture (voir ADR-013).
+- **Un échec définitif remonte au domaine** : un déclencheur sur le passage à `dead` (erreur permanente,
+  tentatives épuisées ou dernier bail expiré) met à jour l’objet métier concerné. Premier usage : une
+  publication encore `queued`/`building` passe `failed` avec le code d’erreur du travail.
