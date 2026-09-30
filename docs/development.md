@@ -17,6 +17,7 @@
 pnpm install
 pnpm db:start      # génère la clé JWT locale (ES256) puis démarre Supabase ; migrations + seed appliqués
 pnpm setup:local   # écrit .env.local et apps/web/.env.local (jamais committés)
+pnpm seed:assets   # dépose les fichiers de démonstration (plan du seed) dans le stockage local
 pnpm dev           # http://127.0.0.1:3000
 ```
 
@@ -52,7 +53,8 @@ Un changement de `supabase/config.toml` ou de `supabase/templates/` demande `pnp
 pnpm check              # tout ce que la CI vérifie côté TypeScript
 pnpm test:db            # tests pgTAP (supabase/tests/database)
 pnpm test:integration   # nécessite db:start + setup:local
-pnpm db:reset           # rejoue migrations + seed (données locales perdues)
+pnpm db:reset           # rejoue migrations + seed puis redépose les fichiers de démonstration
+pnpm seed:assets        # fichiers de démonstration seuls (supabase/seed-assets/, stockage local uniquement)
 pnpm dev:worker         # worker (lit .env.local) : nécessaire pour que les fichiers déposés soient contrôlés
 pnpm --filter @etare/api start   # API seule sur :3001 (démonstration d’extraction)
 pnpm cartography:check  # catalogue des fonds IGN comparé aux services Géoplateforme (réseau requis)

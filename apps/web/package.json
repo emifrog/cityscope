@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node scripts/copy-map-worker.mjs && next dev --hostname 127.0.0.1",
-    "build": "node scripts/copy-map-worker.mjs && next build",
+    "dev": "node scripts/copy-browser-workers.mjs && next dev --hostname 127.0.0.1",
+    "build": "node scripts/copy-browser-workers.mjs && next build",
     "start": "next start --hostname 127.0.0.1",
     "typecheck": "next typegen && tsc -p tsconfig.json --noEmit"
   },
@@ -23,6 +23,7 @@
     "lucide-react": "1.48.0",
     "maplibre-gl": "6.11.2",
     "next": "16.3.6",
+    "pdfjs-dist": "6.3.289",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-hook-form": "7.89.0",

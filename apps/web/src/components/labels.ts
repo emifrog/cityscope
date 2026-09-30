@@ -7,6 +7,7 @@ import type {
   DocumentCategory,
   MembershipStatus,
   OfflinePolicy,
+  PlanType,
   Permission,
   RecordStatus,
   Role,
@@ -146,4 +147,12 @@ export const OBJECT_STATUS_LABELS: Readonly<Record<ObjectStatus, string>> = {
   out_of_service: 'Hors service',
   unknown: 'État inconnu',
   archived: 'Archivé',
+};
+
+export const PLAN_TYPE_LABELS: Readonly<Record<PlanType, string>> = {
+  site: 'Plan de masse',
+  level: 'Plan de niveau',
+  network: 'Plan de réseaux',
+  evacuation: 'Plan d’évacuation',
+  other: 'Autre plan',
 };

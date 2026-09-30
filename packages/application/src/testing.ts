@@ -73,6 +73,14 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       mapFeatures: unstubbed('objects.mapFeatures'),
       ...overrides.objects,
     },
+    plans: {
+      listBySite: unstubbed('plans.listBySite'),
+      get: unstubbed('plans.get'),
+      create: unstubbed('plans.create'),
+      addRevision: unstubbed('plans.addRevision'),
+      update: unstubbed('plans.update'),
+      ...overrides.plans,
+    },
     members: {
       list: unstubbed('members.list'),
       add: unstubbed('members.add'),

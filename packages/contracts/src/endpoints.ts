@@ -21,6 +21,14 @@ import {
   operationalObjectUpdateSchema,
 } from './objects';
 import {
+  planCreateSchema,
+  planListResponseSchema,
+  planRevisionCreateSchema,
+  planSchema,
+  planUpdateSchema,
+  planUploadResponseSchema,
+} from './plans';
+import {
   memberInvitationSchema,
   memberInviteSchema,
   memberListResponseSchema,
@@ -416,6 +424,52 @@ export const endpoints = {
     concurrency: 'if-match',
     successStatus: 200,
     response: operationalObjectSchema,
+  }),
+
+  // ---------------------------------------------------------------- plans
+  listSitePlans: tenantEndpoint({
+    operationId: 'listSitePlans',
+    method: 'get',
+    path: '/sites/{id}/plans',
+    summary: 'Plans d’un site (masse, niveaux, réseaux, évacuation) et leurs révisions de fond',
+    tags: ['plans'],
+    params: idParamsSchema,
+    successStatus: 200,
+    response: planListResponseSchema,
+  }),
+  createPlan: tenantEndpoint({
+    operationId: 'createPlan',
+    method: 'post',
+    path: '/sites/{id}/plans',
+    summary: 'Créer un plan et obtenir l’URL de dépôt de son fond (quarantaine)',
+    tags: ['plans'],
+    params: idParamsSchema,
+    body: planCreateSchema,
+    successStatus: 201,
+    response: planUploadResponseSchema,
+  }),
+  updatePlan: tenantEndpoint({
+    operationId: 'updatePlan',
+    method: 'patch',
+    path: '/plans/{id}',
+    summary: 'Renommer ou archiver un plan',
+    tags: ['plans'],
+    params: idParamsSchema,
+    body: planUpdateSchema,
+    concurrency: 'if-match',
+    successStatus: 200,
+    response: planSchema,
+  }),
+  createPlanRevision: tenantEndpoint({
+    operationId: 'createPlanRevision',
+    method: 'post',
+    path: '/plans/{id}/revisions',
+    summary: 'Remplacer le fond d’un plan (nouvelle révision, les précédentes sont conservées)',
+    tags: ['plans'],
+    params: idParamsSchema,
+    body: planRevisionCreateSchema,
+    successStatus: 201,
+    response: planUploadResponseSchema,
   }),
 
   // ---------------------------------------------------------------- documents and files

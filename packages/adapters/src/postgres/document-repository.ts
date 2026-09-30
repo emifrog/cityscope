@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import type { AssetRepository, DocumentRepository, PendingUpload, StoredAsset } from '@etare/application';
 import {
   documentSchema,
@@ -8,7 +7,8 @@ import {
   type DocumentVersionCreate,
   type FileDeclaration,
 } from '@etare/contracts';
-import { assetStorageKey, quarantineStorageKey, type ScanStatus } from '@etare/domain';
+import type { ScanStatus } from '@etare/domain';
+import { insertPendingAsset } from './pending-asset';
 import type { PoolClient } from './pool';
 import { applyAssignments, assignments, lockVersion, toIso } from './versioned';
 
@@ -144,31 +144,13 @@ export class PostgresDocumentRepository implements DocumentRepository {
     versionNo: number,
     input: { file: FileDeclaration; valid_from?: string | null | undefined; expires_at?: string | null | undefined },
   ): Promise<PendingUpload> {
-    const assetId = randomUUID();
-    const objectVersion = randomUUID();
-    const quarantineKey = quarantineStorageKey(tenantId, assetId, objectVersion);
-    await this.client.query(
-      `insert into app.asset
-         (id, tenant_id, site_id, storage_key, quarantine_key, filename, mime_type, size_bytes, sha256)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [
-        assetId,
-        tenantId,
-        siteId,
-        assetStorageKey(tenantId, assetId, objectVersion),
-        quarantineKey,
-        input.file.filename,
-        input.file.mime_type,
-        input.file.size_bytes,
-        input.file.sha256,
-      ],
-    );
+    const upload = await insertPendingAsset(this.client, tenantId, siteId, input.file);
     await this.client.query(
       `insert into app.document_version (tenant_id, site_id, document_id, version_no, asset_id, valid_from, expires_at)
        values ($1, $2, $3, $4, $5, $6, $7)`,
-      [tenantId, siteId, documentId, versionNo, assetId, input.valid_from ?? null, input.expires_at ?? null],
+      [tenantId, siteId, documentId, versionNo, upload.assetId, input.valid_from ?? null, input.expires_at ?? null],
     );
-    return { assetId, quarantineKey, mimeType: input.file.mime_type };
+    return upload;
   }
 
   private async get(id: string): Promise<Document | null> {

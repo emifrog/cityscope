@@ -24,8 +24,9 @@ key.properties
 supabase/signing_keys.json
 supabase/.env
 apps/web/next-env.d.ts
-# Copied from maplibre-gl at dev/build time (apps/web/scripts/copy-map-worker.mjs).
+# Copied from maplibre-gl at dev/build time (apps/web/scripts/copy-browser-workers.mjs).
 apps/web/public/maplibre/
+apps/web/public/pdfjs/
 *.log
 # JVM crash dumps can contain secrets and are never source artifacts.
 *.hprof

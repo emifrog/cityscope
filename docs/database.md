@@ -66,7 +66,10 @@ synchronisation, `access_event`, intégrations.
 - Intérieur : **coordonnées locales** (`geometry` SRID 0) liées à une `plan_revision` précise ; unité
   `pixel`, `normalized` ou `metre` (mètres seulement si le plan est calibré). Origine en haut à gauche,
   x vers la droite, y vers le bas. Le GPS n’est jamais utilisé pour positionner un équipement intérieur.
-- Remplacer un plan crée une nouvelle `plan_revision` (le fond d’une révision est immuable).
+- Remplacer un plan crée une nouvelle `plan_revision` (le fond d’une révision est immuable) : numéro
+  suivant, `is_current` basculé dans la même transaction (index unique partiel : une seule révision
+  courante par plan). Le fond est un `asset` image contrôlé comme un document (ADR-009) ; un PDF est
+  rendu en image dans le navigateur avant dépôt. Positions stockées en pixels du fond (ADR-011).
 
 ## Publication immuable
 

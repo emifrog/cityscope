@@ -2,7 +2,7 @@
 
 import type { MapCatalog } from '@etare/contracts';
 import type * as MapLibre from 'maplibre-gl';
-import type { LngLatBoundsLike, Map as MapLibreMap } from 'maplibre-gl';
+import type { LngLatBoundsLike, Map as MapLibreMap, StyleSpecification } from 'maplibre-gl';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { FRANCE_VIEW, MAP_WORKER_URL, baseLayerId, baseMapStyle, baseMaps } from './map-style';
 
@@ -14,6 +14,14 @@ export interface InitialView {
   readonly zoom?: number | undefined;
 }
 
+/** Non-geographic uses (plans): own style, no metric scale, movement kept around the content. */
+export interface MapOptions {
+  readonly style?: StyleSpecification | undefined;
+  /** A plan without calibration has no metres: no scale (architecture §08). */
+  readonly scale?: boolean | undefined;
+  readonly maxBounds?: LngLatBoundsLike | undefined;
+}
+
 export interface LoadedMap {
   readonly map: MapLibreMap;
   readonly lib: MapLibreModule;
@@ -23,16 +31,19 @@ export interface LoadedMap {
  * Creates a MapLibre map in the container once the catalogue is known
  * (MapLibre needs the browser: loaded on demand), with navigation, metric
  * scale and full attribution. `loaded` is set when the style is ready for
- * business layers. A failing base map is reported, never blocking.
+ * business layers. A failing background is reported, never blocking.
+ * View and options are read once: remount the component (React key) to change them.
  */
 export function useMapLibre(
   container: RefObject<HTMLDivElement | null>,
   catalog: MapCatalog | undefined,
   view: InitialView,
+  options: MapOptions = {},
 ) {
   const [loaded, setLoaded] = useState<LoadedMap | null>(null);
   const [baseUnavailable, setBaseUnavailable] = useState(false);
   const initialView = useRef(view);
+  const initialOptions = useRef(options);
 
   useEffect(() => {
     const element = container.current;
@@ -44,24 +55,29 @@ export function useMapLibre(
       if (disposed) return;
       lib.setWorkerUrl(MAP_WORKER_URL);
       const start = initialView.current;
+      const { style: ownStyle, scale = true, maxBounds } = initialOptions.current;
+      const style = ownStyle ?? baseMapStyle(catalog, catalog.default_base);
+      const backgroundSources = new Set(Object.keys(style.sources));
       const instance = new lib.Map({
         container: element,
-        style: baseMapStyle(catalog, catalog.default_base),
+        style,
         center: start.center ?? FRANCE_VIEW.center,
         zoom: start.zoom ?? FRANCE_VIEW.zoom,
         ...(start.bounds ? { bounds: start.bounds, fitBoundsOptions: { padding: 48, maxZoom: 18 } } : {}),
+        ...(maxBounds ? { maxBounds, renderWorldCopies: false } : {}),
+        ...(ownStyle ? { maxZoom: 24 } : {}),
         attributionControl: { compact: false },
       });
       map = instance;
       instance.addControl(new lib.NavigationControl({ showCompass: false }), 'top-right');
-      instance.addControl(new lib.ScaleControl({ unit: 'metric' }), 'bottom-right');
-      // A base map failure never hides the operational data (architecture §14).
+      if (scale) instance.addControl(new lib.ScaleControl({ unit: 'metric' }), 'bottom-right');
+      // A background failure never hides the operational data (architecture §14).
       instance.on('error', (event) => {
         const sourceId = (event as { sourceId?: string }).sourceId;
-        if (sourceId && catalog.sources.some((source) => source.id === sourceId)) setBaseUnavailable(true);
+        if (sourceId && backgroundSources.has(sourceId)) setBaseUnavailable(true);
       });
-      // Ready as soon as the style is: 'load' would also wait for the base map tiles, and a slow
-      // or failing base map must never delay the SIS data (architecture §14).
+      // Ready as soon as the style is: 'load' would also wait for the background tiles, and a slow
+      // or failing background must never delay the SIS data (architecture §14).
       const ready = () => setLoaded({ map: instance, lib });
       if (instance.isStyleLoaded()) ready();
       else instance.once('style.load', ready);

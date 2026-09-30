@@ -6,6 +6,8 @@ export * from './health';
 export * from './job-queue';
 export * from './member-repository';
 export * from './operational-object-repository';
+export * from './pending-asset';
+export * from './plan-repository';
 export * from './pool';
 export * from './request-services';
 export * from './session';

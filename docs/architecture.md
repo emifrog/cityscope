@@ -77,7 +77,8 @@ ouest,sud,est,nord, emprise de tous les résultats et nombre de sites sans posit
 géocodage (`GET /geocoding/search`, `GET /geocoding/reverse`, géocodeur IGN appelé par le serveur) ;
 points opérationnels (`GET /object-types`, `GET/POST /sites/{id}/objects`, `PATCH /objects/{id}`) et
 détails de carte (`GET /map/features?bbox=…` : emprises des bâtiments et points d’une zone de 0,2° au
-plus, affichés à partir du zoom 15).
+plus, affichés à partir du zoom 15) ; plans (`GET/POST /sites/{id}/plans`, `PATCH /plans/{id}`,
+`POST /plans/{id}/revisions` : fond déposé comme un document, image seulement, voir ADR-011).
 Les emprises du site et des bâtiments (`footprint`, Polygon ou MultiPolygon) passent par
 `PATCH /sites/{id}`, `POST /sites/{id}/buildings` et `PATCH /buildings/{id}`.
 Les `PATCH` exigent
@@ -99,7 +100,7 @@ Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4, composants de sty
   double authentification), `/administration` (membres), `/carte`, et les modules à venir (`/etare`,
   `/validations`, `/signalements`, `/contributions`).
 - Carte : MapLibre GL JS chargé à la demande côté navigateur ; son worker et le module qu’il importe sont
-  copiés depuis le paquet installé vers `public/maplibre/` (`scripts/copy-map-worker.mjs`, avant `dev`
+  copiés depuis le paquet installé vers `public/maplibre/` (`scripts/copy-browser-workers.mjs`, avant `dev`
   et `build`), le bundler ne pouvant pas les résoudre. Le style est construit depuis le catalogue
   serveur (`src/components/map/map-style.ts`), les couleurs depuis les jetons du thème. Création de la
   carte partagée (`use-map.ts`) ; onglet « Localisation » de la fiche site : point de référence
@@ -107,6 +108,10 @@ Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4, composants de sty
   Terra Draw ; recherche d’adresse (`address-search.tsx`, motif combobox accessible au clavier).
   Points opérationnels : couches par catégorie (`object-layers.ts`, calques activables), tracé par type
   (point, ligne, surface) avec `drawing.ts`, formulaire généré depuis le schéma des propriétés du type.
+- Plans (onglet « Plans » de la fiche site, ADR-011) : même moteur MapLibre dans un repère local
+  synthétique (`src/components/plan/local-frame.ts`, 1 pixel du plan = 1e-5°), sans fond cartographique.
+  Un PDF est rendu page par page dans le navigateur avec pdf.js (`src/lib/plan-image.ts`, worker copié
+  vers `public/pdfjs/` par le même script) ; seul le PNG obtenu est déposé.
 - Thème remplaçable : jetons dans `packages/ui/src/styles/globals.css`, nom/logo dans `src/config/brand.ts`.
 
 ## Worker (services/worker)

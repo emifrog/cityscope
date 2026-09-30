@@ -126,11 +126,13 @@ from (values
   ('06000004-0000-4000-8000-000000000007', '06000003-0000-4000-8000-000000000002', 'R+1', 1, 3.50)
 ) as l (id, building, label, sort_order, elevation);
 
--- Plan background metadata (the demo file itself is not uploaded: scan_status stays 'pending').
-insert into app.asset (id, tenant_id, site_id, storage_key, filename, mime_type, size_bytes, sha256) values
+-- Plan background: synthetic drawing (scripts/generate-demo-plan.ts), uploaded to the storage key
+-- by `pnpm seed:assets` (run by `pnpm db:reset` and `pnpm setup:local`). Seeded as already checked.
+insert into app.asset (id, tenant_id, site_id, storage_key, filename, mime_type, size_bytes, sha256, scan_status, scan_detail, verified_at) values
   ('06000005-0000-4000-8000-000000000001', '06000000-0000-4000-8000-000000000000', '06000002-0000-4000-8000-000000000001',
    'tenants/06000000-0000-4000-8000-000000000000/assets/06000005-0000-4000-8000-000000000001/06000005-0000-4000-8000-0000000000a1',
-   'plan-rdc-batiment-a-demo.pdf', 'application/pdf', 0, 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
+   'plan-batiment-a-rdc-demo.png', 'image/png', 16642, '467df55eecc701442c1349b2107981bc9c9c8a01e0399cdcfd903a0e540c28d4',
+   'clean', '{"detected_type": "image/png", "antivirus": "not_scanned", "engine": "seed"}', '2026-09-17T08:00:00Z');
 
 insert into app.plan (id, tenant_id, site_id, building_id, level_id, plan_type, title) values
   ('06000006-0000-4000-8000-000000000001', '06000000-0000-4000-8000-000000000000', '06000002-0000-4000-8000-000000000001',

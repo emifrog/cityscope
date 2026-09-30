@@ -1,6 +1,7 @@
 import type { AccessTokenVerifier, Logger } from '@etare/adapters';
 import {
   addDocumentVersion,
+  addPlanRevision,
   confirmUpload,
   createBuilding,
   createDocument,
@@ -8,6 +9,7 @@ import {
   createContact,
   createExternalId,
   createLevel,
+  createPlan,
   createSite,
   createSiteObject,
   getAssetDownload,
@@ -25,6 +27,7 @@ import {
   listMapFeatures,
   listMapSites,
   listMembers,
+  listPlans,
   listObjectTypes,
   listSiteObjects,
   listSites,
@@ -34,6 +37,7 @@ import {
   updateDocument,
   updateLevel,
   updateMember,
+  updatePlan,
   updateSiteObject,
   updateSite,
   type CartographyCatalog,
@@ -380,6 +384,33 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     const version = expectedVersion(c);
     const patch = await readBody(c, endpoints.updateObject.body);
     return respond(c, endpoints.updateObject, await updateSiteObject(deps.sessions, context, idOf(c), version, patch));
+  });
+
+  // ---------------------------------------------------------------- plans
+  const plans = { sessions: deps.sessions, storage: deps.storage };
+
+  app.get(routerPath(endpoints.listSitePlans.path), async (c) => {
+    const context = await requestContext(c, endpoints.listSitePlans);
+    return respond(c, endpoints.listSitePlans, { items: await listPlans(plans, context, idOf(c)) });
+  });
+
+  app.post(routerPath(endpoints.createPlan.path), async (c) => {
+    const context = await requestContext(c, endpoints.createPlan);
+    const input = await readBody(c, endpoints.createPlan.body);
+    return respond(c, endpoints.createPlan, await createPlan(plans, context, idOf(c), input));
+  });
+
+  app.patch(routerPath(endpoints.updatePlan.path), async (c) => {
+    const context = await requestContext(c, endpoints.updatePlan);
+    const version = expectedVersion(c);
+    const patch = await readBody(c, endpoints.updatePlan.body);
+    return respond(c, endpoints.updatePlan, await updatePlan(plans, context, idOf(c), version, patch));
+  });
+
+  app.post(routerPath(endpoints.createPlanRevision.path), async (c) => {
+    const context = await requestContext(c, endpoints.createPlanRevision);
+    const input = await readBody(c, endpoints.createPlanRevision.body);
+    return respond(c, endpoints.createPlanRevision, await addPlanRevision(plans, context, idOf(c), input));
   });
 
   // ---------------------------------------------------------------- documents and files

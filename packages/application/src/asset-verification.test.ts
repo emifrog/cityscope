@@ -31,6 +31,7 @@ function setup(
     download: vi.fn(async () => content),
     copy: vi.fn(async () => undefined),
     remove: vi.fn(async () => undefined),
+    upload: vi.fn(async () => undefined),
   };
   const deps: VerificationDependencies = {
     store,

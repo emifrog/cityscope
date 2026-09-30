@@ -9,7 +9,8 @@ export type VersionedTable =
   | 'app.site_classification'
   | 'app.contact'
   | 'app.document'
-  | 'app.operational_object';
+  | 'app.operational_object'
+  | 'app.plan';
 
 /**
  * Locks the row (SELECT … FOR UPDATE, under RLS) and checks the version the

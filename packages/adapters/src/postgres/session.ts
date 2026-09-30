@@ -16,6 +16,7 @@ import { PostgresAssetRepository, PostgresDocumentRepository } from './document-
 import { PostgresIdentityReader } from './identity-reader';
 import { PostgresMemberRepository } from './member-repository';
 import { PostgresOperationalObjectRepository } from './operational-object-repository';
+import { PostgresPlanRepository } from './plan-repository';
 import { sqlState, type Pool, type PoolClient } from './pool';
 import { PostgresAuditRecorder, PostgresJobScheduler } from './request-services';
 import {
@@ -58,6 +59,7 @@ export class PostgresSessionFactory implements SessionFactory {
         assets: new PostgresAssetRepository(client),
         members: new PostgresMemberRepository(client),
         objects: new PostgresOperationalObjectRepository(client),
+        plans: new PostgresPlanRepository(client),
         jobs: new PostgresJobScheduler(client),
         audit: new PostgresAuditRecorder(client),
       });

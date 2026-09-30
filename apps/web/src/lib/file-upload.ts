@@ -1,4 +1,4 @@
-import type { DocumentUploadResponse, FileDeclaration, UploadTicket } from '@etare/contracts';
+import type { FileDeclaration, UploadTicket } from '@etare/contracts';
 import { MAX_UPLOAD_BYTES, detectMimeType, isSafeFilename } from '@etare/domain';
 import { ApiRequestError, api, type ApiCallOptions } from './api-client';
 
@@ -62,16 +62,16 @@ export async function sendToQuarantine(
 }
 
 /**
- * Full upload chain of a document file: describe, declare (the API returns a
- * signed URL), send to quarantine, then ask for verification. The file becomes
- * downloadable only once the worker has declared it clean.
+ * Full upload chain of a file (document version, plan background): describe,
+ * declare (the API returns a signed URL), send to quarantine, then ask for
+ * verification. The file is served only once the worker has declared it clean.
  */
-export async function uploadDocumentFile(
+export async function uploadFile<T extends { readonly upload: UploadTicket }>(
   options: ApiCallOptions,
   file: File,
-  declare: (options: ApiCallOptions, file: FileDeclaration) => Promise<DocumentUploadResponse>,
+  declare: (options: ApiCallOptions, file: FileDeclaration) => Promise<T>,
   onStep: (step: UploadStep) => void = () => undefined,
-): Promise<DocumentUploadResponse> {
+): Promise<T> {
   onStep('reading');
   const { declaration, content } = await describeFile(file);
   onStep('declaring');

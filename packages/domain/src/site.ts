@@ -14,6 +14,13 @@ export type Sensitivity = (typeof SENSITIVITY_LEVELS)[number];
 export const LOCAL_UNITS = ['pixel', 'normalized', 'metre'] as const;
 export type LocalUnit = (typeof LOCAL_UNITS)[number];
 
+/** Plan kinds: plan de masse (site), level plan, networks, evacuation, other. */
+export const PLAN_TYPES = ['site', 'level', 'network', 'evacuation', 'other'] as const;
+export type PlanType = (typeof PLAN_TYPES)[number];
+
+/** Largest plan background accepted (pixels per side): beyond, tablets cannot display it. */
+export const MAX_PLAN_SIDE_PX = 12000;
+
 /** Lifecycle of secondary referential records (buildings, levels, contacts...): never deleted, archived. */
 export const RECORD_STATUSES = ['active', 'archived'] as const;
 export type RecordStatus = (typeof RECORD_STATUSES)[number];

@@ -26,6 +26,7 @@ export default defineConfig([
     'tmp/**',
     // Copied from maplibre-gl at dev/build time.
     'apps/web/public/maplibre/**',
+    'apps/web/public/pdfjs/**',
   ]),
 
   js.configs.recommended,

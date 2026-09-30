@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { API_BASE_PATH, type DocumentUploadResponse } from '@etare/contracts';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiRequestError } from './api-client';
-import { describeFile, uploadDocumentFile, type UploadStep } from './file-upload';
+import { describeFile, uploadFile, type UploadStep } from './file-upload';
 
 const PDF_BYTES = new TextEncoder().encode('%PDF-1.7\n% consignes\n%%EOF\n');
 const pdfFile = (name = 'consignes.pdf') => new File([PDF_BYTES], name, { type: 'application/pdf' });
@@ -51,7 +51,7 @@ describe('describeFile', () => {
   });
 });
 
-describe('uploadDocumentFile', () => {
+describe('uploadFile', () => {
   it('declares, sends to quarantine with the signed headers, then asks for verification', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async (input) =>
       String(input).startsWith(API_BASE_PATH)
@@ -61,9 +61,7 @@ describe('uploadDocumentFile', () => {
     const declare = vi.fn(async () => created);
     const steps: UploadStep[] = [];
 
-    await uploadDocumentFile({ token: 't', tenantId: 'tenant', fetchImpl }, pdfFile(), declare, (step) =>
-      steps.push(step),
-    );
+    await uploadFile({ token: 't', tenantId: 'tenant', fetchImpl }, pdfFile(), declare, (step) => steps.push(step));
 
     expect(steps).toEqual(['reading', 'declaring', 'sending', 'confirming']);
     expect(declare).toHaveBeenCalledWith(
@@ -80,7 +78,7 @@ describe('uploadDocumentFile', () => {
   it('does not ask for verification when the storage refuses the file', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response('denied', { status: 403 }));
     await expect(
-      uploadDocumentFile({ token: 't', tenantId: 'tenant', fetchImpl }, pdfFile(), async () => created),
+      uploadFile({ token: 't', tenantId: 'tenant', fetchImpl }, pdfFile(), async () => created),
     ).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' });
     expect(fetchImpl).toHaveBeenCalledOnce();
   });

@@ -60,6 +60,7 @@ jobs:
       - name: Integration tests (Auth -> API -> RLS, worker queue)
         run: |
           pnpm setup:local
+          pnpm seed:assets
           pnpm test:integration
       - if: always()
         run: pnpm exec supabase stop --no-backup

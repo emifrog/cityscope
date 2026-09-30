@@ -26,6 +26,10 @@ import type {
   OperationalObject,
   OperationalObjectCreate,
   OperationalObjectUpdate,
+  Plan,
+  PlanCreate,
+  PlanRevisionCreate,
+  PlanUpdate,
   MeResponse,
   Member,
   MemberInvite,
@@ -55,6 +59,7 @@ export interface RequestSession {
   readonly assets: AssetRepository;
   readonly members: MemberRepository;
   readonly objects: OperationalObjectRepository;
+  readonly plans: PlanRepository;
   readonly jobs: JobScheduler;
   readonly audit: AuditRecorder;
 }
@@ -170,6 +175,18 @@ export interface MemberRepository {
   update(id: string, expectedVersion: number, patch: MemberUpdate): Promise<Member | null>;
 }
 
+/** Plans of the sites and their background revisions. */
+export interface PlanRepository {
+  /** Null when the site is not visible. */
+  listBySite(siteId: string): Promise<Plan[] | null>;
+  get(id: string): Promise<Plan | null>;
+  /** Creates the plan, its revision 1 and the pending background. Null when the site or level is not visible. */
+  create(siteId: string, input: PlanCreate): Promise<{ plan: Plan; upload: PendingUpload } | null>;
+  /** New current revision; previous ones are kept. Null when the plan is not visible. */
+  addRevision(planId: string, input: PlanRevisionCreate): Promise<{ plan: Plan; upload: PendingUpload } | null>;
+  update(id: string, expectedVersion: number, patch: PlanUpdate): Promise<Plan | null>;
+}
+
 /** Operational objects of the sites (placed on the map; plans come with the ETARE editor). */
 export interface OperationalObjectRepository {
   /** Catalogue visible in the SIS: global types and its own. */
@@ -223,6 +240,8 @@ export interface ObjectStoreAdmin {
   download(key: string): Promise<Uint8Array | null>;
   copy(from: string, to: string): Promise<void>;
   remove(key: string): Promise<void>;
+  /** Stores a file produced or checked server-side (worker outputs, local demo assets). */
+  upload(key: string, content: Uint8Array, contentType: string, options?: { upsert?: boolean }): Promise<void>;
 }
 
 export interface AssetForVerification {

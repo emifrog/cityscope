@@ -19,6 +19,7 @@ function fakeBucket(overrides: Partial<StorageBucketApi> = {}): StorageBucketApi
     download: vi.fn(async () => ({ data: new Blob([Uint8Array.from([37, 80, 68, 70])]), error: null })),
     copy: vi.fn(async () => ({ data: {}, error: null })),
     remove: vi.fn(async () => ({ data: [], error: null })),
+    upload: vi.fn(async () => ({ data: {}, error: null })),
     ...overrides,
   };
 }

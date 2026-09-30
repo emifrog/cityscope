@@ -1,6 +1,14 @@
 'use client';
 
-import type { Document, DocumentUploadResponse, FileDeclaration, MapSitesQuery, SiteListQuery } from '@etare/contracts';
+import type {
+  Document,
+  DocumentUploadResponse,
+  FileDeclaration,
+  MapSitesQuery,
+  Plan,
+  SiteListQuery,
+  UploadTicket,
+} from '@etare/contracts';
 import { permissionsForRoles, type Permission } from '@etare/domain';
 import {
   keepPreviousData,
@@ -14,7 +22,7 @@ import { useMemo, useState } from 'react';
 import { useSession } from '@/providers/session-provider';
 import { useTenant } from '@/providers/tenant-provider';
 import { api, type ApiCallOptions } from './api-client';
-import { uploadDocumentFile, type UploadStep } from './file-upload';
+import { uploadFile, type UploadStep } from './file-upload';
 
 /** Tenant-scoped query keys always start with ['tenant', tenantId] (cache isolation between SIS). */
 export const queryKeys = {
@@ -189,6 +197,41 @@ function awaitsVerdict(documents: readonly Document[] | undefined, now = Date.no
   );
 }
 
+const plansAwaitVerdict = (plans: readonly Plan[] | undefined, now = Date.now()) =>
+  (plans ?? []).some((plan) =>
+    plan.revisions.some(
+      (revision) =>
+        revision.asset.scan_status === 'pending' && now - Date.parse(revision.asset.created_at) < VERDICT_WAIT_MS,
+    ),
+  );
+
+/** Plans of a site; refreshed while a background waits for the verdict of the worker. */
+export function useSitePlans(siteId: string) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.siteRecords(tenantId ?? 'none', siteId, 'plans'),
+    enabled,
+    queryFn: ({ signal }) => api.listSitePlans({ ...options, signal }, siteId),
+    refetchInterval: (query) => (plansAwaitVerdict(query.state.data) ? VERDICT_POLL_MS : false),
+  });
+}
+
+/**
+ * Short-lived URL of a verified file (the access is audited server-side).
+ * Kept a little less than its lifetime, then requested again.
+ */
+export function useAssetUrl(assetId: string | null) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: ['tenant', tenantId ?? 'none', 'asset-url', assetId],
+    enabled: enabled && assetId !== null,
+    staleTime: 45_000,
+    gcTime: 50_000,
+    retry: false,
+    queryFn: ({ signal }) => api.getAssetDownload({ ...options, signal }, assetId ?? ''),
+  });
+}
+
 /** Documents of a site; refreshed while a file waits for the verdict of the worker. */
 export function useDocuments(siteId: string) {
   const { tenantId, options, enabled } = useApiContext();
@@ -200,29 +243,32 @@ export function useDocuments(siteId: string) {
   });
 }
 
-export interface DocumentUploadVariables {
+export interface UploadVariables<T> {
   readonly file: File;
-  readonly declare: (options: ApiCallOptions, file: FileDeclaration) => Promise<DocumentUploadResponse>;
+  readonly declare: (options: ApiCallOptions, file: FileDeclaration) => Promise<T>;
 }
+export type DocumentUploadVariables = UploadVariables<DocumentUploadResponse>;
 
 /**
- * Uploads a document file (new document or new version) and exposes the
- * current step. The list is refreshed even on failure: the declaration may
- * already exist when the transfer itself fails.
+ * Uploads a file of a site (document version, plan background) and exposes
+ * the current step. The records are refreshed even on failure: the
+ * declaration may already exist when the transfer itself fails.
  */
-export function useDocumentUpload(siteId: string) {
+export function useSiteFileUpload<T extends { readonly upload: UploadTicket }>(siteId: string, kind: string) {
   const { tenantId, options } = useApiContext();
   const queryClient = useQueryClient();
   const [step, setStep] = useState<UploadStep | null>(null);
   const mutation = useMutation({
-    mutationFn: ({ file, declare }: DocumentUploadVariables) => uploadDocumentFile(options, file, declare, setStep),
+    mutationFn: ({ file, declare }: UploadVariables<T>) => uploadFile(options, file, declare, setStep),
     onSettled: async () => {
       setStep(null);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.siteRecords(tenantId ?? 'none', siteId, 'documents') });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.siteRecords(tenantId ?? 'none', siteId, kind) });
     },
   });
   return { ...mutation, step };
 }
+
+export const useDocumentUpload = (siteId: string) => useSiteFileUpload<DocumentUploadResponse>(siteId, 'documents');
 
 /**
  * A write through the API. On success, the given keys (relative to the

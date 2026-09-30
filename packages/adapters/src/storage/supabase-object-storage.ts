@@ -10,6 +10,7 @@ export interface StorageBucketApi {
   download(path: string): StorageResult<Blob>;
   copy(fromPath: string, toPath: string): StorageResult<unknown>;
   remove(paths: string[]): StorageResult<unknown>;
+  upload(path: string, body: Uint8Array, options: { contentType: string; upsert: boolean }): StorageResult<unknown>;
 }
 
 const KEY_PATTERN = /^tenants\/[0-9a-f-]{36}\/(assets|quarantine)\/[0-9a-f-]{36}\/[0-9a-f-]{36}$/;
@@ -78,6 +79,18 @@ export class SupabaseObjectStorage implements ObjectStorage, ObjectStoreAdmin {
     assertKey(from);
     assertKey(to);
     const { error } = await this.bucket.copy(from, to);
+    if (error) throw new Error('STORAGE_UNAVAILABLE');
+  }
+
+  async upload(
+    key: string,
+    content: Uint8Array,
+    contentType: string,
+    options: { upsert?: boolean } = {},
+  ): Promise<void> {
+    assertKey(key);
+    if (!key.includes('/assets/')) throw new Error('Server-side uploads go to verified asset keys only.');
+    const { error } = await this.bucket.upload(key, content, { contentType, upsert: options.upsert ?? false });
     if (error) throw new Error('STORAGE_UNAVAILABLE');
   }
 

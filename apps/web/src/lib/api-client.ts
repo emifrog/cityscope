@@ -43,6 +43,11 @@ import {
   type OperationalObject,
   type OperationalObjectCreateInput,
   type OperationalObjectUpdate,
+  type Plan,
+  type PlanCreateInput,
+  type PlanRevisionCreateInput,
+  type PlanUpdate,
+  type PlanUploadResponse,
   type UploadConfirmation,
 } from '@etare/contracts';
 import type { z } from 'zod';
@@ -280,6 +285,34 @@ export const api = {
     patch: OperationalObjectUpdate,
   ): Promise<OperationalObject> =>
     call(endpoints.updateObject.response, pathOf(endpoints.updateObject.path, { id }), options, {
+      method: 'PATCH',
+      body: patch,
+      ifMatch: version,
+    }),
+
+  // ---------------------------------------------------------------- plans
+  listSitePlans: (options: ApiCallOptions, siteId: string): Promise<Plan[]> =>
+    itemsOf(call(endpoints.listSitePlans.response, pathOf(endpoints.listSitePlans.path, { id: siteId }), options)),
+
+  /** Declares the plan and its first background; the answer carries the signed upload URL. */
+  createPlan: (options: ApiCallOptions, siteId: string, input: PlanCreateInput): Promise<PlanUploadResponse> =>
+    call(endpoints.createPlan.response, pathOf(endpoints.createPlan.path, { id: siteId }), options, {
+      method: 'POST',
+      body: input,
+    }),
+
+  createPlanRevision: (
+    options: ApiCallOptions,
+    planId: string,
+    input: PlanRevisionCreateInput,
+  ): Promise<PlanUploadResponse> =>
+    call(endpoints.createPlanRevision.response, pathOf(endpoints.createPlanRevision.path, { id: planId }), options, {
+      method: 'POST',
+      body: input,
+    }),
+
+  updatePlan: (options: ApiCallOptions, id: string, version: number, patch: PlanUpdate): Promise<Plan> =>
+    call(endpoints.updatePlan.response, pathOf(endpoints.updatePlan.path, { id }), options, {
       method: 'PATCH',
       body: patch,
       ifMatch: version,
