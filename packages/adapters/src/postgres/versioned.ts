@@ -3,7 +3,13 @@ import type { PoolClient } from './pool';
 
 /** Tables whose rows carry a row_version (optimistic concurrency). Never built from user input. */
 export type VersionedTable =
-  'app.site' | 'app.building' | 'app.level' | 'app.site_classification' | 'app.contact' | 'app.document';
+  | 'app.site'
+  | 'app.building'
+  | 'app.level'
+  | 'app.site_classification'
+  | 'app.contact'
+  | 'app.document'
+  | 'app.operational_object';
 
 /**
  * Locks the row (SELECT … FOR UPDATE, under RLS) and checks the version the

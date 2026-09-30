@@ -2,7 +2,7 @@
 
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { MapSitesResponse } from '@etare/contracts';
-import { SITE_STATUSES, SITE_TYPES } from '@etare/domain';
+import { OBJECT_CATEGORIES, SITE_STATUSES, SITE_TYPES, type ObjectCategory } from '@etare/domain';
 import { Badge, Button, Card, Input, Label, Select, cn } from '@etare/ui';
 import type { GeoJSONSource, LngLatBoundsLike } from 'maplibre-gl';
 import { X } from 'lucide-react';
@@ -10,12 +10,25 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ApiErrorAlert } from '@/components/feedback';
-import { SITE_STATUS_LABELS, SITE_TYPE_LABELS } from '@/components/labels';
+import {
+  CRITICALITY_LABELS,
+  OBJECT_CATEGORY_LABELS,
+  OBJECT_STATUS_LABELS,
+  SITE_STATUS_LABELS,
+  SITE_TYPE_LABELS,
+} from '@/components/labels';
 import { BaseMapSwitch, BaseMapUnavailable } from '@/components/map/map-overlays';
 import { SITE_LAYERS, SITE_SOURCE, bboxParam, mapColors, siteLayers, toSourceData } from '@/components/map/map-style';
+import {
+  CATEGORY_COLORS,
+  detailObjectsData,
+  filterObjectLayers,
+  objectLayerId,
+  objectLayers,
+} from '@/components/map/object-layers';
 import { useBaseMap, useMapLibre } from '@/components/map/use-map';
 import { PageHeader } from '@/components/page-header';
-import { useMapCatalog, useMapSites, type MapSiteFilters } from '@/lib/queries';
+import { useMapCatalog, useMapFeatures, useMapSites, type MapSiteFilters } from '@/lib/queries';
 
 const isSiteType = (value: string | null): value is (typeof SITE_TYPES)[number] =>
   (SITE_TYPES as readonly (string | null)[]).includes(value);
@@ -34,6 +47,12 @@ function useFiltersFromUrl(): MapSiteFilters {
     ...(isSiteStatus(status) ? { status } : {}),
   };
 }
+
+/** From this zoom (street level), building footprints and operational points are shown (MAP-02). */
+const DETAIL_ZOOM = 15;
+const DETAIL_BUILDINGS = 'detail-buildings';
+const DETAIL_OBJECTS = 'detail-objects';
+const EMPTY = { type: 'FeatureCollection' as const, features: [] };
 
 function extentBounds(extent: NonNullable<MapSitesResponse['extent']>): LngLatBoundsLike {
   return [
@@ -74,6 +93,13 @@ export function SitesMapView() {
   const fittedFor = useRef<string | null>(null);
   const [base, setBase] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Visible extent once zoomed in enough for details; null otherwise (nothing requested).
+  const [detailBbox, setDetailBbox] = useState<string | null>(null);
+  const details = useMapFeatures(detailBbox);
+  const [visibleCategories, setVisibleCategories] = useState<readonly ObjectCategory[]>(OBJECT_CATEGORIES);
+  const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
+  const selectedObject =
+    (detailBbox && details.data?.objects.features.find((feature) => feature.id === selectedObjectId)) || null;
   const activeBase = base ?? catalog.data?.default_base ?? null;
   const selected = sites.data?.features.find((feature) => feature.id === selectedId) ?? null;
   const { loaded, baseUnavailable, clearBaseUnavailable } = useMapLibre(containerRef, catalog.data, {});
@@ -92,7 +118,33 @@ export function SitesMapView() {
       clusterMaxZoom: 13,
     });
     const colors = mapColors(getComputedStyle(document.documentElement));
+    map.addSource(DETAIL_BUILDINGS, { type: 'geojson', data: EMPTY });
+    map.addSource(DETAIL_OBJECTS, { type: 'geojson', data: EMPTY });
+    map.addLayer({
+      id: 'detail-building-fill',
+      type: 'fill',
+      source: DETAIL_BUILDINGS,
+      paint: { 'fill-color': colors.cluster, 'fill-opacity': 0.25 },
+    });
+    map.addLayer({
+      id: 'detail-building-line',
+      type: 'line',
+      source: DETAIL_BUILDINGS,
+      paint: { 'line-color': colors.cluster, 'line-width': 1.5 },
+    });
+    for (const layer of objectLayers(DETAIL_OBJECTS, DETAIL_OBJECTS, fontStack, 17)) map.addLayer(layer);
     for (const layer of siteLayers(colors, fontStack)) map.addLayer(layer);
+    for (const role of ['point', 'line', 'fill'] as const) {
+      const layer = objectLayerId(DETAIL_OBJECTS, role);
+      map.on('click', layer, (event) => {
+        const id = event.features?.[0]?.properties?.['id'];
+        if (typeof id !== 'string') return;
+        setSelectedObjectId(id);
+        setSelectedId(null);
+      });
+      map.on('mouseenter', layer, () => (map.getCanvas().style.cursor = 'pointer'));
+      map.on('mouseleave', layer, () => (map.getCanvas().style.cursor = ''));
+    }
 
     map.on('click', SITE_LAYERS.clusters, (event) => {
       const cluster = event.features?.[0];
@@ -106,7 +158,9 @@ export function SitesMapView() {
     });
     map.on('click', SITE_LAYERS.points, (event) => {
       const siteId = event.features?.[0]?.properties?.['site_id'];
-      if (typeof siteId === 'string') setSelectedId(siteId);
+      if (typeof siteId !== 'string') return;
+      setSelectedId(siteId);
+      setSelectedObjectId(null);
     });
     for (const layer of [SITE_LAYERS.clusters, SITE_LAYERS.points]) {
       map.on('mouseenter', layer, () => (map.getCanvas().style.cursor = 'pointer'));
@@ -114,6 +168,7 @@ export function SitesMapView() {
     }
     map.on('moveend', () => {
       if (truncatedRef.current) setBbox(bboxParam(map.getBounds()));
+      setDetailBbox(map.getZoom() >= DETAIL_ZOOM ? bboxParam(map.getBounds()) : null);
     });
   }, [loaded, fontStack]);
 
@@ -132,6 +187,17 @@ export function SitesMapView() {
   useEffect(() => {
     loaded?.map.setFilter(SITE_LAYERS.selected, ['==', ['get', 'site_id'], selectedId ?? '']);
   }, [loaded, selectedId]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    const data = detailBbox ? details.data : undefined;
+    loaded.map.getSource<GeoJSONSource>(DETAIL_BUILDINGS)?.setData(data ? data.buildings : EMPTY);
+    loaded.map.getSource<GeoJSONSource>(DETAIL_OBJECTS)?.setData(data ? detailObjectsData(data) : EMPTY);
+  }, [loaded, details.data, detailBbox]);
+
+  useEffect(() => {
+    if (loaded) filterObjectLayers(loaded.map, DETAIL_OBJECTS, visibleCategories);
+  }, [loaded, visibleCategories]);
 
   function applyFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -223,6 +289,42 @@ export function SitesMapView() {
           <div className="pointer-events-auto">
             <Legend />
           </div>
+          {detailBbox ? (
+            <fieldset className="pointer-events-auto max-w-56 rounded-md bg-surface/95 px-3 py-2 text-xs shadow">
+              <legend className="float-left mb-1 font-semibold">Points opérationnels</legend>
+              <div className="clear-both space-y-0.5">
+                {OBJECT_CATEGORIES.map((category) => (
+                  <label key={category} className="flex items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      className="size-3.5"
+                      checked={visibleCategories.includes(category)}
+                      onChange={(event) =>
+                        setVisibleCategories((current) =>
+                          event.target.checked ? [...current, category] : current.filter((item) => item !== category),
+                        )
+                      }
+                    />
+                    <span
+                      aria-hidden="true"
+                      className="inline-block size-2.5 rounded-full"
+                      style={{ backgroundColor: CATEGORY_COLORS[category] }}
+                    />
+                    {OBJECT_CATEGORY_LABELS[category]}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ) : (
+            <p className="pointer-events-auto max-w-56 rounded-md bg-surface/95 px-3 py-2 text-xs shadow">
+              Zoomez au niveau de la rue pour afficher bâtiments et points opérationnels.
+            </p>
+          )}
+          {details.error && detailBbox ? (
+            <p className="pointer-events-auto max-w-56 rounded-md bg-surface/95 px-3 py-2 text-xs text-critical shadow">
+              Bâtiments et points opérationnels indisponibles pour cette zone.
+            </p>
+          ) : null}
           {baseUnavailable ? <BaseMapUnavailable /> : null}
         </div>
 
@@ -248,6 +350,40 @@ export function SitesMapView() {
               Voir la liste
             </Link>
           </p>
+        ) : null}
+
+        {selectedObject ? (
+          <Card className="absolute right-3 bottom-10 z-10 w-80 max-w-[calc(100%-1.5rem)] space-y-3 p-4 shadow-lg">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-semibold">
+                  {selectedObject.properties.label ??
+                    selectedObject.properties.name ??
+                    selectedObject.properties.type_name}
+                </p>
+                <p className="text-sm text-muted">
+                  {selectedObject.properties.type_name} · {selectedObject.properties.site_name}
+                </p>
+              </div>
+              <Button size="sm" variant="ghost" aria-label="Fermer" onClick={() => setSelectedObjectId(null)}>
+                <X aria-hidden="true" className="size-4" />
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Badge>{OBJECT_CATEGORY_LABELS[selectedObject.properties.category]}</Badge>
+              {selectedObject.properties.status !== 'active' ? (
+                <Badge tone="critical">{OBJECT_STATUS_LABELS[selectedObject.properties.status]}</Badge>
+              ) : null}
+              {selectedObject.properties.criticality !== 'info' ? (
+                <Badge tone="important">{CRITICALITY_LABELS[selectedObject.properties.criticality]}</Badge>
+              ) : null}
+            </div>
+            <Button asChild size="sm" className="w-full">
+              <Link href={`/sites/${selectedObject.properties.site_id}?onglet=localisation`}>
+                Voir sur la fiche du site
+              </Link>
+            </Button>
+          </Card>
         ) : null}
 
         {selected ? (

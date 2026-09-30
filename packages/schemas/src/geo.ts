@@ -10,6 +10,11 @@ export const pointSchema = z.object({
   coordinates: positionSchema,
 });
 
+export const lineStringSchema = z.object({
+  type: z.literal('LineString'),
+  coordinates: z.array(positionSchema).min(2).max(2000),
+});
+
 const linearRingSchema = z
   .array(positionSchema)
   .min(4)

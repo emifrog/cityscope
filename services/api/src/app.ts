@@ -9,6 +9,7 @@ import {
   createExternalId,
   createLevel,
   createSite,
+  createSiteObject,
   getAssetDownload,
   getMe,
   getMapCatalog,
@@ -21,8 +22,11 @@ import {
   listContacts,
   listDocuments,
   listExternalIds,
+  listMapFeatures,
   listMapSites,
   listMembers,
+  listObjectTypes,
+  listSiteObjects,
   listSites,
   updateBuilding,
   updateClassification,
@@ -30,6 +34,7 @@ import {
   updateDocument,
   updateLevel,
   updateMember,
+  updateSiteObject,
   updateSite,
   type CartographyCatalog,
   type Geocoder,
@@ -210,6 +215,12 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     return respond(c, endpoints.listMapSites, await listMapSites(deps.sessions, context, query));
   });
 
+  app.get(routerPath(endpoints.listMapFeatures.path), async (c) => {
+    const context = await requestContext(c, endpoints.listMapFeatures);
+    const query = endpoints.listMapFeatures.query.parse(c.req.query());
+    return respond(c, endpoints.listMapFeatures, await listMapFeatures(deps.sessions, context, query));
+  });
+
   app.get(routerPath(endpoints.searchAddresses.path), async (c) => {
     const context = await requestContext(c, endpoints.searchAddresses);
     const query = endpoints.searchAddresses.query.parse(c.req.query());
@@ -344,6 +355,31 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     const context = await requestContext(c, endpoints.createExternalId);
     const input = await readBody(c, endpoints.createExternalId.body);
     return respond(c, endpoints.createExternalId, await createExternalId(deps.sessions, context, idOf(c), input));
+  });
+
+  // ---------------------------------------------------------------- operational objects
+  app.get(routerPath(endpoints.listObjectTypes.path), async (c) => {
+    const context = await requestContext(c, endpoints.listObjectTypes);
+    return respond(c, endpoints.listObjectTypes, { items: await listObjectTypes(deps.sessions, context) });
+  });
+
+  app.get(routerPath(endpoints.listSiteObjects.path), async (c) => {
+    const context = await requestContext(c, endpoints.listSiteObjects);
+    const items = await listSiteObjects(deps.sessions, context, idOf(c));
+    return respond(c, endpoints.listSiteObjects, { items });
+  });
+
+  app.post(routerPath(endpoints.createSiteObject.path), async (c) => {
+    const context = await requestContext(c, endpoints.createSiteObject);
+    const input = await readBody(c, endpoints.createSiteObject.body);
+    return respond(c, endpoints.createSiteObject, await createSiteObject(deps.sessions, context, idOf(c), input));
+  });
+
+  app.patch(routerPath(endpoints.updateObject.path), async (c) => {
+    const context = await requestContext(c, endpoints.updateObject);
+    const version = expectedVersion(c);
+    const patch = await readBody(c, endpoints.updateObject.body);
+    return respond(c, endpoints.updateObject, await updateSiteObject(deps.sessions, context, idOf(c), version, patch));
   });
 
   // ---------------------------------------------------------------- documents and files

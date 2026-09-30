@@ -18,8 +18,14 @@ import type {
   Level,
   LevelCreate,
   LevelUpdate,
+  MapFeaturesQuery,
+  MapFeaturesResponse,
   MapSitesQuery,
   MapSitesResponse,
+  ObjectType,
+  OperationalObject,
+  OperationalObjectCreate,
+  OperationalObjectUpdate,
   MeResponse,
   Member,
   MemberInvite,
@@ -48,6 +54,7 @@ export interface RequestSession {
   readonly documents: DocumentRepository;
   readonly assets: AssetRepository;
   readonly members: MemberRepository;
+  readonly objects: OperationalObjectRepository;
   readonly jobs: JobScheduler;
   readonly audit: AuditRecorder;
 }
@@ -161,6 +168,21 @@ export interface MemberRepository {
    */
   add(input: MemberInvite, identitySubject: string | null): Promise<Member | null>;
   update(id: string, expectedVersion: number, patch: MemberUpdate): Promise<Member | null>;
+}
+
+/** Operational objects of the sites (placed on the map; plans come with the ETARE editor). */
+export interface OperationalObjectRepository {
+  /** Catalogue visible in the SIS: global types and its own. */
+  types(): Promise<ObjectType[]>;
+  type(id: string): Promise<ObjectType | null>;
+  /** Null when the site is not visible. */
+  listBySite(siteId: string): Promise<OperationalObject[] | null>;
+  get(id: string): Promise<OperationalObject | null>;
+  /** Null when the site is not visible. */
+  create(siteId: string, input: OperationalObjectCreate): Promise<OperationalObject | null>;
+  update(id: string, expectedVersion: number, patch: OperationalObjectUpdate): Promise<OperationalObject | null>;
+  /** Building footprints and exterior objects within a small extent (map details). */
+  mapFeatures(query: MapFeaturesQuery): Promise<MapFeaturesResponse>;
 }
 
 /** Address search (geocoding). Called outside any database transaction: it is a remote service. */

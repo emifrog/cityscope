@@ -5,6 +5,7 @@ export * from './geocoding';
 export * from './jobs';
 export * from './map';
 export * from './members';
+export * from './objects';
 export * from './ports';
 export * from './referential';
 export * from './use-cases';

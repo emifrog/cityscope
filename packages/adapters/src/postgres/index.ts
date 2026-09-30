@@ -5,6 +5,7 @@ export * from './document-repository';
 export * from './health';
 export * from './job-queue';
 export * from './member-repository';
+export * from './operational-object-repository';
 export * from './pool';
 export * from './request-services';
 export * from './session';

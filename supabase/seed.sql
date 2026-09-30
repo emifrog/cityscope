@@ -171,7 +171,7 @@ from (values
    null, null, null, 7.2514, 43.7076, null, null, '{"ouverture": "code (voir fiche accès)"}',
    'Accès principal des engins.', 'important'),
   ('06000009-0000-4000-8000-000000000004', 'PEI', 'PEI principal', 'PEI 1',
-   null, null, null, 7.2509, 43.7074, null, null, '{"debit_m3h": 120, "distance_m": 60}',
+   null, null, null, 7.2509, 43.7074, null, null, '{"numero": "NIC-0428-1", "nature": "poteau", "debit_m3h": 120, "pression_bar": 3.5}',
    null, 'important'),
   ('06000009-0000-4000-8000-000000000005', 'COUPURE_PV', 'Coupure photovoltaïque toiture B', 'PV',
    '06000003-0000-4000-8000-000000000002', null, null, 7.2522, 43.7081, null, null, '{}',

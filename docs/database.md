@@ -22,6 +22,7 @@ pas exposé par la Data API Supabase (`supabase/config.toml` → `api.schemas`),
 | `20261001000100_referential_editing.sql`          | Sprint 1 : `site_edit` (auteurs des données de travail), contributeurs collectés à la soumission, `site_classification`, `contact`, `external_identifier`, index de recherche |
 | `20261001000200_document_uploads.sql`             | Sprint 1 : clé de quarantaine et verdict de contrôle des `asset`, verdict réservé au worker et définitif, fonctions `worker_*_asset_verification`                             |
 | `20261001000300_member_administration.sql`        | Sprint 1 : `admin_add_member`, `admin_update_member` (anti-escalade, dernier administrateur), `holds_with_second_factor`, unicité des seules liaisons de rôle actives         |
+| `20261002000100_operational_object_geometry.sql`  | Sprint 2 : objet toujours placé (carte ou plan), géométrie conforme au type (point, ligne, surface), propriétés typées des types clés (PEI, réserve, portail, voie engins…)   |
 
 ## Correspondance avec les documents de cadrage
 
@@ -115,6 +116,17 @@ le verdict, par `app.worker_complete_asset_verification()` (`SECURITY DEFINER`, 
 effacée. Le verdict est définitif (trigger, propriétaire compris). `etare_api` ne peut modifier que le nom,
 la classification, l’autorisation hors ligne et la miniature (privilèges par colonne). Voir ADR-009 et le
 test `70_document_uploads`.
+
+## Points opérationnels
+
+`app.operational_object` porte une position sur la carte (`geom`, WGS 84) et/ou sur un plan
+(`local_geom`) ; l’une des deux est obligatoire et leur type géométrique suit celui du type d’objet
+(trigger `operational_object_geometry_kind`). Les propriétés propres au type (débit d’un PEI, largeur
+d’une voie engins…) sont décrites dans `object_type.properties_schema` par un sous-ensemble de JSON
+Schema (`type`, `title`, `unit`, `oneOf`, bornes, longueur, format date, `required`) et validées par
+l’application (`packages/domain/src/objects.ts`) : seules les propriétés déclarées sont acceptées.
+Les distances au point du site se calculent en `geography` (mètres). Voir le test
+`90_operational_objects`.
 
 ## Habilitations des membres
 

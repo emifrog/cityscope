@@ -26,6 +26,7 @@ import {
   type LevelCreate,
   type LevelUpdate,
   type MapCatalog,
+  type MapFeaturesResponse,
   type MapSitesQuery,
   type MapSitesResponse,
   type MeResponse,
@@ -38,6 +39,10 @@ import {
   type SiteListQuery,
   type SiteListResponse,
   type SiteUpdate,
+  type ObjectType,
+  type OperationalObject,
+  type OperationalObjectCreateInput,
+  type OperationalObjectUpdate,
   type UploadConfirmation,
 } from '@etare/contracts';
 import type { z } from 'zod';
@@ -132,6 +137,10 @@ export const api = {
 
   listMapSites: (options: ApiCallOptions, query: Partial<MapSitesQuery> = {}): Promise<MapSitesResponse> =>
     call(endpoints.listMapSites.response, endpoints.listMapSites.path, options, { query }),
+
+  /** Building footprints and operational points of a small extent (close zoom). */
+  listMapFeatures: (options: ApiCallOptions, bbox: string): Promise<MapFeaturesResponse> =>
+    call(endpoints.listMapFeatures.response, endpoints.listMapFeatures.path, options, { query: { bbox } }),
 
   /** Address search through the server (IGN geocoder). */
   searchAddresses: (options: ApiCallOptions, q: string, limit = 5): Promise<AddressCandidates> =>
@@ -245,6 +254,35 @@ export const api = {
     call(endpoints.createExternalId.response, pathOf(endpoints.createExternalId.path, { id: siteId }), options, {
       method: 'POST',
       body: input,
+    }),
+
+  // ---------------------------------------------------------------- operational objects
+  listObjectTypes: (options: ApiCallOptions): Promise<ObjectType[]> =>
+    itemsOf(call(endpoints.listObjectTypes.response, endpoints.listObjectTypes.path, options)),
+
+  listSiteObjects: (options: ApiCallOptions, siteId: string): Promise<OperationalObject[]> =>
+    itemsOf(call(endpoints.listSiteObjects.response, pathOf(endpoints.listSiteObjects.path, { id: siteId }), options)),
+
+  createSiteObject: (
+    options: ApiCallOptions,
+    siteId: string,
+    input: OperationalObjectCreateInput,
+  ): Promise<OperationalObject> =>
+    call(endpoints.createSiteObject.response, pathOf(endpoints.createSiteObject.path, { id: siteId }), options, {
+      method: 'POST',
+      body: input,
+    }),
+
+  updateObject: (
+    options: ApiCallOptions,
+    id: string,
+    version: number,
+    patch: OperationalObjectUpdate,
+  ): Promise<OperationalObject> =>
+    call(endpoints.updateObject.response, pathOf(endpoints.updateObject.path, { id }), options, {
+      method: 'PATCH',
+      body: patch,
+      ifMatch: version,
     }),
 
   // ---------------------------------------------------------------- documents and files

@@ -74,7 +74,10 @@ Endpoints : `GET /health`, `GET /me` ; sites (`GET/POST /sites` avec recherche `
 (`GET/POST /members`, `PATCH /members/{id}`, voir ADR-010) ; carte (`GET /map/sources` : catalogue
 des fonds ; `GET /map/sites` : sites positionnés en GeoJSON, filtres de la liste, `bbox`
 ouest,sud,est,nord, emprise de tous les résultats et nombre de sites sans position ; voir ADR-006) ;
-géocodage (`GET /geocoding/search`, `GET /geocoding/reverse`, géocodeur IGN appelé par le serveur).
+géocodage (`GET /geocoding/search`, `GET /geocoding/reverse`, géocodeur IGN appelé par le serveur) ;
+points opérationnels (`GET /object-types`, `GET/POST /sites/{id}/objects`, `PATCH /objects/{id}`) et
+détails de carte (`GET /map/features?bbox=…` : emprises des bâtiments et points d’une zone de 0,2° au
+plus, affichés à partir du zoom 15).
 Les emprises du site et des bâtiments (`footprint`, Polygon ou MultiPolygon) passent par
 `PATCH /sites/{id}`, `POST /sites/{id}/buildings` et `PATCH /buildings/{id}`.
 Les `PATCH` exigent
@@ -102,6 +105,8 @@ Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4, composants de sty
   carte partagée (`use-map.ts`) ; onglet « Localisation » de la fiche site : point de référence
   (déplacement, adresse la plus proche proposée), emprises du site et des bâtiments tracées avec
   Terra Draw ; recherche d’adresse (`address-search.tsx`, motif combobox accessible au clavier).
+  Points opérationnels : couches par catégorie (`object-layers.ts`, calques activables), tracé par type
+  (point, ligne, surface) avec `drawing.ts`, formulaire généré depuis le schéma des propriétés du type.
 - Thème remplaçable : jetons dans `packages/ui/src/styles/globals.css`, nom/logo dans `src/config/brand.ts`.
 
 ## Worker (services/worker)

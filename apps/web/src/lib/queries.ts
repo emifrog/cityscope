@@ -131,6 +131,30 @@ export const useBuildings = (siteId: string) => useSiteList(siteId, 'buildings',
 export const useClassifications = (siteId: string) => useSiteList(siteId, 'classifications', api.listClassifications);
 export const useContacts = (siteId: string) => useSiteList(siteId, 'contacts', api.listContacts);
 export const useExternalIds = (siteId: string) => useSiteList(siteId, 'external-ids', api.listExternalIds);
+export const useSiteObjects = (siteId: string) => useSiteList(siteId, 'objects', api.listSiteObjects);
+
+/** Catalogue of operational object types of the active SIS (rarely changes). */
+export function useObjectTypes() {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: ['tenant', tenantId ?? 'none', 'object-types'],
+    enabled,
+    staleTime: 10 * 60_000,
+    queryFn: ({ signal }) => api.listObjectTypes({ ...options, signal }),
+  });
+}
+
+/** Buildings and operational points of the visible extent; null bbox (zoomed out): nothing requested. */
+export function useMapFeatures(bbox: string | null) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: [...queryKeys.sites(tenantId ?? 'none'), 'map-features', bbox],
+    enabled: enabled && bbox !== null,
+    placeholderData: keepPreviousData,
+    retry: false,
+    queryFn: ({ signal }) => api.listMapFeatures({ ...options, signal }, bbox ?? ''),
+  });
+}
 
 /** Members of the active SIS (administration: the API requires the second factor). */
 export function useMembers() {

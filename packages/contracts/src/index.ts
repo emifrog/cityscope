@@ -4,5 +4,6 @@ export * from './errors';
 export * from './geocoding';
 export * from './map';
 export * from './members';
+export * from './objects';
 export * from './referential';
 export * from './resources';

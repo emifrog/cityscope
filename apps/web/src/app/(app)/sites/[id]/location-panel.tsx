@@ -1,24 +1,35 @@
 'use client';
 
 import 'maplibre-gl/dist/maplibre-gl.css';
-import type { AddressCandidate, BuildingUpdate, SiteDetail, SiteUpdate } from '@etare/contracts';
-import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle } from '@etare/ui';
-import type { GeoJSONSource, MapMouseEvent, Marker } from 'maplibre-gl';
+import type {
+  AddressCandidate,
+  BuildingUpdate,
+  ObjectType,
+  OperationalObject,
+  OperationalObjectCreateInput,
+  OperationalObjectUpdate,
+  SiteDetail,
+  SiteUpdate,
+} from '@etare/contracts';
+import { OBJECT_CATEGORIES, type ObjectCategory } from '@etare/domain';
+import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle, Select } from '@etare/ui';
+import type { GeoJSONSource, MapLayerMouseEvent, MapMouseEvent, Marker } from 'maplibre-gl';
 import type { TerraDraw } from 'terra-draw';
 import { useEffect, useRef, useState } from 'react';
 import { AddressSearch } from '@/components/address-search';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
-import {
-  roundPosition,
-  siteExtent,
-  toMultiPolygon,
-  toPolygons,
-  type MultiPolygon,
-  type Polygon,
-  type Position,
-} from '@/components/map/geometry';
+import { CRITICALITY_LABELS, OBJECT_CATEGORY_LABELS, OBJECT_STATUS_LABELS } from '@/components/labels';
+import { drawnGeometries, startDrawing, type DrawnGeometry } from '@/components/map/drawing';
+import { roundPosition, siteExtent, toMultiPolygon, toPolygons, type Position } from '@/components/map/geometry';
 import { BaseMapSwitch, BaseMapUnavailable } from '@/components/map/map-overlays';
 import { mapColors, type MapColors } from '@/components/map/map-style';
+import {
+  CATEGORY_COLORS,
+  filterObjectLayers,
+  objectLayerId,
+  objectLayers,
+  siteObjectsData,
+} from '@/components/map/object-layers';
 import { useBaseMap, useMapLibre, type LoadedMap } from '@/components/map/use-map';
 import { api } from '@/lib/api-client';
 import {
@@ -27,26 +38,30 @@ import {
   useBuildings,
   useGeocodingClient,
   useMapCatalog,
+  useObjectTypes,
   usePermissions,
+  useSiteObjects,
 } from '@/lib/queries';
+import { ObjectForm, type ObjectFormValues } from './object-form';
 
 type Editing =
   | { readonly kind: 'none' }
   | { readonly kind: 'point' }
   /** Footprint of the site or of a building (its id). */
-  | { readonly kind: 'surface'; readonly target: 'site' | string };
+  | { readonly kind: 'surface'; readonly target: 'site' | string }
+  /** Operational object: an existing one, or a new one of this type. */
+  | { readonly kind: 'object'; readonly type: ObjectType; readonly object: OperationalObject | null };
 
-const SOURCES = { site: 'site-footprint', buildings: 'building-footprints' } as const;
+const SOURCES = { site: 'site-footprint', buildings: 'building-footprints', objects: 'site-objects' } as const;
+const OBJECTS = 'site-objects';
 const EMPTY = { type: 'FeatureCollection' as const, features: [] };
-type Hex = `#${string}`;
 
 const formatPosition = ([longitude, latitude]: readonly number[]) =>
   `${latitude?.toFixed(6)}, ${longitude?.toFixed(6)}`;
 
-function addFootprintLayers(loaded: LoadedMap, colors: MapColors, fontStack: readonly string[]) {
+function addStaticLayers(loaded: LoadedMap, colors: MapColors, fontStack: readonly string[]) {
   const { map } = loaded;
-  map.addSource(SOURCES.site, { type: 'geojson', data: EMPTY });
-  map.addSource(SOURCES.buildings, { type: 'geojson', data: EMPTY });
+  for (const source of Object.values(SOURCES)) map.addSource(source, { type: 'geojson', data: EMPTY });
   map.addLayer({
     id: 'site-footprint-fill',
     type: 'fill',
@@ -79,69 +94,28 @@ function addFootprintLayers(loaded: LoadedMap, colors: MapColors, fontStack: rea
     layout: { 'text-field': ['get', 'name'], 'text-font': [...fontStack], 'text-size': 12 },
     paint: { 'text-color': colors.cluster, 'text-halo-color': '#ffffff', 'text-halo-width': 1.5 },
   });
+  for (const layer of objectLayers(OBJECTS, SOURCES.objects, fontStack, 16)) map.addLayer(layer);
 }
-
-/** Terra Draw session on the map: polygons only, self-intersections refused while drawing and editing. */
-async function startDrawing(loaded: LoadedMap, colors: MapColors, initial: MultiPolygon | null | undefined) {
-  const [
-    { TerraDraw, TerraDrawPolygonMode, TerraDrawSelectMode, ValidateNotSelfIntersecting },
-    { TerraDrawMapLibreGLAdapter },
-  ] = await Promise.all([import('terra-draw'), import('terra-draw-maplibre-gl-adapter')]);
-  const draw = new TerraDraw({
-    adapter: new TerraDrawMapLibreGLAdapter({ map: loaded.map }),
-    modes: [
-      new TerraDrawSelectMode({
-        flags: {
-          polygon: {
-            feature: {
-              draggable: true,
-              validation: (feature) => ValidateNotSelfIntersecting(feature),
-              coordinates: { midpoints: true, draggable: true, deletable: true },
-            },
-          },
-        },
-      }),
-      new TerraDrawPolygonMode({
-        validation: (feature, context) =>
-          String(context.updateType) === 'provisional' ? { valid: true } : ValidateNotSelfIntersecting(feature),
-        styles: {
-          fillColor: colors.published as Hex,
-          fillOpacity: 0.25,
-          outlineColor: colors.published as Hex,
-          outlineWidth: 2,
-        },
-      }),
-    ],
-  });
-  draw.start();
-  const polygons = toPolygons(initial);
-  if (polygons.length > 0) {
-    draw.addFeatures(
-      polygons.map((polygon) => ({ type: 'Feature', geometry: polygon, properties: { mode: 'polygon' } })),
-    );
-  }
-  draw.setMode(polygons.length > 0 ? 'select' : 'polygon');
-  return draw;
-}
-
-const drawnPolygons = (draw: TerraDraw): Polygon[] =>
-  draw
-    .getSnapshot()
-    .filter((feature) => feature.geometry.type === 'Polygon')
-    .map((feature) => feature.geometry as Polygon);
 
 export function LocationPanel({ site }: { site: SiteDetail }) {
   const canWrite = usePermissions().has('site:write');
   const catalog = useMapCatalog();
   const buildings = useBuildings(site.id);
-  if (catalog.isPending || buildings.isPending) return <LoadingCard lines={8} />;
-  if (catalog.error || buildings.error) return <ApiErrorAlert error={catalog.error ?? buildings.error} />;
+  const objects = useSiteObjects(site.id);
+  const types = useObjectTypes();
+  if (catalog.isPending || buildings.isPending || objects.isPending || types.isPending) {
+    return <LoadingCard lines={8} />;
+  }
+  const failure = catalog.error ?? buildings.error ?? objects.error ?? types.error;
+  if (failure) return <ApiErrorAlert error={failure} />;
   return <LocationEditor site={site} canWrite={canWrite} />;
 }
 
 function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolean }) {
   const catalog = useMapCatalog();
   const buildings = useBuildings(site.id);
+  const objects = useSiteObjects(site.id);
+  const types = useObjectTypes();
   const geocoding = useGeocodingClient();
   const containerRef = useRef<HTMLDivElement>(null);
   const extent = siteExtent(site, buildings.data ?? []);
@@ -162,29 +136,64 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
   const [applyNearest, setApplyNearest] = useState(false);
   const [drawCount, setDrawCount] = useState(0);
   const [selectedDrawing, setSelectedDrawing] = useState<string | number | null>(null);
+  const [visibleCategories, setVisibleCategories] = useState<readonly ObjectCategory[]>(OBJECT_CATEGORIES);
+  const [newTypeId, setNewTypeId] = useState('');
   const markerRef = useRef<Marker | null>(null);
   const drawRef = useRef<TerraDraw | null>(null);
-  const initialSurface = useRef<MultiPolygon | null>(null);
+  const initialGeometries = useRef<DrawnGeometry[]>([]);
+  const editingRef = useRef<Editing>(editing);
+  /** Latest "open this object" action, called by map clicks registered once. */
+  const openObjectRef = useRef<(id: string) => void>(() => undefined);
   const fontStack = catalog.data?.glyphs.font_stack;
 
+  const invalidateSite = (tenantId: string) => [queryKeys.site(tenantId, site.id), queryKeys.sites(tenantId)];
   const updateSite = useApiMutation(
     (options, patch: SiteUpdate) => api.updateSite(options, site.id, site.row_version, patch),
-    (tenantId) => [queryKeys.site(tenantId, site.id), queryKeys.sites(tenantId)],
+    invalidateSite,
   );
   const updateBuilding = useApiMutation(
     (options, { id, version, patch }: { id: string; version: number; patch: BuildingUpdate }) =>
       api.updateBuilding(options, id, version, patch),
     (tenantId) => [queryKeys.siteRecords(tenantId, site.id, 'buildings'), queryKeys.sites(tenantId)],
   );
-  const saving = updateSite.isPending || updateBuilding.isPending;
-  const saveError = updateSite.error ?? updateBuilding.error;
+  const invalidateObjects = (tenantId: string) => [
+    queryKeys.siteRecords(tenantId, site.id, 'objects'),
+    queryKeys.sites(tenantId),
+  ];
+  const createObject = useApiMutation(
+    (options, input: OperationalObjectCreateInput) => api.createSiteObject(options, site.id, input),
+    invalidateObjects,
+  );
+  const updateObject = useApiMutation(
+    (options, { object, patch }: { object: OperationalObject; patch: OperationalObjectUpdate }) =>
+      api.updateObject(options, object.id, object.row_version, patch),
+    invalidateObjects,
+  );
+  const saving = updateSite.isPending || updateBuilding.isPending || createObject.isPending || updateObject.isPending;
+  const siteSaveError = updateSite.error ?? updateBuilding.error;
+
+  useEffect(() => {
+    editingRef.current = editing;
+  }, [editing]);
 
   useEffect(() => {
     if (!loaded || !fontStack) return;
-    addFootprintLayers(loaded, mapColors(getComputedStyle(document.documentElement)), fontStack);
+    addStaticLayers(loaded, mapColors(getComputedStyle(document.documentElement)), fontStack);
+    // A click on an object opens it (when nothing else is being edited).
+    const open = (event: MapLayerMouseEvent) => {
+      const id = event.features?.[0]?.properties?.['id'];
+      if (editingRef.current.kind !== 'none' || typeof id !== 'string') return;
+      openObjectRef.current(id);
+    };
+    for (const role of ['point', 'line', 'fill'] as const) {
+      const layer = objectLayerId(OBJECTS, role);
+      loaded.map.on('click', layer, open);
+      loaded.map.on('mouseenter', layer, () => (loaded.map.getCanvas().style.cursor = 'pointer'));
+      loaded.map.on('mouseleave', layer, () => (loaded.map.getCanvas().style.cursor = ''));
+    }
   }, [loaded, fontStack]);
 
-  // Stored footprints; the one being edited is drawn by Terra Draw instead.
+  // Stored geometries; the one being edited is drawn by Terra Draw instead.
   useEffect(() => {
     if (!loaded) return;
     const editedTarget = editing.kind === 'surface' ? editing.target : null;
@@ -203,7 +212,14 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
           : [],
       ),
     });
-  }, [loaded, site.footprint, buildings.data, editing]);
+    loaded.map.getSource<GeoJSONSource>(SOURCES.objects)?.setData(siteObjectsData(objects.data ?? []));
+    filterObjectLayers(
+      loaded.map,
+      OBJECTS,
+      visibleCategories,
+      editing.kind === 'object' ? (editing.object?.id ?? null) : null,
+    );
+  }, [loaded, site.footprint, buildings.data, objects.data, editing, visibleCategories]);
 
   // Reference point marker, draggable while the point is being moved.
   useEffect(() => {
@@ -257,22 +273,36 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
     };
   }, [pendingPoint, geocoding]);
 
-  // Footprint drawing session.
+  // Drawing session: footprints (polygons) or one operational object of the kind of its type.
   useEffect(() => {
-    if (!loaded || editing.kind !== 'surface') return;
+    if (!loaded || (editing.kind !== 'surface' && editing.kind !== 'object')) return;
     let disposed = false;
     let draw: TerraDraw | undefined;
-    const colors = mapColors(getComputedStyle(document.documentElement));
-    void startDrawing(loaded, colors, initialSurface.current).then((session) => {
+    const kind = editing.kind === 'surface' ? 'polygon' : editing.type.geometry_kind;
+    const color =
+      editing.kind === 'surface'
+        ? mapColors(getComputedStyle(document.documentElement)).published
+        : CATEGORY_COLORS[editing.type.category];
+    const single = editing.kind === 'object';
+    void startDrawing(loaded, color, kind, initialGeometries.current).then((session) => {
       if (disposed) {
         session.stop();
         return;
       }
       draw = session;
       drawRef.current = session;
-      const refresh = () => setDrawCount(drawnPolygons(session).length);
+      const refresh = () => setDrawCount(drawnGeometries(session, kind).length);
       session.on('change', refresh);
-      session.on('finish', () => {
+      session.on('finish', (id) => {
+        // An object has one geometry: a new drawing replaces the previous one.
+        if (single) {
+          const previous = session
+            .getSnapshot()
+            .filter((feature) => feature.id !== id && feature.properties['mode'] !== 'select')
+            .map((feature) => feature.id)
+            .filter((featureId): featureId is string | number => featureId !== undefined);
+          if (previous.length > 0) session.removeFeatures(previous);
+        }
         refresh();
         session.setMode('select');
       });
@@ -287,8 +317,12 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
     };
   }, [loaded, editing]);
 
+  function resetMutations() {
+    for (const mutation of [updateSite, updateBuilding, createObject, updateObject]) mutation.reset();
+  }
+
   function startPoint() {
-    updateSite.reset();
+    resetMutations();
     setPendingPoint(site.location ? roundPosition(site.location.coordinates) : null);
     setNearest(null);
     setApplyNearest(false);
@@ -296,16 +330,32 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
   }
 
   function startSurface(target: 'site' | string) {
-    updateSite.reset();
-    updateBuilding.reset();
-    initialSurface.current =
+    resetMutations();
+    const surface =
       target === 'site'
         ? site.footprint
         : (buildings.data?.find((building) => building.id === target)?.footprint ?? null);
+    initialGeometries.current = toPolygons(surface);
     setDrawCount(0);
     setSelectedDrawing(null);
     setEditing({ kind: 'surface', target });
   }
+
+  function startObject(type: ObjectType, object: OperationalObject | null) {
+    resetMutations();
+    initialGeometries.current = object?.geometry ? [object.geometry as DrawnGeometry] : [];
+    setDrawCount(0);
+    setEditing({ kind: 'object', type, object });
+  }
+
+  // Objects clicked on the map open their form.
+  useEffect(() => {
+    openObjectRef.current = (id) => {
+      const object = objects.data?.find((candidate) => candidate.id === id);
+      const type = types.data?.find((candidate) => candidate.id === object?.object_type_id);
+      if (object && type && canWrite) startObject(type, object);
+    };
+  });
 
   function stopEditing() {
     setEditing({ kind: 'none' });
@@ -336,7 +386,9 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
   function saveSurface() {
     const draw = drawRef.current;
     if (!draw || editing.kind !== 'surface') return;
-    const footprint = toMultiPolygon(drawnPolygons(draw));
+    const footprint = toMultiPolygon(
+      drawnGeometries(draw, 'polygon').map((geometry) => geometry as Extract<DrawnGeometry, { type: 'Polygon' }>),
+    );
     if (editing.target === 'site') {
       updateSite.mutate({ footprint }, { onSuccess: stopEditing });
       return;
@@ -347,6 +399,30 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
       { id: building.id, version: building.row_version, patch: { footprint } },
       { onSuccess: stopEditing },
     );
+  }
+
+  function saveObject(values: ObjectFormValues) {
+    const draw = drawRef.current;
+    if (!draw || editing.kind !== 'object') return;
+    const geometry = drawnGeometries(draw, editing.type.geometry_kind)[0];
+    if (!geometry) return;
+    const rounded = roundGeometry(geometry);
+    if (editing.object) {
+      updateObject.mutate(
+        { object: editing.object, patch: { ...values, geometry: rounded } },
+        { onSuccess: stopEditing },
+      );
+    } else {
+      createObject.mutate(
+        {
+          ...values,
+          status: values.status === 'archived' ? 'active' : values.status,
+          object_type_id: editing.type.id,
+          geometry: rounded,
+        },
+        { onSuccess: stopEditing },
+      );
+    }
   }
 
   function goTo(candidate: AddressCandidate) {
@@ -360,11 +436,21 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
       ? buildings.data?.find((building) => building.id === editing.target)
       : undefined;
   const busy = editing.kind !== 'none';
+  const placed = (objects.data ?? []).filter((object) => object.geometry && object.status !== 'archived');
+  const onPlans = (objects.data ?? []).filter((object) => !object.geometry && object.status !== 'archived');
+  const archived = (objects.data ?? []).filter((object) => object.status === 'archived');
+  const presentCategories = OBJECT_CATEGORIES.filter((category) =>
+    placed.some((object) => object.category === category),
+  );
+  const typesByCategory = OBJECT_CATEGORIES.map((category) => ({
+    category,
+    types: (types.data ?? []).filter((type) => type.category === category),
+  })).filter((group) => group.types.length > 0);
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <div
-        className="relative h-[70dvh] min-h-[420px] overflow-hidden rounded-card border border-border bg-subtle"
+        className="relative h-[75dvh] min-h-[460px] overflow-hidden rounded-card border border-border bg-subtle"
         role="region"
         aria-label="Carte du site"
       >
@@ -404,7 +490,169 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
           </CardContent>
         </Card>
 
-        {saveError ? <ApiErrorAlert error={saveError} /> : null}
+        {siteSaveError ? <ApiErrorAlert error={siteSaveError} /> : null}
+
+        {editing.kind === 'object' ? (
+          <Card>
+            <CardContent className="pt-5">
+              <ObjectForm
+                key={editing.object?.id ?? `new-${editing.type.id}`}
+                type={editing.type}
+                object={editing.object}
+                geometryReady={drawCount > 0}
+                saving={saving}
+                error={createObject.error ?? updateObject.error}
+                onSave={saveObject}
+                onCancel={stopEditing}
+                onVerify={
+                  editing.object
+                    ? () => {
+                        const object = editing.object;
+                        if (object)
+                          updateObject.mutate({ object, patch: { verified: true } }, { onSuccess: stopEditing });
+                      }
+                    : undefined
+                }
+              />
+            </CardContent>
+          </Card>
+        ) : null}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Points opérationnels</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {presentCategories.length > 0 ? (
+              <fieldset className="flex flex-wrap gap-x-3 gap-y-1">
+                <legend className="sr-only">Calques affichés</legend>
+                {presentCategories.map((category) => (
+                  <label key={category} className="flex items-center gap-1.5 text-xs">
+                    <input
+                      type="checkbox"
+                      className="size-3.5"
+                      checked={visibleCategories.includes(category)}
+                      onChange={(event) =>
+                        setVisibleCategories((current) =>
+                          event.target.checked ? [...current, category] : current.filter((item) => item !== category),
+                        )
+                      }
+                    />
+                    <span
+                      aria-hidden="true"
+                      className="inline-block size-2.5 rounded-full"
+                      style={{ backgroundColor: CATEGORY_COLORS[category] }}
+                    />
+                    {OBJECT_CATEGORY_LABELS[category]}
+                  </label>
+                ))}
+              </fieldset>
+            ) : null}
+            <ul className="space-y-2">
+              {placed.map((object) => (
+                <li key={object.id} className="flex items-start justify-between gap-2">
+                  <span className="flex items-start gap-2">
+                    <span
+                      aria-hidden="true"
+                      className="mt-1 inline-block size-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: CATEGORY_COLORS[object.category] }}
+                    />
+                    <span>
+                      <span className="block font-semibold">{object.label ?? object.name ?? object.type_name}</span>
+                      <span className="block text-xs text-muted">
+                        {[
+                          object.type_name,
+                          object.distance_m !== null ? `à ${Math.round(object.distance_m)} m` : null,
+                          object.criticality !== 'info' ? CRITICALITY_LABELS[object.criticality] : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                      {object.status !== 'active' ? (
+                        <Badge tone="critical" className="mt-1">
+                          {OBJECT_STATUS_LABELS[object.status]}
+                        </Badge>
+                      ) : null}
+                    </span>
+                  </span>
+                  {canWrite ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={busy}
+                      onClick={() => {
+                        const type = types.data?.find((candidate) => candidate.id === object.object_type_id);
+                        if (type) startObject(type, object);
+                      }}
+                    >
+                      Modifier
+                    </Button>
+                  ) : null}
+                </li>
+              ))}
+              {placed.length === 0 ? <li className="text-muted">Aucun point placé sur la carte.</li> : null}
+            </ul>
+            {onPlans.length > 0 ? (
+              <p className="text-xs text-muted">
+                {onPlans.length} objet{onPlans.length > 1 ? 's' : ''} placé{onPlans.length > 1 ? 's' : ''} sur les plans
+                intérieurs (éditeur de plans à venir).
+              </p>
+            ) : null}
+            {archived.length > 0 ? (
+              <details className="text-xs">
+                <summary className="cursor-pointer text-info">Archivés ({archived.length})</summary>
+                <ul className="mt-2 space-y-1">
+                  {archived.map((object) => (
+                    <li key={object.id} className="flex items-center justify-between gap-2">
+                      {object.label ?? object.name ?? object.type_name}
+                      {canWrite ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={busy || saving}
+                          onClick={() => updateObject.mutate({ object, patch: { status: 'active' } })}
+                        >
+                          Réactiver
+                        </Button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
+            {canWrite && !busy ? (
+              <div className="flex items-end gap-2 border-t border-border pt-3">
+                <div className="min-w-0 flex-1">
+                  <label htmlFor="new-object-type" className="text-xs font-semibold">
+                    Placer un point
+                  </label>
+                  <Select id="new-object-type" value={newTypeId} onChange={(event) => setNewTypeId(event.target.value)}>
+                    <option value="">Type d’objet…</option>
+                    {typesByCategory.map((group) => (
+                      <optgroup key={group.category} label={OBJECT_CATEGORY_LABELS[group.category]}>
+                        {group.types.map((type) => (
+                          <option key={type.id} value={type.id}>
+                            {type.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </Select>
+                </div>
+                <Button
+                  size="sm"
+                  disabled={!newTypeId}
+                  onClick={() => {
+                    const type = types.data?.find((candidate) => candidate.id === newTypeId);
+                    if (type) startObject(type, null);
+                  }}
+                >
+                  Placer
+                </Button>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
@@ -533,4 +781,16 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
       </aside>
     </div>
   );
+}
+
+/** About 1 cm: coordinates sent to the API are rounded. */
+function roundGeometry(geometry: DrawnGeometry): DrawnGeometry {
+  switch (geometry.type) {
+    case 'Point':
+      return { type: 'Point', coordinates: roundPosition(geometry.coordinates) };
+    case 'LineString':
+      return { type: 'LineString', coordinates: geometry.coordinates.map(roundPosition) };
+    case 'Polygon':
+      return { type: 'Polygon', coordinates: geometry.coordinates.map((ring) => ring.map(roundPosition)) };
+  }
 }

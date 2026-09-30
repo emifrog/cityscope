@@ -1,5 +1,8 @@
 import type {
   ClassificationType,
+  Criticality,
+  ObjectCategory,
+  ObjectStatus,
   ContactVisibility,
   DocumentCategory,
   MembershipStatus,
@@ -117,4 +120,30 @@ export const MEMBERSHIP_STATUS_LABELS: Readonly<Record<MembershipStatus, string>
   active: 'Actif',
   suspended: 'Suspendu',
   revoked: 'Retiré',
+};
+
+export const OBJECT_CATEGORY_LABELS: Readonly<Record<ObjectCategory, string>> = {
+  access: 'Accès',
+  water: 'Eau',
+  energy: 'Énergie',
+  safety: 'Sécurité incendie',
+  smoke_control: 'Désenfumage',
+  vertical: 'Circulations verticales',
+  risk: 'Risques',
+  refuge: 'Mise à l’abri',
+  communication: 'Liaisons',
+  annotation: 'Annotations',
+};
+
+export const CRITICALITY_LABELS: Readonly<Record<Criticality, string>> = {
+  info: 'Information',
+  important: 'Important',
+  critical: 'Critique',
+};
+
+export const OBJECT_STATUS_LABELS: Readonly<Record<ObjectStatus, string>> = {
+  active: 'En service',
+  out_of_service: 'Hors service',
+  unknown: 'État inconnu',
+  archived: 'Archivé',
 };

@@ -15,6 +15,7 @@ import { PostgresBuildingRepository } from './building-repository';
 import { PostgresAssetRepository, PostgresDocumentRepository } from './document-repository';
 import { PostgresIdentityReader } from './identity-reader';
 import { PostgresMemberRepository } from './member-repository';
+import { PostgresOperationalObjectRepository } from './operational-object-repository';
 import { sqlState, type Pool, type PoolClient } from './pool';
 import { PostgresAuditRecorder, PostgresJobScheduler } from './request-services';
 import {
@@ -56,6 +57,7 @@ export class PostgresSessionFactory implements SessionFactory {
         documents: new PostgresDocumentRepository(client),
         assets: new PostgresAssetRepository(client),
         members: new PostgresMemberRepository(client),
+        objects: new PostgresOperationalObjectRepository(client),
         jobs: new PostgresJobScheduler(client),
         audit: new PostgresAuditRecorder(client),
       });
@@ -135,6 +137,12 @@ export function translateDatabaseError(error: unknown): unknown {
       return new NotFound('Élément lié introuvable dans votre SIS.');
     case '23514':
       // PostGIS validity checks (st_isvalid) on drawn geometries.
+      if (constraintOf(error) === 'operational_object_geometry_kind') {
+        return new InvalidInput('La géométrie ne correspond pas au type d’objet (point, ligne ou surface).');
+      }
+      if (constraintOf(error) === 'operational_object_position_check') {
+        return new InvalidInput('Un point opérationnel doit être placé sur la carte ou sur un plan.');
+      }
       if (/_(geom|footprint)_check$/.test(constraintOf(error) ?? '')) {
         return new InvalidInput('Contour invalide : il ne doit pas se recouper ni se refermer sur lui-même.');
       }

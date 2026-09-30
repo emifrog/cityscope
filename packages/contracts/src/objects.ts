@@ -1,0 +1,157 @@
+import { CRITICALITIES, GEOMETRY_KINDS, OBJECT_CATEGORIES, OBJECT_STATUSES } from '@etare/domain';
+import {
+  bboxParamSchema,
+  isoDateTimeSchema,
+  lineStringSchema,
+  multiPolygonSchema,
+  pointSchema,
+  polygonSchema,
+  uuidSchema,
+} from '@etare/schemas';
+import { z } from 'zod';
+
+const text = (max: number) => z.string().trim().min(1).max(max);
+
+/** Position of an object on the map: a point, a line (fire lane) or a polygon (aerial ladder area). */
+export const exteriorGeometrySchema = z.union([pointSchema, lineStringSchema, polygonSchema]);
+export type ExteriorGeometry = z.infer<typeof exteriorGeometrySchema>;
+
+export const objectTypeSchema = z
+  .object({
+    id: uuidSchema,
+    code: z.string(),
+    name: z.string(),
+    category: z.enum(OBJECT_CATEGORIES),
+    geometry_kind: z.enum(GEOMETRY_KINDS),
+    icon_key: z.string(),
+    /** JSON Schema subset of the type-specific properties (packages/domain/src/objects.ts). */
+    properties_schema: z.record(z.string(), z.unknown()),
+  })
+  .meta({ id: 'ObjectType' });
+export type ObjectType = z.infer<typeof objectTypeSchema>;
+
+export const objectTypeListSchema = z.object({ items: z.array(objectTypeSchema) }).meta({ id: 'ObjectTypeList' });
+
+export const operationalObjectSchema = z
+  .object({
+    id: uuidSchema,
+    site_id: uuidSchema,
+    building_id: uuidSchema.nullable(),
+    object_type_id: uuidSchema,
+    type_code: z.string(),
+    type_name: z.string(),
+    category: z.enum(OBJECT_CATEGORIES),
+    name: z.string().nullable(),
+    /** Short text shown on the map ("PEI 1"). */
+    label: z.string().nullable(),
+    /** Null for objects placed only on a plan (interior). */
+    geometry: exteriorGeometrySchema.nullable(),
+    properties: z.record(z.string(), z.unknown()),
+    instructions: z.string().nullable(),
+    criticality: z.enum(CRITICALITIES),
+    status: z.enum(OBJECT_STATUSES),
+    verified_at: isoDateTimeSchema.nullable(),
+    /** Distance in metres from the site reference point, when both are placed on the map. */
+    distance_m: z.number().nullable(),
+    row_version: z.number().int().positive(),
+  })
+  .meta({ id: 'OperationalObject' });
+export type OperationalObject = z.infer<typeof operationalObjectSchema>;
+
+export const operationalObjectListSchema = z
+  .object({ items: z.array(operationalObjectSchema) })
+  .meta({ id: 'OperationalObjectList' });
+
+const properties = z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()]));
+
+export const operationalObjectCreateSchema = z
+  .object({
+    object_type_id: uuidSchema,
+    building_id: uuidSchema.nullable().optional(),
+    name: text(200).nullable().optional(),
+    label: text(40).nullable().optional(),
+    geometry: exteriorGeometrySchema,
+    properties: properties.default({}),
+    instructions: text(2000).nullable().optional(),
+    criticality: z.enum(CRITICALITIES).default('info'),
+    status: z.enum(OBJECT_STATUSES).exclude(['archived']).default('active'),
+  })
+  .meta({ id: 'OperationalObjectCreate' });
+export type OperationalObjectCreateInput = z.input<typeof operationalObjectCreateSchema>;
+export type OperationalObjectCreate = z.infer<typeof operationalObjectCreateSchema>;
+
+export const operationalObjectUpdateSchema = z
+  .object({
+    building_id: uuidSchema.nullable().optional(),
+    name: text(200).nullable().optional(),
+    label: text(40).nullable().optional(),
+    geometry: exteriorGeometrySchema.optional(),
+    /** Replaces all type-specific properties. */
+    properties: properties.optional(),
+    instructions: text(2000).nullable().optional(),
+    criticality: z.enum(CRITICALITIES).optional(),
+    status: z.enum(OBJECT_STATUSES).optional(),
+    /** Records an on-site check now. */
+    verified: z.literal(true).optional(),
+  })
+  .refine((value) => Object.values(value).some((field) => field !== undefined), {
+    message: 'Aucune modification à enregistrer.',
+  })
+  .meta({ id: 'OperationalObjectUpdate' });
+export type OperationalObjectUpdate = z.infer<typeof operationalObjectUpdateSchema>;
+
+// ------------------------------------------------------------------ map details (buildings and objects)
+export const MAP_DETAIL_LAYERS = ['buildings', 'objects'] as const;
+
+/** Largest extent served with details (about 20 km): beyond, the map shows sites only. */
+export const MAX_DETAIL_EXTENT_DEGREES = 0.2;
+
+export const mapFeaturesQuerySchema = z.object({
+  bbox: bboxParamSchema.refine((value) => {
+    const [west, south, east, north] = value.split(',').map(Number);
+    return (
+      east !== undefined &&
+      west !== undefined &&
+      north !== undefined &&
+      south !== undefined &&
+      east - west <= MAX_DETAIL_EXTENT_DEGREES &&
+      north - south <= MAX_DETAIL_EXTENT_DEGREES
+    );
+  }, 'Zone trop étendue : zoomez pour afficher les bâtiments et les points opérationnels.'),
+});
+export type MapFeaturesQuery = z.infer<typeof mapFeaturesQuerySchema>;
+
+export const mapBuildingFeatureSchema = z.object({
+  type: z.literal('Feature'),
+  id: uuidSchema,
+  geometry: multiPolygonSchema,
+  properties: z.object({ site_id: uuidSchema, name: z.string() }),
+});
+
+export const mapObjectFeatureSchema = z.object({
+  type: z.literal('Feature'),
+  id: uuidSchema,
+  geometry: exteriorGeometrySchema,
+  properties: z.object({
+    site_id: uuidSchema,
+    site_name: z.string(),
+    type_code: z.string(),
+    type_name: z.string(),
+    category: z.enum(OBJECT_CATEGORIES),
+    name: z.string().nullable(),
+    label: z.string().nullable(),
+    criticality: z.enum(CRITICALITIES),
+    status: z.enum(OBJECT_STATUSES),
+  }),
+});
+export type MapObjectFeature = z.infer<typeof mapObjectFeatureSchema>;
+
+export const mapFeaturesResponseSchema = z
+  .object({
+    buildings: z.object({ type: z.literal('FeatureCollection'), features: z.array(mapBuildingFeatureSchema) }),
+    objects: z.object({ type: z.literal('FeatureCollection'), features: z.array(mapObjectFeatureSchema) }),
+    /** More details exist in this extent than returned: zoom in. */
+    truncated: z.boolean(),
+  })
+  .meta({ id: 'MapFeatures' });
+export type MapFeaturesResponse = z.infer<typeof mapFeaturesResponseSchema>;

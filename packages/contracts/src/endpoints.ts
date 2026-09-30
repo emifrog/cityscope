@@ -12,6 +12,15 @@ import {
 import { addressCandidatesSchema, addressSearchQuerySchema, reverseGeocodingQuerySchema } from './geocoding';
 import { mapCatalogSchema, mapSitesQuerySchema, mapSitesResponseSchema } from './map';
 import {
+  mapFeaturesQuerySchema,
+  mapFeaturesResponseSchema,
+  objectTypeListSchema,
+  operationalObjectCreateSchema,
+  operationalObjectListSchema,
+  operationalObjectSchema,
+  operationalObjectUpdateSchema,
+} from './objects';
+import {
   memberInvitationSchema,
   memberInviteSchema,
   memberListResponseSchema,
@@ -133,6 +142,16 @@ export const endpoints = {
     response: mapSitesResponseSchema,
   }),
 
+  listMapFeatures: tenantEndpoint({
+    operationId: 'listMapFeatures',
+    method: 'get',
+    path: '/map/features',
+    summary: 'Emprises des bâtiments et points opérationnels d’une zone restreinte (vue rapprochée)',
+    tags: ['map'],
+    query: mapFeaturesQuerySchema,
+    successStatus: 200,
+    response: mapFeaturesResponseSchema,
+  }),
   searchAddresses: tenantEndpoint({
     operationId: 'searchAddresses',
     method: 'get',
@@ -353,6 +372,50 @@ export const endpoints = {
     body: externalIdCreateSchema,
     successStatus: 201,
     response: externalIdSchema,
+  }),
+
+  // ---------------------------------------------------------------- operational objects
+  listObjectTypes: tenantEndpoint({
+    operationId: 'listObjectTypes',
+    method: 'get',
+    path: '/object-types',
+    summary: 'Catalogue des types d’objets opérationnels (global et propre au SIS)',
+    tags: ['objects'],
+    successStatus: 200,
+    response: objectTypeListSchema,
+  }),
+  listSiteObjects: tenantEndpoint({
+    operationId: 'listSiteObjects',
+    method: 'get',
+    path: '/sites/{id}/objects',
+    summary: 'Points opérationnels d’un site (accès, eau, coupures…)',
+    tags: ['objects'],
+    params: idParamsSchema,
+    successStatus: 200,
+    response: operationalObjectListSchema,
+  }),
+  createSiteObject: tenantEndpoint({
+    operationId: 'createSiteObject',
+    method: 'post',
+    path: '/sites/{id}/objects',
+    summary: 'Placer un point opérationnel sur la carte',
+    tags: ['objects'],
+    params: idParamsSchema,
+    body: operationalObjectCreateSchema,
+    successStatus: 201,
+    response: operationalObjectSchema,
+  }),
+  updateObject: tenantEndpoint({
+    operationId: 'updateObject',
+    method: 'patch',
+    path: '/objects/{id}',
+    summary: 'Modifier, déplacer, vérifier ou archiver un point opérationnel',
+    tags: ['objects'],
+    params: idParamsSchema,
+    body: operationalObjectUpdateSchema,
+    concurrency: 'if-match',
+    successStatus: 200,
+    response: operationalObjectSchema,
   }),
 
   // ---------------------------------------------------------------- documents and files
