@@ -11,6 +11,16 @@ export function requireEnv(name: string): string {
   return value;
 }
 
+// These tests sign in with the public demo password and write to the database:
+// they must never reach a hosted or shared Supabase project.
+const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
+for (const name of ['SUPABASE_URL', 'DATABASE_URL', 'WORKER_DATABASE_URL', 'LOCAL_DATABASE_ADMIN_URL']) {
+  const host = new URL(requireEnv(name)).hostname;
+  if (!LOCAL_HOSTS.has(host)) {
+    throw new Error(`${name} points to "${host}": integration tests only run against the local stack.`);
+  }
+}
+
 export const DEMO_PASSWORD = 'Etare-Demo-2026!';
 export const TENANT_06 = '06000000-0000-4000-8000-000000000000';
 export const TENANT_83 = '83000000-0000-4000-8000-000000000000';

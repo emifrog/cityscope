@@ -5,7 +5,7 @@
  * Both are gitignored. Local development only: never point these at a shared environment.
  */
 import { execFileSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
@@ -55,7 +55,28 @@ WORKER_DATABASE_URL=${roleUrl('etare_worker', 'etare_worker_local_only')}
 LOCAL_DATABASE_ADMIN_URL=${dbUrl}
 `;
 
+// Never silently replace a configuration that targets another (e.g. hosted) project.
+const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
+function targetsRemoteProject(file: string): boolean {
+  if (!existsSync(file)) return false;
+  return [...readFileSync(file, 'utf8').matchAll(/^[A-Z_]+=\s*((?:https?|postgres(?:ql)?):\/\/\S+)/gm)].some(
+    ([, url]) => {
+      try {
+        return !LOCAL_HOSTS.has(new URL(url ?? '').hostname);
+      } catch {
+        return false;
+      }
+    },
+  );
+}
+
+const force = process.argv.includes('--force');
 for (const target of ['.env.local', 'apps/web/.env.local']) {
-  writeFileSync(resolve(root, target), content, { mode: 0o600 });
+  const file = resolve(root, target);
+  if (!force && targetsRemoteProject(file)) {
+    console.warn(`Skipped ${target}: it targets a non-local project. Re-run with --force to overwrite it.`);
+    continue;
+  }
+  writeFileSync(file, content, { mode: 0o600 });
   console.log(`Wrote ${target}`);
 }
