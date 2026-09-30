@@ -1,4 +1,5 @@
 import {
+  IgnCartographyCatalog,
   PostgresHealthProbe,
   PostgresSessionFactory,
   SupabaseIdentityProvisioner,
@@ -29,6 +30,7 @@ export function createApiDependencies(env: Env): ApiDependencies {
     identities: config.supabaseSecretKey
       ? SupabaseIdentityProvisioner.fromSecretKey(config.supabaseUrl, config.supabaseSecretKey)
       : null,
+    cartography: new IgnCartographyCatalog(),
     logger: createLogger({ component: 'api', version, env: config.appEnv }),
     version,
     openApiDocument: () => (openApi ??= buildOpenApiDocument()),

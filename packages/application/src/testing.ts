@@ -25,6 +25,7 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
     sites: {
       list: unstubbed('sites.list'),
       get: unstubbed('sites.get'),
+      mapFeatures: unstubbed('sites.mapFeatures'),
       create: unstubbed('sites.create'),
       update: unstubbed('sites.update'),
       ...overrides.sites,

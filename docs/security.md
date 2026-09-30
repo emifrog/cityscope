@@ -89,6 +89,9 @@ journaux ne contiennent ni nom de fichier ni URL signée, seulement des identifi
 ## API et web
 
 - Pas de CORS : l’API n’est appelée que par le web (même origine) et l’application mobile.
+- Carte : le navigateur charge les tuiles et les polices directement sur `data.geopf.fr` (IGN), qui voit
+  donc l’adresse réseau et l’emprise consultée, jamais les données du SIS (servies par l’API). Flux
+  à valider par la DSI ; un proxy limité reste possible (architecture §14).
 - Pas d’authentification par cookie sur l’API (jeton Bearer) : pas de CSRF possible.
 - `Cache-Control: no-store` sur toutes les réponses métier ; `trace_id` sur chaque réponse.
 - En-têtes : `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, COOP.

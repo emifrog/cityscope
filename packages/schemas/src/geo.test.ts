@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { localPointSchema, pointSchema, polygonSchema } from './geo';
+import { bboxParamSchema, localPointSchema, parseBbox, pointSchema, polygonSchema } from './geo';
 
 describe('GeoJSON schemas', () => {
   it('uses longitude then latitude', () => {
@@ -51,4 +51,18 @@ describe('local plan coordinates', () => {
   it('requires the plan revision', () => {
     expect(localPointSchema.safeParse({ unit: 'pixel', x: 1, y: 1 }).success).toBe(false);
   });
+});
+
+describe('map extent parameter', () => {
+  it('reads west,south,east,north in WGS 84', () => {
+    expect(parseBbox('7.1,43.6,7.4,43.8')).toEqual([7.1, 43.6, 7.4, 43.8]);
+    expect(bboxParamSchema.safeParse('-61.9,15.8,-61,16.6').success).toBe(true);
+  });
+
+  it.each(['7.4,43.6,7.1,43.8', '7.1,43.8,7.4,43.6', '181,0,182,1', '7,43', 'a,b,c,d', '7.1,43.6,7.4,43.8,1'])(
+    'refuses %s',
+    (value) => {
+      expect(bboxParamSchema.safeParse(value).success).toBe(false);
+    },
+  );
 });

@@ -17,6 +17,8 @@ import type {
   Level,
   LevelCreate,
   LevelUpdate,
+  MapSitesQuery,
+  MapSitesResponse,
   MeResponse,
   Member,
   MemberInvite,
@@ -70,6 +72,8 @@ export interface SiteReader {
 }
 
 export interface SiteRepository extends SiteReader {
+  /** Positioned sites as GeoJSON for the map, with the extent of all matches and the unpositioned count. */
+  mapFeatures(query: MapSitesQuery): Promise<MapSitesResponse>;
   create(input: SiteCreate): Promise<SiteDetail>;
   update(id: string, expectedVersion: number, patch: SiteUpdate): Promise<SiteDetail | null>;
 }

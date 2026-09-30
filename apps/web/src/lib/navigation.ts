@@ -15,7 +15,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: readonly NavItem[] = [
   { href: '/', label: 'Tableau de bord' },
-  { href: '/carte', label: 'Carte', comingIn: 'Sprint 2' },
+  { href: '/carte', label: 'Carte' },
   { href: '/sites', label: 'Sites' },
   { href: '/etare', label: 'ETARE', comingIn: 'Sprint 3' },
   { href: '/validations', label: 'Validations', comingIn: 'Sprint 3' },

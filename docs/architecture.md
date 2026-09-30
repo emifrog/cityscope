@@ -71,7 +71,10 @@ Endpoints : `GET /health`, `GET /me` ; sites (`GET/POST /sites` avec recherche `
 `PATCH /classifications/{id}`, `PATCH /contacts/{id}`) ; documents et fichiers
 (`GET/POST /sites/{id}/documents`, `PATCH /documents/{id}`, `POST /documents/{id}/versions`,
 `POST /assets/{id}/uploaded`, `GET /assets/{id}/download`, voir ADR-009) ; membres du SIS
-(`GET/POST /members`, `PATCH /members/{id}`, voir ADR-010). Les `PATCH` exigent
+(`GET/POST /members`, `PATCH /members/{id}`, voir ADR-010) ; carte (`GET /map/sources` : catalogue
+des fonds ; `GET /map/sites` : sites positionnés en GeoJSON, filtres de la liste, `bbox`
+ouest,sud,est,nord, emprise de tous les résultats et nombre de sites sans position ; voir ADR-006).
+Les `PATCH` exigent
 `If-Match` (412 si la version est périmée), les corps JSON sont limités à 64 Kio : les fichiers ne
 passent jamais par l’API mais par des URL signées.
 
@@ -87,8 +90,12 @@ Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4, composants de sty
   clés commencent par `['tenant', tenantId]` : changer de SIS ou se déconnecter purge le cache.
 - Routes : `/login`, `/verification` (second facteur), `/auth/confirm` (activation d’une invitation),
   `/` (tableau de bord), `/sites`, `/sites/[id]` (onglets dont Documents), `/compte` (habilitations,
-  double authentification), `/administration` (membres), et les modules à venir (`/carte`, `/etare`,
+  double authentification), `/administration` (membres), `/carte`, et les modules à venir (`/etare`,
   `/validations`, `/signalements`, `/contributions`).
+- Carte : MapLibre GL JS chargé à la demande côté navigateur ; son worker et le module qu’il importe sont
+  copiés depuis le paquet installé vers `public/maplibre/` (`scripts/copy-map-worker.mjs`, avant `dev`
+  et `build`), le bundler ne pouvant pas les résoudre. Le style est construit depuis le catalogue
+  serveur (`src/components/map/map-style.ts`), les couleurs depuis les jetons du thème.
 - Thème remplaçable : jetons dans `packages/ui/src/styles/globals.css`, nom/logo dans `src/config/brand.ts`.
 
 ## Worker (services/worker)

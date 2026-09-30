@@ -24,6 +24,8 @@ export default defineConfig([
     '.tools/**',
     '.pnpm-store/**',
     'tmp/**',
+    // Copied from maplibre-gl at dev/build time.
+    'apps/web/public/maplibre/**',
   ]),
 
   js.configs.recommended,

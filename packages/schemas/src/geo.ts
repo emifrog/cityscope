@@ -48,3 +48,26 @@ export const localPointSchema = z
       ctx.addIssue({ code: 'custom', message: 'Les coordonnées en pixels sont positives.' });
     }
   });
+
+/** Rectangle in WGS 84: [west, south, east, north] (GeoJSON bbox order). */
+export type Bbox = readonly [number, number, number, number];
+
+const BBOX_PATTERN = /^-?\d{1,3}(?:\.\d{1,9})?(?:,-?\d{1,3}(?:\.\d{1,9})?){3}$/;
+
+/** Query parameter "west,south,east,north" (the visible map extent). */
+export const bboxParamSchema = z
+  .string()
+  .regex(BBOX_PATTERN, 'Emprise attendue : ouest,sud,est,nord en degrés WGS 84.')
+  .refine((value) => parseBbox(value) !== null, 'Emprise invalide (bornes WGS 84 ou ordre des coins).');
+
+/** Parses a bbox parameter; null when out of WGS 84 bounds or inverted. */
+export function parseBbox(value: string): Bbox | null {
+  const parts = value.split(',').map(Number);
+  const [west, south, east, north] = parts;
+  if (parts.length !== 4 || west === undefined || south === undefined || east === undefined || north === undefined) {
+    return null;
+  }
+  const inBounds =
+    [west, east].every((lon) => lon >= -180 && lon <= 180) && [south, north].every((lat) => lat >= -90 && lat <= 90);
+  return inBounds && west < east && south < north ? [west, south, east, north] : null;
+}

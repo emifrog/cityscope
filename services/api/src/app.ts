@@ -11,6 +11,7 @@ import {
   createSite,
   getAssetDownload,
   getMe,
+  getMapCatalog,
   getSite,
   inviteMember,
   listBuildings,
@@ -18,6 +19,7 @@ import {
   listContacts,
   listDocuments,
   listExternalIds,
+  listMapSites,
   listMembers,
   listSites,
   updateBuilding,
@@ -27,6 +29,7 @@ import {
   updateLevel,
   updateMember,
   updateSite,
+  type CartographyCatalog,
   type HealthProbe,
   type IdentityProvisioner,
   type ObjectStorage,
@@ -55,6 +58,7 @@ export interface ApiDependencies {
   readonly storage: ObjectStorage | null;
   /** Null when identity administration is not configured (invitations of new addresses answer 503). */
   readonly identities: IdentityProvisioner | null;
+  readonly cartography: CartographyCatalog;
   readonly logger: Logger;
   readonly version: string;
   readonly openApiDocument: () => unknown;
@@ -189,6 +193,17 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
   app.get(routerPath(endpoints.getMe.path), async (c) => {
     const context = await requestContext(c, endpoints.getMe);
     return respond(c, endpoints.getMe, await getMe(deps.sessions, context));
+  });
+
+  app.get(routerPath(endpoints.getMapCatalog.path), async (c) => {
+    await requestContext(c, endpoints.getMapCatalog);
+    return respond(c, endpoints.getMapCatalog, getMapCatalog(deps.cartography));
+  });
+
+  app.get(routerPath(endpoints.listMapSites.path), async (c) => {
+    const context = await requestContext(c, endpoints.listMapSites);
+    const query = endpoints.listMapSites.query.parse(c.req.query());
+    return respond(c, endpoints.listMapSites, await listMapSites(deps.sessions, context, query));
   });
 
   app.get(routerPath(endpoints.listSites.path), async (c) => {

@@ -69,6 +69,8 @@ export const siteUpdateSchema = nonEmptyPatch(
     etare_number: etareNumberSchema.nullable().optional(),
     address: addressInputSchema.nullable().optional(),
     location: pointSchema.nullable().optional(),
+    /** Records an on-site check now (feeds "vérifié < 12 mois" on the map). */
+    verified: z.literal(true).optional(),
   }),
 ).meta({ id: 'SiteUpdate' });
 export type SiteUpdate = z.infer<typeof siteUpdateSchema>;

@@ -1,8 +1,11 @@
 import type { SiteRepository } from '@etare/application';
 import {
+  mapSitesResponseSchema,
   siteDetailSchema,
   siteSummarySchema,
   type AddressInput,
+  type MapSitesQuery,
+  type MapSitesResponse,
   type SiteCreate,
   type SiteDetail,
   type SiteListQuery,
@@ -10,6 +13,7 @@ import {
   type SiteSummary,
   type SiteUpdate,
 } from '@etare/contracts';
+import { parseBbox } from '@etare/schemas';
 import { decodeCursor, encodeCursor } from './cursor';
 import type { PoolClient } from './pool';
 import { applyAssignments, assignments, geoJsonPoint, lockVersion } from './versioned';
@@ -54,6 +58,33 @@ const SITE_JOINS = `
 /** Escapes LIKE wildcards so that user text is matched literally. */
 const likeLiteral = (value: string) => `%${value.replace(/[\\%_]/g, '\\$&')}%`;
 
+/** Filters shared by the map ($1 status, $2 text, $3 type); same semantics as the site list. */
+const MAP_FILTERS = `s.tenant_id = app.current_tenant_id()
+  and ($1::text is null and s.status <> 'archived' or s.status = $1::text)
+  and ($2::text is null or s.name ilike $2 or a.label ilike $2 or s.etare_number ilike $2)
+  and ($3::text is null or s.site_type = $3::text)`;
+
+interface MapRow {
+  id: string;
+  name: string;
+  site_type: string;
+  status: string;
+  etare_number: string | null;
+  city: string | null;
+  lon: number;
+  lat: number;
+  publication_number: number | null;
+  verified_recently: boolean;
+}
+
+interface MapTotalsRow {
+  west: number | null;
+  south: number | null;
+  east: number | null;
+  north: number | null;
+  unlocated: number;
+}
+
 function addressLabel(address: AddressInput): string {
   const locality = [address.postal_code, address.city].filter(Boolean).join(' ');
   return [address.street, locality].filter(Boolean).join(', ');
@@ -91,6 +122,62 @@ export class PostgresSiteRepository implements SiteRepository {
       items: rows.map(toSummary),
       next_cursor: result.rows.length > query.limit && last ? encodeCursor(last.name, last.id) : null,
     };
+  }
+
+  async mapFeatures(query: MapSitesQuery): Promise<MapSitesResponse> {
+    const filters = [query.status ?? null, query.q ? likeLiteral(query.q) : null, query.site_type ?? null];
+    const bbox = query.bbox ? parseBbox(query.bbox) : null;
+    const features = await this.client.query<MapRow>(
+      `select s.id, s.name, s.site_type, s.status, s.etare_number, a.city,
+              extensions.st_x(s.geom) as lon, extensions.st_y(s.geom) as lat,
+              p.publication_number,
+              coalesce(s.last_verified_at > now() - interval '12 months', false) as verified_recently
+       ${SITE_JOINS}
+       left join app.publication p on p.tenant_id = s.tenant_id and p.id = s.active_publication_id
+       where ${MAP_FILTERS}
+         and s.geom is not null
+         and ($4::float8 is null
+              or extensions.st_intersects(s.geom, extensions.st_makeenvelope($4, $5, $6, $7, 4326)))
+       order by s.name, s.id
+       limit $8`,
+      [...filters, ...(bbox ?? [null, null, null, null]), query.limit + 1],
+    );
+    const totals = await this.client.query<MapTotalsRow>(
+      `select extensions.st_xmin(e) as west, extensions.st_ymin(e) as south,
+              extensions.st_xmax(e) as east, extensions.st_ymax(e) as north, unlocated
+       from (
+         select extensions.st_extent(s.geom)::extensions.box3d as e,
+                count(*) filter (where s.geom is null)::int as unlocated
+         ${SITE_JOINS}
+         where ${MAP_FILTERS}
+       ) matching`,
+      filters,
+    );
+    const extent = totals.rows[0];
+    return mapSitesResponseSchema.parse({
+      type: 'FeatureCollection',
+      features: features.rows.slice(0, query.limit).map((row) => ({
+        type: 'Feature',
+        id: row.id,
+        geometry: { type: 'Point', coordinates: [row.lon, row.lat] },
+        properties: {
+          name: row.name,
+          site_type: row.site_type,
+          status: row.status,
+          etare_number: row.etare_number,
+          city: row.city,
+          published: row.publication_number !== null,
+          publication_number: row.publication_number,
+          verified_recently: row.verified_recently,
+        },
+      })),
+      truncated: features.rows.length > query.limit,
+      extent:
+        extent && extent.west !== null && extent.south !== null && extent.east !== null && extent.north !== null
+          ? [extent.west, extent.south, extent.east, extent.north]
+          : null,
+      unlocated: extent?.unlocated ?? 0,
+    });
   }
 
   async get(id: string): Promise<SiteDetail | null> {
@@ -186,6 +273,7 @@ export class PostgresSiteRepository implements SiteRepository {
       }
       values.push({ column: 'address_id', value: addressId });
     }
+    if (patch.verified) values.push({ column: 'last_verified_at', raw: 'now()' });
 
     await applyAssignments(this.client, 'app.site', id, values);
     return this.get(id);

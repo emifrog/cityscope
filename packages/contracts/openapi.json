@@ -193,6 +193,310 @@
           "roles"
         ]
       },
+      "MapCatalog": {
+        "type": "object",
+        "properties": {
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MapSource"
+            }
+          },
+          "default_base": {
+            "type": "string"
+          },
+          "glyphs": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string"
+              },
+              "font_stack": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "url",
+              "font_stack"
+            ]
+          }
+        },
+        "required": [
+          "sources",
+          "default_base",
+          "glyphs"
+        ]
+      },
+      "MapSource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "producer": {
+            "type": "string"
+          },
+          "product": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "raster-wmts",
+              "vector-tms",
+              "style"
+            ]
+          },
+          "url": {
+            "type": "string"
+          },
+          "tile_size": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "min_zoom": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "max_zoom": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "attribution": {
+            "type": "string"
+          },
+          "licence": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              }
+            },
+            "required": [
+              "name",
+              "url"
+            ]
+          },
+          "rights": {
+            "type": "object",
+            "properties": {
+              "online_display": {
+                "type": "string",
+                "enum": [
+                  "open",
+                  "licensed"
+                ]
+              },
+              "offline_packaging": {
+                "type": "string",
+                "enum": [
+                  "unverified",
+                  "approved",
+                  "forbidden"
+                ]
+              },
+              "pdf_export": {
+                "type": "string",
+                "enum": [
+                  "unverified",
+                  "approved",
+                  "forbidden"
+                ]
+              }
+            },
+            "required": [
+              "online_display",
+              "offline_packaging",
+              "pdf_export"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "producer",
+          "product",
+          "kind",
+          "url",
+          "tile_size",
+          "min_zoom",
+          "max_zoom",
+          "attribution",
+          "licence",
+          "rights"
+        ]
+      },
+      "MapSites": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "FeatureCollection"
+            ]
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MapSiteFeature"
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "extent": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          },
+          "unlocated": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "type",
+          "features",
+          "truncated",
+          "extent",
+          "unlocated"
+        ]
+      },
+      "MapSiteFeature": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "Feature"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "geometry": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Point"
+                ]
+              },
+              "coordinates": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180
+                  },
+                  {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
+                  }
+                ]
+              }
+            },
+            "required": [
+              "type",
+              "coordinates"
+            ]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "site_type": {
+                "type": "string",
+                "enum": [
+                  "erp",
+                  "industrial",
+                  "health",
+                  "education",
+                  "heritage",
+                  "other"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "active",
+                  "inactive",
+                  "archived"
+                ]
+              },
+              "etare_number": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "city": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "published": {
+                "type": "boolean"
+              },
+              "publication_number": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "verified_recently": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "site_type",
+              "status",
+              "etare_number",
+              "city",
+              "published",
+              "publication_number",
+              "verified_recently"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "geometry",
+          "properties"
+        ]
+      },
       "SiteList": {
         "type": "object",
         "properties": {
@@ -820,6 +1124,12 @@
             "required": [
               "type",
               "coordinates"
+            ]
+          },
+          "verified": {
+            "type": "boolean",
+            "enum": [
+              true
             ]
           }
         }
@@ -2395,6 +2705,211 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/map/sources": {
+      "get": {
+        "operationId": "getMapCatalog",
+        "summary": "Fonds de carte autorisés (catalogue serveur : URL, zooms, attribution, droits)",
+        "tags": [
+          "map"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapCatalog"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/map/sites": {
+      "get": {
+        "operationId": "listMapSites",
+        "summary": "Sites positionnés du SIS actif en GeoJSON, filtrables et limités à l’emprise visible",
+        "tags": [
+          "map"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^-?\\d{1,3}(?:\\.\\d{1,9})?(?:,-?\\d{1,3}(?:\\.\\d{1,9})?){3}$"
+            },
+            "required": false,
+            "name": "bbox",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 100
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "erp",
+                "industrial",
+                "health",
+                "education",
+                "heritage",
+                "other"
+              ]
+            },
+            "required": false,
+            "name": "site_type",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "active",
+                "inactive",
+                "archived"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5000,
+              "default": 2000
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapSites"
                 }
               }
             }

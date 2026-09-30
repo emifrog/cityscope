@@ -1,4 +1,4 @@
-import { createLogger, type AccessTokenVerifier } from '@etare/adapters';
+import { IgnCartographyCatalog, createLogger, type AccessTokenVerifier } from '@etare/adapters';
 import type { RequestSession, SessionFactory } from '@etare/application';
 import { stubSession } from '@etare/application/testing';
 import { API_BASE_PATH, apiErrorSchema, endpoints, type SiteDetail } from '@etare/contracts';
@@ -84,6 +84,7 @@ function makeApp(roles: Role[] = ['PREVISION_EDITOR']) {
     health: { database: async () => 'ok' },
     storage: null,
     identities: null,
+    cartography: new IgnCartographyCatalog(),
     logger: createLogger({}, { write: () => undefined }),
     version: 'test',
     openApiDocument: () => ({ openapi: '3.1.0' }),

@@ -9,6 +9,7 @@ import {
   documentVersionCreateSchema,
   uploadConfirmationSchema,
 } from './documents';
+import { mapCatalogSchema, mapSitesQuerySchema, mapSitesResponseSchema } from './map';
 import {
   memberInvitationSchema,
   memberInviteSchema,
@@ -107,6 +108,29 @@ export const endpoints = {
     successStatus: 200,
     response: meResponseSchema,
   },
+
+  // ---------------------------------------------------------------- map
+  getMapCatalog: {
+    operationId: 'getMapCatalog',
+    method: 'get',
+    path: '/map/sources',
+    summary: 'Fonds de carte autorisés (catalogue serveur : URL, zooms, attribution, droits)',
+    tags: ['map'],
+    auth: 'user',
+    tenantScoped: false,
+    successStatus: 200,
+    response: mapCatalogSchema,
+  },
+  listMapSites: tenantEndpoint({
+    operationId: 'listMapSites',
+    method: 'get',
+    path: '/map/sites',
+    summary: 'Sites positionnés du SIS actif en GeoJSON, filtrables et limités à l’emprise visible',
+    tags: ['map'],
+    query: mapSitesQuerySchema,
+    successStatus: 200,
+    response: mapSitesResponseSchema,
+  }),
 
   // ---------------------------------------------------------------- sites
   listSites: tenantEndpoint({

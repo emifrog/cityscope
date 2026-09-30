@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
-import { ComingSoon } from '@/components/coming-soon';
+import { Suspense } from 'react';
+import { LoadingCard } from '@/components/feedback';
+import { SitesMapView } from './sites-map';
 
-export const metadata: Metadata = { title: 'Carte opérationnelle' };
+export const metadata: Metadata = { title: 'Carte' };
 
 export default function Page() {
   return (
-    <ComingSoon
-      title="Carte opérationnelle"
-      description="Navigation géographique dans le référentiel, sur fond IGN (pas de SITAC)."
-      sprint="Sprint 2"
-    />
+    <Suspense fallback={<LoadingCard lines={8} />}>
+      <SitesMapView />
+    </Suspense>
   );
 }

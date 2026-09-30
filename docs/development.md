@@ -55,6 +55,7 @@ pnpm test:integration   # nécessite db:start + setup:local
 pnpm db:reset           # rejoue migrations + seed (données locales perdues)
 pnpm dev:worker         # worker (lit .env.local) : nécessaire pour que les fichiers déposés soient contrôlés
 pnpm --filter @etare/api start   # API seule sur :3001 (démonstration d’extraction)
+pnpm cartography:check  # catalogue des fonds IGN comparé aux services Géoplateforme (réseau requis)
 ```
 
 En développement, l’API est instanciée une seule fois par processus Next (pool de connexions partagé

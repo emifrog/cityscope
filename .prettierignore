@@ -13,3 +13,4 @@ apps/mobile/
 supabase/
 packages/contracts/openapi.json
 **/next-env.d.ts
+apps/web/public/maplibre/

@@ -24,6 +24,9 @@ import {
   type Level,
   type LevelCreate,
   type LevelUpdate,
+  type MapCatalog,
+  type MapSitesQuery,
+  type MapSitesResponse,
   type MeResponse,
   type Member,
   type MemberInvitation,
@@ -121,6 +124,13 @@ const itemsOf = async <T>(promise: Promise<{ items: T[] }>) => (await promise).i
 export const api = {
   getMe: (options: ApiCallOptions): Promise<MeResponse> =>
     call(endpoints.getMe.response, endpoints.getMe.path, options),
+
+  // ---------------------------------------------------------------- map
+  getMapCatalog: (options: ApiCallOptions): Promise<MapCatalog> =>
+    call(endpoints.getMapCatalog.response, endpoints.getMapCatalog.path, options),
+
+  listMapSites: (options: ApiCallOptions, query: Partial<MapSitesQuery> = {}): Promise<MapSitesResponse> =>
+    call(endpoints.listMapSites.response, endpoints.listMapSites.path, options, { query }),
 
   // ---------------------------------------------------------------- sites
   listSites: (options: ApiCallOptions, query: Partial<SiteListQuery> = {}): Promise<SiteListResponse> =>

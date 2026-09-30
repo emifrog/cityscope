@@ -1,8 +1,15 @@
 'use client';
 
-import type { Document, DocumentUploadResponse, FileDeclaration, SiteListQuery } from '@etare/contracts';
+import type { Document, DocumentUploadResponse, FileDeclaration, MapSitesQuery, SiteListQuery } from '@etare/contracts';
 import { permissionsForRoles, type Permission } from '@etare/domain';
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryKey,
+} from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useSession } from '@/providers/session-provider';
 import { useTenant } from '@/providers/tenant-provider';
@@ -46,6 +53,33 @@ export function useSites(filters: SiteFilters = {}, pageSize = 25) {
         { ...filters, limit: pageSize, ...(pageParam ? { cursor: pageParam } : {}) },
       ),
     getNextPageParam: (last) => last.next_cursor ?? undefined,
+  });
+}
+
+/** Base maps of the server-side catalogue: identical for every SIS, fetched once per session. */
+export function useMapCatalog() {
+  const { token, options } = useApiContext();
+  return useQuery({
+    queryKey: ['map-catalog'],
+    enabled: Boolean(token),
+    staleTime: Number.POSITIVE_INFINITY,
+    queryFn: ({ signal }) => api.getMapCatalog({ ...options, signal }),
+  });
+}
+
+export type MapSiteFilters = Pick<MapSitesQuery, 'q' | 'site_type' | 'status'>;
+
+/**
+ * Positioned sites for the map. Keyed under the site list, so any site change
+ * refreshes the map too. With a bbox, only the visible extent is requested.
+ */
+export function useMapSites(filters: MapSiteFilters, bbox: string | null) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: [...queryKeys.sites(tenantId ?? 'none'), 'map', filters, bbox],
+    enabled,
+    placeholderData: keepPreviousData,
+    queryFn: ({ signal }) => api.listMapSites({ ...options, signal }, { ...filters, ...(bbox ? { bbox } : {}) }),
   });
 }
 

@@ -40,6 +40,12 @@ export function SummaryPanel({ site }: { site: SiteDetail }) {
     (tenantId) => [queryKeys.site(tenantId, site.id), queryKeys.sites(tenantId)],
   );
 
+  // Separate from the edit form: its errors must not show up in the form.
+  const verify = useApiMutation(
+    (options, _: void) => api.updateSite(options, site.id, site.row_version, { verified: true }),
+    (tenantId) => [queryKeys.site(tenantId, site.id), queryKeys.sites(tenantId)],
+  );
+
   const reload = async () => {
     update.reset();
     await queryClient.invalidateQueries({ queryKey: queryKeys.site(activeTenant?.tenant_id ?? 'none', site.id) });
@@ -51,9 +57,14 @@ export function SummaryPanel({ site }: { site: SiteDetail }) {
         <CardHeader>
           <CardTitle>Référentiel site</CardTitle>
           {permissions.has('site:write') && !editing ? (
-            <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
-              Modifier
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="ghost" size="sm" disabled={verify.isPending} onClick={() => verify.mutate()}>
+                Marquer comme vérifié
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+                Modifier
+              </Button>
+            </div>
           ) : null}
         </CardHeader>
         <CardContent>
@@ -84,20 +95,27 @@ export function SummaryPanel({ site }: { site: SiteDetail }) {
               />
             </>
           ) : (
-            <dl className="grid grid-cols-2 gap-4 md:grid-cols-3">
-              <Item label="N° ETARE">{site.etare_number ?? '—'}</Item>
-              <Item label="Type">{SITE_TYPE_LABELS[site.site_type]}</Item>
-              <Item label="Statut">{SITE_STATUS_LABELS[site.status]}</Item>
-              <Item label="Sensibilité">{SENSITIVITY_LABELS[site.sensitivity]}</Item>
-              <Item label="Bâtiments">{site.building_count}</Item>
-              <Item label="Point de référence">
-                {site.location ? `${site.location.coordinates[1]}, ${site.location.coordinates[0]}` : '—'}
-              </Item>
-              <Item label="Dernière vérification">
-                {site.last_verified_at ? dateFormat.format(new Date(site.last_verified_at)) : '—'}
-              </Item>
-              <Item label="Dernière modification">{dateFormat.format(new Date(site.updated_at))}</Item>
-            </dl>
+            <>
+              {verify.error ? (
+                <div className="mb-4">
+                  <ApiErrorAlert error={verify.error} />
+                </div>
+              ) : null}
+              <dl className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                <Item label="N° ETARE">{site.etare_number ?? '—'}</Item>
+                <Item label="Type">{SITE_TYPE_LABELS[site.site_type]}</Item>
+                <Item label="Statut">{SITE_STATUS_LABELS[site.status]}</Item>
+                <Item label="Sensibilité">{SENSITIVITY_LABELS[site.sensitivity]}</Item>
+                <Item label="Bâtiments">{site.building_count}</Item>
+                <Item label="Point de référence">
+                  {site.location ? `${site.location.coordinates[1]}, ${site.location.coordinates[0]}` : '—'}
+                </Item>
+                <Item label="Dernière vérification">
+                  {site.last_verified_at ? dateFormat.format(new Date(site.last_verified_at)) : '—'}
+                </Item>
+                <Item label="Dernière modification">{dateFormat.format(new Date(site.updated_at))}</Item>
+              </dl>
+            </>
           )}
         </CardContent>
       </Card>
