@@ -2,7 +2,9 @@ import type {
   ClassificationType,
   ContactVisibility,
   DocumentCategory,
+  MembershipStatus,
   OfflinePolicy,
+  Permission,
   RecordStatus,
   Role,
   ScanStatus,
@@ -91,4 +93,28 @@ export const REJECTION_REASON_LABELS: Readonly<Record<string, string>> = {
   SHA256_MISMATCH: 'le contenu reçu diffère du fichier choisi (envoi altéré)',
   TYPE_MISMATCH: 'le contenu réel ne correspond pas au type annoncé',
   MALWARE: 'un contenu malveillant a été détecté',
+};
+
+export const ROLE_DESCRIPTIONS: Readonly<Record<Role, string>> = {
+  SUPER_ADMIN: 'Exploitation technique de la plateforme, sans accès métier.',
+  SIS_ADMIN: 'Comptes, rôles, terminaux et catalogues du SIS. Ne valide ni ne publie sans le rôle validateur.',
+  PREVISION_EDITOR: 'Crée et modifie les sites et les ETARE, soumet à validation.',
+  PREVISION_VALIDATOR: 'Valide ou refuse les révisions et déclenche la publication.',
+  OPS_USER: 'Consulte les versions publiées, y compris hors ligne, et signale les écarts terrain.',
+  EXPLOITANT: 'Vue restreinte à ses sites et propositions de mise à jour.',
+  READER: 'Lecture seule, sans modification.',
+};
+
+/** Actions protected by the second factor (PRIVILEGED_PERMISSIONS). */
+export const PRIVILEGED_ACTION_LABELS: Readonly<Partial<Record<Permission, string>>> = {
+  'etare:approve': 'valider les révisions ETARE',
+  'publication:publish': 'publier une version',
+  'member:manage': 'gérer les membres du SIS',
+  'device:manage': 'gérer les terminaux',
+};
+
+export const MEMBERSHIP_STATUS_LABELS: Readonly<Record<MembershipStatus, string>> = {
+  active: 'Actif',
+  suspended: 'Suspendu',
+  revoked: 'Retiré',
 };

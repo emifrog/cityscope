@@ -1,3 +1,4 @@
+import { createHmac, randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -37,4 +38,79 @@ export async function signIn(email: string): Promise<string> {
   const body = (await response.json()) as { access_token?: string };
   if (!response.ok || !body.access_token) throw new Error(`Sign-in failed for ${email} (${response.status}).`);
   return body.access_token;
+}
+
+/** Direct call to the local Supabase Auth REST API. */
+export async function authApi<T>(path: string, init: { method?: string; token?: string; body?: unknown } = {}) {
+  const response = await fetch(`${requireEnv('SUPABASE_URL')}/auth/v1${path}`, {
+    method: init.method ?? 'GET',
+    headers: {
+      apikey: requireEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'),
+      'content-type': 'application/json',
+      ...(init.token ? { authorization: `Bearer ${init.token}` } : {}),
+    },
+    ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
+  });
+  const text = await response.text();
+  if (!response.ok) throw new Error(`Auth ${init.method ?? 'GET'} ${path} failed (${response.status}): ${text}`);
+  return (text ? JSON.parse(text) : null) as T;
+}
+
+export async function signInWithPassword(email: string, password: string): Promise<string> {
+  const session = await authApi<{ access_token: string }>('/token?grant_type=password', {
+    method: 'POST',
+    body: { email, password },
+  });
+  return session.access_token;
+}
+
+/** Time-based one-time password (RFC 6238: HMAC-SHA1, 30 s, 6 digits), as an authenticator application computes it. */
+export function totp(secretBase32: string, now = Date.now()): string {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const bits = [...secretBase32.replace(/=+$/, '').toUpperCase()]
+    .map((character) => alphabet.indexOf(character).toString(2).padStart(5, '0'))
+    .join('');
+  const key = Buffer.from((bits.match(/.{8}/g) ?? []).map((byte) => Number.parseInt(byte, 2)));
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(now / 30_000)));
+  const hmac = createHmac('sha1', key).update(counter).digest();
+  const offset = (hmac.at(-1) ?? 0) & 0x0f;
+  return ((hmac.readUInt32BE(offset) & 0x7fffffff) % 1_000_000).toString().padStart(6, '0');
+}
+
+/** Enrolls a TOTP factor and verifies it: returns an aal2 access token and the factor (to remove it afterwards). */
+export async function withSecondFactor(token: string): Promise<{ token: string; factorId: string }> {
+  const factor = await authApi<{ id: string; totp: { secret: string } }>('/factors', {
+    method: 'POST',
+    token,
+    body: { factor_type: 'totp', friendly_name: `Test ${randomUUID()}` },
+  });
+  const challenge = await authApi<{ id: string }>(`/factors/${factor.id}/challenge`, { method: 'POST', token });
+  const session = await authApi<{ access_token: string }>(`/factors/${factor.id}/verify`, {
+    method: 'POST',
+    token,
+    body: { challenge_id: challenge.id, code: totp(factor.totp.secret) },
+  });
+  return { token: session.access_token, factorId: factor.id };
+}
+
+const MAILPIT_URL = process.env['MAILPIT_URL'] ?? 'http://127.0.0.1:54324';
+if (!LOCAL_HOSTS.has(new URL(MAILPIT_URL).hostname)) throw new Error('MAILPIT_URL must be local.');
+
+/** Latest e-mail received by the local mail catcher for this address (waits a little for delivery). */
+export async function latestEmailTo(address: string): Promise<{ subject: string; html: string }> {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const search = await fetch(`${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:"${address}"`)}`);
+    const found = (await search.json()) as { messages?: { ID: string }[] };
+    const id = found.messages?.[0]?.ID;
+    if (id) {
+      const message = (await (await fetch(`${MAILPIT_URL}/api/v1/message/${id}`)).json()) as {
+        Subject: string;
+        HTML: string;
+      };
+      return { subject: message.Subject, html: message.HTML };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error(`No e-mail received for ${address}.`);
 }

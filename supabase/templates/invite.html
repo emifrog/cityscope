@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="fr">
+  <body style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.5">
+    <h2 style="color: #0b1f3a">Invitation à la plateforme ETARE</h2>
+    <p>
+      Un administrateur de votre service d’incendie et de secours vous a ouvert un accès à la plateforme de
+      préparation et de consultation des plans ETARE.
+    </p>
+    <p>
+      <a
+        href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite"
+        style="display: inline-block; padding: 10px 18px; background: #c2410c; color: #ffffff; text-decoration: none; border-radius: 6px"
+        >Activer mon compte</a
+      >
+    </p>
+    <p>Vous choisirez ensuite votre mot de passe. Ce lien est personnel et utilisable une seule fois.</p>
+    <p style="font-size: 12px; color: #6b7280">
+      Si vous n’attendiez pas cette invitation, ignorez ce message : aucun accès n’est ouvert sans activation.
+    </p>
+  </body>
+</html>

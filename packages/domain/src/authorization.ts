@@ -42,6 +42,22 @@ export const PRIVILEGED_PERMISSIONS: ReadonlySet<Permission> = new Set<Permissio
   'device:manage',
 ]);
 
+/**
+ * Roles a SIS administrator may grant to a whole SIS (mirrors app.grantable_role_ids):
+ * never the platform role, never EXPLOITANT, which is always limited to sites.
+ */
+export const TENANT_WIDE_ROLES = [
+  'SIS_ADMIN',
+  'PREVISION_EDITOR',
+  'PREVISION_VALIDATOR',
+  'OPS_USER',
+  'READER',
+] as const satisfies readonly Role[];
+export type TenantWideRole = (typeof TENANT_WIDE_ROLES)[number];
+
+export const MEMBERSHIP_STATUSES = ['active', 'suspended', 'revoked'] as const;
+export type MembershipStatus = (typeof MEMBERSHIP_STATUSES)[number];
+
 export const DEFAULT_ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {
   // Platform operations only: never any access to business data.
   SUPER_ADMIN: [],

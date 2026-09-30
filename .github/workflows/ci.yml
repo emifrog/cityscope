@@ -52,7 +52,7 @@ jobs:
       - name: Start the local Supabase stack (migrations + synthetic seed replayed from scratch)
         run: |
           pnpm exec tsx scripts/ensure-signing-key.ts
-          pnpm exec supabase start -x studio,imgproxy,vector,logflare,supavisor,edge-runtime,realtime,postgres-meta,mailpit
+          pnpm exec supabase start -x studio,imgproxy,vector,logflare,supavisor,edge-runtime,realtime,postgres-meta
       - name: Lint the business schema
         run: pnpm exec supabase db lint --schema app --level warning --fail-on warning
       - name: Database tests (pgTAP)

@@ -32,8 +32,14 @@ révèlent rien). Tests : `supabase/tests/database/10_tenant_isolation.test.sql`
 - **Séparation des tâches** : `PREVISION_EDITOR ≠ PREVISION_VALIDATOR`, et en base le validateur ne
   peut pas être l’auteur, le soumetteur ni un contributeur de la révision (même en cumulant les rôles).
 - **MFA** : les permissions privilégiées (`etare:approve`, `publication:publish`, `member:manage`,
-  `device:manage`) exigent `aal2` (TOTP activé dans Supabase Auth). Paramètre SIS
-  `mfa_required_for_privileged` (défaut : vrai). L’enrôlement TOTP dans l’interface reste à faire.
+  `device:manage`) exigent `aal2` (TOTP, Supabase Auth). Paramètre SIS `mfa_required_for_privileged`
+  (défaut : vrai). Enrôlement et retrait dans « Mon compte » ; un compte enrôlé passe par l’étape de code
+  à chaque connexion (proxy web). `MFA_REQUIRED` n’est répondu qu’aux personnes dont les rôles
+  accorderaient la permission avec le second facteur ; les autres reçoivent `FORBIDDEN` (ADR-010).
+- **Administration des membres** (ADR-010) : invitations, rôles et suspensions par fonctions
+  `SECURITY DEFINER` qui revérifient `member:manage` en `aal2` ; ni auto-attribution ni auto-retrait,
+  jamais `SUPER_ADMIN` ni `EXPLOITANT` à l’échelle du SIS, au moins un administrateur actif conservé,
+  concurrence optimiste, historique des rôles révoqués. Le lien d’invitation n’est vérifié qu’au clic.
 
 ## Accès à la base
 
@@ -52,7 +58,8 @@ révèlent rien). Tests : `supabase/tests/database/10_tenant_isolation.test.sql`
 ## Environnement d’intégration
 
 Projet Supabase hébergé partagé (procédure : `docs/development.md`). Données fictives uniquement ; seed
-interdit ; inscriptions désactivées et TOTP activé à la main (le `config.toml` ne s’y applique pas) ;
+interdit ; inscriptions désactivées, TOTP activé et gabarit d’invitation reporté à la main (le
+`config.toml` ne s’y applique pas) ;
 mots de passe des rôles générés aléatoirement par `pnpm integration roles` et transmis en empreinte
 SCRAM ; URL d’administration jamais écrite sur disque ; configuration dans `.env.integration`, ignoré par
 Git. Les tests automatisés et `pnpm setup:local` refusent de viser ce projet.
@@ -110,6 +117,9 @@ vers l’émulateur. Voir `apps/mobile/README.md`.
 - Antivirus non branché : le port `MalwareScanner` existe, le verdict indique `antivirus: not_scanned`.
 - Purge des dépôts abandonnés (`pending` jamais envoyés) et des objets orphelins de quarantaine à écrire.
 - Accès aux journaux d’audit refusés (403) non encore tracés dans `audit_event`.
-- Enrôlement TOTP, révocation de sessions, SSO OIDC/SAML : non développés.
+- Second facteur exigé par le web mais pas encore par l’API pour les permissions ordinaires d’un compte
+  enrôlé ; pas de codes de secours ni de réinitialisation du mot de passe en libre-service.
+- Révocation des sessions à la suspension (la base refuse déjà chaque requête), SSO OIDC/SAML : non
+  développés.
 - Autorisation hors ligne signée, révocation de terminaux, chiffrement des fichiers mobiles : Sprint 3+.
 - Chaînage d’empreintes / export externe du journal d’audit : à décider.

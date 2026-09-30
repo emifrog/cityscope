@@ -17,7 +17,11 @@ function unstubbed(name: string) {
 export function stubSession(access: ResolvedAccess, overrides: SessionOverrides = {}): RequestSession {
   return {
     access,
-    identity: { me: unstubbed('identity.me'), ...overrides.identity },
+    identity: {
+      me: unstubbed('identity.me'),
+      holdsWithSecondFactor: unstubbed('identity.holdsWithSecondFactor'),
+      ...overrides.identity,
+    },
     sites: {
       list: unstubbed('sites.list'),
       get: unstubbed('sites.get'),
@@ -58,6 +62,12 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       ...overrides.documents,
     },
     assets: { get: unstubbed('assets.get'), ...overrides.assets },
+    members: {
+      list: unstubbed('members.list'),
+      add: unstubbed('members.add'),
+      update: unstubbed('members.update'),
+      ...overrides.members,
+    },
     jobs: { enqueue: unstubbed('jobs.enqueue'), ...overrides.jobs },
     audit: { record: unstubbed('audit.record'), ...overrides.audit },
   };

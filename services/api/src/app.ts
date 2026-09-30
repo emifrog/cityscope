@@ -12,19 +12,23 @@ import {
   getAssetDownload,
   getMe,
   getSite,
+  inviteMember,
   listBuildings,
   listClassifications,
   listContacts,
   listDocuments,
   listExternalIds,
+  listMembers,
   listSites,
   updateBuilding,
   updateClassification,
   updateContact,
   updateDocument,
   updateLevel,
+  updateMember,
   updateSite,
   type HealthProbe,
+  type IdentityProvisioner,
   type ObjectStorage,
   type SessionFactory,
 } from '@etare/application';
@@ -49,6 +53,8 @@ export interface ApiDependencies {
   readonly health: HealthProbe;
   /** Null when file storage is not configured (document endpoints answer 503). */
   readonly storage: ObjectStorage | null;
+  /** Null when identity administration is not configured (invitations of new addresses answer 503). */
+  readonly identities: IdentityProvisioner | null;
   readonly logger: Logger;
   readonly version: string;
   readonly openApiDocument: () => unknown;
@@ -343,6 +349,26 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
   app.get(routerPath(endpoints.getAssetDownload.path), async (c) => {
     const context = await requestContext(c, endpoints.getAssetDownload);
     return respond(c, endpoints.getAssetDownload, await getAssetDownload(documents, context, idOf(c)));
+  });
+
+  // ---------------------------------------------------------------- members of the SIS
+  app.get(routerPath(endpoints.listMembers.path), async (c) => {
+    const context = await requestContext(c, endpoints.listMembers);
+    return respond(c, endpoints.listMembers, { items: await listMembers(deps.sessions, context) });
+  });
+
+  app.post(routerPath(endpoints.inviteMember.path), async (c) => {
+    const context = await requestContext(c, endpoints.inviteMember);
+    const input = await readBody(c, endpoints.inviteMember.body);
+    const members = { sessions: deps.sessions, identities: deps.identities };
+    return respond(c, endpoints.inviteMember, await inviteMember(members, context, input));
+  });
+
+  app.patch(routerPath(endpoints.updateMember.path), async (c) => {
+    const context = await requestContext(c, endpoints.updateMember);
+    const version = expectedVersion(c);
+    const patch = await readBody(c, endpoints.updateMember.body);
+    return respond(c, endpoints.updateMember, await updateMember(deps.sessions, context, idOf(c), version, patch));
   });
 
   return app;

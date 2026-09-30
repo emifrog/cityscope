@@ -1,7 +1,8 @@
 /** Only relative, same-origin paths are accepted as post-login destinations (no open redirect). */
 export function safeNextPath(value: string | null | undefined): string {
   if (!value || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/\\')) return '/';
-  if (value.startsWith('/login')) return '/';
+  // Never back to an authentication step.
+  if (['/login', '/verification', '/auth/'].some((prefix) => value.startsWith(prefix))) return '/';
   return value;
 }
 
@@ -20,7 +21,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: '/validations', label: 'Validations', comingIn: 'Sprint 3' },
   { href: '/signalements', label: 'Signalements', comingIn: 'Sprint 5' },
   { href: '/contributions', label: 'Contributions', comingIn: 'Sprint 5' },
-  { href: '/administration', label: 'Administration', comingIn: 'Sprint 4' },
+  { href: '/administration', label: 'Administration' },
 ];
 
 export function isActivePath(pathname: string, href: string): boolean {

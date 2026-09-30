@@ -15,11 +15,14 @@ import type { RequestSession, SessionFactory } from './ports';
  * Application-level authorization. The database enforces the same rules
  * through RLS; this layer gives explicit errors and keeps the rules readable.
  */
-export function requirePermission(access: ResolvedAccess, context: RequestContext, permission: Permission): void {
+export function requirePermission(
+  access: ResolvedAccess,
+  context: RequestContext,
+  permission: Permission,
+  grantedWithSecondFactor = false,
+): void {
   if (access.permissions.has(permission)) return;
-  if (PRIVILEGED_PERMISSIONS.has(permission) && context.principal.assurance !== 'aal2') {
-    throw new StrongAuthenticationRequired();
-  }
+  if (grantedWithSecondFactor && context.principal.assurance !== 'aal2') throw new StrongAuthenticationRequired();
   throw new AccessDenied();
 }
 
@@ -35,7 +38,14 @@ export async function inTenant<T>(
 ): Promise<T> {
   if (!context.tenantId) throw new TenantRequired();
   return sessions.run(context, async (session) => {
-    requirePermission(session.access, context, permission);
+    // MFA_REQUIRED only for people whose roles grant the permission once the second factor is used;
+    // the others get FORBIDDEN (checked lazily: only when a privileged permission is missing).
+    const grantedWithSecondFactor =
+      !session.access.permissions.has(permission) &&
+      PRIVILEGED_PERMISSIONS.has(permission) &&
+      context.principal.assurance !== 'aal2' &&
+      (await session.identity.holdsWithSecondFactor(permission));
+    requirePermission(session.access, context, permission, grantedWithSecondFactor);
     return work(session);
   });
 }

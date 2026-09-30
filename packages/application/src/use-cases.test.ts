@@ -77,15 +77,15 @@ describe('getMe', () => {
 });
 
 describe('requirePermission', () => {
-  it('asks for a second factor on privileged permissions', () => {
-    const access = { userId: 'u', tenantId, permissions: permissionsForRoles(['READER']) };
-    expect(() => requirePermission(access, context, 'etare:approve')).toThrow(StrongAuthenticationRequired);
-    expect(() =>
-      requirePermission(
-        access,
-        { ...context, principal: { ...context.principal, assurance: 'aal2' } },
-        'etare:approve',
-      ),
-    ).toThrow(AccessDenied);
+  const access = { userId: 'u', tenantId, permissions: permissionsForRoles(['READER']) };
+
+  it('asks for a second factor when the roles grant the permission with it', () => {
+    expect(() => requirePermission(access, context, 'etare:approve', true)).toThrow(StrongAuthenticationRequired);
+  });
+
+  it('refuses without mentioning the second factor when the roles do not grant the permission', () => {
+    expect(() => requirePermission(access, context, 'etare:approve')).toThrow(AccessDenied);
+    const aal2 = { ...context, principal: { ...context.principal, assurance: 'aal2' as const } };
+    expect(() => requirePermission(access, aal2, 'etare:approve', true)).toThrow(AccessDenied);
   });
 });

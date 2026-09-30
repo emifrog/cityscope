@@ -4,6 +4,7 @@ import {
   Conflict,
   InvalidInput,
   NotFound,
+  PreconditionFailed,
   Unauthenticated,
   isPermission,
   type RequestContext,
@@ -13,6 +14,7 @@ import { z } from 'zod';
 import { PostgresBuildingRepository } from './building-repository';
 import { PostgresAssetRepository, PostgresDocumentRepository } from './document-repository';
 import { PostgresIdentityReader } from './identity-reader';
+import { PostgresMemberRepository } from './member-repository';
 import { sqlState, type Pool, type PoolClient } from './pool';
 import { PostgresAuditRecorder, PostgresJobScheduler } from './request-services';
 import {
@@ -53,6 +55,7 @@ export class PostgresSessionFactory implements SessionFactory {
         externalIds: new PostgresExternalIdRepository(client),
         documents: new PostgresDocumentRepository(client),
         assets: new PostgresAssetRepository(client),
+        members: new PostgresMemberRepository(client),
         jobs: new PostgresJobScheduler(client),
         audit: new PostgresAuditRecorder(client),
       });
@@ -98,6 +101,8 @@ const UNIQUE_MESSAGES: Readonly<Record<string, string>> = {
   site_etare_number_uq: 'Ce numéro ETARE est déjà utilisé dans votre SIS.',
   level_building_id_label_key: 'Ce niveau existe déjà dans ce bâtiment.',
   external_identifier_tenant_id_system_code_external_id_key: 'Cet identifiant externe est déjà utilisé dans votre SIS.',
+  membership_tenant_id_user_id_key: 'Cette personne est déjà membre de votre SIS (réactivez-la si elle est suspendue).',
+  user_account_auth_provider_email_key: 'Cette adresse est rattachée à une autre identité : contactez le support.',
 };
 
 function constraintOf(error: unknown): string | undefined {
@@ -116,6 +121,14 @@ export function translateDatabaseError(error: unknown): unknown {
       return new AccessDenied('Vous n’êtes pas membre de ce SIS.');
     case '42501':
       return new AccessDenied();
+    case 'ETSLF':
+      return new AccessDenied('Vous ne pouvez pas modifier vos propres habilitations.');
+    case 'ETADM':
+      return new Conflict('Le SIS doit conserver au moins un administrateur actif.');
+    case 'ET404':
+      return new NotFound('Membre introuvable dans votre SIS.');
+    case 'ET412':
+      return new PreconditionFailed('Ce membre a été modifié entre-temps : rechargez la liste avant d’enregistrer.');
     case '23505':
       return new Conflict(UNIQUE_MESSAGES[constraintOf(error) ?? ''] ?? 'Cet élément existe déjà.');
     case '23503':

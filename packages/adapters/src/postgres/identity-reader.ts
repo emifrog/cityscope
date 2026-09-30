@@ -1,6 +1,6 @@
 import type { IdentityReader } from '@etare/application';
 import type { MeResponse } from '@etare/contracts';
-import { Unauthenticated, isRole } from '@etare/domain';
+import { Unauthenticated, isRole, type Permission } from '@etare/domain';
 import type { PoolClient } from './pool';
 
 interface UserRow {
@@ -38,5 +38,12 @@ export class PostgresIdentityReader implements IdentityReader {
         roles: m.roles.filter(isRole),
       })),
     };
+  }
+
+  async holdsWithSecondFactor(permission: Permission): Promise<boolean> {
+    const { rows } = await this.client.query<{ held: boolean }>('select app.holds_with_second_factor($1) as held', [
+      permission,
+    ]);
+    return rows[0]?.held === true;
   }
 }

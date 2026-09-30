@@ -25,6 +25,10 @@ import {
   type LevelCreate,
   type LevelUpdate,
   type MeResponse,
+  type Member,
+  type MemberInvitation,
+  type MemberInvite,
+  type MemberUpdate,
   type SiteCreateInput,
   type SiteDetail,
   type SiteListQuery,
@@ -268,4 +272,19 @@ export const api = {
   /** Short-lived URL of a verified file (the download is audited server-side). */
   getAssetDownload: (options: ApiCallOptions, assetId: string): Promise<AssetDownload> =>
     call(endpoints.getAssetDownload.response, pathOf(endpoints.getAssetDownload.path, { id: assetId }), options),
+
+  // ---------------------------------------------------------------- members of the SIS
+  listMembers: (options: ApiCallOptions): Promise<Member[]> =>
+    itemsOf(call(endpoints.listMembers.response, endpoints.listMembers.path, options)),
+
+  /** Invites a person (invitation e-mail) or attaches an existing account. */
+  inviteMember: (options: ApiCallOptions, input: MemberInvite): Promise<MemberInvitation> =>
+    call(endpoints.inviteMember.response, endpoints.inviteMember.path, options, { method: 'POST', body: input }),
+
+  updateMember: (options: ApiCallOptions, id: string, version: number, patch: MemberUpdate): Promise<Member> =>
+    call(endpoints.updateMember.response, pathOf(endpoints.updateMember.path, { id }), options, {
+      method: 'PATCH',
+      body: patch,
+      ifMatch: version,
+    }),
 };

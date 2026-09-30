@@ -14,6 +14,7 @@ export const queryKeys = {
   sites: (tenantId: string) => ['tenant', tenantId, 'sites'] as const,
   site: (tenantId: string, id: string) => ['tenant', tenantId, 'site', id] as const,
   siteRecords: (tenantId: string, id: string, kind: string) => ['tenant', tenantId, 'site', id, kind] as const,
+  members: (tenantId: string) => ['tenant', tenantId, 'members'] as const,
 };
 
 export type SiteFilters = Pick<SiteListQuery, 'q' | 'site_type' | 'status' | 'city'>;
@@ -74,6 +75,18 @@ export const useBuildings = (siteId: string) => useSiteList(siteId, 'buildings',
 export const useClassifications = (siteId: string) => useSiteList(siteId, 'classifications', api.listClassifications);
 export const useContacts = (siteId: string) => useSiteList(siteId, 'contacts', api.listContacts);
 export const useExternalIds = (siteId: string) => useSiteList(siteId, 'external-ids', api.listExternalIds);
+
+/** Members of the active SIS (administration: the API requires the second factor). */
+export function useMembers() {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.members(tenantId ?? 'none'),
+    enabled,
+    queryFn: ({ signal }) => api.listMembers({ ...options, signal }),
+    // MFA_REQUIRED / FORBIDDEN are answers, not transient failures.
+    retry: false,
+  });
+}
 
 const VERDICT_POLL_MS = 3000;
 /** Past this delay a pending file is considered abandoned (upload never finished): polling stops. */

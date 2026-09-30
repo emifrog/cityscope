@@ -1,7 +1,9 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { safeNextPath } from '@/lib/navigation';
 
-const PUBLIC_PATHS = new Set(['/login']);
+/** Reachable without a session: sign-in and activation of an invitation. */
+const PUBLIC_PATHS = new Set(['/login', '/auth/confirm']);
 
 /**
  * Refreshes the Supabase session cookies and keeps unauthenticated visitors
@@ -51,11 +53,24 @@ export async function proxy(request: NextRequest) {
     login.search = `?next=${encodeURIComponent(pathname + search)}`;
     return finish(NextResponse.redirect(login));
   }
-  if (authenticated && pathname === '/login') {
-    const home = request.nextUrl.clone();
-    home.pathname = '/';
-    home.search = '';
-    return finish(NextResponse.redirect(home));
+  if (authenticated && pathname !== '/auth/confirm') {
+    // Second step of the sign-in: an account with a verified factor presents it before any page.
+    // Read from the session cookie (no network call); the API enforces aal2 on its own.
+    const { data: level } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    const secondFactorPending = level?.nextLevel === 'aal2' && level.currentLevel !== 'aal2';
+    if (secondFactorPending && pathname !== '/verification') {
+      const verification = request.nextUrl.clone();
+      verification.pathname = '/verification';
+      verification.search = `?next=${encodeURIComponent(safeNextPath(pathname + search))}`;
+      return finish(NextResponse.redirect(verification));
+    }
+    if (!secondFactorPending && (pathname === '/login' || pathname === '/verification')) {
+      const destination = request.nextUrl.clone();
+      const next = new URL(safeNextPath(request.nextUrl.searchParams.get('next')), request.nextUrl.origin);
+      destination.pathname = pathname === '/login' ? '/' : next.pathname;
+      destination.search = pathname === '/login' ? '' : next.search;
+      return finish(NextResponse.redirect(destination));
+    }
   }
   return finish(response);
 }

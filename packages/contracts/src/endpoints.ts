@@ -10,6 +10,13 @@ import {
   uploadConfirmationSchema,
 } from './documents';
 import {
+  memberInvitationSchema,
+  memberInviteSchema,
+  memberListResponseSchema,
+  memberSchema,
+  memberUpdateSchema,
+} from './members';
+import {
   buildingCreateSchema,
   buildingListResponseSchema,
   buildingSchema,
@@ -366,6 +373,39 @@ export const endpoints = {
     params: idParamsSchema,
     successStatus: 200,
     response: assetDownloadSchema,
+  }),
+
+  // ---------------------------------------------------------------- members of the SIS
+  listMembers: tenantEndpoint({
+    operationId: 'listMembers',
+    method: 'get',
+    path: '/members',
+    summary: 'Membres du SIS et leurs rôles (administration, double authentification exigée)',
+    tags: ['members'],
+    successStatus: 200,
+    response: memberListResponseSchema,
+  }),
+  inviteMember: tenantEndpoint({
+    operationId: 'inviteMember',
+    method: 'post',
+    path: '/members',
+    summary: 'Inviter une personne dans le SIS (ou rattacher un compte existant)',
+    tags: ['members'],
+    body: memberInviteSchema,
+    successStatus: 201,
+    response: memberInvitationSchema,
+  }),
+  updateMember: tenantEndpoint({
+    operationId: 'updateMember',
+    method: 'patch',
+    path: '/members/{id}',
+    summary: 'Modifier les rôles d’un membre, le suspendre ou le réactiver (jamais soi-même)',
+    tags: ['members'],
+    params: idParamsSchema,
+    body: memberUpdateSchema,
+    concurrency: 'if-match',
+    successStatus: 200,
+    response: memberSchema,
   }),
 } as const satisfies Record<string, EndpointContract>;
 

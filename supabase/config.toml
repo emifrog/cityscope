@@ -248,10 +248,12 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# Uncomment to customize email template
-# [auth.email.template.invite]
-# subject = "You have been invited"
-# content_path = "./supabase/templates/invite.html"
+# Invitation of a new member (POST /members): the link opens /auth/confirm on the web application,
+# which verifies the token only when the person clicks (mail scanners cannot consume it).
+# Hosted projects: same subject and body to set in Authentication > Emails > Invite user.
+[auth.email.template.invite]
+subject = "Invitation à la plateforme ETARE"
+content_path = "./supabase/templates/invite.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]

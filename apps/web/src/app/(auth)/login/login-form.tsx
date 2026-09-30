@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { needsSecondFactor } from '@/lib/mfa';
 import { supabaseBrowser } from '@/lib/supabase-browser';
 
 export function LoginForm({ next }: { next: string }) {
@@ -27,7 +28,8 @@ export function LoginForm({ next }: { next: string }) {
         );
         return;
       }
-      router.replace(next);
+      // People who enabled the double authentication present their code before anything else.
+      router.replace((await needsSecondFactor()) ? `/verification?next=${encodeURIComponent(next)}` : next);
       router.refresh();
     } catch {
       setFailure('Le service d’authentification est injoignable.');

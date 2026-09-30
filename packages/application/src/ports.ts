@@ -18,13 +18,16 @@ import type {
   LevelCreate,
   LevelUpdate,
   MeResponse,
+  Member,
+  MemberInvite,
+  MemberUpdate,
   SiteCreate,
   SiteDetail,
   SiteListQuery,
   SiteListResponse,
   SiteUpdate,
 } from '@etare/contracts';
-import type { RequestContext, ResolvedAccess, ScanStatus } from '@etare/domain';
+import type { Permission, RequestContext, ResolvedAccess, ScanStatus } from '@etare/domain';
 
 /**
  * A request session: one database transaction carrying the verified request
@@ -41,6 +44,7 @@ export interface RequestSession {
   readonly externalIds: ExternalIdRepository;
   readonly documents: DocumentRepository;
   readonly assets: AssetRepository;
+  readonly members: MemberRepository;
   readonly jobs: JobScheduler;
   readonly audit: AuditRecorder;
 }
@@ -51,6 +55,8 @@ export interface SessionFactory {
 
 export interface IdentityReader {
   me(): Promise<MeResponse>;
+  /** True when the roles of the user would grant this permission with a second factor (aal2). */
+  holdsWithSecondFactor(permission: Permission): Promise<boolean>;
 }
 
 /**
@@ -134,6 +140,31 @@ export interface AssetRepository {
 /** Enqueues a job in the same transaction as the business change (transactional outbox). */
 export interface JobScheduler {
   enqueue(type: string, payload: Record<string, unknown>, idempotencyKey: string): Promise<string>;
+}
+
+/**
+ * Members of the current SIS. Writes go through database functions that
+ * re-check member:manage and the anti-escalation rules (no self-change,
+ * grantable roles only, at least one administrator left).
+ */
+export interface MemberRepository {
+  list(): Promise<Member[]>;
+  /**
+   * Attaches the person to the SIS with the given roles. Without an identity
+   * subject, only an existing account is attached: null means the address
+   * has no account yet (the identity must be created first).
+   */
+  add(input: MemberInvite, identitySubject: string | null): Promise<Member | null>;
+  update(id: string, expectedVersion: number, patch: MemberUpdate): Promise<Member | null>;
+}
+
+/** Administration of the identity provider (server-side secret, never exposed to clients). */
+export interface IdentityProvisioner {
+  /**
+   * Creates the identity and sends the invitation e-mail. When the address
+   * already has an identity, returns it without sending anything.
+   */
+  invite(email: string, displayName: string | null): Promise<{ subject: string; invitationSent: boolean }>;
 }
 
 /** Business events (download, export...) stamped with the verified request context. */

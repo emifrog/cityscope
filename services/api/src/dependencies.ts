@@ -1,6 +1,7 @@
 import {
   PostgresHealthProbe,
   PostgresSessionFactory,
+  SupabaseIdentityProvisioner,
   SupabaseObjectStorage,
   createLogger,
   createPool,
@@ -23,6 +24,10 @@ export function createApiDependencies(env: Env): ApiDependencies {
     // Storage gateway: server-side secret key, only used after an authorization check in PostgreSQL.
     storage: config.supabaseSecretKey
       ? SupabaseObjectStorage.fromSecretKey(config.supabaseUrl, config.supabaseSecretKey)
+      : null,
+    // Invitations: identities are created with the same server-side secret key.
+    identities: config.supabaseSecretKey
+      ? SupabaseIdentityProvisioner.fromSecretKey(config.supabaseUrl, config.supabaseSecretKey)
       : null,
     logger: createLogger({ component: 'api', version, env: config.appEnv }),
     version,

@@ -1,12 +1,14 @@
 'use client';
 
-import { Badge, Button, cn } from '@etare/ui';
-import { LogOut, Menu, Search } from 'lucide-react';
+import { PRIVILEGED_PERMISSIONS, permissionsForRoles } from '@etare/domain';
+import { Alert, Badge, Button, cn } from '@etare/ui';
+import { LogOut, Menu, Search, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { brand } from '@/config/brand';
 import { NAV_ITEMS, isActivePath } from '@/lib/navigation';
+import { PRIVILEGED_ACTION_LABELS } from './labels';
 import { useSession } from '@/providers/session-provider';
 import { useTenant } from '@/providers/tenant-provider';
 
@@ -31,6 +33,26 @@ function TenantSwitcher() {
         ))}
       </select>
     </label>
+  );
+}
+
+/** Privileged roles without the second factor: say what is blocked and where to enable it. */
+function SecondFactorReminder() {
+  const { assurance } = useSession();
+  const { activeTenant } = useTenant();
+  const pathname = usePathname();
+  const blocked = [...permissionsForRoles(activeTenant?.roles ?? [])]
+    .filter((permission) => PRIVILEGED_PERMISSIONS.has(permission))
+    .map((permission) => PRIVILEGED_ACTION_LABELS[permission])
+    .filter(Boolean);
+  if (assurance !== 'aal1' || blocked.length === 0 || pathname === '/compte') return null;
+  return (
+    <Alert tone="important" className="mb-4">
+      Votre rôle exige la double authentification pour {blocked.join(', ')}.{' '}
+      <Link href="/compte" className="font-semibold underline">
+        L’activer maintenant
+      </Link>
+    </Alert>
   );
 }
 
@@ -81,7 +103,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         </form>
         <div className="ml-auto flex items-center gap-3">
           <TenantSwitcher />
-          <span className="hidden text-sm text-white/80 xl:inline">{session?.user.email}</span>
+          <Link
+            href="/compte"
+            className="flex items-center gap-2 rounded-md px-2 py-1 text-sm text-white/80 hover:bg-brand-navy-soft hover:text-white"
+          >
+            <UserRound aria-hidden="true" className="size-4" />
+            <span className="sr-only xl:not-sr-only">{session?.user.email ?? 'Mon compte'}</span>
+          </Link>
           <Button variant="inverse" size="sm" onClick={() => void signOut()}>
             <LogOut aria-hidden="true" className="size-4" />
             <span className="sr-only lg:not-sr-only">Déconnexion</span>
@@ -118,7 +146,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           </ul>
           <p className="mt-6 px-3 text-xs text-muted">Back-office SIS</p>
         </nav>
-        <main className="min-w-0 flex-1 p-4 md:p-6">{children}</main>
+        <main className="min-w-0 flex-1 p-4 md:p-6">
+          <SecondFactorReminder />
+          {children}
+        </main>
       </div>
     </div>
   );

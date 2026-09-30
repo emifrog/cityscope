@@ -6,10 +6,26 @@ import { useRouter } from 'next/navigation';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { supabaseBrowser } from '@/lib/supabase-browser';
 
+export type AssuranceLevel = 'aal1' | 'aal2';
+
 interface SessionState {
   readonly ready: boolean;
   readonly session: Session | null;
+  /** Authentication level of the current token (display only: the API verifies the token itself). */
+  readonly assurance: AssuranceLevel | null;
   readonly signOut: () => Promise<void>;
+}
+
+/** Reads the aal claim of an access token without verifying it (UI hints only). */
+export function assuranceOf(accessToken: string | undefined): AssuranceLevel | null {
+  const payload = accessToken?.split('.')[1];
+  if (!payload) return null;
+  try {
+    const claims = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as { aal?: unknown };
+    return claims.aal === 'aal2' ? 'aal2' : 'aal1';
+  } catch {
+    return null;
+  }
 }
 
 const SessionContext = createContext<SessionState | null>(null);
@@ -24,13 +40,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const supabase = supabaseBrowser();
     let active = true;
     let identity: string | null = null;
+    let assurance: AssuranceLevel | null = null;
     let authEventReceived = false;
     function applySession(next: Session | null) {
       if (!active) return;
       const nextIdentity = next?.user.id ?? null;
       // Includes expiration and sign-out in another tab, not just our sign-out button.
+      const nextAssurance = assuranceOf(next?.access_token);
       if (nextIdentity !== identity) queryClient.clear();
+      // Same person, new level (second factor verified): answers such as MFA_REQUIRED are stale.
+      else if (nextAssurance !== assurance) void queryClient.invalidateQueries();
       identity = nextIdentity;
+      assurance = nextAssurance;
       setSession(next);
       setReady(true);
     }
@@ -56,7 +77,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     router.refresh();
   }, [queryClient, router]);
 
-  const value = useMemo(() => ({ ready, session, signOut }), [ready, session, signOut]);
+  const value = useMemo(
+    () => ({ ready, session, assurance: assuranceOf(session?.access_token), signOut }),
+    [ready, session, signOut],
+  );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 

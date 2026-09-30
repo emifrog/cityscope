@@ -5,9 +5,11 @@ import { LoginForm } from './login-form';
 const replace = vi.fn();
 const refresh = vi.fn();
 const signInWithPassword = vi.fn();
+const needsSecondFactor = vi.fn(async () => false);
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace, refresh }) }));
 vi.mock('@/lib/supabase-browser', () => ({ supabaseBrowser: () => ({ auth: { signInWithPassword } }) }));
+vi.mock('@/lib/mfa', () => ({ needsSecondFactor: () => needsSecondFactor() }));
 
 function fill(email: string, password: string) {
   fireEvent.change(screen.getByLabelText('Adresse e-mail professionnelle'), { target: { value: email } });
@@ -35,6 +37,14 @@ describe('LoginForm', () => {
     fill('redacteur06@demo.etare.test', 'motdepasse');
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/sites'));
     expect(signInWithPassword).toHaveBeenCalledWith({ email: 'redacteur06@demo.etare.test', password: 'motdepasse' });
+  });
+
+  it('sends people who enabled the double authentication to the code step', async () => {
+    signInWithPassword.mockResolvedValue({ error: null });
+    needsSecondFactor.mockResolvedValueOnce(true);
+    render(<LoginForm next="/administration" />);
+    fill('admin.sis06@demo.etare.test', 'motdepasse');
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/verification?next=%2Fadministration'));
   });
 
   it('shows a neutral message on invalid credentials', async () => {

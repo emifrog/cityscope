@@ -70,7 +70,8 @@ Endpoints : `GET /health`, `GET /me` ; sites (`GET/POST /sites` avec recherche `
 `PATCH /levels/{id}`) ; classifications, contacts et identifiants externes (`/sites/{id}/…`,
 `PATCH /classifications/{id}`, `PATCH /contacts/{id}`) ; documents et fichiers
 (`GET/POST /sites/{id}/documents`, `PATCH /documents/{id}`, `POST /documents/{id}/versions`,
-`POST /assets/{id}/uploaded`, `GET /assets/{id}/download`, voir ADR-009). Les `PATCH` exigent
+`POST /assets/{id}/uploaded`, `GET /assets/{id}/download`, voir ADR-009) ; membres du SIS
+(`GET/POST /members`, `PATCH /members/{id}`, voir ADR-010). Les `PATCH` exigent
 `If-Match` (412 si la version est périmée), les corps JSON sont limités à 64 Kio : les fichiers ne
 passent jamais par l’API mais par des URL signées.
 
@@ -79,12 +80,15 @@ passent jamais par l’API mais par des URL signées.
 Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4, composants de style shadcn/ui
 (`packages/ui`), React Hook Form + Zod, TanStack Query.
 
-- `src/proxy.ts` (ex-middleware) rafraîchit la session Supabase et renvoie vers `/login` ; ce n’est
-  qu’un confort de navigation, l’autorisation est faite par l’API.
+- `src/proxy.ts` (ex-middleware) rafraîchit la session Supabase, renvoie vers `/login`, et vers
+  `/verification` un compte dont le second facteur n’a pas encore été saisi ; ce n’est qu’un confort de
+  navigation, l’autorisation est faite par l’API.
 - Providers : session (Supabase Auth navigateur), SIS actif (issu de `/me`), cache de requêtes dont les
   clés commencent par `['tenant', tenantId]` : changer de SIS ou se déconnecter purge le cache.
-- Routes : `/login`, `/` (tableau de bord), `/sites`, `/sites/[id]`, et les modules à venir
-  (`/carte`, `/etare`, `/validations`, `/signalements`, `/contributions`, `/administration`).
+- Routes : `/login`, `/verification` (second facteur), `/auth/confirm` (activation d’une invitation),
+  `/` (tableau de bord), `/sites`, `/sites/[id]` (onglets dont Documents), `/compte` (habilitations,
+  double authentification), `/administration` (membres), et les modules à venir (`/carte`, `/etare`,
+  `/validations`, `/signalements`, `/contributions`).
 - Thème remplaçable : jetons dans `packages/ui/src/styles/globals.css`, nom/logo dans `src/config/brand.ts`.
 
 ## Worker (services/worker)

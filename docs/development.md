@@ -40,7 +40,11 @@ du fichier. Comptes utiles :
 | `multi.sis@demo.etare.test`           | READER @ 06 + PREVISION_EDITOR @ 83    | sélecteur de SIS dans l’en-tête                |
 | `plateforme@demo.etare.test`          | SUPER_ADMIN (plateforme)               | aucun SIS, aucune donnée métier                |
 
-L’inscription libre est désactivée (produit sur invitation).
+L’inscription libre est désactivée (produit sur invitation). Pour essayer l’administration avec
+`admin.sis06` : activer la double authentification dans « Mon compte » (application TOTP), puis
+Administration → « Inviter une personne » ; l’e-mail d’invitation arrive dans Mailpit
+(`http://127.0.0.1:54324`). Retirer ensuite le facteur pour revenir à l’état du seed.
+Un changement de `supabase/config.toml` ou de `supabase/templates/` demande `pnpm db:stop && pnpm db:start`.
 
 ## Commandes courantes
 
@@ -159,8 +163,19 @@ pnpm integration members
 ```
 
 Rôles possibles : `SIS_ADMIN`, `PREVISION_EDITOR`, `PREVISION_VALIDATOR`, `OPS_USER`, `EXPLOITANT`,
-`READER` (`SUPER_ADMIN` n’est jamais lié à un SIS). Cet outil sera remplacé par l’écran
-d’administration (Sprint 4).
+`READER` (`SUPER_ADMIN` n’est jamais lié à un SIS). Cet outil sert à créer le **premier**
+administrateur d’un SIS ; ensuite, l’écran Administration invite les membres et gère leurs rôles
+(double authentification exigée).
+
+Pour les invitations et les documents, dans le tableau de bord du projet :
+
+- Authentication → URL Configuration : **Site URL** = adresse de l’application web (le lien
+  d’invitation pointe vers `<Site URL>/auth/confirm`) ;
+- Authentication → Emails → **Invite user** : reprendre le sujet et le corps de
+  `supabase/templates/invite.html` ;
+- Authentication → Multi-Factor : TOTP activé ;
+- ajouter la clé secrète (Project Settings → API Keys) à `.env.integration` sous `SUPABASE_SECRET_KEY`
+  (serveur uniquement, jamais préfixée `NEXT_PUBLIC_`).
 
 ### 5. Vérifier et utiliser
 

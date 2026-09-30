@@ -21,6 +21,7 @@ pas exposé par la Data API Supabase (`supabase/config.toml` → `api.schemas`),
 | `20260930120000_role_timeouts.sql`                | délais `statement` / `idle in transaction` / `lock` portés par les rôles applicatifs (indépendants du pooler)                                                                 |
 | `20261001000100_referential_editing.sql`          | Sprint 1 : `site_edit` (auteurs des données de travail), contributeurs collectés à la soumission, `site_classification`, `contact`, `external_identifier`, index de recherche |
 | `20261001000200_document_uploads.sql`             | Sprint 1 : clé de quarantaine et verdict de contrôle des `asset`, verdict réservé au worker et définitif, fonctions `worker_*_asset_verification`                             |
+| `20261001000300_member_administration.sql`        | Sprint 1 : `admin_add_member`, `admin_update_member` (anti-escalade, dernier administrateur), `holds_with_second_factor`, unicité des seules liaisons de rôle actives         |
 
 ## Correspondance avec les documents de cadrage
 
@@ -115,6 +116,16 @@ effacée. Le verdict est définitif (trigger, propriétaire compris). `etare_api
 la classification, l’autorisation hors ligne et la miniature (privilèges par colonne). Voir ADR-009 et le
 test `70_document_uploads`.
 
+## Habilitations des membres
+
+Les tables d’identité restent en lecture seule pour `etare_api` (RLS : un membre voit sa propre
+adhésion, un détenteur de `member:manage` voit celles de son SIS). Les écritures passent par
+`app.admin_add_member()` et `app.admin_update_member()` (`SECURITY DEFINER`) qui revérifient
+`member:manage` (donc `aal2`) et refusent l’auto-modification (`ETSLF`), les rôles non attribuables à
+l’échelle du SIS (`22023`), la perte du dernier administrateur actif (`ETADM`) et une version périmée
+(`ET412`). Un rôle retiré est révoqué (`revoked_at`) : seules les liaisons actives sont uniques, ce qui
+permet de le réattribuer en gardant l’historique. Voir ADR-010 et le test `80_member_administration`.
+
 ## Audit
 
 `app.audit_event` : SIS, acteur, type d’acteur, action (`table.operation`), entité, avant/après,
@@ -127,5 +138,5 @@ les tables métier et par `app.record_audit_event()`. Aucun rôle applicatif ne 
 
 `supabase/tests/database/*.test.sql` (pgTAP, `pnpm test:db`) : invariants structurels, isolation
 multi-SIS, RBAC/MFA/séparation des tâches, immutabilité des publications, audit, file de tâches,
-édition du référentiel, verdict des fichiers. Les tests d’intégration ajoutent des données à la base
+édition du référentiel, verdict des fichiers, habilitations. Les tests d’intégration ajoutent des données à la base
 locale : les assertions portent sur l’isolation, pas sur des listes exactes.

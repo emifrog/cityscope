@@ -6,12 +6,19 @@ describe('post-login redirection', () => {
     expect(safeNextPath('/sites/123?tab=plans')).toBe('/sites/123?tab=plans');
   });
 
-  it.each(['https://evil.example', '//evil.example', '/\\evil.example', 'javascript:alert(1)', '/login', '', null])(
-    'refuses %s',
-    (value) => {
-      expect(safeNextPath(value)).toBe('/');
-    },
-  );
+  it.each([
+    'https://evil.example',
+    '//evil.example',
+    '/\\evil.example',
+    'javascript:alert(1)',
+    '/login',
+    '/verification?next=/',
+    '/auth/confirm?token_hash=x',
+    '',
+    null,
+  ])('refuses %s', (value) => {
+    expect(safeNextPath(value)).toBe('/');
+  });
 });
 
 describe('active navigation item', () => {
