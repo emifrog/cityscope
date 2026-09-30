@@ -98,3 +98,12 @@ export class PreconditionRequired extends DomainError {
     this.name = 'PreconditionRequired';
   }
 }
+
+/** A dependency (object storage, identity provider...) is not configured or not reachable (HTTP 503). */
+export class ServiceUnavailable extends DomainError {
+  readonly code = 'SERVICE_UNAVAILABLE';
+  constructor(message = 'Service momentanément indisponible.') {
+    super(message);
+    this.name = 'ServiceUnavailable';
+  }
+}

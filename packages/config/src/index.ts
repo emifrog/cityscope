@@ -81,6 +81,9 @@ const workerEnvSchema = z.object({
   WORKER_POLL_INTERVAL_MS: z.coerce.number().int().min(100).max(60_000).default(1_000),
   WORKER_LEASE_SECONDS: z.coerce.number().int().min(5).max(3_600).default(60),
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(32).default(2),
+  /** Object storage access for file verification (server-side secret, never exposed). */
+  SUPABASE_URL: z.url().optional(),
+  SUPABASE_SECRET_KEY: z.string().min(1).optional(),
 });
 
 export interface WorkerEnv {
@@ -90,6 +93,8 @@ export interface WorkerEnv {
   readonly pollIntervalMs: number;
   readonly leaseSeconds: number;
   readonly concurrency: number;
+  /** Null when the worker cannot reach the object storage (file verification disabled). */
+  readonly storage: { readonly url: string; readonly secretKey: string } | null;
 }
 
 export function readWorkerEnv(env: Env): WorkerEnv {
@@ -101,6 +106,10 @@ export function readWorkerEnv(env: Env): WorkerEnv {
     pollIntervalMs: parsed.WORKER_POLL_INTERVAL_MS,
     leaseSeconds: parsed.WORKER_LEASE_SECONDS,
     concurrency: parsed.WORKER_CONCURRENCY,
+    storage:
+      parsed.SUPABASE_URL && parsed.SUPABASE_SECRET_KEY
+        ? { url: parsed.SUPABASE_URL, secretKey: parsed.SUPABASE_SECRET_KEY }
+        : null,
   };
 }
 

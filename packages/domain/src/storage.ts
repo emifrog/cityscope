@@ -21,3 +21,8 @@ export function isStorageKeyOfTenant(key: string, tenantId: string): boolean {
     parts.slice(3).every((part) => UUID.test(part))
   );
 }
+
+/** Uploads land here first; the worker promotes verified files to the asset key. */
+export function quarantineStorageKey(tenantId: string, assetId: string, versionId: string): string {
+  return assetStorageKey(tenantId, assetId, versionId).replace('/assets/', '/quarantine/');
+}

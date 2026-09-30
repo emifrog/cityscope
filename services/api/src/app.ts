@@ -1,24 +1,31 @@
 import type { AccessTokenVerifier, Logger } from '@etare/adapters';
 import {
+  addDocumentVersion,
+  confirmUpload,
   createBuilding,
+  createDocument,
   createClassification,
   createContact,
   createExternalId,
   createLevel,
   createSite,
+  getAssetDownload,
   getMe,
   getSite,
   listBuildings,
   listClassifications,
   listContacts,
+  listDocuments,
   listExternalIds,
   listSites,
   updateBuilding,
   updateClassification,
   updateContact,
+  updateDocument,
   updateLevel,
   updateSite,
   type HealthProbe,
+  type ObjectStorage,
   type SessionFactory,
 } from '@etare/application';
 import { API_BASE_PATH, TENANT_HEADER, endpoints, type EndpointContract } from '@etare/contracts';
@@ -40,6 +47,8 @@ export interface ApiDependencies {
   readonly sessions: SessionFactory;
   readonly tokens: AccessTokenVerifier;
   readonly health: HealthProbe;
+  /** Null when file storage is not configured (document endpoints answer 503). */
+  readonly storage: ObjectStorage | null;
   readonly logger: Logger;
   readonly version: string;
   readonly openApiDocument: () => unknown;
@@ -296,6 +305,44 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     const context = await requestContext(c, endpoints.createExternalId);
     const input = await readBody(c, endpoints.createExternalId.body);
     return respond(c, endpoints.createExternalId, await createExternalId(deps.sessions, context, idOf(c), input));
+  });
+
+  // ---------------------------------------------------------------- documents and files
+  const documents = { sessions: deps.sessions, storage: deps.storage };
+
+  app.get(routerPath(endpoints.listDocuments.path), async (c) => {
+    const context = await requestContext(c, endpoints.listDocuments);
+    const items = await listDocuments(documents, context, idOf(c));
+    return respond(c, endpoints.listDocuments, { items });
+  });
+
+  app.post(routerPath(endpoints.createDocument.path), async (c) => {
+    const context = await requestContext(c, endpoints.createDocument);
+    const input = await readBody(c, endpoints.createDocument.body);
+    return respond(c, endpoints.createDocument, await createDocument(documents, context, idOf(c), input));
+  });
+
+  app.patch(routerPath(endpoints.updateDocument.path), async (c) => {
+    const context = await requestContext(c, endpoints.updateDocument);
+    const version = expectedVersion(c);
+    const patch = await readBody(c, endpoints.updateDocument.body);
+    return respond(c, endpoints.updateDocument, await updateDocument(documents, context, idOf(c), version, patch));
+  });
+
+  app.post(routerPath(endpoints.createDocumentVersion.path), async (c) => {
+    const context = await requestContext(c, endpoints.createDocumentVersion);
+    const input = await readBody(c, endpoints.createDocumentVersion.body);
+    return respond(c, endpoints.createDocumentVersion, await addDocumentVersion(documents, context, idOf(c), input));
+  });
+
+  app.post(routerPath(endpoints.confirmUpload.path), async (c) => {
+    const context = await requestContext(c, endpoints.confirmUpload);
+    return respond(c, endpoints.confirmUpload, await confirmUpload(documents, context, idOf(c)));
+  });
+
+  app.get(routerPath(endpoints.getAssetDownload.path), async (c) => {
+    const context = await requestContext(c, endpoints.getAssetDownload);
+    return respond(c, endpoints.getAssetDownload, await getAssetDownload(documents, context, idOf(c)));
   });
 
   return app;

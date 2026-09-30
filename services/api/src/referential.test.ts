@@ -58,6 +58,7 @@ function makeApp(overrides: SessionOverrides, roles: Role[] = ['PREVISION_EDITOR
     sessions,
     tokens,
     health: { database: async () => 'ok' },
+    storage: null,
     logger: createLogger({}, { write: () => undefined }),
     version: 'test',
     openApiDocument: () => ({}),

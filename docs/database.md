@@ -20,6 +20,7 @@ pas exposé par la Data API Supabase (`supabase/config.toml` → `api.schemas`),
 | `20260930085355_revision_authorship.sql`          | attribution des contributions par trigger, contrôle de l’auteur et du soumetteur, modification d’un brouillon réservée aux rédacteurs                                         |
 | `20260930120000_role_timeouts.sql`                | délais `statement` / `idle in transaction` / `lock` portés par les rôles applicatifs (indépendants du pooler)                                                                 |
 | `20261001000100_referential_editing.sql`          | Sprint 1 : `site_edit` (auteurs des données de travail), contributeurs collectés à la soumission, `site_classification`, `contact`, `external_identifier`, index de recherche |
+| `20261001000200_document_uploads.sql`             | Sprint 1 : clé de quarantaine et verdict de contrôle des `asset`, verdict réservé au worker et définitif, fonctions `worker_*_asset_verification`                             |
 
 ## Correspondance avec les documents de cadrage
 
@@ -105,6 +106,15 @@ Les modifications (`PATCH`) exigent l’en-tête `If-Match` avec la `row_version
 L’adaptateur verrouille la ligne (`SELECT … FOR UPDATE`, sous RLS), compare la version et répond 412 si
 quelqu’un a modifié la fiche entre-temps : jamais d’écrasement silencieux. Les réponses portent un `ETag`.
 
+## Fichiers et verdict de contrôle
+
+Un `asset` naît `pending` avec sa `quarantine_key` (préfixée par son SIS, `CHECK`). Seul le worker rend
+le verdict, par `app.worker_complete_asset_verification()` (`SECURITY DEFINER`, réservée à
+`etare_worker`) : `clean` ou `rejected`, avec `scan_detail` et `verified_at`, et la clé de quarantaine
+effacée. Le verdict est définitif (trigger, propriétaire compris). `etare_api` ne peut modifier que le nom,
+la classification, l’autorisation hors ligne et la miniature (privilèges par colonne). Voir ADR-009 et le
+test `70_document_uploads`.
+
 ## Audit
 
 `app.audit_event` : SIS, acteur, type d’acteur, action (`table.operation`), entité, avant/après,
@@ -116,4 +126,6 @@ les tables métier et par `app.record_audit_event()`. Aucun rôle applicatif ne 
 ## Tests
 
 `supabase/tests/database/*.test.sql` (pgTAP, `pnpm test:db`) : invariants structurels, isolation
-multi-SIS, RBAC/MFA/séparation des tâches, immutabilité des publications, audit, file de tâches.
+multi-SIS, RBAC/MFA/séparation des tâches, immutabilité des publications, audit, file de tâches,
+édition du référentiel, verdict des fichiers. Les tests d’intégration ajoutent des données à la base
+locale : les assertions portent sur l’isolation, pas sur des listes exactes.

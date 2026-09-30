@@ -1,8 +1,11 @@
+import { createHash } from 'node:crypto';
 import { hostname } from 'node:os';
+import { antivirusNotConfigured } from '@etare/application';
 import { createLogger } from '@etare/adapters/logging';
-import { PostgresJobQueue, createPool } from '@etare/adapters/postgres';
+import { PostgresAssetVerificationStore, PostgresJobQueue, createPool } from '@etare/adapters/postgres';
+import { SupabaseObjectStorage } from '@etare/adapters/storage';
 import { readWorkerEnv } from '@etare/config';
-import { HandlerRegistry, noopHandler } from './handlers';
+import { HandlerRegistry, assetVerificationHandler, noopHandler } from './handlers';
 import { createWorker } from './runner';
 
 const env = readWorkerEnv(process.env);
@@ -14,9 +17,24 @@ const pool = createPool({
   max: env.concurrency + 2,
 });
 
+const registry = new HandlerRegistry([noopHandler]);
+if (env.storage) {
+  registry.register(
+    assetVerificationHandler({
+      store: new PostgresAssetVerificationStore(pool),
+      objects: SupabaseObjectStorage.fromSecretKey(env.storage.url, env.storage.secretKey),
+      scanner: antivirusNotConfigured,
+      sha256: async (content) => createHash('sha256').update(content).digest('hex'),
+    }),
+  );
+  logger.warn('antivirus engine not configured: files are checked for size, SHA-256 and real type only');
+} else {
+  logger.warn('object storage not configured: file verification jobs are not handled by this worker');
+}
+
 const worker = createWorker({
   queue: new PostgresJobQueue(pool, workerId),
-  registry: new HandlerRegistry([noopHandler]),
+  registry,
   logger,
   concurrency: env.concurrency,
   leaseSeconds: env.leaseSeconds,

@@ -17,6 +17,7 @@
     "@etare/application": "workspace:*",
     "@etare/config": "workspace:*",
     "@etare/domain": "workspace:*",
+    "@supabase/supabase-js": "2.117.2",
     "pg": "8.23.0",
     "zod": "4.6.5"
   },

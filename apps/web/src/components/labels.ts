@@ -1,8 +1,11 @@
 import type {
   ClassificationType,
   ContactVisibility,
+  DocumentCategory,
+  OfflinePolicy,
   RecordStatus,
   Role,
+  ScanStatus,
   Sensitivity,
   SiteStatus,
   SiteType,
@@ -59,4 +62,33 @@ export const CONTACT_VISIBILITY_LABELS: Readonly<Record<ContactVisibility, strin
 export const RECORD_STATUS_LABELS: Readonly<Record<RecordStatus, string>> = {
   active: 'Actif',
   archived: 'Archivé',
+};
+
+export const DOCUMENT_CATEGORY_LABELS: Readonly<Record<DocumentCategory, string>> = {
+  fds: 'Fiche de données de sécurité',
+  notice: 'Notice',
+  instruction: 'Consigne',
+  plan: 'Plan',
+  photo: 'Photo',
+  other: 'Autre',
+};
+
+export const OFFLINE_POLICY_LABELS: Readonly<Record<OfflinePolicy, string>> = {
+  never: 'Pas de consultation hors ligne',
+  on_demand: 'Hors ligne à la demande',
+  always: 'Toujours embarqué hors ligne',
+};
+
+export const SCAN_STATUS_LABELS: Readonly<Record<ScanStatus, string>> = {
+  pending: 'Contrôle en cours',
+  clean: 'Contrôlé',
+  rejected: 'Refusé',
+};
+
+/** Reasons given by the worker when it refuses a file. */
+export const REJECTION_REASON_LABELS: Readonly<Record<string, string>> = {
+  SIZE_MISMATCH: 'la taille reçue ne correspond pas à celle annoncée',
+  SHA256_MISMATCH: 'le contenu reçu diffère du fichier choisi (envoi altéré)',
+  TYPE_MISMATCH: 'le contenu réel ne correspond pas au type annoncé',
+  MALWARE: 'un contenu malveillant a été détecté',
 };

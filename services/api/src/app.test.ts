@@ -82,6 +82,7 @@ function makeApp(roles: Role[] = ['PREVISION_EDITOR']) {
     sessions: fake,
     tokens,
     health: { database: async () => 'ok' },
+    storage: null,
     logger: createLogger({}, { write: () => undefined }),
     version: 'test',
     openApiDocument: () => ({ openapi: '3.1.0' }),

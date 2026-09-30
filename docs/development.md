@@ -49,9 +49,13 @@ pnpm check              # tout ce que la CI vérifie côté TypeScript
 pnpm test:db            # tests pgTAP (supabase/tests/database)
 pnpm test:integration   # nécessite db:start + setup:local
 pnpm db:reset           # rejoue migrations + seed (données locales perdues)
-pnpm dev:worker         # worker (lit .env.local)
+pnpm dev:worker         # worker (lit .env.local) : nécessaire pour que les fichiers déposés soient contrôlés
 pnpm --filter @etare/api start   # API seule sur :3001 (démonstration d’extraction)
 ```
+
+En développement, l’API est instanciée une seule fois par processus Next (pool de connexions partagé
+entre rechargements) : après une modification de `services/api` ou des adaptateurs, redémarrer
+`pnpm dev`. Sans le worker, un document déposé reste « Contrôle en cours ».
 
 ## Base de données
 

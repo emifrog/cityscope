@@ -2,7 +2,8 @@ import { PreconditionFailed } from '@etare/domain';
 import type { PoolClient } from './pool';
 
 /** Tables whose rows carry a row_version (optimistic concurrency). Never built from user input. */
-export type VersionedTable = 'app.site' | 'app.building' | 'app.level' | 'app.site_classification' | 'app.contact';
+export type VersionedTable =
+  'app.site' | 'app.building' | 'app.level' | 'app.site_classification' | 'app.contact' | 'app.document';
 
 /**
  * Locks the row (SELECT … FOR UPDATE, under RLS) and checks the version the

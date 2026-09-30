@@ -1,12 +1,13 @@
 'use client';
 
-import type { SiteListQuery } from '@etare/contracts';
+import type { Document, DocumentUploadResponse, FileDeclaration, SiteListQuery } from '@etare/contracts';
 import { permissionsForRoles, type Permission } from '@etare/domain';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useSession } from '@/providers/session-provider';
 import { useTenant } from '@/providers/tenant-provider';
 import { api, type ApiCallOptions } from './api-client';
+import { uploadDocumentFile, type UploadStep } from './file-upload';
 
 /** Tenant-scoped query keys always start with ['tenant', tenantId] (cache isolation between SIS). */
 export const queryKeys = {
@@ -73,6 +74,54 @@ export const useBuildings = (siteId: string) => useSiteList(siteId, 'buildings',
 export const useClassifications = (siteId: string) => useSiteList(siteId, 'classifications', api.listClassifications);
 export const useContacts = (siteId: string) => useSiteList(siteId, 'contacts', api.listContacts);
 export const useExternalIds = (siteId: string) => useSiteList(siteId, 'external-ids', api.listExternalIds);
+
+const VERDICT_POLL_MS = 3000;
+/** Past this delay a pending file is considered abandoned (upload never finished): polling stops. */
+const VERDICT_WAIT_MS = 10 * 60 * 1000;
+
+function awaitsVerdict(documents: readonly Document[] | undefined, now = Date.now()): boolean {
+  return (documents ?? []).some((document) =>
+    document.versions.some(
+      (version) =>
+        version.asset.scan_status === 'pending' && now - Date.parse(version.asset.created_at) < VERDICT_WAIT_MS,
+    ),
+  );
+}
+
+/** Documents of a site; refreshed while a file waits for the verdict of the worker. */
+export function useDocuments(siteId: string) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.siteRecords(tenantId ?? 'none', siteId, 'documents'),
+    enabled,
+    queryFn: ({ signal }) => api.listDocuments({ ...options, signal }, siteId),
+    refetchInterval: (query) => (awaitsVerdict(query.state.data) ? VERDICT_POLL_MS : false),
+  });
+}
+
+export interface DocumentUploadVariables {
+  readonly file: File;
+  readonly declare: (options: ApiCallOptions, file: FileDeclaration) => Promise<DocumentUploadResponse>;
+}
+
+/**
+ * Uploads a document file (new document or new version) and exposes the
+ * current step. The list is refreshed even on failure: the declaration may
+ * already exist when the transfer itself fails.
+ */
+export function useDocumentUpload(siteId: string) {
+  const { tenantId, options } = useApiContext();
+  const queryClient = useQueryClient();
+  const [step, setStep] = useState<UploadStep | null>(null);
+  const mutation = useMutation({
+    mutationFn: ({ file, declare }: DocumentUploadVariables) => uploadDocumentFile(options, file, declare, setStep),
+    onSettled: async () => {
+      setStep(null);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.siteRecords(tenantId ?? 'none', siteId, 'documents') });
+    },
+  });
+  return { ...mutation, step };
+}
 
 /**
  * A write through the API. On success, the given keys (relative to the

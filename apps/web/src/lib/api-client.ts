@@ -13,6 +13,12 @@ import {
   type Contact,
   type ContactCreateInput,
   type ContactUpdate,
+  type AssetDownload,
+  type Document,
+  type DocumentCreateInput,
+  type DocumentUpdate,
+  type DocumentUploadResponse,
+  type DocumentVersionCreate,
   type ExternalId,
   type ExternalIdCreate,
   type Level,
@@ -24,6 +30,7 @@ import {
   type SiteListQuery,
   type SiteListResponse,
   type SiteUpdate,
+  type UploadConfirmation,
 } from '@etare/contracts';
 import type { z } from 'zod';
 
@@ -217,4 +224,48 @@ export const api = {
       method: 'POST',
       body: input,
     }),
+
+  // ---------------------------------------------------------------- documents and files
+  listDocuments: (options: ApiCallOptions, siteId: string): Promise<Document[]> =>
+    itemsOf(call(endpoints.listDocuments.response, pathOf(endpoints.listDocuments.path, { id: siteId }), options)),
+
+  /** Declares the document and its first file; the answer carries the signed upload URL. */
+  createDocument: (
+    options: ApiCallOptions,
+    siteId: string,
+    input: DocumentCreateInput,
+  ): Promise<DocumentUploadResponse> =>
+    call(endpoints.createDocument.response, pathOf(endpoints.createDocument.path, { id: siteId }), options, {
+      method: 'POST',
+      body: input,
+    }),
+
+  createDocumentVersion: (
+    options: ApiCallOptions,
+    documentId: string,
+    input: DocumentVersionCreate,
+  ): Promise<DocumentUploadResponse> =>
+    call(
+      endpoints.createDocumentVersion.response,
+      pathOf(endpoints.createDocumentVersion.path, { id: documentId }),
+      options,
+      { method: 'POST', body: input },
+    ),
+
+  updateDocument: (options: ApiCallOptions, id: string, version: number, patch: DocumentUpdate): Promise<Document> =>
+    call(endpoints.updateDocument.response, pathOf(endpoints.updateDocument.path, { id }), options, {
+      method: 'PATCH',
+      body: patch,
+      ifMatch: version,
+    }),
+
+  /** The file has been sent to quarantine: asks the worker to verify it. */
+  confirmUpload: (options: ApiCallOptions, assetId: string): Promise<UploadConfirmation> =>
+    call(endpoints.confirmUpload.response, pathOf(endpoints.confirmUpload.path, { id: assetId }), options, {
+      method: 'POST',
+    }),
+
+  /** Short-lived URL of a verified file (the download is audited server-side). */
+  getAssetDownload: (options: ApiCallOptions, assetId: string): Promise<AssetDownload> =>
+    call(endpoints.getAssetDownload.response, pathOf(endpoints.getAssetDownload.path, { id: assetId }), options),
 };

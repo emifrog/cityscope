@@ -50,5 +50,15 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       create: unstubbed('externalIds.create'),
       ...overrides.externalIds,
     },
+    documents: {
+      listBySite: unstubbed('documents.listBySite'),
+      create: unstubbed('documents.create'),
+      addVersion: unstubbed('documents.addVersion'),
+      update: unstubbed('documents.update'),
+      ...overrides.documents,
+    },
+    assets: { get: unstubbed('assets.get'), ...overrides.assets },
+    jobs: { enqueue: unstubbed('jobs.enqueue'), ...overrides.jobs },
+    audit: { record: unstubbed('audit.record'), ...overrides.audit },
   };
 }

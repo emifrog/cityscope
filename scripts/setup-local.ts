@@ -35,8 +35,9 @@ const status = supabaseStatus();
 const apiUrl = status['API_URL'];
 const publishableKey = status['PUBLISHABLE_KEY'];
 const dbUrl = status['DB_URL'];
-if (!apiUrl || !publishableKey || !dbUrl) {
-  console.error('Unexpected `supabase status` output (API_URL, PUBLISHABLE_KEY or DB_URL missing).');
+const secretKey = status['SECRET_KEY'];
+if (!apiUrl || !publishableKey || !dbUrl || !secretKey) {
+  console.error('Unexpected `supabase status` output (API_URL, PUBLISHABLE_KEY, SECRET_KEY or DB_URL missing).');
   process.exit(1);
 }
 
@@ -50,6 +51,8 @@ APP_ENV=development
 NEXT_PUBLIC_SUPABASE_URL=${apiUrl}
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${publishableKey}
 SUPABASE_URL=${apiUrl}
+# Server-side only (storage gateway and file verification): never in a NEXT_PUBLIC_ variable.
+SUPABASE_SECRET_KEY=${secretKey}
 DATABASE_URL=${roleUrl('etare_api', 'etare_api_local_only')}
 WORKER_DATABASE_URL=${roleUrl('etare_worker', 'etare_worker_local_only')}
 LOCAL_DATABASE_ADMIN_URL=${dbUrl}

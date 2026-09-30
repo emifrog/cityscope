@@ -1,5 +1,9 @@
 import type {
   Building,
+  Document,
+  DocumentCreate,
+  DocumentUpdate,
+  DocumentVersionCreate,
   BuildingCreate,
   BuildingUpdate,
   Classification,
@@ -20,7 +24,7 @@ import type {
   SiteListResponse,
   SiteUpdate,
 } from '@etare/contracts';
-import type { RequestContext, ResolvedAccess } from '@etare/domain';
+import type { RequestContext, ResolvedAccess, ScanStatus } from '@etare/domain';
 
 /**
  * A request session: one database transaction carrying the verified request
@@ -35,6 +39,10 @@ export interface RequestSession {
   readonly classifications: ClassificationRepository;
   readonly contacts: ContactRepository;
   readonly externalIds: ExternalIdRepository;
+  readonly documents: DocumentRepository;
+  readonly assets: AssetRepository;
+  readonly jobs: JobScheduler;
+  readonly audit: AuditRecorder;
 }
 
 export interface SessionFactory {
@@ -91,10 +99,85 @@ export interface HealthProbe {
   database(): Promise<'ok' | 'unavailable'>;
 }
 
-/** Object storage (Supabase Storage at MVP, S3-compatible later). */
+/** A file waiting for its upload, created with the document (version). */
+export interface PendingUpload {
+  readonly assetId: string;
+  readonly quarantineKey: string;
+  readonly mimeType: string;
+}
+
+export interface DocumentRepository {
+  listBySite(siteId: string): Promise<Document[]>;
+  /** Creates the document, its version 1 and the pending asset. Null when the site is not visible. */
+  create(siteId: string, input: DocumentCreate): Promise<{ document: Document; upload: PendingUpload } | null>;
+  /** Adds a version (previous ones are kept). Null when the document is not visible. */
+  addVersion(
+    documentId: string,
+    input: DocumentVersionCreate,
+  ): Promise<{ document: Document; upload: PendingUpload } | null>;
+  update(id: string, expectedVersion: number, patch: DocumentUpdate): Promise<Document | null>;
+}
+
+export interface StoredAsset {
+  readonly id: string;
+  readonly storageKey: string;
+  readonly filename: string;
+  readonly mimeType: string;
+  readonly scanStatus: ScanStatus;
+}
+
+export interface AssetRepository {
+  /** Null when the asset is not visible (unknown, other SIS or not authorized). */
+  get(id: string): Promise<StoredAsset | null>;
+}
+
+/** Enqueues a job in the same transaction as the business change (transactional outbox). */
+export interface JobScheduler {
+  enqueue(type: string, payload: Record<string, unknown>, idempotencyKey: string): Promise<string>;
+}
+
+/** Business events (download, export...) stamped with the verified request context. */
+export interface AuditRecorder {
+  record(action: string, entityType: string, entityId: string, metadata?: Record<string, unknown>): Promise<void>;
+}
+
+/** Object storage for the API (Supabase Storage at MVP, S3-compatible later). */
 export interface ObjectStorage {
   /** Short-lived URL for an object the caller has ALREADY been authorized to read. */
-  createDownloadUrl(key: string, expiresInSeconds: number): Promise<string>;
-  /** Short-lived URL to upload into the quarantine area. */
-  createUploadUrl(key: string): Promise<{ url: string; token: string }>;
+  createDownloadUrl(key: string, expiresInSeconds: number): Promise<{ url: string; expiresAt: Date }>;
+  /** URL to upload one object into the quarantine area. */
+  createUploadUrl(
+    key: string,
+    contentType: string,
+  ): Promise<{ url: string; headers: Record<string, string>; expiresAt: Date }>;
+}
+
+/** Object storage for the worker, which verifies and promotes quarantined files. */
+export interface ObjectStoreAdmin {
+  download(key: string): Promise<Uint8Array | null>;
+  copy(from: string, to: string): Promise<void>;
+  remove(key: string): Promise<void>;
+}
+
+export interface AssetForVerification {
+  readonly tenantId: string;
+  readonly storageKey: string;
+  readonly quarantineKey: string | null;
+  readonly mimeType: string;
+  readonly sizeBytes: number;
+  readonly sha256: string;
+  readonly scanStatus: ScanStatus;
+}
+
+/** Worker-side access to the verification state (dedicated database functions). */
+export interface AssetVerificationStore {
+  get(assetId: string): Promise<AssetForVerification | null>;
+  complete(assetId: string, verdict: 'clean' | 'rejected', detail: Record<string, unknown>): Promise<boolean>;
+}
+
+/** Antivirus engine (ClamAV or a provider later). */
+export interface MalwareScanner {
+  scan(
+    content: Uint8Array,
+  ): Promise<{ verdict: 'clean' | 'infected' | 'not_scanned'; engine: string; signature?: string }>;
 }

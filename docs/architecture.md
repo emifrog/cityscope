@@ -68,8 +68,11 @@ Endpoints : `GET /health`, `GET /me` ; sites (`GET/POST /sites` avec recherche `
 `status`, `city` et pagination par curseur opaque ; `GET/PATCH /sites/{id}`) ; bâtiments et niveaux
 (`GET/POST /sites/{id}/buildings`, `PATCH /buildings/{id}`, `POST /buildings/{id}/levels`,
 `PATCH /levels/{id}`) ; classifications, contacts et identifiants externes (`/sites/{id}/…`,
-`PATCH /classifications/{id}`, `PATCH /contacts/{id}`). Les `PATCH` exigent `If-Match` (412 si la
-version est périmée), les corps JSON sont limités à 64 Kio.
+`PATCH /classifications/{id}`, `PATCH /contacts/{id}`) ; documents et fichiers
+(`GET/POST /sites/{id}/documents`, `PATCH /documents/{id}`, `POST /documents/{id}/versions`,
+`POST /assets/{id}/uploaded`, `GET /assets/{id}/download`, voir ADR-009). Les `PATCH` exigent
+`If-Match` (412 si la version est périmée), les corps JSON sont limités à 64 Kio : les fichiers ne
+passent jamais par l’API mais par des URL signées.
 
 ## Web (apps/web)
 
@@ -89,8 +92,9 @@ Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4, composants de sty
 Boucle de réservation (`app.claim_jobs`, `FOR UPDATE SKIP LOCKED`), bail avec heartbeat, reprise
 exponentielle avec aléa, erreurs permanentes → état `dead`, arrêt propre sur SIGTERM. Les handlers
 valident leur payload avant tout effet et doivent être idempotents (livraison « au moins une fois »).
-Seul `system.noop` existe ; PDF, paquets hors ligne, miniatures, imports, antivirus, notifications et
-empreintes s’ajouteront comme handlers. Voir ADR-007.
+Handlers : `system.noop` et `asset.verify` (contrôle des fichiers déposés, ADR-009), enregistré dès que
+`SUPABASE_URL` et `SUPABASE_SECRET_KEY` sont fournis. PDF, paquets hors ligne, miniatures, imports,
+notifications et empreintes s’ajouteront comme handlers. Voir ADR-007.
 
 ## Mobile (apps/mobile)
 

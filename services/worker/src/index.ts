@@ -1,6 +1,7 @@
 export { retryDelaySeconds } from './backoff';
 export {
   HandlerRegistry,
+  assetVerificationHandler,
   defineHandler,
   noopHandler,
   type HandlerDefinition,

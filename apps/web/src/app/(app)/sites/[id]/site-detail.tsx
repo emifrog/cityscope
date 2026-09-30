@@ -10,6 +10,7 @@ import { useSite } from '@/lib/queries';
 import { BuildingsPanel } from './buildings-panel';
 import { ClassificationsPanel } from './classifications-panel';
 import { ContactsPanel } from './contacts-panel';
+import { DocumentsPanel } from './documents-panel';
 import { SummaryPanel } from './summary-panel';
 
 const TABS = [
@@ -17,6 +18,7 @@ const TABS = [
   { key: 'batiments', label: 'Bâtiments & niveaux' },
   { key: 'classifications', label: 'Classifications' },
   { key: 'contacts', label: 'Contacts' },
+  { key: 'documents', label: 'Documents' },
 ] as const;
 type TabKey = (typeof TABS)[number]['key'];
 
@@ -58,6 +60,7 @@ export function SiteDetailView({ id }: { id: string }) {
       {tab === 'batiments' ? <BuildingsPanel siteId={id} /> : null}
       {tab === 'classifications' ? <ClassificationsPanel siteId={id} /> : null}
       {tab === 'contacts' ? <ContactsPanel siteId={id} /> : null}
+      {tab === 'documents' ? <DocumentsPanel siteId={id} /> : null}
     </>
   );
 }

@@ -1,4 +1,10 @@
-import { PermanentJobError, type Job } from '@etare/application';
+import {
+  ASSET_VERIFICATION_JOB,
+  PermanentJobError,
+  verifyAsset,
+  type Job,
+  type VerificationDependencies,
+} from '@etare/application';
 import type { Logger } from '@etare/adapters/logging';
 import { z } from 'zod';
 
@@ -76,4 +82,25 @@ export class HandlerRegistry {
   types(): string[] {
     return [...this.handlers.keys()];
   }
+}
+
+/**
+ * Verifies an uploaded file (size, SHA-256, real type, antivirus) and promotes
+ * it out of quarantine. A missing upload is retried with backoff; the verdict
+ * itself is final and written through a dedicated database function.
+ */
+export function assetVerificationHandler(deps: VerificationDependencies): JobHandler {
+  return defineHandler({
+    type: ASSET_VERIFICATION_JOB,
+    payloadVersion: 1,
+    payload: z.object({ asset_id: z.uuid() }),
+    async handle(payload, { job, logger }) {
+      const outcome = await verifyAsset(deps, payload.asset_id, job.tenantId);
+      logger.info('asset verification', {
+        asset_id: payload.asset_id,
+        outcome: outcome.status,
+        ...('reason' in outcome ? { reason: outcome.reason } : {}),
+      });
+    },
+  });
 }

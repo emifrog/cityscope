@@ -11,8 +11,10 @@ import {
 } from '@etare/domain';
 import { z } from 'zod';
 import { PostgresBuildingRepository } from './building-repository';
+import { PostgresAssetRepository, PostgresDocumentRepository } from './document-repository';
 import { PostgresIdentityReader } from './identity-reader';
 import { sqlState, type Pool, type PoolClient } from './pool';
+import { PostgresAuditRecorder, PostgresJobScheduler } from './request-services';
 import {
   PostgresClassificationRepository,
   PostgresContactRepository,
@@ -49,6 +51,10 @@ export class PostgresSessionFactory implements SessionFactory {
         classifications: new PostgresClassificationRepository(client),
         contacts: new PostgresContactRepository(client),
         externalIds: new PostgresExternalIdRepository(client),
+        documents: new PostgresDocumentRepository(client),
+        assets: new PostgresAssetRepository(client),
+        jobs: new PostgresJobScheduler(client),
+        audit: new PostgresAuditRecorder(client),
       });
       await client.query('commit');
       return result;

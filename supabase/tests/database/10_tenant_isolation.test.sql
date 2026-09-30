@@ -12,7 +12,7 @@ begin
   return v_count;
 end $$;
 
-select plan(21);
+select plan(23);
 
 -- ---------------------------------------------------------------- editor of 06
 set local role etare_api;
@@ -21,10 +21,16 @@ select lives_ok(
   'redacteur06 opens a request in SDIS DEMO 06'
 );
 
+-- Integration tests add sites to the local database: assert the isolation, not an exact list.
 select set_eq(
+  $$ select distinct tenant_id from app.site $$,
+  array['06000000-0000-4000-8000-000000000000']::uuid[],
+  'redacteur06 only sees sites of SDIS DEMO 06'
+);
+select set_has(
   $$ select name from app.site $$,
-  array['EHPAD Les Oliviers', 'Entrepôt logistique Démo Antibes'],
-  'redacteur06 sees exactly the sites of SDIS DEMO 06'
+  $$ values ('EHPAD Les Oliviers'), ('Entrepôt logistique Démo Antibes') $$,
+  'redacteur06 sees the seeded sites of SDIS DEMO 06'
 );
 
 select is(
@@ -86,9 +92,14 @@ select lives_ok(
   'the multi-SIS agent opens a request in SDIS DEMO 83'
 );
 select set_eq(
-  $$ select name from app.site $$,
-  array['Résidence Les Pins (démo 83)', 'Plateforme industrielle Démo Var'],
+  $$ select distinct tenant_id from app.site $$,
+  array['83000000-0000-4000-8000-000000000000']::uuid[],
   'in SDIS DEMO 83 context, only 83 sites are visible'
+);
+select set_has(
+  $$ select name from app.site $$,
+  $$ values ('Résidence Les Pins (démo 83)'), ('Plateforme industrielle Démo Var') $$,
+  'in SDIS DEMO 83 context, the seeded 83 sites are visible'
 );
 select lives_ok(
   $$ select app.begin_request('supabase', '00000000-0000-4000-a000-000000000008', '06000000-0000-4000-8000-000000000000', 'aal1', null, 'web') $$,

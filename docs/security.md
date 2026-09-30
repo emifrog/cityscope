@@ -59,19 +59,25 @@ Git. Les tests automatisés et `pnpm setup:local` refusent de viser ce projet.
 
 ## Clés Supabase
 
-| Clé                   | Où                              | Justification                                                  |
-| --------------------- | ------------------------------- | -------------------------------------------------------------- |
-| publishable           | navigateur, mobile              | publique par conception ; ne donne accès à aucune table métier |
-| secret / service_role | **jamais utilisée au Sprint 0** | prévue uniquement pour la passerelle de stockage côté serveur  |
-| clé de signature JWT  | `supabase/signing_keys.json`    | locale, générée, ignorée par Git                               |
+| Clé                   | Où                           | Justification                                                                |
+| --------------------- | ---------------------------- | ---------------------------------------------------------------------------- |
+| publishable           | navigateur, mobile           | publique par conception ; ne donne accès à aucune table métier               |
+| secret / service_role | API et worker, côté serveur  | signature des URL de stockage, contrôle des fichiers ; jamais `NEXT_PUBLIC_` |
+| clé de signature JWT  | `supabase/signing_keys.json` | locale, générée, ignorée par Git                                             |
 
 ## Stockage
 
 Bucket `etare-assets` privé, **sans policy** pour `anon`/`authenticated` : aucun client n’accède
 directement aux objets. L’API autorise l’objet exact en base (RLS sur `asset`) puis émet une URL signée de
-≤ 300 s (`SupabaseObjectStorage`). Clés d’objets `tenants/{tenant}/assets/{asset}/{version}` ; dépôts en
-`quarantine/` d’abord ; contenu d’un asset immuable (empreinte SHA-256, taille, type). Antivirus et
-contrôle du type réel : worker, Sprint 1+.
+≤ 300 s (`SupabaseObjectStorage`). Clés d’objets `tenants/{tenant}/assets/{asset}/{version}` ; contenu
+d’un asset immuable (empreinte SHA-256, taille, type).
+
+Dépôts (ADR-009) : le fichier est envoyé par URL signée en `quarantine/`, sans écrasement possible, puis
+vérifié par le worker (taille, SHA-256, type réel lu dans le contenu, antivirus) avant d’être copié vers
+sa clé définitive. Le verdict n’est modifiable que par le worker et il est définitif. Un fichier non
+vérifié ou refusé n’est jamais servi (409) ; chaque téléchargement est tracé (`asset.download`) et passe
+par une URL de 60 s. Le web refuse dès le navigateur un contenu dont le type réel n’est pas admis. Les
+journaux ne contiennent ni nom de fichier ni URL signée, seulement des identifiants.
 
 ## API et web
 
@@ -100,7 +106,9 @@ vers l’émulateur. Voir `apps/mobile/README.md`.
 
 ## Limites connues (à traiter avant le pilote)
 
-- Pas encore de CSP stricte (nonces Next.js), de limitation de débit (reverse proxy), ni d’antivirus.
+- Pas encore de CSP stricte (nonces Next.js) ni de limitation de débit (reverse proxy).
+- Antivirus non branché : le port `MalwareScanner` existe, le verdict indique `antivirus: not_scanned`.
+- Purge des dépôts abandonnés (`pending` jamais envoyés) et des objets orphelins de quarantaine à écrire.
 - Accès aux journaux d’audit refusés (403) non encore tracés dans `audit_event`.
 - Enrôlement TOTP, révocation de sessions, SSO OIDC/SAML : non développés.
 - Autorisation hors ligne signée, révocation de terminaux, chiffrement des fichiers mobiles : Sprint 3+.

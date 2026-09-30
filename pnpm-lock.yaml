@@ -286,6 +286,9 @@ importers:
       '@etare/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@supabase/supabase-js':
+        specifier: 2.117.2
+        version: 2.117.2
       pg:
         specifier: 8.23.0
         version: 8.23.0
