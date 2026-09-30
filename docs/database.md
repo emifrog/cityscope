@@ -24,6 +24,7 @@ pas exposé par la Data API Supabase (`supabase/config.toml` → `api.schemas`),
 | `20261001000300_member_administration.sql`        | Sprint 1 : `admin_add_member`, `admin_update_member` (anti-escalade, dernier administrateur), `holds_with_second_factor`, unicité des seules liaisons de rôle actives              |
 | `20261002000100_operational_object_geometry.sql`  | Sprint 2 : objet toujours placé (carte ou plan), géométrie conforme au type (point, ligne, surface), propriétés typées des types clés (PEI, réserve, portail, voie engins…)        |
 | `20261003000100_plan_placement_and_risks.sql`     | Sprint 3 : placement sur plan (fond courant, dans l’image, niveau du plan, zone déduite), portée zone ⊂ niveau ⊂ bâtiment, champs et libellé des risques, codes nationaux réservés |
+| `20261003000200_etare_workflow.sql`               | Sprint 3 : `member_name` (noms des membres du SIS pour le workflow), fabrication des publications par le worker (`worker_start/complete/fail_publication`)                         |
 
 ## Correspondance avec les documents de cadrage
 
@@ -79,6 +80,12 @@ données de travail ──submit──► etare_revision (snapshot + SHA-256 fig
       ──approval (validateur distinct, même empreinte)──► révision approuvée
       ──publication (queued → building → ready → published)──► paquet OPS (à venir)
 ```
+
+Le contenu figé est l’instantané canonique de l’ADR-013 ; son SHA-256 (JSON canonique) est calculé par l’API
+à la soumission. Le worker fabrique la publication par `worker_start_publication` (queued → building,
+filtré par SIS), `worker_complete_publication` (charge utile, manifeste et empreinte, puis activation :
+la version précédente est remplacée, un build obsolète est classé `superseded`) et
+`worker_fail_publication` (la version active reste en place). Voir le test `110_publication_build`.
 
 Garanties SQL (`tg_etare_revision_guard`, `tg_approval_guard`, `tg_publication_guard`) :
 

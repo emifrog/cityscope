@@ -20,6 +20,10 @@ import {
   type DocumentUpdate,
   type DocumentUploadResponse,
   type DocumentVersionCreate,
+  type EtareDossier,
+  type EtareOverview,
+  type EtarePreview,
+  type EtareRevision,
   type ExternalId,
   type ExternalIdCreate,
   type Level,
@@ -48,6 +52,10 @@ import {
   type PlanRevisionCreateInput,
   type PlanUpdate,
   type PlanUploadResponse,
+  type RevisionCreate,
+  type RevisionDecisionInput,
+  type RevisionDetail,
+  type RevisionSubmit,
   type Risk,
   type RiskCreateInput,
   type RiskType,
@@ -55,6 +63,7 @@ import {
   type RiskTypeUpdate,
   type RiskUpdate,
   type UploadConfirmation,
+  type ValidationQueueItem,
   type Zone,
   type ZoneCreate,
   type ZoneUpdate,
@@ -341,6 +350,51 @@ export const api = {
       method: 'PATCH',
       body: patch,
       ifMatch: version,
+    }),
+
+  // ---------------------------------------------------------------- ETARE workflow
+  listEtareDossiers: (options: ApiCallOptions): Promise<EtareDossier[]> =>
+    itemsOf(call(endpoints.listEtareDossiers.response, endpoints.listEtareDossiers.path, options)),
+
+  getSiteEtare: (options: ApiCallOptions, siteId: string): Promise<EtareOverview> =>
+    call(endpoints.getSiteEtare.response, pathOf(endpoints.getSiteEtare.path, { id: siteId }), options),
+
+  previewSiteEtare: (options: ApiCallOptions, siteId: string): Promise<EtarePreview> =>
+    call(endpoints.previewSiteEtare.response, pathOf(endpoints.previewSiteEtare.path, { id: siteId }), options),
+
+  createRevision: (options: ApiCallOptions, siteId: string, input: RevisionCreate): Promise<EtareRevision> =>
+    call(endpoints.createRevision.response, pathOf(endpoints.createRevision.path, { id: siteId }), options, {
+      method: 'POST',
+      body: input,
+    }),
+
+  submitRevision: (
+    options: ApiCallOptions,
+    id: string,
+    version: number,
+    input: RevisionSubmit,
+  ): Promise<EtareRevision> =>
+    call(endpoints.submitRevision.response, pathOf(endpoints.submitRevision.path, { id }), options, {
+      method: 'POST',
+      body: input,
+      ifMatch: version,
+    }),
+
+  listValidations: (options: ApiCallOptions): Promise<ValidationQueueItem[]> =>
+    itemsOf(call(endpoints.listValidations.response, endpoints.listValidations.path, options)),
+
+  getRevision: (options: ApiCallOptions, id: string): Promise<RevisionDetail> =>
+    call(endpoints.getRevision.response, pathOf(endpoints.getRevision.path, { id }), options),
+
+  decideRevision: (options: ApiCallOptions, id: string, input: RevisionDecisionInput): Promise<EtareRevision> =>
+    call(endpoints.decideRevision.response, pathOf(endpoints.decideRevision.path, { id }), options, {
+      method: 'POST',
+      body: input,
+    }),
+
+  publishRevision: (options: ApiCallOptions, id: string): Promise<EtareRevision> =>
+    call(endpoints.publishRevision.response, pathOf(endpoints.publishRevision.path, { id }), options, {
+      method: 'POST',
     }),
 
   // ---------------------------------------------------------------- risks

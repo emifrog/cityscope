@@ -1,4 +1,5 @@
 export * from './authorization';
+export * from './canonical';
 export * from './catalog';
 export * from './context';
 export * from './errors';

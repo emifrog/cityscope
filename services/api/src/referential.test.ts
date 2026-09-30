@@ -62,6 +62,7 @@ function makeApp(overrides: SessionOverrides, roles: Role[] = ['PREVISION_EDITOR
     identities: null,
     cartography: new IgnCartographyCatalog(),
     geocoder: new IgnGeocoder(async () => new Response('{"features":[]}')),
+    sha256: async () => '0'.repeat(64),
     logger: createLogger({}, { write: () => undefined }),
     version: 'test',
     openApiDocument: () => ({}),

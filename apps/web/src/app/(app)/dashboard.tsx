@@ -6,18 +6,35 @@ import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { ROLE_LABELS } from '@/components/labels';
 import { PageHeader } from '@/components/page-header';
 import { SitesTable } from '@/components/sites-table';
-import { useSites } from '@/lib/queries';
+import { useEtareDossiers, usePermissions, useSites, useValidations } from '@/lib/queries';
 import { useTenant } from '@/providers/tenant-provider';
 
-const PLANNED_INDICATORS = [
-  { label: 'ETARE publiés', sprint: 'Sprint 3' },
-  { label: 'À valider', sprint: 'Sprint 3' },
-  { label: 'Signalements terrain', sprint: 'Sprint 5' },
-];
+const PLANNED_INDICATORS = [{ label: 'Signalements terrain', sprint: 'Sprint 5' }];
+
+function Indicator({ label, value, note, href }: { label: string; value: string; note: string; href?: string }) {
+  return (
+    <Card>
+      <CardContent>
+        <p className="text-sm text-muted">{label}</p>
+        <p className="mt-1 text-3xl font-bold">{value}</p>
+        {href ? (
+          <Link href={href} className="mt-2 inline-block text-xs text-info hover:underline">
+            {note}
+          </Link>
+        ) : (
+          <p className="mt-2 text-xs text-muted">{note}</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export function Dashboard() {
   const { me, activeTenant, loading, error } = useTenant();
   const sites = useSites({}, 10);
+  const readsEtare = usePermissions().has('etare:read');
+  const dossiers = useEtareDossiers(readsEtare);
+  const queue = useValidations(readsEtare);
 
   if (loading) return <LoadingCard lines={4} />;
   if (error) return <ApiErrorAlert error={error} />;
@@ -55,6 +72,22 @@ export function Dashboard() {
             </Badge>
           </CardContent>
         </Card>
+        <Indicator
+          label="ETARE publiés"
+          value={
+            readsEtare && dossiers.data
+              ? String(dossiers.data.filter((dossier) => dossier.active_publication).length)
+              : '—'
+          }
+          note={readsEtare && dossiers.data ? `sur ${dossiers.data.length} site(s)` : 'Dossiers ETARE'}
+          href="/etare"
+        />
+        <Indicator
+          label="À valider"
+          value={readsEtare && queue.data ? String(queue.data.length) : '—'}
+          note="File des validations"
+          href="/validations"
+        />
         {PLANNED_INDICATORS.map((indicator) => (
           <Card key={indicator.label}>
             <CardContent>

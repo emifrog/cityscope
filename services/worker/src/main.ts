@@ -2,10 +2,15 @@ import { createHash } from 'node:crypto';
 import { hostname } from 'node:os';
 import { antivirusNotConfigured } from '@etare/application';
 import { createLogger } from '@etare/adapters/logging';
-import { PostgresAssetVerificationStore, PostgresJobQueue, createPool } from '@etare/adapters/postgres';
+import {
+  PostgresAssetVerificationStore,
+  PostgresJobQueue,
+  PostgresPublicationBuildStore,
+  createPool,
+} from '@etare/adapters/postgres';
 import { SupabaseObjectStorage } from '@etare/adapters/storage';
 import { readWorkerEnv } from '@etare/config';
-import { HandlerRegistry, assetVerificationHandler, noopHandler } from './handlers';
+import { HandlerRegistry, assetVerificationHandler, noopHandler, publicationBuildHandler } from './handlers';
 import { createWorker } from './runner';
 
 const env = readWorkerEnv(process.env);
@@ -17,14 +22,21 @@ const pool = createPool({
   max: env.concurrency + 2,
 });
 
-const registry = new HandlerRegistry([noopHandler]);
+const sha256 = async (content: Uint8Array | string) => createHash('sha256').update(content).digest('hex');
+const registry = new HandlerRegistry([
+  noopHandler,
+  publicationBuildHandler({
+    store: new PostgresPublicationBuildStore(pool),
+    tools: { sha256, byteLength: (text) => Buffer.byteLength(text, 'utf8'), now: () => new Date() },
+  }),
+]);
 if (env.storage) {
   registry.register(
     assetVerificationHandler({
       store: new PostgresAssetVerificationStore(pool),
       objects: SupabaseObjectStorage.fromSecretKey(env.storage.url, env.storage.secretKey),
       scanner: antivirusNotConfigured,
-      sha256: async (content) => createHash('sha256').update(content).digest('hex'),
+      sha256,
     }),
   );
   logger.warn('antivirus engine not configured: files are checked for size, SHA-256 and real type only');

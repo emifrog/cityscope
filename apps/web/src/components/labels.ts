@@ -1,5 +1,7 @@
 import type {
   ClassificationType,
+  PublicationStatus,
+  RevisionStatus,
   FieldKind,
   RiskIconKey,
   ZoneType,
@@ -204,4 +206,40 @@ export const FIELD_KIND_LABELS: Readonly<Record<FieldKind, string>> = {
   boolean: 'Oui / non',
   date: 'Date',
   choice: 'Liste de choix',
+};
+
+export const REVISION_STATUS_LABELS: Readonly<Record<RevisionStatus, string>> = {
+  draft: 'Brouillon',
+  submitted: 'En attente de validation',
+  approved: 'Validée',
+  changes_requested: 'Corrections demandées',
+  superseded: 'Remplacée',
+};
+
+export const PUBLICATION_STATUS_LABELS: Readonly<Record<PublicationStatus, string>> = {
+  queued: 'Publication demandée',
+  building: 'Fabrication en cours',
+  ready: 'Prête',
+  published: 'Publiée',
+  superseded: 'Remplacée',
+  withdrawn: 'Retirée',
+  failed: 'Échec de fabrication',
+};
+
+export const ETARE_SECTION_LABELS: Readonly<Record<string, string>> = {
+  site: 'Site',
+  classifications: 'Classements',
+  buildings: 'Bâtiments',
+  contacts: 'Contacts',
+  plans: 'Plans',
+  zones: 'Zones',
+  objects: 'Points opérationnels',
+  risks: 'Risques',
+  documents: 'Documents',
+};
+
+export const CHANGE_LABELS: Readonly<Record<'added' | 'removed' | 'modified', string>> = {
+  added: 'Ajout',
+  removed: 'Suppression',
+  modified: 'Modification',
 };

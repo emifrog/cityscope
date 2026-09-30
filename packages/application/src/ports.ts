@@ -5,6 +5,10 @@ import type {
   DocumentCreate,
   DocumentUpdate,
   DocumentVersionCreate,
+  EtareDossier,
+  EtareOverview,
+  EtareRevision,
+  EtareSnapshot,
   BuildingCreate,
   BuildingUpdate,
   Classification,
@@ -48,6 +52,7 @@ import type {
   SiteListQuery,
   SiteListResponse,
   SiteUpdate,
+  ValidationQueueItem,
 } from '@etare/contracts';
 import type { Permission, RequestContext, ResolvedAccess, ScanStatus } from '@etare/domain';
 
@@ -71,6 +76,7 @@ export interface RequestSession {
   readonly plans: PlanRepository;
   readonly zones: ZoneRepository;
   readonly risks: RiskRepository;
+  readonly etare: EtareRepository;
   readonly jobs: JobScheduler;
   readonly audit: AuditRecorder;
 }
@@ -196,6 +202,52 @@ export interface PlanRepository {
   /** New current revision; previous ones are kept. Null when the plan is not visible. */
   addRevision(planId: string, input: PlanRevisionCreate): Promise<{ plan: Plan; upload: PendingUpload } | null>;
   update(id: string, expectedVersion: number, patch: PlanUpdate): Promise<Plan | null>;
+}
+
+export interface RevisionRecord {
+  readonly revision: EtareRevision;
+  readonly siteName: string;
+  /** Frozen snapshot (null while the revision is a draft). */
+  readonly snapshot: unknown;
+  /** Snapshot of the revision behind the base publication, to compare with. */
+  readonly baseSnapshot: unknown;
+  readonly contributors: readonly { readonly id: string; readonly name: string }[];
+}
+
+/**
+ * ETARE dossiers, revisions, decisions and publication requests. PostgreSQL
+ * enforces the state machines, the frozen snapshot, the separation of duties
+ * and the hash binding of decisions (ADR-005).
+ */
+export interface EtareRepository {
+  /** Sites of the SIS (not archived) with their active publication and latest revision. */
+  dossiers(): Promise<EtareDossier[]>;
+  /** Null when the site is not visible. */
+  overview(siteId: string): Promise<EtareOverview | null>;
+  /** Opens a draft revision (and the dossier on first use). Null when the site is not visible. */
+  createRevision(siteId: string, changeSummary: string | null): Promise<EtareRevision | null>;
+  revision(id: string): Promise<RevisionRecord | null>;
+  /** draft -> submitted with the frozen snapshot and its hash. */
+  submit(
+    id: string,
+    expectedVersion: number,
+    input: { readonly snapshot: EtareSnapshot; readonly contentHash: string; readonly changeSummary: string },
+  ): Promise<EtareRevision | null>;
+  /** Submitted revisions of the SIS, oldest first. */
+  queue(): Promise<ValidationQueueItem[]>;
+  /** Records the decision (append-only, bound to the hash) and moves the revision; returns the approval id. */
+  decide(
+    id: string,
+    input: {
+      readonly decision: 'approved' | 'changes_requested';
+      readonly comment: string | null;
+      readonly revisionHash: string;
+    },
+  ): Promise<string>;
+  /** Latest approval of an approved revision (to publish it again after a failed build). */
+  approvalOf(revisionId: string): Promise<string | null>;
+  /** Queues the publication of an approved revision; returns its id. */
+  requestPublication(revisionId: string, approvalId: string): Promise<string>;
 }
 
 /** Zones of the levels, drawn on level plans. */

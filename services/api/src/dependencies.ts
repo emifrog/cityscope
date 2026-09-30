@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import {
   IgnCartographyCatalog,
   IgnGeocoder,
@@ -33,6 +34,7 @@ export function createApiDependencies(env: Env): ApiDependencies {
       : null,
     cartography: new IgnCartographyCatalog(),
     geocoder: new IgnGeocoder(),
+    sha256: async (text) => createHash('sha256').update(text, 'utf8').digest('hex'),
     logger: createLogger({ component: 'api', version, env: config.appEnv }),
     version,
     openApiDocument: () => (openApi ??= buildOpenApiDocument()),

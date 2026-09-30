@@ -81,7 +81,12 @@ plus, affichés à partir du zoom 15) ; plans (`GET/POST /sites/{id}/plans`, `PA
 `POST /plans/{id}/revisions` : fond déposé comme un document, image seulement, voir ADR-011) ; zones
 (`GET/POST /sites/{id}/zones`, `PATCH /zones/{id}`) ; risques (`GET /risk-types`, `POST /risk-types`,
 `PATCH /risk-types/{id}` pour le catalogue du SIS, `GET/POST /sites/{id}/risks`, `PATCH /risks/{id}`) ;
-les objets acceptent aussi une position sur plan (`plan_position`), voir ADR-012.
+les objets acceptent aussi une position sur plan (`plan_position`), voir ADR-012 ; workflow ETARE
+(`GET /etare` : dossiers du SIS ; `GET /sites/{id}/etare`, `GET /sites/{id}/etare/preview` : contrôles
+et aperçu ; `POST /sites/{id}/etare/revisions` ; `POST /etare-revisions/{id}/submit` ;
+`GET /validations` ; `GET /etare-revisions/{id}` ; `POST /etare-revisions/{id}/decision` : validation
+ou correction motivée, second facteur ; `POST /etare-revisions/{id}/publication` : relance après échec),
+voir ADR-013.
 Les emprises du site et des bâtiments (`footprint`, Polygon ou MultiPolygon) passent par
 `PATCH /sites/{id}`, `POST /sites/{id}/buildings` et `PATCH /buildings/{id}`.
 Les `PATCH` exigent
@@ -119,6 +124,10 @@ Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4, composants de sty
   annulation de la dernière action, liste des éléments à replacer après un changement de fond et liste
   accessible au clavier des éléments du fond affiché ; pictogrammes de risques dessinés à la volée.
 - Administration : onglets selon les permissions (Membres, Catalogue des risques du SIS).
+- ETARE (ADR-013) : onglet « ETARE » de la fiche site (version publiée, révision en cours, contrôles avant
+  validation, aperçu fidèle rendu depuis l’instantané par `components/etare/etare-document.tsx`,
+  soumission, historique), page « ETARE » (dossiers du SIS), « Validations » (file et écran de contrôle :
+  modifications depuis la version publiée, contributeurs, empreinte, décision motivée).
 - Thème remplaçable : jetons dans `packages/ui/src/styles/globals.css`, nom/logo dans `src/config/brand.ts`.
 
 ## Worker (services/worker)
@@ -126,8 +135,9 @@ Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4, composants de sty
 Boucle de réservation (`app.claim_jobs`, `FOR UPDATE SKIP LOCKED`), bail avec heartbeat, reprise
 exponentielle avec aléa, erreurs permanentes → état `dead`, arrêt propre sur SIGTERM. Les handlers
 valident leur payload avant tout effet et doivent être idempotents (livraison « au moins une fois »).
-Handlers : `system.noop` et `asset.verify` (contrôle des fichiers déposés, ADR-009), enregistré dès que
-`SUPABASE_URL` et `SUPABASE_SECRET_KEY` sont fournis. PDF, paquets hors ligne, miniatures, imports,
+Handlers : `system.noop`, `publication.build` (fabrication d’une publication à partir de la révision
+figée : charge utile, manifeste, empreintes, activation — ADR-013) et `asset.verify` (contrôle des
+fichiers déposés, ADR-009), enregistré dès que `SUPABASE_URL` et `SUPABASE_SECRET_KEY` sont fournis. PDF, paquets hors ligne, miniatures, imports,
 notifications et empreintes s’ajouteront comme handlers. Voir ADR-007.
 
 ## Mobile (apps/mobile)

@@ -5,6 +5,7 @@ import {
   InvalidInput,
   NotFound,
   PreconditionFailed,
+  SelfApprovalForbidden,
   Unauthenticated,
   isPermission,
   type RequestContext,
@@ -12,6 +13,7 @@ import {
 } from '@etare/domain';
 import { z } from 'zod';
 import { PostgresBuildingRepository } from './building-repository';
+import { PostgresEtareRepository } from './etare-repository';
 import { PostgresAssetRepository, PostgresDocumentRepository } from './document-repository';
 import { PostgresIdentityReader } from './identity-reader';
 import { PostgresMemberRepository } from './member-repository';
@@ -64,6 +66,7 @@ export class PostgresSessionFactory implements SessionFactory {
         plans: new PostgresPlanRepository(client),
         zones: new PostgresZoneRepository(client),
         risks: new PostgresRiskRepository(client),
+        etare: new PostgresEtareRepository(client),
         jobs: new PostgresJobScheduler(client),
         audit: new PostgresAuditRecorder(client),
       });
@@ -113,6 +116,7 @@ const UNIQUE_MESSAGES: Readonly<Record<string, string>> = {
   user_account_auth_provider_email_key: 'Cette adresse est rattachée à une autre identité : contactez le support.',
   catalog_code_national: 'Ce code appartient au catalogue national : choisissez-en un autre.',
   risk_type_tenant_code_uq: 'Ce code est déjà utilisé dans le catalogue de votre SIS.',
+  etare_revision_open_uq: 'Une révision est déjà en cours pour ce site (brouillon ou en attente de validation).',
 };
 
 /** Messages of the placement rules (plans, scope of objects and risks). */
@@ -132,6 +136,10 @@ const CHECK_MESSAGES: Readonly<Record<string, string>> = {
   risk_occurrence_check2: 'Tracé invalide sur le plan : le contour ne doit pas se recouper.',
 };
 
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : '';
+}
+
 function constraintOf(error: unknown): string | undefined {
   if (typeof error === 'object' && error !== null && 'constraint' in error && typeof error.constraint === 'string') {
     return error.constraint;
@@ -147,6 +155,7 @@ export function translateDatabaseError(error: unknown): unknown {
     case 'ET403':
       return new AccessDenied('Vous n’êtes pas membre de ce SIS.');
     case '42501':
+      if (messageOf(error).includes('SELF_APPROVAL_FORBIDDEN')) return new SelfApprovalForbidden();
       return new AccessDenied();
     case 'ETSLF':
       return new AccessDenied('Vous ne pouvez pas modifier vos propres habilitations.');
@@ -161,6 +170,9 @@ export function translateDatabaseError(error: unknown): unknown {
     case '23503':
       return new NotFound('Élément lié introuvable dans votre SIS.');
     case '23514':
+      if (messageOf(error).includes('REVISION_HASH_MISMATCH')) {
+        return new PreconditionFailed('La révision a changé depuis votre lecture : rechargez-la avant de décider.');
+      }
       // PostGIS validity checks (st_isvalid) on drawn geometries.
       if (CHECK_MESSAGES[constraintOf(error) ?? '']) {
         return new InvalidInput(CHECK_MESSAGES[constraintOf(error) ?? ''] ?? '');

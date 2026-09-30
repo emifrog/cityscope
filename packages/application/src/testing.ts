@@ -99,6 +99,18 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       update: unstubbed('risks.update'),
       ...overrides.risks,
     },
+    etare: {
+      dossiers: unstubbed('etare.dossiers'),
+      overview: unstubbed('etare.overview'),
+      createRevision: unstubbed('etare.createRevision'),
+      revision: unstubbed('etare.revision'),
+      submit: unstubbed('etare.submit'),
+      queue: unstubbed('etare.queue'),
+      decide: unstubbed('etare.decide'),
+      approvalOf: unstubbed('etare.approvalOf'),
+      requestPublication: unstubbed('etare.requestPublication'),
+      ...overrides.etare,
+    },
     members: {
       list: unstubbed('members.list'),
       add: unstubbed('members.add'),

@@ -12,10 +12,14 @@ import {
   createPlan,
   createSite,
   createSiteObject,
+  createRevision,
   createRiskType,
   createSiteRisk,
   createZone,
+  decideRevision,
   getAssetDownload,
+  getRevision,
+  getSiteEtare,
   getMe,
   getMapCatalog,
   getSite,
@@ -33,7 +37,12 @@ import {
   listPlans,
   listObjectTypes,
   listSiteObjects,
+  listEtareDossiers,
   listRiskTypes,
+  listValidations,
+  previewSiteEtare,
+  publishRevision,
+  submitRevision,
   listSiteRisks,
   listSiteZones,
   listSites,
@@ -81,6 +90,8 @@ export interface ApiDependencies {
   readonly identities: IdentityProvisioner | null;
   readonly cartography: CartographyCatalog;
   readonly geocoder: Geocoder;
+  /** SHA-256 (hex) of the UTF-8 bytes of a text (revision snapshots). */
+  readonly sha256: (text: string) => Promise<string>;
   readonly logger: Logger;
   readonly version: string;
   readonly openApiDocument: () => unknown;
@@ -479,6 +490,56 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     const version = expectedVersion(c);
     const patch = await readBody(c, endpoints.updateRisk.body);
     return respond(c, endpoints.updateRisk, await updateSiteRisk(deps.sessions, context, idOf(c), version, patch));
+  });
+
+  // ---------------------------------------------------------------- ETARE workflow
+  app.get(routerPath(endpoints.listEtareDossiers.path), async (c) => {
+    const context = await requestContext(c, endpoints.listEtareDossiers);
+    return respond(c, endpoints.listEtareDossiers, { items: await listEtareDossiers(deps.sessions, context) });
+  });
+
+  app.get(routerPath(endpoints.getSiteEtare.path), async (c) => {
+    const context = await requestContext(c, endpoints.getSiteEtare);
+    return respond(c, endpoints.getSiteEtare, await getSiteEtare(deps.sessions, context, idOf(c)));
+  });
+
+  app.get(routerPath(endpoints.previewSiteEtare.path), async (c) => {
+    const context = await requestContext(c, endpoints.previewSiteEtare);
+    return respond(c, endpoints.previewSiteEtare, await previewSiteEtare(deps, context, idOf(c)));
+  });
+
+  app.post(routerPath(endpoints.createRevision.path), async (c) => {
+    const context = await requestContext(c, endpoints.createRevision);
+    const input = await readBody(c, endpoints.createRevision.body);
+    return respond(c, endpoints.createRevision, await createRevision(deps.sessions, context, idOf(c), input));
+  });
+
+  app.post(routerPath(endpoints.submitRevision.path), async (c) => {
+    const context = await requestContext(c, endpoints.submitRevision);
+    const version = expectedVersion(c);
+    const input = await readBody(c, endpoints.submitRevision.body);
+    return respond(c, endpoints.submitRevision, await submitRevision(deps, context, idOf(c), version, input));
+  });
+
+  app.get(routerPath(endpoints.listValidations.path), async (c) => {
+    const context = await requestContext(c, endpoints.listValidations);
+    return respond(c, endpoints.listValidations, { items: await listValidations(deps.sessions, context) });
+  });
+
+  app.get(routerPath(endpoints.getRevision.path), async (c) => {
+    const context = await requestContext(c, endpoints.getRevision);
+    return respond(c, endpoints.getRevision, await getRevision(deps.sessions, context, idOf(c)));
+  });
+
+  app.post(routerPath(endpoints.decideRevision.path), async (c) => {
+    const context = await requestContext(c, endpoints.decideRevision);
+    const input = await readBody(c, endpoints.decideRevision.body);
+    return respond(c, endpoints.decideRevision, await decideRevision(deps.sessions, context, idOf(c), input));
+  });
+
+  app.post(routerPath(endpoints.publishRevision.path), async (c) => {
+    const context = await requestContext(c, endpoints.publishRevision);
+    return respond(c, endpoints.publishRevision, await publishRevision(deps.sessions, context, idOf(c)));
   });
 
   // ---------------------------------------------------------------- documents and files

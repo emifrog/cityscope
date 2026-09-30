@@ -30,6 +30,8 @@ export const queryKeys = {
   site: (tenantId: string, id: string) => ['tenant', tenantId, 'site', id] as const,
   siteRecords: (tenantId: string, id: string, kind: string) => ['tenant', tenantId, 'site', id, kind] as const,
   members: (tenantId: string) => ['tenant', tenantId, 'members'] as const,
+  etare: (tenantId: string) => ['tenant', tenantId, 'etare'] as const,
+  revision: (tenantId: string, id: string) => ['tenant', tenantId, 'etare', 'revision', id] as const,
   riskTypes: (tenantId: string, includeDeprecated?: boolean) =>
     includeDeprecated === undefined
       ? (['tenant', tenantId, 'risk-types'] as const)
@@ -164,6 +166,59 @@ export function useRiskTypes(includeDeprecated = false) {
     enabled,
     staleTime: 5 * 60_000,
     queryFn: ({ signal }) => api.listRiskTypes({ ...options, signal }, includeDeprecated),
+  });
+}
+
+/** A publication being built: its status is followed until it is published (or failed). */
+const BUILD_POLL_MS = 3000;
+const building = (status: string | undefined) => status === 'queued' || status === 'building';
+
+export function useEtareDossiers(wanted = true) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: [...queryKeys.etare(tenantId ?? 'none'), 'dossiers'],
+    enabled: enabled && wanted,
+    queryFn: ({ signal }) => api.listEtareDossiers({ ...options, signal }),
+  });
+}
+
+export function useSiteEtare(siteId: string) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.siteRecords(tenantId ?? 'none', siteId, 'etare'),
+    enabled,
+    queryFn: ({ signal }) => api.getSiteEtare({ ...options, signal }, siteId),
+    refetchInterval: (query) =>
+      query.state.data?.revisions.some((revision) => building(revision.publication?.status)) ? BUILD_POLL_MS : false,
+  });
+}
+
+/** What would be submitted now, with the checks; recomputed on demand (it reads all the working data). */
+export function useEtarePreview(siteId: string, enabled = true) {
+  const { tenantId, options, enabled: ready } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.siteRecords(tenantId ?? 'none', siteId, 'etare-preview'),
+    enabled: ready && enabled,
+    queryFn: ({ signal }) => api.previewSiteEtare({ ...options, signal }, siteId),
+  });
+}
+
+export function useValidations(wanted = true) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: [...queryKeys.etare(tenantId ?? 'none'), 'validations'],
+    enabled: enabled && wanted,
+    queryFn: ({ signal }) => api.listValidations({ ...options, signal }),
+  });
+}
+
+export function useRevision(id: string) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.revision(tenantId ?? 'none', id),
+    enabled,
+    queryFn: ({ signal }) => api.getRevision({ ...options, signal }, id),
+    refetchInterval: (query) => (building(query.state.data?.revision.publication?.status) ? BUILD_POLL_MS : false),
   });
 }
 
