@@ -106,8 +106,9 @@ Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4, composants de sty
 - Routes : `/login`, `/verification` (second facteur), `/auth/confirm` (activation d’une invitation),
   `/` (tableau de bord), `/sites`, `/sites/[id]` (onglets dont Documents), `/compte` (habilitations,
   double authentification), `/administration` (membres, terminaux, risques), `/carte`, `/etare`,
-  `/validations`, `/signalements` (instruction des signalements terrain, ADR-017) ; `/contributions` est
-  encore un écran d’attente (portail exploitant).
+  `/validations`, `/signalements` (instruction des signalements terrain, ADR-017), `/exploitants`
+  (invitations) et `/contributions` (instruction des propositions des exploitants, ADR-019). Le portail
+  exploitant (`/portail`, `/portail/sites/[id]`) a son propre cadre, sans accès au back-office.
 - Carte : MapLibre GL JS chargé à la demande côté navigateur ; son worker et le module qu’il importe sont
   copiés depuis le paquet installé vers `public/maplibre/` (`scripts/copy-browser-workers.mjs`, avant `dev`
   et `build`), le bundler ne pouvant pas les résoudre. Le style est construit depuis le catalogue

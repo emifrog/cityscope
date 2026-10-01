@@ -12,7 +12,8 @@ import { found } from './use-cases';
  */
 const DOWNLOAD_URL_SECONDS = 60;
 
-function inPortal<T>(
+/** Portal work in the active SIS; PostgreSQL checks the access site by site. */
+export function inPortal<T>(
   sessions: SessionFactory,
   context: RequestContext,
   work: (session: RequestSession) => Promise<T>,

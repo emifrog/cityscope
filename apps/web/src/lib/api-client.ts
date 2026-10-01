@@ -26,6 +26,14 @@ import {
   type EtareRevision,
   type ExternalId,
   type ExternalIdCreate,
+  type Contribution,
+  type ContributionCreateInput,
+  type ContributionList,
+  type ContributionListQuery,
+  type ContributionReceipt,
+  type ContributionUpdate,
+  type ContributionUploaded,
+  type PortalContribution,
   type FieldReport,
   type FieldReportList,
   type FieldReportListQuery,
@@ -483,6 +491,64 @@ export const api = {
     ),
 
   // ---------------------------------------------------------------- field reports (OPS-04)
+  // ---------------------------------------------------------------- proposals of the exploitants (POR-03/04)
+  createPortalContribution: (
+    options: ApiCallOptions,
+    siteId: string,
+    input: ContributionCreateInput,
+  ): Promise<ContributionReceipt> =>
+    call(
+      endpoints.createPortalContribution.response,
+      pathOf(endpoints.createPortalContribution.path, { id: siteId }),
+      options,
+      { method: 'POST', body: input },
+    ),
+
+  confirmPortalContributionUploads: (options: ApiCallOptions, id: string): Promise<ContributionUploaded> =>
+    call(
+      endpoints.confirmPortalContributionUploads.response,
+      pathOf(endpoints.confirmPortalContributionUploads.path, { id }),
+      options,
+      { method: 'POST' },
+    ),
+
+  listPortalContributions: (options: ApiCallOptions, query: { site_id?: string } = {}): Promise<PortalContribution[]> =>
+    itemsOf(
+      call(endpoints.listPortalContributions.response, endpoints.listPortalContributions.path, options, { query }),
+    ),
+
+  replyPortalContribution: (options: ApiCallOptions, id: string, body: string): Promise<PortalContribution> =>
+    call(endpoints.replyPortalContribution.response, pathOf(endpoints.replyPortalContribution.path, { id }), options, {
+      method: 'POST',
+      body: { body },
+    }),
+
+  withdrawPortalContribution: (options: ApiCallOptions, id: string): Promise<PortalContribution> =>
+    call(
+      endpoints.withdrawPortalContribution.response,
+      pathOf(endpoints.withdrawPortalContribution.path, { id }),
+      options,
+      { method: 'POST' },
+    ),
+
+  listContributions: (options: ApiCallOptions, query: Partial<ContributionListQuery> = {}): Promise<ContributionList> =>
+    call(endpoints.listContributions.response, endpoints.listContributions.path, options, { query }),
+
+  getContribution: (options: ApiCallOptions, id: string): Promise<Contribution> =>
+    call(endpoints.getContribution.response, pathOf(endpoints.getContribution.path, { id }), options),
+
+  updateContribution: (
+    options: ApiCallOptions,
+    id: string,
+    version: number,
+    patch: ContributionUpdate,
+  ): Promise<Contribution> =>
+    call(endpoints.updateContribution.response, pathOf(endpoints.updateContribution.path, { id }), options, {
+      method: 'PATCH',
+      body: patch,
+      ifMatch: version,
+    }),
+
   listFieldReports: (options: ApiCallOptions, query: Partial<FieldReportListQuery> = {}): Promise<FieldReportList> =>
     call(endpoints.listFieldReports.response, endpoints.listFieldReports.path, options, { query }),
 

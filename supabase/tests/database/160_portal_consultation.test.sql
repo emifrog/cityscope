@@ -107,7 +107,7 @@ select set_eq($$ select jsonb_object_keys(v -> 'address') from pg_temp.seen() as
   'the address, without anything else');
 select is((select v #>> '{classifications,0,label}' from pg_temp.seen() as v), 'ERP type J', 'the classification is shown');
 select set_eq($$ select jsonb_object_keys(v #> '{contacts,0}') from pg_temp.seen() as v $$,
-  array['name', 'role', 'phone', 'phone_alt', 'email', 'availability', 'verified_at'],
+  array['id', 'name', 'role', 'phone', 'phone_alt', 'email', 'availability', 'verified_at'],
   'contacts: who to call, nothing else');
 select is((select v #> '{plans,0}' from pg_temp.seen() as v),
   '{"id": "06000016-0000-4000-8000-0000000000f1", "title": "Plan du rez-de-chaussée", "plan_type": "level",

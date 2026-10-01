@@ -6,7 +6,14 @@ import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { ROLE_LABELS } from '@/components/labels';
 import { PageHeader } from '@/components/page-header';
 import { SitesTable } from '@/components/sites-table';
-import { useEtareDossiers, useFieldReports, usePermissions, useSites, useValidations } from '@/lib/queries';
+import {
+  useContributions,
+  useEtareDossiers,
+  useFieldReports,
+  usePermissions,
+  useSites,
+  useValidations,
+} from '@/lib/queries';
 import { useTenant } from '@/providers/tenant-provider';
 
 function Indicator({ label, value, note, href }: { label: string; value: string; note: string; href?: string }) {
@@ -35,6 +42,8 @@ export function Dashboard() {
   const queue = useValidations(readsEtare);
   const reviewsReports = usePermissions().has('field_report:review');
   const reports = useFieldReports({ view: 'open', limit: 1 }, reviewsReports);
+  const reviewsContributions = usePermissions().has('contribution:review');
+  const contributions = useContributions({ view: 'open', limit: 1 }, reviewsContributions);
 
   if (loading) return <LoadingCard lines={4} />;
   if (error) return <ApiErrorAlert error={error} />;
@@ -60,7 +69,7 @@ export function Dashboard() {
         description={`Situation de la base opérationnelle — ${activeTenant.tenant_name}`}
       />
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
         <Card>
           <CardContent>
             <p className="text-sm text-muted">Sites visibles</p>
@@ -93,6 +102,12 @@ export function Dashboard() {
           value={reviewsReports && reports.data ? String(reports.data.open_count) : '—'}
           note="Remontés par les intervenants"
           href="/signalements"
+        />
+        <Indicator
+          label="Contributions à traiter"
+          value={reviewsContributions && contributions.data ? String(contributions.data.open_count) : '—'}
+          note="Proposées par les exploitants"
+          href="/contributions"
         />
       </div>
 

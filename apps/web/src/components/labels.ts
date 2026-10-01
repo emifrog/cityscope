@@ -1,5 +1,8 @@
 import type {
   ClassificationType,
+  ContributionOperation,
+  ContributionStatus,
+  ContributionTarget,
   DeviceState,
   SyncReceiptStatus,
   PublicationStatus,
@@ -291,4 +294,45 @@ export const REPORT_ITEM_LABELS: Readonly<Record<'object' | 'risk' | 'zone', str
   object: 'Point',
   risk: 'Risque',
   zone: 'Zone',
+};
+
+export const CONTRIBUTION_STATUS_LABELS: Readonly<Record<ContributionStatus, string>> = {
+  submitted: 'Reçue',
+  in_review: 'En cours d’examen',
+  info_requested: 'Précision demandée',
+  accepted: 'Acceptée',
+  partially_accepted: 'Acceptée en partie',
+  rejected: 'Refusée',
+  withdrawn: 'Retirée',
+};
+
+export const CONTRIBUTION_TARGET_LABELS: Readonly<Record<ContributionTarget, string>> = {
+  site: 'Identité et adresse du site',
+  contact: 'Contact',
+  plan: 'Plan',
+  document: 'Document',
+  other: 'Autre information',
+};
+
+export const CONTRIBUTION_OPERATION_LABELS: Readonly<Record<ContributionOperation, string>> = {
+  create: 'Ajout',
+  update: 'Modification',
+  delete: 'Retrait',
+};
+
+/** Fields of the values compared in a proposal (contact, site, plan, document). */
+export const CONTRIBUTION_FIELD_LABELS: Readonly<Record<string, string>> = {
+  name: 'Nom',
+  role: 'Fonction',
+  phone: 'Téléphone',
+  phone_alt: 'Autre téléphone',
+  email: 'E-mail',
+  availability: 'Disponibilité',
+  street: 'Voie',
+  postal_code: 'Code postal',
+  city: 'Commune',
+  title: 'Titre',
+  plan_type: 'Type de plan',
+  category: 'Catégorie',
+  version_no: 'Version',
 };

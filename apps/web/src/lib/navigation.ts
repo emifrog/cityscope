@@ -20,7 +20,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: '/etare', label: 'ETARE' },
   { href: '/validations', label: 'Validations' },
   { href: '/signalements', label: 'Signalements' },
-  { href: '/contributions', label: 'Contributions', comingIn: 'portail exploitant' },
+  { href: '/contributions', label: 'Contributions' },
   { href: '/exploitants', label: 'Exploitants' },
   { href: '/administration', label: 'Administration' },
 ];

@@ -3,7 +3,16 @@ import {
   addDocumentVersion,
   addPlanRevision,
   confirmFieldReportUploads,
+  confirmPortalContributionUploads,
   confirmUpload,
+  createPortalContribution,
+  getContribution,
+  getPortalContribution,
+  listContributions,
+  listPortalContributions,
+  replyPortalContribution,
+  updateContribution,
+  withdrawPortalContribution,
   createBuilding,
   createDevice,
   createSyncDownloads,
@@ -899,6 +908,79 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
       c,
       endpoints.updateFieldReport,
       await updateFieldReport(deps.sessions, context, idOf(c), version, patch),
+    );
+  });
+
+  // ---------------------------------------------------------------- proposals of the exploitants (POR-03/04)
+  app.post(routerPath(endpoints.createPortalContribution.path), async (c) => {
+    const context = await requestContext(c, endpoints.createPortalContribution);
+    const input = await readBody(c, endpoints.createPortalContribution.body);
+    const files = { sessions: deps.sessions, storage: deps.storage };
+    return respond(
+      c,
+      endpoints.createPortalContribution,
+      await createPortalContribution(files, context, idOf(c), input),
+    );
+  });
+
+  app.post(routerPath(endpoints.confirmPortalContributionUploads.path), async (c) => {
+    const context = await requestContext(c, endpoints.confirmPortalContributionUploads);
+    return respond(
+      c,
+      endpoints.confirmPortalContributionUploads,
+      await confirmPortalContributionUploads(deps.sessions, context, idOf(c)),
+    );
+  });
+
+  app.get(routerPath(endpoints.listPortalContributions.path), async (c) => {
+    const context = await requestContext(c, endpoints.listPortalContributions);
+    const query = endpoints.listPortalContributions.query.parse(c.req.query());
+    return respond(c, endpoints.listPortalContributions, await listPortalContributions(deps.sessions, context, query));
+  });
+
+  app.get(routerPath(endpoints.getPortalContribution.path), async (c) => {
+    const context = await requestContext(c, endpoints.getPortalContribution);
+    return respond(c, endpoints.getPortalContribution, await getPortalContribution(deps.sessions, context, idOf(c)));
+  });
+
+  app.post(routerPath(endpoints.replyPortalContribution.path), async (c) => {
+    const context = await requestContext(c, endpoints.replyPortalContribution);
+    const input = await readBody(c, endpoints.replyPortalContribution.body);
+    return respond(
+      c,
+      endpoints.replyPortalContribution,
+      await replyPortalContribution(deps.sessions, context, idOf(c), input),
+    );
+  });
+
+  app.post(routerPath(endpoints.withdrawPortalContribution.path), async (c) => {
+    const context = await requestContext(c, endpoints.withdrawPortalContribution);
+    return respond(
+      c,
+      endpoints.withdrawPortalContribution,
+      await withdrawPortalContribution(deps.sessions, context, idOf(c)),
+    );
+  });
+
+  app.get(routerPath(endpoints.listContributions.path), async (c) => {
+    const context = await requestContext(c, endpoints.listContributions);
+    const query = endpoints.listContributions.query.parse(c.req.query());
+    return respond(c, endpoints.listContributions, await listContributions(deps.sessions, context, query));
+  });
+
+  app.get(routerPath(endpoints.getContribution.path), async (c) => {
+    const context = await requestContext(c, endpoints.getContribution);
+    return respond(c, endpoints.getContribution, await getContribution(deps.sessions, context, idOf(c)));
+  });
+
+  app.patch(routerPath(endpoints.updateContribution.path), async (c) => {
+    const context = await requestContext(c, endpoints.updateContribution);
+    const version = expectedVersion(c);
+    const patch = await readBody(c, endpoints.updateContribution.body);
+    return respond(
+      c,
+      endpoints.updateContribution,
+      await updateContribution(deps.sessions, context, idOf(c), version, patch),
     );
   });
 

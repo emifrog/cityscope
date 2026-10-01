@@ -4,7 +4,7 @@ import type { PortalSite } from '@etare/contracts';
 import { Alert, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@etare/ui';
 import { ArrowLeft, Download } from 'lucide-react';
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { PageHeader } from '@/components/page-header';
 import {
@@ -16,6 +16,8 @@ import {
 import { api } from '@/lib/api-client';
 import { openInNewTab } from '@/lib/open-link';
 import { useApiMutation, usePortalSite } from '@/lib/queries';
+import { ContributionForm } from './contribution-form';
+import { MyContributions } from './my-contributions';
 
 const date = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeZone: 'Europe/Paris' });
 const sizeFormat = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
@@ -42,8 +44,8 @@ function Contacts({ site }: { site: PortalSite }) {
     <Section title="Contacts" description="Les personnes que les secours appellent en cas d’intervention.">
       {site.contacts.length === 0 ? <Empty>Aucun contact publié.</Empty> : null}
       <ul className="grid gap-3 md:grid-cols-2">
-        {site.contacts.map((contact, index) => (
-          <li key={index} className="rounded-md border border-border p-3 text-sm">
+        {site.contacts.map((contact) => (
+          <li key={contact.id} className="rounded-md border border-border p-3 text-sm">
             <p className="font-semibold">{contact.name}</p>
             {contact.role ? <p className="text-muted">{contact.role}</p> : null}
             <p className="mt-1">
@@ -101,6 +103,26 @@ function Documents({ site }: { site: PortalSite }) {
           </li>
         ))}
       </ul>
+    </Section>
+  );
+}
+
+/** Proposals of updates (POR-03): the form, then the proposals already sent and their outcome. */
+function Proposals({ site }: { site: PortalSite }) {
+  const [proposing, setProposing] = useState(false);
+  return (
+    <Section
+      title="Vos propositions de mise à jour"
+      description="Un changement sur le site (contact, stockage, travaux, nouveau plan…) ? Proposez-le : le SIS l’examine, vous répond et met à jour son dossier après validation."
+    >
+      <div className="space-y-4">
+        {proposing ? (
+          <ContributionForm site={site} onDone={() => setProposing(false)} />
+        ) : (
+          <Button onClick={() => setProposing(true)}>Proposer une mise à jour</Button>
+        )}
+        <MyContributions siteId={site.id} />
+      </div>
     </Section>
   );
 }
@@ -214,6 +236,7 @@ export function PortalSiteView({ id }: { id: string }) {
             <Documents site={data} />
           </>
         ) : null}
+        <Proposals site={data} />
       </div>
     </>
   );

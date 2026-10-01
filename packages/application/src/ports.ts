@@ -1,4 +1,9 @@
 import type {
+  Contribution,
+  ContributionCreate,
+  ContributionListQuery,
+  ContributionUpdate,
+  PortalContribution,
   MyPortalInvitation,
   PortalInvitation,
   PortalSettings,
@@ -107,6 +112,7 @@ export interface RequestSession {
   readonly devices: DeviceRepository;
   readonly fieldReports: FieldReportRepository;
   readonly portal: PortalAccessRepository;
+  readonly contributions: ContributionRepository;
   readonly jobs: JobScheduler;
   readonly audit: AuditRecorder;
 }
@@ -519,6 +525,42 @@ export interface FieldReportRepository {
   list(query: FieldReportListQuery): Promise<{ items: FieldReport[]; nextCursor: string | null; openCount: number }>;
   get(id: string): Promise<FieldReport | null>;
   update(id: string, expectedVersion: number, patch: FieldReportUpdate): Promise<FieldReport | null>;
+}
+
+/** A file joined to a proposal and the state of its file (quarantine key while pending). */
+export interface ContributionFile {
+  readonly assetId: string;
+  readonly quarantineKey: string | null;
+  readonly mimeType: string;
+  readonly sha256: string;
+  readonly scanStatus: 'pending' | 'clean' | 'rejected';
+}
+
+/**
+ * Proposals of the exploitants (POR-03/04, ADR-019). The exploitant goes
+ * through PostgreSQL functions (their own proposals, on their sites); the
+ * instruction runs under RLS (contribution:review).
+ */
+export interface ContributionRepository {
+  /** Records a proposal of the caller on one of their sites; returns its identifier. */
+  submit(siteId: string, tenantId: string, input: ContributionCreate): Promise<string>;
+  files(id: string): Promise<ContributionFile[]>;
+  /** Plans the verification of the files still waiting; returns how many. */
+  uploaded(id: string): Promise<number>;
+  /** Proposals of the caller, on one site or all of theirs. */
+  mine(siteId: string | null): Promise<PortalContribution[]>;
+  mineOne(id: string): Promise<PortalContribution | null>;
+  reply(id: string, body: string): Promise<void>;
+  withdraw(id: string): Promise<void>;
+  list(query: ContributionListQuery): Promise<{ items: Contribution[]; nextCursor: string | null; openCount: number }>;
+  get(id: string): Promise<Contribution | null>;
+  /** Instruction; the message (question or note to the exploitant) is written first. */
+  update(
+    id: string,
+    expectedVersion: number,
+    patch: Omit<ContributionUpdate, 'message'>,
+    message: { body: string; kind: 'message' | 'info_request' } | null,
+  ): Promise<Contribution | null>;
 }
 
 export interface DeviceRepository {

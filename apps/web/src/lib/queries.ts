@@ -1,6 +1,8 @@
 'use client';
 
 import type {
+  Contribution,
+  ContributionListQuery,
   Document,
   DocumentUploadResponse,
   FieldReport,
@@ -37,6 +39,8 @@ export const queryKeys = {
   etare: (tenantId: string) => ['tenant', tenantId, 'etare'] as const,
   revision: (tenantId: string, id: string) => ['tenant', tenantId, 'etare', 'revision', id] as const,
   fieldReports: (tenantId: string) => ['tenant', tenantId, 'field-reports'] as const,
+  contributions: (tenantId: string) => ['tenant', tenantId, 'contributions'] as const,
+  portalContributions: (tenantId: string) => ['tenant', tenantId, 'portal-contributions'] as const,
   portalInvitations: (tenantId: string) => ['tenant', tenantId, 'portal-invitations'] as const,
   portalSettings: (tenantId: string) => ['tenant', tenantId, 'portal-settings'] as const,
   portalAccess: (tenantId: string) => ['tenant', tenantId, 'portal-access'] as const,
@@ -242,7 +246,7 @@ const reportAwaitsPhotos = (report: FieldReport | undefined, now = Date.now()) =
     (asset) => asset.scan_status === 'pending' && now - Date.parse(asset.created_at) < VERDICT_WAIT_MS,
   );
 
-/** Field reports of the SIS (OPS-04); `wanted`: only for those who instruct them. */
+/** Invitations of exploitants in the active SIS (inviters only). */
 export function usePortalInvitations(wanted = true) {
   const { tenantId, options, enabled } = useApiContext();
   return useQuery({
@@ -302,6 +306,7 @@ export function useMyPortalInvitations() {
   });
 }
 
+/** Field reports of the SIS (OPS-04); `wanted`: only for those who instruct them. */
 export function useFieldReports(query: Partial<FieldReportListQuery> = {}, wanted = true) {
   const { tenantId, options, enabled } = useApiContext();
   return useQuery({
@@ -335,6 +340,58 @@ export function useFieldReport(id: string) {
     enabled,
     queryFn: ({ signal }) => api.getFieldReport({ ...options, signal }, id),
     refetchInterval: (query) => (reportAwaitsPhotos(query.state.data) ? VERDICT_POLL_MS : false),
+  });
+}
+
+const contributionAwaitsFiles = (contribution: Contribution | undefined, now = Date.now()) =>
+  (contribution?.attachments ?? []).some(
+    (asset) => asset.scan_status === 'pending' && now - Date.parse(asset.created_at) < VERDICT_WAIT_MS,
+  );
+
+/** Proposals of the exploitants (POR-03/04); `wanted`: only for those who instruct them. */
+export function useContributions(query: Partial<ContributionListQuery> = {}, wanted = true) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: [...queryKeys.contributions(tenantId ?? 'none'), 'list', query],
+    enabled: enabled && wanted,
+    queryFn: ({ signal }) => api.listContributions({ ...options, signal }, query),
+  });
+}
+
+/** Pages of proposals for the instruction list (open, closed or all). */
+export function useContributionPages(view: ContributionListQuery['view'], pageSize = 50) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useInfiniteQuery({
+    queryKey: [...queryKeys.contributions(tenantId ?? 'none'), 'pages', view, pageSize],
+    enabled,
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam, signal }) =>
+      api.listContributions(
+        { ...options, signal },
+        { view, limit: pageSize, ...(pageParam ? { cursor: pageParam } : {}) },
+      ),
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
+  });
+}
+
+/** One proposal; refreshed while a file waits for the verdict of the worker. */
+export function useContribution(id: string) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: [...queryKeys.contributions(tenantId ?? 'none'), 'detail', id],
+    enabled,
+    queryFn: ({ signal }) => api.getContribution({ ...options, signal }, id),
+    refetchInterval: (query) => (contributionAwaitsFiles(query.state.data) ? VERDICT_POLL_MS : false),
+  });
+}
+
+/** Proposals of the exploitant on one site (portal). */
+export function usePortalContributions(siteId: string) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: [...queryKeys.portalContributions(tenantId ?? 'none'), siteId],
+    enabled,
+    queryFn: ({ signal }) => api.listPortalContributions({ ...options, signal }, { site_id: siteId }),
   });
 }
 

@@ -26,7 +26,14 @@ import {
 } from '@/components/labels';
 import { PageHeader } from '@/components/page-header';
 import { api } from '@/lib/api-client';
-import { queryKeys, useApiMutation, useFieldReports, usePermissions, useRevision } from '@/lib/queries';
+import {
+  queryKeys,
+  useApiMutation,
+  useContributions,
+  useFieldReports,
+  usePermissions,
+  useRevision,
+} from '@/lib/queries';
 import { useTenant } from '@/providers/tenant-provider';
 
 const dateTime = new Intl.DateTimeFormat('fr-FR', {
@@ -90,6 +97,38 @@ function IntegratedReports({ revisionId }: { revisionId: string }) {
               </Link>
               <span className="text-xs text-muted">
                 {report.reporter.name} · {when(report.observed_at)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Proposals of exploitants integrated into this revision (their origin stays linked to the publication). */
+function IntegratedContributions({ revisionId }: { revisionId: string }) {
+  const reviews = usePermissions().has('contribution:review');
+  const contributions = useContributions({ view: 'all', revision_id: revisionId, limit: 100 }, reviews);
+  if (!reviews || !contributions.data || contributions.data.items.length === 0) return null;
+  return (
+    <Card>
+      <CardHeader>
+        <div>
+          <CardTitle className="text-base">Contributions intégrées ({contributions.data.items.length})</CardTitle>
+          <CardDescription>Mises à jour proposées par les exploitants, reportées dans cette révision.</CardDescription>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <ul className="space-y-2 text-sm">
+          {contributions.data.items.map((contribution) => (
+            <li key={contribution.id}>
+              <Link href={`/contributions/${contribution.id}`} className="line-clamp-2 text-info hover:underline">
+                {contribution.title}
+              </Link>
+              <span className="text-xs text-muted">
+                {contribution.author.name} · {when(contribution.created_at)}
+                {contribution.conflict_resolution ? ' · conflit résolu' : ''}
               </span>
             </li>
           ))}
@@ -206,6 +245,7 @@ export function RevisionReview({ id }: { id: string }) {
           </Card>
 
           <IntegratedReports revisionId={revision.id} />
+          <IntegratedContributions revisionId={revision.id} />
 
           {revision.decision ? (
             <Card>

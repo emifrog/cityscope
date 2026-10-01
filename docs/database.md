@@ -171,6 +171,16 @@ construite champ par champ dans la charge utile) et `portal_document_file` (fich
 par `has_permission('portal:read', site)`. `document.portal_visible` est saisi sur les données de travail
 et figé dans l'instantané. Voir le test `160_portal_consultation`.
 
+Les propositions (POR-03/04) : `app.contribution` (cible, opération, valeur vue dans la version publiée
+`base_value` copiée par `portal_submit_contribution`, valeur proposée, instruction), `contribution_message`
+(en ajout seul) et `contribution_attachment` (fichiers de la chaîne contrôlée, exclus de `site_edit`). Le
+trigger `contribution_guard` fige la proposition, fait avancer l'instruction (`submitted` → `in_review` ↔
+`info_requested` → `accepted`, `partially_accepted`, `rejected`, ou `withdrawn` par l'auteur), exige une
+révision en brouillon pour accepter et une résolution motivée en cas de conflit
+(`contribution_in_conflict` : valeur de travail actuelle, `contribution_working_value`, différente de la
+valeur vue). La Prévision instruit sous RLS (`contribution:review`, colonnes d'instruction seules) ;
+l'exploitant passe par les fonctions `portal_*contribution*`. Voir le test `170_exploitant_contributions`.
+
 ## Auteurs des données de travail et séparation des tâches
 
 Chaque écriture d’une donnée de travail (site, bâtiment, niveau, zone, plan, objet, risque, document,

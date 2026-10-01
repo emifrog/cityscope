@@ -2,6 +2,7 @@ export * from './authorization';
 export * from './canonical';
 export * from './catalog';
 export * from './context';
+export * from './contributions';
 export * from './distribution';
 export * from './errors';
 export * from './field-reports';

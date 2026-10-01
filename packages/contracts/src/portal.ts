@@ -178,6 +178,8 @@ export const portalSiteSchema = z
     contacts: z.array(
       z
         .object({
+          /** Designated by the proposals of the exploitant (POR-03). */
+          id: uuidSchema,
           name: z.string(),
           role: z.string().nullable(),
           phone: z.string(),

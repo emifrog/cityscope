@@ -1,3 +1,4 @@
+export * from './contributions';
 export * from './documents';
 export * from './endpoints';
 export * from './etare';

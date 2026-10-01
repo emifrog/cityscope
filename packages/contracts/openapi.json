@@ -9829,6 +9829,10 @@
       "PortalContact": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "name": {
             "type": "string"
           },
@@ -9868,6 +9872,7 @@
           }
         },
         "required": [
+          "id",
           "name",
           "role",
           "phone",
@@ -9982,6 +9987,807 @@
           "mime_type",
           "size_bytes"
         ]
+      },
+      "ContributionReceipt": {
+        "type": "object",
+        "properties": {
+          "contribution": {
+            "$ref": "#/components/schemas/PortalContribution"
+          },
+          "uploads": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "upload": {
+                  "$ref": "#/components/schemas/UploadTicket"
+                }
+              },
+              "required": [
+                "sha256",
+                "upload"
+              ]
+            }
+          }
+        },
+        "required": [
+          "contribution",
+          "uploads"
+        ]
+      },
+      "PortalContribution": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "site_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "site_name": {
+            "type": "string"
+          },
+          "target_type": {
+            "type": "string",
+            "enum": [
+              "site",
+              "contact",
+              "plan",
+              "document",
+              "other"
+            ]
+          },
+          "target_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "create",
+              "update",
+              "delete"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "base_value": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "proposed_value": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "submitted",
+              "in_review",
+              "info_requested",
+              "accepted",
+              "partially_accepted",
+              "rejected",
+              "withdrawn"
+            ]
+          },
+          "decision_comment": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "decided_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "publication_number": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortalContributionMessage"
+            }
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortalContributionFile"
+            }
+          },
+          "resolution": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "revision_no": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "publication_number": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              }
+            },
+            "required": [
+              "revision_no",
+              "publication_number"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "site_id",
+          "site_name",
+          "target_type",
+          "target_id",
+          "operation",
+          "title",
+          "description",
+          "base_value",
+          "proposed_value",
+          "status",
+          "decision_comment",
+          "decided_at",
+          "created_at",
+          "publication_number",
+          "messages",
+          "files",
+          "resolution"
+        ]
+      },
+      "PortalContributionMessage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "exploitant",
+              "sis"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "message",
+              "info_request"
+            ]
+          },
+          "body": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "author_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "side",
+          "kind",
+          "body",
+          "created_at",
+          "author_name"
+        ]
+      },
+      "PortalContributionFile": {
+        "type": "object",
+        "properties": {
+          "filename": {
+            "type": "string"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "scan_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "clean",
+              "rejected"
+            ]
+          }
+        },
+        "required": [
+          "filename",
+          "mime_type",
+          "size_bytes",
+          "scan_status"
+        ]
+      },
+      "ContributionCreate": {
+        "type": "object",
+        "properties": {
+          "target_type": {
+            "type": "string",
+            "enum": [
+              "site",
+              "contact",
+              "plan",
+              "document",
+              "other"
+            ]
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "create",
+              "update",
+              "delete"
+            ]
+          },
+          "target_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "proposed_value": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FileDeclaration"
+            },
+            "maxItems": 5
+          }
+        },
+        "required": [
+          "target_type",
+          "operation",
+          "title",
+          "description",
+          "files"
+        ]
+      },
+      "ContributionUploaded": {
+        "type": "object",
+        "properties": {
+          "contribution_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "verifications": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "contribution_id",
+          "verifications"
+        ]
+      },
+      "PortalContributionList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortalContribution"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "ContributionMessageCreate": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          }
+        },
+        "required": [
+          "body"
+        ]
+      },
+      "ContributionList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Contribution"
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 512,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "open_count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor",
+          "open_count"
+        ]
+      },
+      "Contribution": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "site_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "site_name": {
+            "type": "string"
+          },
+          "etare_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "author": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "email"
+            ]
+          },
+          "target_type": {
+            "type": "string",
+            "enum": [
+              "site",
+              "contact",
+              "plan",
+              "document",
+              "other"
+            ]
+          },
+          "target_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "create",
+              "update",
+              "delete"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "base_value": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "proposed_value": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "current_value": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "conflict": {
+            "type": "boolean"
+          },
+          "publication": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "publication_number": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "publication_number"
+            ]
+          },
+          "current_publication_number": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "submitted",
+              "in_review",
+              "info_requested",
+              "accepted",
+              "partially_accepted",
+              "rejected",
+              "withdrawn"
+            ]
+          },
+          "assigned_to": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "decision_comment": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "conflict_resolution": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "decided_by": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "decided_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContributionMessage"
+            }
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Asset"
+            }
+          },
+          "resolution": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "revision_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "revision_no": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "revision_status": {
+                "type": "string"
+              },
+              "publication_number": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              }
+            },
+            "required": [
+              "revision_id",
+              "revision_no",
+              "revision_status",
+              "publication_number"
+            ]
+          },
+          "row_version": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "site_id",
+          "site_name",
+          "etare_number",
+          "author",
+          "target_type",
+          "target_id",
+          "operation",
+          "title",
+          "description",
+          "base_value",
+          "proposed_value",
+          "current_value",
+          "conflict",
+          "publication",
+          "current_publication_number",
+          "status",
+          "assigned_to",
+          "decision_comment",
+          "conflict_resolution",
+          "decided_by",
+          "decided_at",
+          "created_at",
+          "messages",
+          "attachments",
+          "resolution",
+          "row_version"
+        ]
+      },
+      "ContributionMessage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "exploitant",
+              "sis"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "message",
+              "info_request"
+            ]
+          },
+          "body": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "author": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "side",
+          "kind",
+          "body",
+          "created_at",
+          "author"
+        ]
+      },
+      "ContributionUpdate": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "in_review",
+              "info_requested",
+              "accepted",
+              "partially_accepted",
+              "rejected"
+            ]
+          },
+          "assigned_to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "decision_comment": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "conflict_resolution": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "revision_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          }
+        }
       }
     },
     "parameters": {}
@@ -20025,6 +20831,1010 @@
           },
           "404": {
             "description": "Ressource introuvable ou non autorisée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portal/sites/{id}/contributions": {
+      "post": {
+        "operationId": "createPortalContribution",
+        "summary": "Proposer une mise à jour d’un site (jamais une modification directe), avec ses pièces",
+        "tags": [
+          "portal"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContributionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContributionReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ressource introuvable ou non autorisée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflit avec des données existantes (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portal/contributions/{id}/uploaded": {
+      "post": {
+        "operationId": "confirmPortalContributionUploads",
+        "summary": "Pièces d’une proposition envoyées : demande de leur contrôle (idempotent)",
+        "tags": [
+          "portal"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContributionUploaded"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ressource introuvable ou non autorisée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portal/contributions": {
+      "get": {
+        "operationId": "listPortalContributions",
+        "summary": "Propositions de l’exploitant dans le SIS actif (d’un site ou de tous)",
+        "tags": [
+          "portal"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "site_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalContributionList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portal/contributions/{id}": {
+      "get": {
+        "operationId": "getPortalContribution",
+        "summary": "Une proposition de l’exploitant : échanges, pièces et issue",
+        "tags": [
+          "portal"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalContribution"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ressource introuvable ou non autorisée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portal/contributions/{id}/messages": {
+      "post": {
+        "operationId": "replyPortalContribution",
+        "summary": "Répondre au SIS sur une proposition (une demande de précision est alors satisfaite)",
+        "tags": [
+          "portal"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContributionMessageCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalContribution"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ressource introuvable ou non autorisée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflit avec des données existantes (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portal/contributions/{id}/withdrawal": {
+      "post": {
+        "operationId": "withdrawPortalContribution",
+        "summary": "Retirer une proposition pas encore décidée (définitif)",
+        "tags": [
+          "portal"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalContribution"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ressource introuvable ou non autorisée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contributions": {
+      "get": {
+        "operationId": "listContributions",
+        "summary": "Propositions des exploitants à instruire (ou instruites) dans le SIS actif",
+        "tags": [
+          "contributions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^[A-Za-z0-9_-]+$"
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "open",
+                "closed",
+                "all"
+              ],
+              "default": "open"
+            },
+            "required": false,
+            "name": "view",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "site_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "revision_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContributionList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contributions/{id}": {
+      "get": {
+        "operationId": "getContribution",
+        "summary": "Une proposition : valeur vue, proposée et actuelle, conflit, échanges, pièces",
+        "tags": [
+          "contributions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Contribution"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ressource introuvable ou non autorisée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateContribution",
+        "summary": "Instruire une proposition : prise en charge, question à l’exploitant, intégration au brouillon, décision motivée",
+        "tags": [
+          "contributions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Version sur laquelle porte la modification (valeur de l’ETag reçu), ex. \"3\".",
+              "example": "\"3\""
+            },
+            "required": true,
+            "description": "Version sur laquelle porte la modification (valeur de l’ETag reçu), ex. \"3\".",
+            "name": "if-match",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContributionUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "headers": {
+              "ETag": {
+                "description": "Version de la ressource (row_version)",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Contribution"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ressource introuvable ou non autorisée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflit avec des données existantes (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Modifiée entre-temps : relire puis réessayer (PRECONDITION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "En-tête If-Match manquant (PRECONDITION_REQUIRED)",
             "content": {
               "application/json": {
                 "schema": {

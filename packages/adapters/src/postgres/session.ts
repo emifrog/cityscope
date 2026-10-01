@@ -19,6 +19,7 @@ import { PostgresBuildingRepository } from './building-repository';
 import { PostgresDeviceRepository } from './device-repository';
 import { PostgresEtareRepository } from './etare-repository';
 import { PostgresFieldReportRepository } from './field-report-repository';
+import { PostgresContributionRepository } from './contribution-repository';
 import { PostgresPortalAccessRepository } from './portal-repository';
 import { PostgresAssetRepository, PostgresDocumentRepository } from './document-repository';
 import { PostgresIdentityReader } from './identity-reader';
@@ -80,6 +81,7 @@ export class PostgresSessionFactory implements SessionFactory {
         devices: new PostgresDeviceRepository(client),
         fieldReports: new PostgresFieldReportRepository(client),
         portal: new PostgresPortalAccessRepository(client),
+        contributions: new PostgresContributionRepository(client),
         jobs: new PostgresJobScheduler(client),
         audit: new PostgresAuditRecorder(client),
       });
@@ -168,6 +170,13 @@ const PORTAL_MESSAGES: readonly (readonly [string, string])[] = [
   ['EXPLOITANT_SCOPE', 'Un exploitant n’accède qu’à des sites, jamais à tout le SIS.'],
 ];
 
+/** Messages of the refusals of a proposal (SQLSTATE ETCTV). */
+const CONTRIBUTION_MESSAGES: readonly (readonly [string, string])[] = [
+  ['CONTRIBUTION_LIMIT', 'Vingt propositions au plus en cours par site : attendez la réponse du SIS.'],
+  ['CONTRIBUTION_VALUE', 'Valeur proposée inattendue pour cet élément.'],
+  ['CONTRIBUTION_FILES', 'Cinq fichiers au plus, PDF, PNG, JPEG ou WebP de 50 Mo au plus.'],
+];
+
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : '';
 }
@@ -235,6 +244,16 @@ export function translateDatabaseError(error: unknown): unknown {
       return new NotFound(
         'Invitation introuvable, déjà utilisée, révoquée ou expirée : demandez-en une nouvelle au SIS.',
       );
+    case 'ETCTS':
+      return new NotFound('Site introuvable dans votre SIS.');
+    case 'ETCTT':
+      return new InvalidInput('Cet élément ne figure plus dans la version publiée : rechargez la page.');
+    case 'ETCTV':
+      return new InvalidInput(
+        CONTRIBUTION_MESSAGES.find(([code]) => messageOf(error).includes(code))?.[1] ?? 'Proposition refusée.',
+      );
+    case 'ETCTN':
+      return new NotFound('Proposition introuvable.');
     case 'ETPI2':
       return new PreconditionFailed('Cette invitation a été modifiée entre-temps : rechargez la liste.');
     case '23505':
@@ -247,6 +266,20 @@ export function translateDatabaseError(error: unknown): unknown {
       }
       if (messageOf(error).includes('FIELD_REPORT_ASSIGNEE')) {
         return new InvalidInput('Affectez le signalement à un membre actif du SIS.');
+      }
+      if (messageOf(error).includes('CONTRIBUTION_CLOSED')) {
+        return new Conflict('Cette proposition est déjà décidée ou retirée : c’est définitif.');
+      }
+      if (messageOf(error).includes('CONTRIBUTION_CONFLICT')) {
+        return new Conflict(
+          'La valeur a changé dans les données de travail depuis la proposition : indiquez comment le conflit est résolu.',
+        );
+      }
+      if (messageOf(error).includes('CONTRIBUTION_REVISION')) {
+        return new InvalidInput('Une proposition acceptée s’intègre à une révision en brouillon de ce site.');
+      }
+      if (messageOf(error).includes('CONTRIBUTION_ASSIGNEE')) {
+        return new InvalidInput('Affectez la proposition à un membre actif du SIS.');
       }
       if (messageOf(error).includes('FIELD_REPORT_REVISION')) {
         return new InvalidInput('Un signalement s’intègre à une révision en brouillon de ce site.');
