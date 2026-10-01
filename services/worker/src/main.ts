@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { hostname } from 'node:os';
 import { antivirusNotConfigured } from '@etare/application';
+import { ClamAvScanner, parseClamAvUrl } from '@etare/adapters/antivirus';
 import { Ed25519Signer } from '@etare/adapters/crypto';
 import { createLogger } from '@etare/adapters/logging';
 import { PdfLibEtareRenderer } from '@etare/adapters/pdf';
@@ -29,6 +30,8 @@ const sha256 = async (content: Uint8Array | string) => createHash('sha256').upda
 const objects = env.storage ? SupabaseObjectStorage.fromSecretKey(env.storage.url, env.storage.secretKey) : null;
 // Publication key: signs manifests for the terminals; it never leaves the worker (ADR-015).
 const signer = env.publicationSigningKey ? Ed25519Signer.fromPkcs8(env.publicationSigningKey) : null;
+// Antivirus of uploaded files (SEC-01): required outside development.
+const antivirus = env.antivirusUrl ? new ClamAvScanner(parseClamAvUrl(env.antivirusUrl)) : null;
 const registry = new HandlerRegistry([
   noopHandler,
   publicationBuildHandler({
@@ -43,11 +46,15 @@ if (objects) {
     assetVerificationHandler({
       store: new PostgresAssetVerificationStore(pool),
       objects,
-      scanner: antivirusNotConfigured,
+      scanner: antivirus ?? antivirusNotConfigured,
       sha256,
     }),
   );
-  logger.warn('antivirus engine not configured: files are checked for size, SHA-256 and real type only');
+  if (antivirus) {
+    logger.info('uploaded files checked by ClamAV', { antivirus: env.antivirusUrl });
+  } else {
+    logger.warn('antivirus engine not configured: files are checked for size, SHA-256 and real type only');
+  }
 } else {
   logger.warn('object storage not configured: no file verification, publications are built without their PDF');
 }

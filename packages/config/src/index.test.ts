@@ -62,9 +62,28 @@ describe('signing keys (ADR-015)', () => {
       expect(() => readApiEnv({ ...api, APP_ENV: appEnv })).toThrow(/CATALOG_SIGNING_KEY/);
       expect(() => readWorkerEnv({ ...worker, APP_ENV: appEnv })).toThrow(/PUBLICATION_SIGNING_KEY/);
       expect(readApiEnv({ ...api, APP_ENV: appEnv, CATALOG_SIGNING_KEY: 'k' }).catalogSigningKey).toBe('k');
-      expect(readWorkerEnv({ ...worker, APP_ENV: appEnv, PUBLICATION_SIGNING_KEY: 'k' }).publicationSigningKey).toBe(
-        'k',
-      );
+      expect(
+        readWorkerEnv({ ...worker, APP_ENV: appEnv, PUBLICATION_SIGNING_KEY: 'k', ANTIVIRUS_URL: 'tcp://clamav:3310' })
+          .publicationSigningKey,
+      ).toBe('k');
     }
+  });
+});
+
+describe('antivirus (SEC-01)', () => {
+  const worker = { WORKER_DATABASE_URL: 'postgresql://etare_worker:pw@db:5432/etare', PUBLICATION_SIGNING_KEY: 'k' };
+
+  it('is optional in development only, where files are checked without it', () => {
+    expect(readWorkerEnv(worker).antivirusUrl).toBeNull();
+    for (const appEnv of ['staging', 'production']) {
+      expect(() => readWorkerEnv({ ...worker, APP_ENV: appEnv })).toThrow(/ANTIVIRUS_URL/);
+    }
+  });
+
+  it('is a clamd address', () => {
+    expect(readWorkerEnv({ ...worker, ANTIVIRUS_URL: 'tcp://127.0.0.1:3310' }).antivirusUrl).toBe(
+      'tcp://127.0.0.1:3310',
+    );
+    expect(() => readWorkerEnv({ ...worker, ANTIVIRUS_URL: 'http://clamav' })).toThrow(/ANTIVIRUS_URL/);
   });
 });

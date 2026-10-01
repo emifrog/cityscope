@@ -399,10 +399,18 @@ export interface AssetVerificationStore {
 }
 
 /** Antivirus engine (ClamAV or a provider later). */
+/**
+ * Antivirus (SEC-01). `unscannable`: the engine refuses the file (e.g. above its
+ * stream limit), which is then rejected; an unavailable engine throws, so the
+ * job is retried and the file stays in quarantine. `not_scanned` is only
+ * accepted in development (the worker requires an engine elsewhere).
+ */
 export interface MalwareScanner {
-  scan(
-    content: Uint8Array,
-  ): Promise<{ verdict: 'clean' | 'infected' | 'not_scanned'; engine: string; signature?: string }>;
+  scan(content: Uint8Array): Promise<{
+    verdict: 'clean' | 'infected' | 'unscannable' | 'not_scanned';
+    engine: string;
+    signature?: string;
+  }>;
 }
 
 /** Ed25519 signer of distributed content: publication key (worker) or catalogue key (API). */

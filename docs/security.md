@@ -91,7 +91,7 @@ directement aux objets. L’API autorise l’objet exact en base (RLS sur `asset
 d’un asset immuable (empreinte SHA-256, taille, type).
 
 Dépôts (ADR-009) : le fichier est envoyé par URL signée en `quarantine/`, sans écrasement possible, puis
-vérifié par le worker (taille, SHA-256, type réel lu dans le contenu, antivirus) avant d’être copié vers
+vérifié par le worker (taille, SHA-256, type réel lu dans le contenu, antivirus ClamAV) avant d’être copié vers
 sa clé définitive. Le verdict n’est modifiable que par le worker et il est définitif. Un fichier non
 vérifié ou refusé n’est jamais servi (409) ; chaque téléchargement est tracé (`asset.download`) et passe
 par une URL de 60 s. Le web refuse dès le navigateur un contenu dont le type réel n’est pas admis. Les
@@ -157,7 +157,8 @@ jetables (`pnpm setup:local`). Les clés de signature des environnements partag�
   les codes d’enrôlement des terminaux.
 - Clés de signature lues dans l’environnement : gestionnaire de secrets ou KMS à brancher avant la
   production.
-- Antivirus non branché : le port `MalwareScanner` existe, le verdict indique `antivirus: not_scanned`.
+- Antivirus : ClamAV (clamd) obligatoire hors développement ; la fraîcheur des signatures, la
+  supervision du démon et le choix éventuel d’un service managé restent à organiser avec l’exploitation.
 - Purge des dépôts abandonnés (`pending` jamais envoyés) et des objets orphelins de quarantaine à écrire.
 - Accès aux journaux d’audit refusés (403) non encore tracés dans `audit_event`.
 - Second facteur exigé par le web mais pas encore par l’API pour les permissions ordinaires d’un compte

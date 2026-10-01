@@ -32,9 +32,14 @@ export function assertDedicatedDatabaseRole(connectionString: string, role: 'eta
 const appEnvSchema = z.enum(APP_ENVS).default('development');
 
 /** Shared environments distribute to terminals: their signing keys are mandatory (ADR-015). */
-function requiredOutsideDevelopment(appEnv: AppEnv, name: string, value: string | undefined): void {
+function requiredOutsideDevelopment(
+  appEnv: AppEnv,
+  name: string,
+  value: string | undefined,
+  purpose = 'offline distribution',
+): void {
   if ((appEnv === 'staging' || appEnv === 'production') && !value) {
-    throw new Error(`${name} is required in ${appEnv} (offline distribution).`);
+    throw new Error(`${name} is required in ${appEnv} (${purpose}).`);
   }
 }
 
@@ -99,6 +104,11 @@ const workerEnvSchema = z.object({
   SUPABASE_SECRET_KEY: z.string().min(1).optional(),
   /** Ed25519 key (PKCS#8 DER, base64) signing the manifests of publications (never given to the API). */
   PUBLICATION_SIGNING_KEY: z.string().min(1).optional(),
+  /** ClamAV daemon checking every uploaded file, `tcp://host:3310` (SEC-01). */
+  ANTIVIRUS_URL: z
+    .string()
+    .regex(/^tcp:\/\/[^/\s]+:\d{1,5}$/, 'ANTIVIRUS_URL must look like tcp://host:3310')
+    .optional(),
 });
 
 export interface WorkerEnv {
@@ -112,11 +122,15 @@ export interface WorkerEnv {
   readonly storage: { readonly url: string; readonly secretKey: string } | null;
   /** Null when publications are built without a signature (not distributable offline). */
   readonly publicationSigningKey: string | null;
+  /** Null in development only: files are then checked without antivirus (said at startup). */
+  readonly antivirusUrl: string | null;
 }
 
 export function readWorkerEnv(env: Env): WorkerEnv {
   const parsed = workerEnvSchema.parse(env);
   requiredOutsideDevelopment(parsed.APP_ENV, 'PUBLICATION_SIGNING_KEY', parsed.PUBLICATION_SIGNING_KEY);
+  // A file is never admitted without antivirus outside development (SEC-01).
+  requiredOutsideDevelopment(parsed.APP_ENV, 'ANTIVIRUS_URL', parsed.ANTIVIRUS_URL, 'antivirus of uploaded files');
   return {
     appEnv: parsed.APP_ENV,
     databaseUrl: assertDedicatedDatabaseRole(parsed.WORKER_DATABASE_URL, 'etare_worker'),
@@ -129,6 +143,7 @@ export function readWorkerEnv(env: Env): WorkerEnv {
         ? { url: parsed.SUPABASE_URL, secretKey: parsed.SUPABASE_SECRET_KEY }
         : null,
     publicationSigningKey: parsed.PUBLICATION_SIGNING_KEY ?? null,
+    antivirusUrl: parsed.ANTIVIRUS_URL ?? null,
   };
 }
 

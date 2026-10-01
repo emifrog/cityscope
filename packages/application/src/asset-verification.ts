@@ -54,6 +54,8 @@ export async function verifyAsset(
 
   const scan = await deps.scanner.scan(content);
   if (scan.verdict === 'infected') return reject('MALWARE', { engine: scan.engine, signature: scan.signature ?? null });
+  if (scan.verdict === 'unscannable')
+    return reject('UNSCANNABLE', { engine: scan.engine, detail: scan.signature ?? null });
 
   await deps.objects.copy(asset.quarantineKey, asset.storageKey);
   await deps.objects.remove(asset.quarantineKey);

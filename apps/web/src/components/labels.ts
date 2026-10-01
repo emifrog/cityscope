@@ -107,6 +107,7 @@ export const REJECTION_REASON_LABELS: Readonly<Record<string, string>> = {
   SHA256_MISMATCH: 'le contenu reçu diffère du fichier choisi (envoi altéré)',
   TYPE_MISMATCH: 'le contenu réel ne correspond pas au type annoncé',
   MALWARE: 'un contenu malveillant a été détecté',
+  UNSCANNABLE: 'l’antivirus n’a pas pu l’analyser (fichier trop volumineux ou protégé)',
 };
 
 export const ROLE_DESCRIPTIONS: Readonly<Record<Role, string>> = {

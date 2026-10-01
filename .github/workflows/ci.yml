@@ -41,6 +41,12 @@ jobs:
     name: Database (migrations, RLS tests, integration)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # ClamAV daemon (signatures embedded in the image) for the antivirus of uploads (SEC-01).
+    services:
+      clamav:
+        image: clamav/clamav:stable
+        ports:
+          - 3310:3310
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -58,6 +64,8 @@ jobs:
       - name: Database tests (pgTAP)
         run: pnpm test:db
       - name: Integration tests (Auth -> API -> RLS, worker queue)
+        env:
+          ANTIVIRUS_URL: tcp://localhost:3310
         run: |
           pnpm setup:local
           pnpm seed:assets

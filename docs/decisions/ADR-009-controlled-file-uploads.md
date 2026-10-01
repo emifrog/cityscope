@@ -33,9 +33,14 @@ foi de ce que le navigateur annonce (extension, type MIME). Les fichiers ne tran
 
 ## Conséquences
 
-- L’antivirus n’est pas encore choisi : `antivirusNotConfigured` le dit explicitement dans le détail du
-  verdict (`antivirus: not_scanned`) et le worker l’annonce au démarrage. Brancher ClamAV (ou un service
-  managé) revient à implémenter `MalwareScanner`.
+- Antivirus (Sprint 5, SEC-01) : ClamAV par le démon clamd (commande `INSTREAM`, fichier transmis par
+  blocs, jamais écrit sur disque de notre côté), `ANTIVIRUS_URL=tcp://hôte:port`, obligatoire en
+  préproduction et en production (le worker refuse de démarrer sans). Verdicts : `OK` admis,
+  `… FOUND` refusé (`MALWARE`, signature conservée), fichier au-delà de la limite du démon refusé
+  (`UNSCANNABLE`) ; démon injoignable, en erreur ou muet : le travail est rejoué et le fichier reste
+  en quarantaine, jamais admis. En développement seulement, sans démon, `antivirusNotConfigured` le dit
+  dans le détail du verdict (`antivirus: not_scanned`) et au démarrage du worker. La limite de flux du
+  démon (`StreamMaxLength`) doit couvrir la taille maximale des dépôts (50 Mo).
 - La clé secrète Supabase est désormais utilisée **côté serveur uniquement** (API pour signer les URL,
   worker pour lire, copier et supprimer les objets). Elle n’est jamais exposée au navigateur.
 - Un dépôt déclaré mais jamais envoyé reste `pending` : le web cesse de l’attendre après 10 minutes ; une

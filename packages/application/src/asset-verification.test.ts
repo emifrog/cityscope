@@ -79,6 +79,25 @@ describe('asset verification', () => {
     await expect(verifyAsset(deps, 'asset')).resolves.toEqual({ status: 'rejected', reason: 'MALWARE' });
   });
 
+  it('rejects a file the antivirus cannot analyse, and keeps it in quarantine when the antivirus is down', async () => {
+    const unscannable: MalwareScanner = {
+      scan: async () => ({ verdict: 'unscannable', engine: 'test', signature: 'STREAM_TOO_LARGE' }),
+    };
+    await expect(verifyAsset(setup({}, PDF, unscannable).deps, 'asset')).resolves.toEqual({
+      status: 'rejected',
+      reason: 'UNSCANNABLE',
+    });
+    const down: MalwareScanner = {
+      scan: async () => {
+        throw new Error('ANTIVIRUS_UNAVAILABLE');
+      },
+    };
+    const { deps } = setup({}, PDF, down);
+    await expect(verifyAsset(deps, 'asset')).rejects.toThrow('ANTIVIRUS_UNAVAILABLE');
+    expect(deps.store.complete).not.toHaveBeenCalled();
+    expect(deps.objects.remove).not.toHaveBeenCalled();
+  });
+
   it('ignores an asset of another tenant', async () => {
     const { deps, objects } = setup();
     await expect(verifyAsset(deps, 'asset', '83000000-0000-4000-8000-000000000000')).resolves.toEqual({

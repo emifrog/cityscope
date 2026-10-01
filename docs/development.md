@@ -26,6 +26,12 @@ pnpm dev           # http://127.0.0.1:3000
 d’une exécution à l’autre et leurs clés publiques sont écrites dans la configuration du mobile
 (`TRUSTED_SIGNING_KEYS`). Les supprimer de `.env.local` oblige à réenrôler les terminaux de test.
 
+Antivirus (facultatif en local, obligatoire en préproduction et production) : un démon ClamAV contrôle
+chaque fichier déposé. Pour l’activer en local, lancer `docker run -d --name etare-clamav -p 3311:3310
+clamav/clamav:stable`, puis ajouter `ANTIVIRUS_URL=tcp://127.0.0.1:3311` à `.env.local` avant
+`pnpm dev:worker`. Le test d’intégration `antivirus.test.ts` ne s’exécute que si `ANTIVIRUS_URL` est
+défini (la CI l’active avec un conteneur de service).
+
 Services locaux : API Supabase `http://127.0.0.1:54321`, PostgreSQL `127.0.0.1:54322`, Studio
 `http://127.0.0.1:54323`, e-mails de test (Mailpit) `http://127.0.0.1:54324`.
 
