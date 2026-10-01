@@ -1,17 +1,14 @@
+import 'package:etare_ops/src/core/routing/app_routes.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/auth/presentation/login_screen.dart';
 import 'package:etare_ops/src/features/home/presentation/home_screen.dart';
 import 'package:etare_ops/src/features/startup/presentation/splash_screen.dart';
+import 'package:etare_ops/src/features/sync/presentation/enrollment_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-/// Chemins de navigation.
-abstract final class AppRoutes {
-  static const splash = '/splash';
-  static const login = '/login';
-  static const home = '/home';
-}
+export 'package:etare_ops/src/core/routing/app_routes.dart';
 
 /// Règle de redirection (fonction pure, testée unitairement) :
 /// - session en cours de restauration → écran d'attente ;
@@ -60,6 +57,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.home,
         builder: (context, state) => const HomeScreen(),
+        routes: [
+          GoRoute(
+            path: 'enroll',
+            builder: (context, state) => const EnrollmentScreen(),
+          ),
+        ],
       ),
     ],
   );

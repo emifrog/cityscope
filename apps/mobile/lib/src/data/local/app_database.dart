@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:etare_ops/src/data/local/daos/local_meta_dao.dart';
+import 'package:etare_ops/src/data/local/daos/offline_dao.dart';
 import 'package:etare_ops/src/data/local/daos/sync_state_dao.dart';
 import 'package:etare_ops/src/data/local/tables.dart';
 
@@ -11,28 +12,51 @@ part 'app_database.g.dart';
 /// passe une connexion chiffrée (`openEncryptedAppDatabase`), les tests une
 /// base en mémoire (`NativeDatabase.memory()`).
 @DriftDatabase(
-  tables: [LocalMeta, SyncState],
-  daos: [LocalMetaDao, SyncStateDao],
+  tables: [
+    LocalMeta,
+    SyncState,
+    InstalledPublications,
+    PublicationFiles,
+    FileBlobs,
+    SiteData,
+    SiteSearch,
+  ],
+  daos: [LocalMetaDao, SyncStateDao, OfflineDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   /// Incrémenter à chaque évolution du schéma, puis :
   /// `dart run drift_dev make-migrations` (instantané + tests générés).
-  static const currentSchemaVersion = 1;
+  static const currentSchemaVersion = 2;
 
   @override
   int get schemaVersion => currentSchemaVersion;
 
-  /// Étapes de migration indexées par version CIBLE. Exemple pour la v2 :
-  ///
-  /// ```dart
-  /// static Future<void> _migrateToV2(Migrator m, AppDatabase db) =>
-  ///     m.addColumn(db.syncState, db.syncState.lastError);
-  /// // puis dans la table : 2: _migrateToV2,
-  /// ```
+  /// Étapes de migration indexées par version CIBLE.
   static const Map<int, Future<void> Function(Migrator m, AppDatabase db)>
-  _migrationSteps = {};
+  _migrationSteps = {2: _migrateToV2};
+
+  /// v2 (Sprint 4) : contenu hors ligne installé et état de synchronisation
+  /// complet (génération acceptée, autorisation locale, dernière erreur).
+  static Future<void> _migrateToV2(Migrator m, AppDatabase db) async {
+    for (final column in [
+      db.syncState.catalogGeneration,
+      db.syncState.lastAttemptAt,
+      db.syncState.lastError,
+      db.syncState.serverTime,
+      db.syncState.authorizedUserId,
+      db.syncState.authorizationExpiresAt,
+      db.syncState.receiptPending,
+    ]) {
+      await m.addColumn(db.syncState, column);
+    }
+    await m.createTable(db.installedPublications);
+    await m.createTable(db.publicationFiles);
+    await m.createTable(db.fileBlobs);
+    await m.createTable(db.siteData);
+    await m.createTable(db.siteSearch);
+  }
 
   @override
   MigrationStrategy get migration => MigrationStrategy(

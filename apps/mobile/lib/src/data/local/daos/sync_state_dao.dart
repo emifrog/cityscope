@@ -33,4 +33,11 @@ class SyncStateDao extends DatabaseAccessor<AppDatabase>
       ),
     );
   }
+
+  /// Met à jour les colonnes fournies par [changes] (les autres sont gardées).
+  Future<void> write(SyncStateCompanion changes) async {
+    await (update(
+      syncState,
+    )..where((t) => t.id.equals(SyncState.singletonId))).write(changes);
+  }
 }

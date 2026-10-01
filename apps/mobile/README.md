@@ -1,12 +1,11 @@
-# Application OPS (Flutter) — squelette Sprint 0
+# Application OPS (Flutter)
 
 Application mobile **opérationnelle** de la plateforme ETARE numérique :
 consultation terrain des plans ETARE par les sapeurs-pompiers (SIS/SDIS).
 Android en priorité, structure compatible iOS.
 
-> Sprint 0 : **squelette uniquement** (architecture, configuration,
-> authentification, base locale chiffrée, écrans provisoires). Aucune
-> fonctionnalité métier OPS n'est livrée.
+> Sprint 4 : enrôlement de la tablette, synchronisation signée et
+> installation hors ligne chiffrée des ETARE publiés (ADR-015, ADR-016).
 
 Nom commercial non arrêté : le produit s'appelle provisoirement « Produit
 ETARE » et l'identifiant d'application `fr.etare.ops` est **provisoire**.
@@ -40,6 +39,7 @@ flutter pub get
 | `API_BASE_URL` | `http://10.0.2.2:3000/api/v1` | API produit |
 | `AUTH_URL` | `http://10.0.2.2:54321/auth/v1` | Supabase Auth (GoTrue) |
 | `AUTH_PUBLISHABLE_KEY` | *(vide)* | clé **publishable** Supabase (publique par conception) |
+| `TRUSTED_SIGNING_KEYS` | *(vide)* | clés publiques serveur approuvées : `publication:<id>:<base64>;catalog:<id>:<base64>` (obligatoires hors `dev` ; sans elles, pas de synchronisation) |
 
 La configuration est validée au démarrage : si elle est invalide (clé
 absente, URL incorrecte, HTTP hors `dev`, clé **secrète** / `service_role`
@@ -53,12 +53,9 @@ n'effectue aucun appel réseau.
 1. Démarrer la pile locale (Supabase + API) — voir le README racine.
 2. Récupérer la clé *publishable* locale (`supabase status`, ligne
    « Publishable key »).
-3. Créer un fichier de configuration local (ignoré par git) :
-
-   ```bash
-   cp dart_defines.example.json dart_defines.local.json
-   # puis renseigner AUTH_PUBLISHABLE_KEY
-   ```
+3. Le fichier de configuration local (ignoré par git)
+   `dart_defines.local.json` est écrit par `pnpm setup:local` à la racine :
+   clé publishable, port d'Auth et clés publiques de signature locales.
 
 4. Lancer :
 
@@ -91,6 +88,7 @@ HTTP en clair n'est autorisé que dans la variante **debug** et uniquement vers
 flutter analyze                 # doit afficher « No issues found! »
 flutter test                    # tests unitaires + widgets
 dart run build_runner build     # après toute modification du schéma Drift
+dart run drift_dev make-migrations  # nouvelle version du schéma : instantané + test
 flutter build apk --debug       # APK de développement
 ```
 
@@ -111,6 +109,14 @@ flutter build apk --debug       # APK de développement
   factice pour Dio, stockage sécurisé en mémoire, base Drift en mémoire.
 - Les tests de chiffrement (`test/data/local/encrypted_database_test.dart`)
   s'exécutent sur l'hôte avec **la même build SQLCipher** que l'appareil.
+- La synchronisation est testée contre un serveur simulé qui signe
+  réellement (Ed25519) et vérifie la signature de chaque requête de la
+  tablette (`test/features/sync/`) : installation, différentiel, retrait,
+  signatures falsifiées, fichier corrompu, rejeu, coupure et reprise,
+  révocation, horloge décalée.
+- Test de bout en bout **optionnel** contre la pile locale
+  (`test/e2e/local_stack_sync_test.dart`, ignoré sans `ETARE_E2E_API`) :
+  enrôlement et synchronisation réels auprès de l'API TypeScript.
 
 ## 5. Architecture
 
@@ -144,8 +150,8 @@ lib/
 
 Fonctionnalités présentes : `auth` (connexion/déconnexion, session),
 `account` (`/me`, SIS actif), `sites` (repository `/sites`, sans écran),
-`sync` (état hors ligne lu dans `sync_state`), `home`, `startup`
-(attente, erreurs de démarrage).
+`sync` (enrôlement, synchronisation signée, installation hors ligne,
+fraîcheur), `home`, `startup` (attente, erreurs de démarrage).
 
 Principes :
 
@@ -198,12 +204,14 @@ Principes :
 - **Récupération** : la base est un cache re-téléchargeable. Si la clé a
   disparu (réinstallation, reset du Keystore) ou ne correspond plus
   (`SQLITE_NOTADB`), le fichier est supprimé puis recréé.
-- **Schéma v1** : `local_meta` (clé/valeur non secrète) et `sync_state`
-  (ligne unique : `active_generation`, `last_sync_at`, `status` =
-  `never`). Migrations : `MigrationStrategy` pas à pas dans
-  `app_database.dart` ; instantanés de schéma via
-  `dart run drift_dev make-migrations` (configuré dans `build.yaml`,
-  instantané v1 dans `drift_schemas/`).
+- **Schéma v2** (Sprint 4) : `local_meta`, `sync_state` (génération
+  installée et acceptée, dernière synchronisation et tentative, autorisation
+  locale, accusé en attente), `installed_publication`, `publication_file`,
+  `file_blob` (contenu des fichiers, par empreinte), `site_data`,
+  `site_search`. Les fichiers des paquets sont DANS la base chiffrée
+  (ADR-016). Migrations pas à pas dans `app_database.dart`, instantanés v1
+  et v2 dans `drift_schemas/`, test de migration avec données dans
+  `test/drift/`.
 - **Licences** : SQLCipher Community Edition (licence de type BSD, mention
   requise dans la documentation distribuée) et OpenSSL sur Android — à
   intégrer à l'écran « À propos » / aux mentions légales avant diffusion.
@@ -226,12 +234,28 @@ Principes :
 - Les clés `sb_secret_…` / JWT `service_role` sont refusées à la
   configuration.
 
-## 8. Volontairement NON fait au Sprint 0
+## 8. Hors ligne : enrôlement et synchronisation (ADR-015, ADR-016)
+
+1. L'administrateur du SIS déclare la tablette (web, onglet « Terminaux ») et
+   remet le code à usage unique.
+2. Connecté, l'agent saisit le code : la tablette génère sa clé Ed25519, en
+   prouve la détention, et garde sa graine dans le Keystore.
+3. À chaque ouverture de l'accueil (et à la demande), la tablette demande
+   son catalogue signé, ne télécharge que les fichiers d'empreinte nouvelle,
+   vérifie signatures, empreintes et tailles, puis active le nouveau jeu en
+   une transaction et accuse réception.
+4. La consultation locale est autorisée 7 jours à l'utilisateur du dernier
+   catalogue ; la fraîcheur (à jour, en retard, erreur) est toujours
+   affichée.
+5. Révocation : au premier contact, données, état et identité de la tablette
+   sont effacés.
+
+## 9. Volontairement NON fait au Sprint 0
 
 - Fonctions OPS (risques, accès, plans, eau, coupures, contacts) : tuiles
   « Bientôt » uniquement.
-- Synchronisation hors ligne et stockage des publications (seule la table
-  `sync_state` existe).
+- ~~Synchronisation hors ligne et stockage des publications~~ : livrés au
+  Sprint 4 (sections 6 et 8).
 - Cartographie, géolocalisation, caméra.
 - Client API généré depuis l'OpenAPI (client manuel provisoire).
 - Verrouillage applicatif (PIN/biométrie), épinglage de certificats,

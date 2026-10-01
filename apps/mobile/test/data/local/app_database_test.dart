@@ -17,11 +17,12 @@ void main() {
   tearDown(() => database.close());
 
   test(
-    'schéma v1 : la ligne unique de sync_state est créée à l’ouverture',
+    'schéma courant : la ligne unique de sync_state est créée à l’ouverture',
     () async {
       final row = await database.syncStateDao.read();
 
-      expect(database.schemaVersion, 1);
+      expect(database.schemaVersion, AppDatabase.currentSchemaVersion);
+      expect(row.receiptPending, isFalse);
       expect(row.id, 1);
       expect(row.status, 'never');
       expect(row.activeGeneration, isNull);

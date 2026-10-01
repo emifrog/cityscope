@@ -76,3 +76,30 @@ extension JsonMapReader on JsonMap {
     _ => throw FormatException('« $key » : liste attendue'),
   };
 }
+
+extension JsonMapScalarReader on JsonMap {
+  int requireInt(String key) =>
+      optionalInt(key) ?? (throw FormatException('« $key » : entier attendu'));
+
+  bool requireBool(String key) => switch (this[key]) {
+    final bool value => value,
+    _ => throw FormatException('« $key » : booléen attendu'),
+  };
+
+  bool? optionalBool(String key) => switch (this[key]) {
+    null => null,
+    final bool value => value,
+    _ => throw FormatException('« $key » : booléen ou null attendu'),
+  };
+
+  double? optionalNumber(String key) => switch (this[key]) {
+    null => null,
+    final num value => value.toDouble(),
+    _ => throw FormatException('« $key » : nombre ou null attendu'),
+  };
+
+  List<Object?> requireList(String key) => switch (this[key]) {
+    final List<Object?> list => list,
+    _ => throw FormatException('« $key » : liste attendue'),
+  };
+}

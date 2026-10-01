@@ -202,7 +202,8 @@ export async function getSyncCatalog(
       generation,
       issued_at: now.toISOString(),
       authorization: {
-        user_id: session.access.userId,
+        // The terminal knows the user by the subject of their token, not by our internal id.
+        subject: context.principal.subject,
         expires_at: new Date(now.getTime() + OFFLINE_AUTHORIZATION_DAYS * 86_400_000).toISOString(),
       },
       publications,

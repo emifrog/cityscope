@@ -19,8 +19,21 @@ String describeError(Object error) => switch (error) {
   ApiException(code: ApiErrorCode.notFound) => 'Élément introuvable.',
   ApiException(code: ApiErrorCode.tenantRequired) =>
     'Aucun SIS sélectionné. Choisissez un SIS puis réessayez.',
-  ApiException(code: ApiErrorCode.validationFailed) =>
-    'La requête a été refusée par le serveur (données invalides).',
+  ApiException(code: ApiErrorCode.deviceRevoked) => 'Cette tablette a été révoquée par votre SIS : ses données ont été effacées.',
+  ApiException(code: ApiErrorCode.deviceNotEnrolled) =>
+    'Cette tablette n’est pas enrôlée dans votre SIS.',
+  ApiException(code: ApiErrorCode.deviceProofInvalid) =>
+    'L’identité de la tablette n’a pas pu être prouvée : réenrôlez-la.',
+  ApiException(code: ApiErrorCode.deviceClockSkew) =>
+    'L’heure de la tablette est incorrecte : corrigez-la puis réessayez.',
+  ApiException(code: ApiErrorCode.serviceUnavailable) =>
+    'Service momentanément indisponible. Réessayez plus tard.',
+  // Les refus de validation de l'API sont rédigés pour l'utilisateur (ex. code
+  // d'enrôlement expiré) : on les affiche tels quels.
+  ApiException(code: ApiErrorCode.validationFailed, :final message) =>
+    message.isEmpty
+        ? 'La requête a été refusée par le serveur (données invalides).'
+        : message,
   ApiException(:final traceId) => _withTrace(
     'Erreur du serveur. Réessayez plus tard.',
     traceId,

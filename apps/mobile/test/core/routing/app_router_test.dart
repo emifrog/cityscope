@@ -3,6 +3,7 @@ import 'package:etare_ops/src/core/routing/app_router.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/auth/presentation/login_screen.dart';
 import 'package:etare_ops/src/features/home/presentation/home_screen.dart';
+import 'package:etare_ops/src/features/sync/presentation/offline_status_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart' show Scrollable;
@@ -125,11 +126,9 @@ void main() {
         expect(find.text('SDIS DEMO 06'), findsOneWidget);
         expect(find.text('Rédacteur prévision'), findsOneWidget);
         expect(find.text('Opérationnel'), findsOneWidget);
-        expect(
-          find.text('Données hors ligne : aucune publication installée'),
-          findsOneWidget,
-        );
-        expect(find.text('Dernière synchronisation : jamais'), findsOneWidget);
+        // Tablette pas encore enrôlée : l'accueil le dit et propose le code.
+        expect(find.text('Tablette non enrôlée'), findsOneWidget);
+        expect(find.byKey(OfflineStatusCard.enrollButtonKey), findsOneWidget);
         for (final label in [
           'Risques',
           'Accès',
@@ -138,10 +137,13 @@ void main() {
           'Coupures',
           'Contacts',
         ]) {
-          await tester.ensureVisible(find.text(label));
+          await tester.scrollUntilVisible(
+            find.text(label),
+            200,
+            scrollable: find.byType(Scrollable).first,
+          );
           expect(find.text(label), findsOneWidget);
         }
-        expect(find.text('Bientôt'), findsNWidgets(6));
       },
     );
   });

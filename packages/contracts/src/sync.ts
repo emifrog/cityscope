@@ -170,7 +170,8 @@ export const syncCatalogSchema = z
     device_id: uuidSchema,
     generation: z.number().int().nonnegative(),
     issued_at: isoDateTimeSchema,
-    authorization: z.object({ user_id: uuidSchema, expires_at: isoDateTimeSchema }),
+    /** Local consultation right: the identity of the user as their token names it (sub), and its end. */
+    authorization: z.object({ subject: z.string().min(1).max(255), expires_at: isoDateTimeSchema }),
     publications: z.array(catalogEntrySchema),
   })
   .meta({ id: 'SyncCatalog' });

@@ -32,6 +32,11 @@ dependencies:
   # Bindings SQLite ; la variante embarquée (SQLCipher) est choisie via
   # `hooks.user_defines` ci-dessous.
   sqlite3: ^3.6.0
+  # Ed25519 (clé du terminal, vérification des manifestes et catalogues signés),
+  # implémentation Dart pure, Apache-2.0.
+  cryptography: ^2.9.0
+  # SHA-256 des fichiers téléchargés (dart-lang, BSD-3-Clause).
+  crypto: ^3.0.7
 
 dev_dependencies:
   build_runner: ^2.16.1

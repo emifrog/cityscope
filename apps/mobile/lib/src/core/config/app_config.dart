@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:etare_ops/src/core/security/trusted_keys.dart';
 import 'package:flutter/foundation.dart';
 
 /// Environnement d'exécution, fourni par `--dart-define=ENV=...`.
@@ -54,12 +55,14 @@ final class AppConfig {
     required this.apiBaseUrl,
     required this.authUrl,
     required this.authPublishableKey,
+    this.trustedKeys = TrustedKeys.empty,
   });
 
   static const envKey = 'ENV';
   static const apiBaseUrlKey = 'API_BASE_URL';
   static const authUrlKey = 'AUTH_URL';
   static const authPublishableKeyKey = 'AUTH_PUBLISHABLE_KEY';
+  static const trustedSigningKeysKey = 'TRUSTED_SIGNING_KEYS';
 
   /// Valeurs par défaut pensées pour l'émulateur Android (10.0.2.2 = hôte).
   static const defaultApiBaseUrl = 'http://10.0.2.2:3000/api/v1';
@@ -77,6 +80,11 @@ final class AppConfig {
   /// l'ancienne clé `anon`), mais jamais journalisée pour autant.
   final String authPublishableKey;
 
+  /// Clés publiques serveur approuvées pour les paquets hors ligne (ADR-015).
+  /// Vide en développement si non fournie : la synchronisation est alors
+  /// indisponible, jamais faite sans vérification.
+  final TrustedKeys trustedKeys;
+
   /// Lit les `--dart-define` compilés dans l'application puis les valide.
   static ConfigLoadResult load() => parse(readDartDefines());
 
@@ -92,6 +100,10 @@ final class AppConfig {
     if (const bool.hasEnvironment(authPublishableKeyKey))
       authPublishableKeyKey: const String.fromEnvironment(
         authPublishableKeyKey,
+      ),
+    if (const bool.hasEnvironment(trustedSigningKeysKey))
+      trustedSigningKeysKey: const String.fromEnvironment(
+        trustedSigningKeysKey,
       ),
   };
 
@@ -148,6 +160,25 @@ final class AppConfig {
       );
     }
 
+    var trustedKeys = TrustedKeys.empty;
+    try {
+      trustedKeys = TrustedKeys.parse(defines[trustedSigningKeysKey] ?? '');
+    } on FormatException catch (error) {
+      issues.add(ConfigIssue(trustedSigningKeysKey, error.message));
+    }
+    final complete =
+        trustedKeys.has(KeyPurpose.publication) &&
+        trustedKeys.has(KeyPurpose.catalog);
+    if (effectiveEnv != AppEnvironment.dev && !complete) {
+      issues.add(
+        ConfigIssue(
+          trustedSigningKeysKey,
+          'Clés publiques de publication et de catalogue obligatoires en '
+          'environnement ${effectiveEnv.name}.',
+        ),
+      );
+    }
+
     if (issues.isNotEmpty || apiBaseUrl == null || authUrl == null) {
       return ConfigRejected(List.unmodifiable(issues));
     }
@@ -157,6 +188,7 @@ final class AppConfig {
         apiBaseUrl: apiBaseUrl,
         authUrl: authUrl,
         authPublishableKey: publishableKey,
+        trustedKeys: trustedKeys,
       ),
     );
   }

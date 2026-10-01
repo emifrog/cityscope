@@ -1,26 +1,43 @@
 import 'dart:async';
 
 import 'package:etare_ops/src/core/errors/error_messages.dart';
-import 'package:etare_ops/src/core/formatting/date_formatting.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
 import 'package:etare_ops/src/features/account/application/account_providers.dart';
 import 'package:etare_ops/src/features/account/domain/role_labels.dart';
 import 'package:etare_ops/src/features/account/domain/user_account.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/sync/application/sync_providers.dart';
-import 'package:etare_ops/src/features/sync/domain/sync_status.dart';
+import 'package:etare_ops/src/features/sync/presentation/offline_status_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Accueil TEMPORAIRE (Sprint 0) : compte, SIS actif, état hors ligne et
 /// aperçu des futures fonctions opérationnelles.
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   static const signOutButtonKey = Key('home.signOut');
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => Scaffold(
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Synchronisation automatique à l'ouverture si la tablette est enrôlée :
+    // la consultation reste locale, le réseau ne bloque jamais l'écran.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final identity = await ref.read(deviceIdentityProvider.future);
+      if (identity != null && mounted) {
+        ref.read(syncControllerProvider.notifier).synchronizeInBackground();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text(Brand.productName)),
     body: SafeArea(
       child: RefreshIndicator(
@@ -30,7 +47,7 @@ class HomeScreen extends ConsumerWidget {
           children: const [
             _AccountCard(),
             SizedBox(height: 16),
-            _OfflineDataCard(),
+            OfflineStatusCard(),
             SizedBox(height: 24),
             _SectionTitle('Fonctions opérationnelles'),
             SizedBox(height: 12),
@@ -206,60 +223,6 @@ class _TenantSection extends ConsumerWidget {
     );
     if (selected == null || selected == current.tenantId) return;
     await ref.read(activeTenantControllerProvider.notifier).select(selected);
-  }
-}
-
-class _OfflineDataCard extends ConsumerWidget {
-  const _OfflineDataCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final textTheme = Theme.of(context).textTheme;
-    final status = ref.watch(syncStatusProvider);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: switch (status) {
-          AsyncError(:final error) => _LoadError(
-            message: 'État hors ligne illisible : ${describeError(error)}',
-          ),
-          AsyncData(value: final SyncStatus sync) => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    sync.hasPublication
-                        ? Icons.offline_pin
-                        : Icons.cloud_off_outlined,
-                    color: sync.hasPublication
-                        ? BrandColors.success
-                        : BrandColors.important,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      sync.hasPublication
-                          ? 'Données hors ligne : publication '
-                                'n° ${sync.activeGeneration} installée'
-                          : 'Données hors ligne : aucune publication installée',
-                      style: textTheme.titleMedium,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Dernière synchronisation : '
-                '${sync.lastSyncAt == null ? 'jamais' : formatDateTimeFr(sync.lastSyncAt!)}',
-                style: textTheme.bodyLarge,
-              ),
-            ],
-          ),
-          _ => const _Loading(label: 'Lecture de l’état hors ligne…'),
-        },
-      ),
-    );
   }
 }
 

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:etare_ops/src/core/config/app_config.dart';
+import 'package:etare_ops/src/core/security/trusted_keys.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 AppConfig expectLoaded(ConfigLoadResult result) => switch (result) {
@@ -13,7 +14,70 @@ List<String> rejectedKeys(ConfigLoadResult result) => switch (result) {
   ConfigLoaded() => fail('La configuration aurait dû être rejetée'),
 };
 
+/// Clé publique factice (32 octets nuls) : seul le format est contrôlé ici.
+const testKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
+const trustedKeys =
+    'publication:ed25519-pub:$testKey;catalog:ed25519-cat:$testKey';
+
 void main() {
+  group('clés de signature approuvées (ADR-015)', () {
+    test('sont lues avec leur usage', () {
+      final config = expectLoaded(
+        AppConfig.parse({
+          'AUTH_PUBLISHABLE_KEY': 'k',
+          'TRUSTED_SIGNING_KEYS': trustedKeys,
+        }),
+      );
+      expect(config.trustedKeys.has(KeyPurpose.publication), isTrue);
+      expect(
+        config.trustedKeys.find('ed25519-pub', KeyPurpose.catalog),
+        isNull,
+        reason: 'une clé de publication ne vaut pas pour un catalogue',
+      );
+    });
+
+    test('sont facultatives en dev, obligatoires ailleurs', () {
+      expect(
+        expectLoaded(AppConfig.parse({'AUTH_PUBLISHABLE_KEY': 'k'}))
+            .trustedKeys
+            .keys,
+        isEmpty,
+      );
+      expect(
+        rejectedKeys(
+          AppConfig.parse({
+            'ENV': 'staging',
+            'API_BASE_URL': 'https://api.example.fr/api/v1',
+            'AUTH_URL': 'https://auth.example.fr/auth/v1',
+            'AUTH_PUBLISHABLE_KEY': 'k',
+            'TRUSTED_SIGNING_KEYS': 'publication:ed25519-pub:$testKey',
+          }),
+        ),
+        ['TRUSTED_SIGNING_KEYS'],
+      );
+    });
+
+    test('refusent une entrée malformée', () {
+      for (final raw in [
+        'publication:ed25519-pub',
+        'signature:id:$testKey',
+        'catalog:id:AAAA',
+        'catalog:id:@@@',
+      ]) {
+        expect(
+          rejectedKeys(
+            AppConfig.parse({
+              'AUTH_PUBLISHABLE_KEY': 'k',
+              'TRUSTED_SIGNING_KEYS': raw,
+            }),
+          ),
+          ['TRUSTED_SIGNING_KEYS'],
+          reason: raw,
+        );
+      }
+    });
+  });
+
   group('AppConfig.parse', () {
     test('applique les valeurs par défaut de l’émulateur Android', () {
       final config = expectLoaded(
@@ -33,6 +97,7 @@ void main() {
           'API_BASE_URL': 'https://api.staging.example.fr/api/v1/',
           'AUTH_URL': 'https://auth.staging.example.fr/auth/v1//',
           'AUTH_PUBLISHABLE_KEY': '  sb_publishable_xyz  ',
+          'TRUSTED_SIGNING_KEYS': trustedKeys,
         }),
       );
 
@@ -40,6 +105,7 @@ void main() {
       expect(config.apiBaseUrl, 'https://api.staging.example.fr/api/v1');
       expect(config.authUrl, 'https://auth.staging.example.fr/auth/v1');
       expect(config.authPublishableKey, 'sb_publishable_xyz');
+      expect(config.trustedKeys.keys, hasLength(2));
     });
 
     test('rejette une clé publishable absente ou vide', () {
@@ -71,6 +137,7 @@ void main() {
       final result = AppConfig.parse({
         'ENV': 'prod',
         'AUTH_PUBLISHABLE_KEY': 'k',
+        'TRUSTED_SIGNING_KEYS': trustedKeys,
       });
       expect(rejectedKeys(result), ['API_BASE_URL', 'AUTH_URL']);
     });

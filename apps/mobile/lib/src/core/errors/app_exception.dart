@@ -54,7 +54,21 @@ enum ApiErrorCode {
   notFound('NOT_FOUND'),
   validationFailed('VALIDATION_FAILED'),
   tenantRequired('TENANT_REQUIRED'),
+  conflict('CONFLICT'),
+  serviceUnavailable('SERVICE_UNAVAILABLE'),
   internal('INTERNAL'),
+
+  /// Terminal inconnu dans ce SIS ou enrôlement non terminé.
+  deviceNotEnrolled('DEVICE_NOT_ENROLLED'),
+
+  /// Terminal révoqué : l'application efface ses données (OFF-04).
+  deviceRevoked('DEVICE_REVOKED'),
+
+  /// Requête non signée par la clé du terminal.
+  deviceProofInvalid('DEVICE_PROOF_INVALID'),
+
+  /// Horloge du terminal trop éloignée de celle du serveur.
+  deviceClockSkew('DEVICE_CLOCK_SKEW'),
 
   /// Code absent ou inconnu de cette version de l'application.
   unknown('UNKNOWN');

@@ -7,6 +7,10 @@ abstract final class SecureStorageKeys {
 
   /// Clé de chiffrement SQLCipher (32 octets aléatoires, en hexadécimal).
   static const databaseKey = 'etare.db.key.v1';
+
+  /// Identité du terminal enrôlé : identifiant, SIS et graine de sa clé
+  /// Ed25519 (ADR-015).
+  static const deviceIdentity = 'etare.device.identity.v1';
 }
 
 /// Stockage clé/valeur pour les SECRETS (jetons, clé de base).

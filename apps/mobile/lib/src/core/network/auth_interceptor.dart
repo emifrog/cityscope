@@ -69,7 +69,9 @@ final class AuthInterceptor extends Interceptor {
   ) async {
     final request = err.requestOptions;
     final alreadyRetried = request.extra[_retriedFlag] == true;
-    if (err.response?.statusCode != 401 || alreadyRetried) {
+    if (err.response?.statusCode != 401 ||
+        alreadyRetried ||
+        _isDeviceError(err.response?.data)) {
       handler.next(err);
       return;
     }
@@ -103,5 +105,15 @@ final class AuthInterceptor extends Interceptor {
     } on DioException catch (retryError) {
       handler.next(retryError);
     }
+  }
+
+  /// Un 401 sur la preuve du TERMINAL (signature, horloge) ne vient pas de la
+  /// session : la rafraîchir n'y changerait rien.
+  static bool _isDeviceError(Object? body) {
+    if (body is! Map<String, Object?>) return false;
+    final error = body['error'];
+    if (error is! Map<String, Object?>) return false;
+    final code = error['code'];
+    return code is String && code.startsWith('DEVICE_');
   }
 }

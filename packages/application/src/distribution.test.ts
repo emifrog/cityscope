@@ -158,7 +158,7 @@ describe('terminal requests', () => {
       tenant_id: TENANT,
       device_id: DEVICE,
       generation: 7,
-      authorization: { user_id: USER, expires_at: '2026-10-08T10:00:00.000Z' },
+      authorization: { subject: 'ops', expires_at: '2026-10-08T10:00:00.000Z' },
       publications: [entry],
     });
     expect(devices.catalog).toHaveBeenCalledWith(DEVICE, '1.0.0');
