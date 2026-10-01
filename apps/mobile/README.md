@@ -22,6 +22,7 @@ imposerait de réinstaller et de réenrôler chaque tablette).
 | JDK | 17+ | le JBR d'Android Studio convient |
 | Android SDK | plateforme/Build-Tools récents, licences acceptées | `flutter doctor` |
 | Émulateur Android | API 24+ | `minSdk` = 24 |
+| Tablette de référence | Alldocube iPlay 40H, Android 11 (API 30) | DEC-01 ; qualification physique à venir |
 
 **Accès réseau au premier build** : `package:sqlite3` télécharge sa
 bibliothèque native (SQLCipher) depuis les *releases* GitHub de

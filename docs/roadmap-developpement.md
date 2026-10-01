@@ -101,6 +101,11 @@ n’est engagée par ce document.
 
 - [ ] **DEC-01 — Matériel :** nommer la tablette Android de référence, ses limites RAM/disque, la version
       Android et le mode de distribution ; décider si iOS est nécessaire au pilote ou reporté.
+      **Tablette retenue le 1er octobre 2026 :** Alldocube iPlay 40H, Android 11 (API 30), écran 10,4"
+      2000 × 1200, 4G double SIM, GPS ; 8 Go de RAM et 128 Go de stockage selon la fiche publique, à
+      confirmer sur le modèle livré. Restent ouverts : mode de distribution (MDM ou installation
+      manuelle), iOS au pilote, règles de synchronisation (fréquence, budget de 50 Mo, Wi-Fi) et gestion
+      de l'énergie du constructeur, qui peut retarder les tâches de fond (ADR-018).
 - [ ] **DEC-02 — IGN :** qualifier par produit les droits de stockage/redistribution offline, attributions,
       emprises, niveaux de zoom, volume et renouvellement ; conserver la preuve avec le dossier SIG.
 - [ ] **DEC-03 — Hébergement :** région, responsabilités d’exploitation, séparation des environnements,
@@ -187,6 +192,13 @@ Lire le PDF essentiel après redémarrage sans réseau. Tests de contrat, d’in
       commentaire, pièces et suivi. Réutiliser le traitement des contributions de R1.
 - [ ] **POR-04 — Concurrence :** détecter une proposition basée sur une ancienne valeur, demander une
       résolution explicite et tracer acceptation partielle/refus ; aucune écriture directe dans le publié.
+      **Décisions prises par le porteur le 1er octobre 2026 (Sprint 7) :** l'administrateur du SIS et les
+      rédacteurs Prévision invitent les exploitants, avec second facteur ; le second facteur des exploitants est
+      un réglage du SIS, exigé par défaut ; l'exploitant voit une **liste blanche minimale** de la version
+      publiée (identité, adresse, classement, contacts du site, liste des plans par titre et date, documents
+      marqués « visibles par l'exploitant ») et jamais les codes d'accès, les risques détaillés, les PEI ni les
+      images des plans.
+
 - [ ] **POR-05 — Notifications utiles :** invitation, demande de précision, décision ; envoi rejouable,
       liens à durée limitée et suivi d’erreur. Le workflow doit rester utilisable si la notification échoue.
 
