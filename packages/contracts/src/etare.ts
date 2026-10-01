@@ -151,6 +151,8 @@ export const etareSnapshotSchema = z
       documentSchema
         .pick({ id: true, title: true, category: true, offline_policy: true })
         .extend({
+          /** Shown on the exploitant portal (POR-02); absent when not, as in snapshots made before it. */
+          portal_visible: z.literal(true).optional(),
           version: documentVersionSchema
             .pick({ id: true, version_no: true, valid_from: true, expires_at: true })
             .extend({ asset: snapshotAsset })

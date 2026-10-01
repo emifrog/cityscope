@@ -1,9 +1,13 @@
 import {
+  CLASSIFICATION_TYPES,
+  DOCUMENT_CATEGORIES,
+  PLAN_TYPES,
   PORTAL_ACCESS_STATES,
   PORTAL_INVITATION_DEFAULT_DAYS,
   PORTAL_INVITATION_MAX_DAYS,
   PORTAL_INVITATION_MAX_SITES,
   PORTAL_INVITATION_STATES,
+  SITE_TYPES,
 } from '@etare/domain';
 import { isoDateTimeSchema, uuidSchema } from '@etare/schemas';
 import { z } from 'zod';
@@ -113,3 +117,106 @@ export const portalAccessSchema = z
   .object({ state: z.enum(PORTAL_ACCESS_STATES) })
   .meta({ id: 'PortalAccess', description: 'Accès du demandeur au portail exploitant du SIS actif.' });
 export type PortalAccess = z.infer<typeof portalAccessSchema>;
+
+// ------------------------------------------------------------------ consultation (POR-02)
+const publishedVersionSchema = z
+  .object({ publication_number: z.number().int().positive(), published_at: isoDateTimeSchema })
+  .meta({ id: 'PortalPublishedVersion' });
+
+export const portalSiteSummarySchema = z
+  .object({
+    id: uuidSchema,
+    name: z.string(),
+    etare_number: z.string().nullable(),
+    /** End of the access (null: until the SIS ends it). */
+    access_until: isoDateTimeSchema.nullable(),
+    publication_number: z.number().int().positive().nullable(),
+    published_at: isoDateTimeSchema.nullable(),
+  })
+  .meta({ id: 'PortalSiteSummary' });
+export type PortalSiteSummary = z.infer<typeof portalSiteSummarySchema>;
+
+export const portalSiteListSchema = z
+  .object({ items: z.array(portalSiteSummarySchema) })
+  .meta({ id: 'PortalSiteList' });
+export type PortalSiteList = z.infer<typeof portalSiteListSchema>;
+
+/**
+ * What the exploitant reads of a site: a whitelist of its published version
+ * (ADR-019). Never access codes, risks, objects, zones nor plan images.
+ */
+export const portalSiteSchema = z
+  .object({
+    id: uuidSchema,
+    name: z.string(),
+    short_name: z.string().nullable(),
+    etare_number: z.string().nullable(),
+    site_type: z.enum(SITE_TYPES),
+    address: z
+      .object({
+        label: z.string(),
+        street: z.string().nullable(),
+        postal_code: z.string().nullable(),
+        city: z.string(),
+      })
+      .nullable(),
+    access_until: isoDateTimeSchema.nullable(),
+    /** Null: nothing published yet (or the version was withdrawn). */
+    publication: publishedVersionSchema.nullable(),
+    classifications: z.array(
+      z
+        .object({
+          classification_type: z.enum(CLASSIFICATION_TYPES),
+          code: z.string().nullable(),
+          category: z.string().nullable(),
+          label: z.string().nullable(),
+          valid_from: z.string().nullable(),
+          valid_to: z.string().nullable(),
+        })
+        .meta({ id: 'PortalClassification' }),
+    ),
+    contacts: z.array(
+      z
+        .object({
+          name: z.string(),
+          role: z.string().nullable(),
+          phone: z.string(),
+          phone_alt: z.string().nullable(),
+          email: z.string().nullable(),
+          availability: z.string().nullable(),
+          verified_at: isoDateTimeSchema.nullable(),
+        })
+        .meta({ id: 'PortalContact' }),
+    ),
+    plans: z.array(
+      z
+        .object({
+          id: uuidSchema,
+          title: z.string(),
+          plan_type: z.enum(PLAN_TYPES),
+          building_name: z.string().nullable(),
+          level_name: z.string().nullable(),
+          revision_no: z.number().int().positive(),
+        })
+        .meta({ id: 'PortalPlan' }),
+    ),
+    documents: z.array(
+      z
+        .object({
+          id: uuidSchema,
+          title: z.string(),
+          category: z.enum(DOCUMENT_CATEGORIES),
+          version_no: z.number().int().positive(),
+          valid_from: z.string().nullable(),
+          expires_at: z.string().nullable(),
+          filename: z.string(),
+          mime_type: z.string(),
+          size_bytes: z.number().int().nonnegative(),
+        })
+        .meta({ id: 'PortalDocument' }),
+    ),
+  })
+  .meta({ id: 'PortalSite' });
+export type PortalSite = z.infer<typeof portalSiteSchema>;
+
+export const portalDocumentParamsSchema = z.object({ id: uuidSchema, document_id: uuidSchema });

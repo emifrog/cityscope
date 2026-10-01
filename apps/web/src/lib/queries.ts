@@ -40,6 +40,8 @@ export const queryKeys = {
   portalInvitations: (tenantId: string) => ['tenant', tenantId, 'portal-invitations'] as const,
   portalSettings: (tenantId: string) => ['tenant', tenantId, 'portal-settings'] as const,
   portalAccess: (tenantId: string) => ['tenant', tenantId, 'portal-access'] as const,
+  portalSites: (tenantId: string) => ['tenant', tenantId, 'portal-sites'] as const,
+  portalSite: (tenantId: string, siteId: string) => ['tenant', tenantId, 'portal-sites', siteId] as const,
   myPortalInvitations: (userId: string) => ['me', userId, 'portal-invitations'] as const,
   riskTypes: (tenantId: string, includeDeprecated?: boolean) =>
     includeDeprecated === undefined
@@ -266,6 +268,26 @@ export function usePortalAccess(wanted = true) {
     queryKey: queryKeys.portalAccess(tenantId ?? 'none'),
     enabled: enabled && wanted,
     queryFn: ({ signal }) => api.getPortalAccess({ ...options, signal }),
+  });
+}
+
+/** Sites open to the exploitant in the active SIS (POR-02). */
+export function usePortalSites(wanted = true) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.portalSites(tenantId ?? 'none'),
+    enabled: enabled && wanted,
+    queryFn: ({ signal }) => api.listPortalSites({ ...options, signal }),
+  });
+}
+
+/** What the exploitant sees of one site: the whitelist of its published version. */
+export function usePortalSite(siteId: string) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.portalSite(tenantId ?? 'none', siteId),
+    enabled,
+    queryFn: ({ signal }) => api.getPortalSite({ ...options, signal }, siteId),
   });
 }
 

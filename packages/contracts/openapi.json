@@ -7202,6 +7202,12 @@
               "always"
             ]
           },
+          "portal_visible": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
           "version": {
             "$ref": "#/components/schemas/SnapshotDocumentVersion"
           }
@@ -7622,6 +7628,9 @@
               "always"
             ]
           },
+          "portal_visible": {
+            "type": "boolean"
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -7646,6 +7655,7 @@
           "category",
           "title",
           "offline_policy",
+          "portal_visible",
           "status",
           "row_version",
           "versions"
@@ -7736,6 +7746,10 @@
             ],
             "default": "never"
           },
+          "portal_visible": {
+            "type": "boolean",
+            "default": false
+          },
           "valid_from": {
             "type": [
               "string",
@@ -7818,6 +7832,9 @@
               "on_demand",
               "always"
             ]
+          },
+          "portal_visible": {
+            "type": "boolean"
           },
           "status": {
             "type": "string",
@@ -9557,6 +9574,414 @@
           "state"
         ],
         "description": "Accès du demandeur au portail exploitant du SIS actif."
+      },
+      "PortalSiteList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortalSiteSummary"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "PortalSiteSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "etare_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "access_until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "publication_number": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0
+          },
+          "published_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "etare_number",
+          "access_until",
+          "publication_number",
+          "published_at"
+        ]
+      },
+      "PortalSite": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "short_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "etare_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "site_type": {
+            "type": "string",
+            "enum": [
+              "erp",
+              "industrial",
+              "health",
+              "education",
+              "heritage",
+              "other"
+            ]
+          },
+          "address": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "street": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "postal_code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "city": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "label",
+              "street",
+              "postal_code",
+              "city"
+            ]
+          },
+          "access_until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "publication": {
+            "$ref": "#/components/schemas/PortalPublishedVersion"
+          },
+          "classifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortalClassification"
+            }
+          },
+          "contacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortalContact"
+            }
+          },
+          "plans": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortalPlan"
+            }
+          },
+          "documents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortalDocument"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "short_name",
+          "etare_number",
+          "site_type",
+          "address",
+          "access_until",
+          "publication",
+          "classifications",
+          "contacts",
+          "plans",
+          "documents"
+        ]
+      },
+      "PortalPublishedVersion": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "publication_number": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "publication_number",
+          "published_at"
+        ]
+      },
+      "PortalClassification": {
+        "type": "object",
+        "properties": {
+          "classification_type": {
+            "type": "string",
+            "enum": [
+              "ERP",
+              "IGH",
+              "ICPE",
+              "SEVESO",
+              "ETARE",
+              "PPI",
+              "OTHER"
+            ]
+          },
+          "code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "category": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "valid_from": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "valid_to": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "classification_type",
+          "code",
+          "category",
+          "label",
+          "valid_from",
+          "valid_to"
+        ]
+      },
+      "PortalContact": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "phone": {
+            "type": "string"
+          },
+          "phone_alt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "availability": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "verified_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "name",
+          "role",
+          "phone",
+          "phone_alt",
+          "email",
+          "availability",
+          "verified_at"
+        ]
+      },
+      "PortalPlan": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "plan_type": {
+            "type": "string",
+            "enum": [
+              "site",
+              "level",
+              "network",
+              "evacuation",
+              "other"
+            ]
+          },
+          "building_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "level_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "revision_no": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "plan_type",
+          "building_name",
+          "level_name",
+          "revision_no"
+        ]
+      },
+      "PortalDocument": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "fds",
+              "notice",
+              "instruction",
+              "plan",
+              "photo",
+              "other"
+            ]
+          },
+          "version_no": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "valid_from": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "filename": {
+            "type": "string"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "category",
+          "version_no",
+          "valid_from",
+          "expires_at",
+          "filename",
+          "mime_type",
+          "size_bytes"
+        ]
       }
     },
     "parameters": {}
@@ -19316,6 +19741,290 @@
           },
           "403": {
             "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portal/sites": {
+      "get": {
+        "operationId": "listPortalSites",
+        "summary": "Sites ouverts à l’exploitant dans le SIS actif, avec leur version publiée",
+        "tags": [
+          "portal"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalSiteList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portal/sites/{id}": {
+      "get": {
+        "operationId": "getPortalSite",
+        "summary": "Ce que l’exploitant voit d’un site : liste blanche de la version publiée",
+        "tags": [
+          "portal"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalSite"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ressource introuvable ou non autorisée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portal/sites/{id}/documents/{document_id}/download": {
+      "get": {
+        "operationId": "getPortalDocumentDownload",
+        "summary": "URL de courte durée d’un document publié visible de l’exploitant (accès tracé)",
+        "tags": [
+          "portal"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "document_id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetDownload"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ressource introuvable ou non autorisée",
             "content": {
               "application/json": {
                 "schema": {

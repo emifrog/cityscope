@@ -192,6 +192,7 @@ export function buildSnapshot(data: WorkingData): EtareSnapshot {
           title: document.title,
           category: document.category,
           offline_policy: document.offline_policy,
+          ...(document.portal_visible ? { portal_visible: true as const } : {}),
           version: {
             id: version.id,
             version_no: version.version_no,

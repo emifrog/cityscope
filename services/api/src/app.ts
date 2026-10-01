@@ -36,7 +36,10 @@ import {
   acceptPortalInvitation,
   createPortalInvitation,
   getPortalAccess,
+  getPortalDocumentDownload,
   getPortalSettings,
+  getPortalSite,
+  listPortalSites,
   listMyPortalInvitations,
   listPortalInvitations,
   revokePortalInvitation,
@@ -766,6 +769,28 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
   app.get(routerPath(endpoints.getPortalAccess.path), async (c) => {
     const context = await requestContext(c, endpoints.getPortalAccess);
     return respond(c, endpoints.getPortalAccess, await getPortalAccess(deps.sessions, context));
+  });
+
+  app.get(routerPath(endpoints.listPortalSites.path), async (c) => {
+    const context = await requestContext(c, endpoints.listPortalSites);
+    return respond(c, endpoints.listPortalSites, await listPortalSites(deps.sessions, context));
+  });
+
+  app.get(routerPath(endpoints.getPortalSite.path), async (c) => {
+    const context = await requestContext(c, endpoints.getPortalSite);
+    const { id } = endpoints.getPortalSite.params.parse(c.req.param());
+    return respond(c, endpoints.getPortalSite, await getPortalSite(deps.sessions, context, id));
+  });
+
+  app.get(routerPath(endpoints.getPortalDocumentDownload.path), async (c) => {
+    const context = await requestContext(c, endpoints.getPortalDocumentDownload);
+    const { id, document_id } = endpoints.getPortalDocumentDownload.params.parse(c.req.param());
+    const files = { sessions: deps.sessions, storage: deps.storage };
+    return respond(
+      c,
+      endpoints.getPortalDocumentDownload,
+      await getPortalDocumentDownload(files, context, id, document_id),
+    );
   });
 
   // ---------------------------------------------------------------- terminals (administration)

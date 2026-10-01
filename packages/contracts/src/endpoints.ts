@@ -24,6 +24,7 @@ import { mapCatalogSchema, mapSitesQuerySchema, mapSitesResponseSchema } from '.
 import {
   myPortalInvitationListSchema,
   portalAccessSchema,
+  portalDocumentParamsSchema,
   portalInvitationAcceptedSchema,
   portalInvitationCreateSchema,
   portalInvitationCreatedSchema,
@@ -31,6 +32,8 @@ import {
   portalInvitationRevokeSchema,
   portalInvitationSchema,
   portalSettingsSchema,
+  portalSiteListSchema,
+  portalSiteSchema,
 } from './portal';
 import {
   mapFeaturesQuerySchema,
@@ -1113,6 +1116,35 @@ export const endpoints = {
     tags: ['portal'],
     successStatus: 200,
     response: portalAccessSchema,
+  }),
+  listPortalSites: tenantEndpoint({
+    operationId: 'listPortalSites',
+    method: 'get',
+    path: '/portal/sites',
+    summary: 'Sites ouverts à l’exploitant dans le SIS actif, avec leur version publiée',
+    tags: ['portal'],
+    successStatus: 200,
+    response: portalSiteListSchema,
+  }),
+  getPortalSite: tenantEndpoint({
+    operationId: 'getPortalSite',
+    method: 'get',
+    path: '/portal/sites/{id}',
+    summary: 'Ce que l’exploitant voit d’un site : liste blanche de la version publiée',
+    tags: ['portal'],
+    params: idParamsSchema,
+    successStatus: 200,
+    response: portalSiteSchema,
+  }),
+  getPortalDocumentDownload: tenantEndpoint({
+    operationId: 'getPortalDocumentDownload',
+    method: 'get',
+    path: '/portal/sites/{id}/documents/{document_id}/download',
+    summary: 'URL de courte durée d’un document publié visible de l’exploitant (accès tracé)',
+    tags: ['portal'],
+    params: portalDocumentParamsSchema,
+    successStatus: 200,
+    response: assetDownloadSchema,
   }),
 } as const satisfies Record<string, EndpointContract>;
 

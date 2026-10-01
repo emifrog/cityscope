@@ -16,6 +16,7 @@ const created: DocumentUploadResponse = {
     category: 'instruction',
     title: 'Consignes',
     offline_policy: 'never',
+    portal_visible: false,
     status: 'active',
     row_version: 1,
     versions: [],

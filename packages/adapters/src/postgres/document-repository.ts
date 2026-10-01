@@ -18,6 +18,7 @@ interface DocumentRow {
   category: string;
   title: string;
   offline_policy: string;
+  portal_visible: boolean;
   status: string;
   row_version: number;
 }
@@ -39,7 +40,8 @@ interface VersionRow {
   asset_created_at: Date;
 }
 
-const DOCUMENT_COLUMNS = 'd.id, d.site_id, d.category, d.title, d.offline_policy, d.status, d.row_version';
+const DOCUMENT_COLUMNS =
+  'd.id, d.site_id, d.category, d.title, d.offline_policy, d.portal_visible, d.status, d.row_version';
 const VERSION_COLUMNS = `v.document_id, v.id, v.version_no, v.valid_from::text as valid_from, v.expires_at::text as expires_at,
   v.created_at, a.id as asset_id, a.filename, a.mime_type, a.size_bytes::int as size_bytes, a.sha256, a.scan_status,
   a.scan_detail ->> 'reason' as rejection_reason, a.created_at as asset_created_at`;
@@ -98,9 +100,9 @@ export class PostgresDocumentRepository implements DocumentRepository {
     const tenantId = site.rows[0]?.tenant_id;
     if (!tenantId) return null;
     const document = await this.client.query<{ id: string }>(
-      `insert into app.document (tenant_id, site_id, category, title, offline_policy)
-       values ($1, $2, $3, $4, $5) returning id`,
-      [tenantId, siteId, input.category, input.title, input.offline_policy],
+      `insert into app.document (tenant_id, site_id, category, title, offline_policy, portal_visible)
+       values ($1, $2, $3, $4, $5, $6) returning id`,
+      [tenantId, siteId, input.category, input.title, input.offline_policy, input.portal_visible],
     );
     const documentId = document.rows[0]?.id ?? '';
     const upload = await this.insertVersion(tenantId, siteId, documentId, 1, input);
@@ -132,7 +134,13 @@ export class PostgresDocumentRepository implements DocumentRepository {
       this.client,
       'app.document',
       id,
-      assignments(patch, { title: 'title', category: 'category', offline_policy: 'offline_policy', status: 'status' }),
+      assignments(patch, {
+        title: 'title',
+        category: 'category',
+        offline_policy: 'offline_policy',
+        portal_visible: 'portal_visible',
+        status: 'status',
+      }),
     );
     return this.get(id);
   }

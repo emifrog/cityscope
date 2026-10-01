@@ -2,6 +2,8 @@ import type {
   MyPortalInvitation,
   PortalInvitation,
   PortalSettings,
+  PortalSite,
+  PortalSiteSummary,
   AddressCandidate,
   Building,
   Document,
@@ -386,6 +388,12 @@ export interface PortalAccessRepository {
   settings(): Promise<PortalSettings | null>;
   updateSettings(settings: PortalSettings): Promise<PortalSettings>;
   accessState(): Promise<PortalAccessState>;
+  /** Sites open to the caller, with their published version (POR-02). */
+  sites(): Promise<PortalSiteSummary[]>;
+  /** Whitelist of the published version of a site; null when it is not open to the caller. */
+  site(id: string): Promise<PortalSite | null>;
+  /** File of a published document shown to the exploitant; null otherwise. */
+  documentFile(siteId: string, documentId: string): Promise<StoredAsset | null>;
 }
 
 export interface IdentityProvisioner {

@@ -10,6 +10,7 @@ import { queryKeys, useMyPortalInvitations, usePortalAccess } from '@/lib/querie
 import { SecondFactorSection } from '@/app/(app)/compte/second-factor-section';
 import { useSession } from '@/providers/session-provider';
 import { useTenant } from '@/providers/tenant-provider';
+import { PortalSites } from './portal-sites';
 
 const date = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeZone: 'Europe/Paris' });
 const dateTime = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Europe/Paris' });
@@ -96,7 +97,7 @@ export function PortalHome() {
             </CardContent>
           </Card>
         ) : null}
-        {state === 'granted' ? <Alert tone="info">Votre accès est ouvert : vos sites s’afficheront ici.</Alert> : null}
+        {state === 'granted' ? <PortalSites /> : null}
         {state === 'none' && pending.length === 0 ? (
           <Alert tone="info">
             Aucun site ne vous est ouvert pour l’instant. Votre accès passe par une invitation du service d’incendie et

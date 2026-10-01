@@ -61,6 +61,8 @@ export const documentSchema = z
     category: z.enum(DOCUMENT_CATEGORIES),
     title: z.string(),
     offline_policy: z.enum(OFFLINE_POLICIES),
+    /** Shown on the exploitant portal once published (POR-02). */
+    portal_visible: z.boolean(),
     status: z.enum(RECORD_STATUSES),
     row_version: z.number().int().positive(),
     /** Newest first. */
@@ -79,6 +81,7 @@ export const documentCreateSchema = z
     title: z.string().trim().min(1).max(200),
     category: z.enum(DOCUMENT_CATEGORIES),
     offline_policy: z.enum(OFFLINE_POLICIES).default('never'),
+    portal_visible: z.boolean().default(false),
     ...versionDates,
     file: fileDeclarationSchema,
   })
@@ -96,6 +99,7 @@ export const documentUpdateSchema = z
     title: z.string().trim().min(1).max(200).optional(),
     category: z.enum(DOCUMENT_CATEGORIES).optional(),
     offline_policy: z.enum(OFFLINE_POLICIES).optional(),
+    portal_visible: z.boolean().optional(),
     status: z.enum(RECORD_STATUSES).optional(),
   })
   .refine((value) => Object.values(value).some((field) => field !== undefined), {

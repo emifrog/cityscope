@@ -165,6 +165,12 @@ une liaison `EXPLOITANT` par site ; `exploitant_binding_scope` refuse toute liai
 l'échelle du SIS. Les permissions `portal_mfa` exigent `aal2` si le paramètre du SIS
 `portal_mfa_required` (défaut : vrai) l'impose. Voir le test `150_exploitant_access`.
 
+La consultation (POR-02) lit la **version publiée** : `portal_sites`, `portal_site` (liste blanche
+construite champ par champ dans la charge utile) et `portal_document_file` (fichier d'un document
+`portal_visible` de la publication active, vérifié par identifiant et empreinte), filtrées site par site
+par `has_permission('portal:read', site)`. `document.portal_visible` est saisi sur les données de travail
+et figé dans l'instantané. Voir le test `160_portal_consultation`.
+
 ## Auteurs des données de travail et séparation des tâches
 
 Chaque écriture d’une donnée de travail (site, bâtiment, niveau, zone, plan, objet, risque, document,

@@ -131,12 +131,13 @@ const photo = (
   asset: { ...asset(`${id}-a`, status), mime_type: 'image/jpeg' },
 });
 
-const document = (id: string, status: 'clean' | 'pending'): Document => ({
+const document = (id: string, status: 'clean' | 'pending', portalVisible = false): Document => ({
   id,
   site_id: SITE,
   category: 'fds',
   title: `Document ${id}`,
   offline_policy: 'always',
+  portal_visible: portalVisible,
   status: 'active',
   row_version: 1,
   versions: [
@@ -257,6 +258,12 @@ describe('canonical snapshot', () => {
       },
     ]);
     expect(snapshot.objects.find((item) => item.id === 'o0')).not.toHaveProperty('photos');
+  });
+
+  it('marks the documents shown to the exploitant, and no key at all for the others', () => {
+    const snapshot = buildSnapshot(data({ documents: [document('d1', 'clean', true), document('d2', 'clean')] }));
+    expect(snapshot.documents.find((item) => item.id === 'd1')?.portal_visible).toBe(true);
+    expect(snapshot.documents.find((item) => item.id === 'd2')).not.toHaveProperty('portal_visible');
   });
 });
 

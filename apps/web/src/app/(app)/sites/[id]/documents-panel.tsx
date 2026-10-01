@@ -59,6 +59,7 @@ const metaShape = {
   title: z.string().trim().min(1, 'Le titre est obligatoire.').max(200),
   category: z.enum(DOCUMENT_CATEGORIES),
   offline_policy: z.enum(OFFLINE_POLICIES),
+  portal_visible: z.boolean(),
 };
 const metaSchema = z.object(metaShape);
 const newDocumentSchema = z.object({ ...metaShape, ...datesShape }).refine(datesInOrder, DATES_ERROR);
@@ -157,6 +158,22 @@ function DateFields({
   );
 }
 
+/** Whether the exploitants of the site see the document once published (POR-02, ADR-019). */
+function PortalVisibleField({ id, registration }: { id: string; registration: UseFormRegisterReturn }) {
+  return (
+    <div className="space-y-1 md:col-span-2">
+      <label htmlFor={id} className="flex items-center gap-2 text-sm font-medium">
+        <input id={id} type="checkbox" className="size-4 accent-brand-accent" {...registration} />
+        Visible par l’exploitant
+      </label>
+      <p className="text-xs text-muted">
+        Après la prochaine publication, l’exploitant du site pourra consulter et télécharger ce document depuis son
+        portail.
+      </p>
+    </div>
+  );
+}
+
 function NewDocumentForm({ siteId, onClose }: { siteId: string; onClose: () => void }) {
   const { upload, setFile, fileError, setFileError, submit } = useUploadForm(siteId);
   const {
@@ -167,7 +184,14 @@ function NewDocumentForm({ siteId, onClose }: { siteId: string; onClose: () => v
     formState: { errors },
   } = useForm<NewDocumentValues>({
     resolver: zodResolver(newDocumentSchema),
-    defaultValues: { title: '', category: 'instruction', offline_policy: 'never', valid_from: '', expires_at: '' },
+    defaultValues: {
+      title: '',
+      category: 'instruction',
+      offline_policy: 'never',
+      portal_visible: false,
+      valid_from: '',
+      expires_at: '',
+    },
   });
 
   return (
@@ -180,6 +204,7 @@ function NewDocumentForm({ siteId, onClose }: { siteId: string; onClose: () => v
             title: values.title.trim(),
             category: values.category,
             offline_policy: values.offline_policy,
+            portal_visible: values.portal_visible,
             valid_from: blankToNull(values.valid_from),
             expires_at: blankToNull(values.expires_at),
             file,
@@ -225,6 +250,7 @@ function NewDocumentForm({ siteId, onClose }: { siteId: string; onClose: () => v
           ))}
         </Select>
       </Field>
+      <PortalVisibleField id="new-document-portal" registration={register('portal_visible')} />
       <DateFields
         prefix="new-document"
         validFrom={register('valid_from')}
@@ -310,7 +336,12 @@ function DocumentMetaForm({ siteId, document, onClose }: { siteId: string; docum
     formState: { errors },
   } = useForm<MetaValues>({
     resolver: zodResolver(metaSchema),
-    defaultValues: { title: document.title, category: document.category, offline_policy: document.offline_policy },
+    defaultValues: {
+      title: document.title,
+      category: document.category,
+      offline_policy: document.offline_policy,
+      portal_visible: document.portal_visible,
+    },
   });
 
   return (
@@ -347,6 +378,7 @@ function DocumentMetaForm({ siteId, document, onClose }: { siteId: string; docum
           ))}
         </Select>
       </Field>
+      <PortalVisibleField id={`${prefix}-portal`} registration={register('portal_visible')} />
       <div className="flex gap-2 md:col-span-2">
         <Button type="submit" size="sm" disabled={update.isPending}>
           {update.isPending ? 'Enregistrement…' : 'Enregistrer'}
@@ -448,6 +480,7 @@ function DocumentCard({
               <Badge tone={document.offline_policy === 'never' ? 'neutral' : 'info'}>
                 {OFFLINE_POLICY_LABELS[document.offline_policy]}
               </Badge>
+              {document.portal_visible ? <Badge tone="info">Visible exploitant</Badge> : null}
               {archived ? <Badge>Archivé</Badge> : null}
             </div>
           </div>

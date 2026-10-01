@@ -1,10 +1,14 @@
-import type { PortalAccessRepository, PortalInviteInput } from '@etare/application';
+import type { PortalAccessRepository, PortalInviteInput, StoredAsset } from '@etare/application';
 import {
   myPortalInvitationSchema,
   portalInvitationSchema,
+  portalSiteSchema,
+  portalSiteSummarySchema,
   type MyPortalInvitation,
   type PortalInvitation,
   type PortalSettings,
+  type PortalSite,
+  type PortalSiteSummary,
 } from '@etare/contracts';
 import { portalInvitationState, type PortalAccessState } from '@etare/domain';
 import type { PoolClient } from './pool';
@@ -159,4 +163,66 @@ export class PostgresPortalAccessRepository implements PortalAccessRepository {
     const { rows } = await this.client.query<{ state: PortalAccessState }>('select app.portal_access_state() as state');
     return rows[0]?.state ?? 'none';
   }
+
+  async sites(): Promise<PortalSiteSummary[]> {
+    const { rows } = await this.client.query<{
+      id: string;
+      name: string;
+      etare_number: string | null;
+      access_until: Date | null;
+      publication_number: number | null;
+      published_at: Date | null;
+    }>('select * from app.portal_sites()');
+    return rows.map((row) =>
+      portalSiteSummarySchema.parse({
+        ...row,
+        access_until: toIso(row.access_until),
+        published_at: toIso(row.published_at),
+      }),
+    );
+  }
+
+  async site(id: string): Promise<PortalSite | null> {
+    const { rows } = await this.client.query<{ site: PortalSiteJson | null }>('select app.portal_site($1) as site', [
+      id,
+    ]);
+    const site = rows[0]?.site;
+    if (!site) return null;
+    // Timestamps built in PostgreSQL JSON are normalized to the API format.
+    return portalSiteSchema.parse({
+      ...site,
+      access_until: isoOrNull(site.access_until),
+      publication: site.publication
+        ? { ...site.publication, published_at: isoOrNull(site.publication.published_at) }
+        : null,
+      contacts: site.contacts.map((contact) => ({ ...contact, verified_at: isoOrNull(contact.verified_at) })),
+    });
+  }
+
+  async documentFile(siteId: string, documentId: string): Promise<StoredAsset | null> {
+    const { rows } = await this.client.query<{
+      asset_id: string;
+      storage_key: string;
+      filename: string;
+      mime_type: string;
+    }>('select * from app.portal_document_file($1, $2)', [siteId, documentId]);
+    const row = rows[0];
+    return row
+      ? {
+          id: row.asset_id,
+          storageKey: row.storage_key,
+          filename: row.filename,
+          mimeType: row.mime_type,
+          scanStatus: 'clean',
+        }
+      : null;
+  }
 }
+
+interface PortalSiteJson {
+  access_until: string | null;
+  publication: { published_at: string } | null;
+  contacts: { verified_at: string | null }[];
+}
+
+const isoOrNull = (value: string | null) => (value ? new Date(value).toISOString() : null);

@@ -46,6 +46,8 @@ import {
   type PortalInvitationCreated,
   type PortalInvitationRevoke,
   type PortalSettings,
+  type PortalSite,
+  type PortalSiteSummary,
   type Device,
   type DeviceCreate,
   type DeviceEnrollmentCode,
@@ -466,6 +468,19 @@ export const api = {
 
   getPortalAccess: (options: ApiCallOptions): Promise<PortalAccess> =>
     call(endpoints.getPortalAccess.response, endpoints.getPortalAccess.path, options),
+
+  listPortalSites: (options: ApiCallOptions): Promise<PortalSiteSummary[]> =>
+    itemsOf(call(endpoints.listPortalSites.response, endpoints.listPortalSites.path, options)),
+
+  getPortalSite: (options: ApiCallOptions, id: string): Promise<PortalSite> =>
+    call(endpoints.getPortalSite.response, pathOf(endpoints.getPortalSite.path, { id }), options),
+
+  getPortalDocumentDownload: (options: ApiCallOptions, siteId: string, documentId: string): Promise<AssetDownload> =>
+    call(
+      endpoints.getPortalDocumentDownload.response,
+      pathOf(endpoints.getPortalDocumentDownload.path, { id: siteId, document_id: documentId }),
+      options,
+    ),
 
   // ---------------------------------------------------------------- field reports (OPS-04)
   listFieldReports: (options: ApiCallOptions, query: Partial<FieldReportListQuery> = {}): Promise<FieldReportList> =>
