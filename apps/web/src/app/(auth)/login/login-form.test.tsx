@@ -23,6 +23,11 @@ describe('LoginForm', () => {
   });
   afterEach(cleanup);
 
+  it('never sends credentials in the URL, even if submitted before hydration', () => {
+    const { container } = render(<LoginForm next="/" />);
+    expect(container.querySelector('form')?.getAttribute('method')).toBe('post');
+  });
+
   it('validates the fields before calling the identity provider', async () => {
     render(<LoginForm next="/" />);
     fill('pas-un-email', '');

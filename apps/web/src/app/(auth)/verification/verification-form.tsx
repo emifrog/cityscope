@@ -65,7 +65,13 @@ export function VerificationForm({ next }: { next: string }) {
   }
 
   return (
-    <form noValidate onSubmit={onSubmit} className="space-y-4">
+    <form
+      noValidate
+      // POST: a submission before hydration never puts credentials in the URL (history, logs).
+      method="post"
+      onSubmit={onSubmit}
+      className="space-y-4"
+    >
       <p className="text-sm text-muted">
         Saisissez le code à 6 chiffres affiché par votre application d’authentification.
       </p>

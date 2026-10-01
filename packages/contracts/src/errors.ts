@@ -15,6 +15,10 @@ export const API_ERROR_CODES = [
   'INVALID_TRANSITION',
   'SELF_APPROVAL_FORBIDDEN',
   'RATE_LIMITED',
+  'DEVICE_NOT_ENROLLED',
+  'DEVICE_REVOKED',
+  'DEVICE_PROOF_INVALID',
+  'DEVICE_CLOCK_SKEW',
   'INTERNAL',
 ] as const;
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];

@@ -117,6 +117,27 @@ journaux ne contiennent ni nom de fichier ni URL signée, seulement des identifi
   une identité après un événement d’authentification plus récent.
 - Journaux JSON avec masquage des clés sensibles (jetons, mots de passe, URL signées).
 
+## Terminaux et distribution hors ligne
+
+Voir ADR-015.
+
+- Deux clés Ed25519 serveur : la clé de **publication** n’existe que dans le worker et signe les
+  manifestes à la fabrication ; la clé de **catalogue** n’existe que dans l’API et signe les catalogues.
+  Une compromission de l’API ne permet pas de forger un contenu publié. Les terminaux ne font confiance
+  qu’aux clés publiques de leur configuration, chacune liée à son usage.
+- Ce qui est signé commence par une ligne de contexte : une signature faite pour un usage (manifeste,
+  catalogue, requête, enrôlement) n’est valable pour aucun autre.
+- Enrôlement : code à usage unique de 60 bits, valable 24 h, conservé haché, délivré par un administrateur
+  avec second facteur ; la tablette génère sa clé et prouve la détenir. Un identifiant de terminal seul
+  n’authentifie rien.
+- Chaque requête de synchronisation porte le jeton de l’utilisateur **et** la signature du terminal sur la
+  méthode, le chemin, l’heure (± 5 min) et le corps ; PostgreSQL revérifie `offline:download`, le SIS et
+  l’état du terminal. Un terminal révoqué est refusé à la requête suivante (`DEVICE_REVOKED`).
+- Fichiers : URL signées de 5 minutes, seulement pour des empreintes présentes dans le manifeste d’une
+  version distribuable ; téléchargements audités. Les sites sensibles ne sont pas distribués (Sprint 4).
+- Le catalogue accorde une consultation locale de 7 jours à l’utilisateur ; une horloge de tablette
+  manipulée peut prolonger cette durée hors réseau (limite décrite par l’architecture §19).
+
 ## Mobile
 
 Jetons et clé de base dans le stockage sécurisé Android (Keystore), base SQLite chiffrée SQLCipher dès le
@@ -126,11 +147,16 @@ vers l’émulateur. Voir `apps/mobile/README.md`.
 ## Secrets et Git
 
 `.env`, `.env.*` (sauf `.env.example`), `supabase/signing_keys.json`, keystores Android et
-`key.properties` sont ignorés. La CI n’utilise aucun secret.
+`key.properties` sont ignorés. La CI n’utilise aucun secret : elle génère des clés de distribution
+jetables (`pnpm setup:local`). Les clés de signature des environnements partagés
+(`PUBLICATION_SIGNING_KEY`, `CATALOG_SIGNING_KEY`) viennent d’un coffre au démarrage, jamais du dépôt.
 
 ## Limites connues (à traiter avant le pilote)
 
-- Pas encore de CSP stricte (nonces Next.js) ni de limitation de débit (reverse proxy).
+- Pas encore de CSP stricte (nonces Next.js) ni de limitation de débit (reverse proxy), y compris sur
+  les codes d’enrôlement des terminaux.
+- Clés de signature lues dans l’environnement : gestionnaire de secrets ou KMS à brancher avant la
+  production.
 - Antivirus non branché : le port `MalwareScanner` existe, le verdict indique `antivirus: not_scanned`.
 - Purge des dépôts abandonnés (`pending` jamais envoyés) et des objets orphelins de quarantaine à écrire.
 - Accès aux journaux d’audit refusés (403) non encore tracés dans `audit_event`.

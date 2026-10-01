@@ -118,3 +118,39 @@ export class ServiceUnavailable extends DomainError {
     this.name = 'ServiceUnavailable';
   }
 }
+
+/** The terminal is unknown in this SIS or its enrollment is not finished (OFF-04). */
+export class DeviceNotEnrolled extends DomainError {
+  readonly code = 'DEVICE_NOT_ENROLLED';
+  constructor(message = 'Ce terminal n’est pas enrôlé dans votre SIS.') {
+    super(message);
+    this.name = 'DeviceNotEnrolled';
+  }
+}
+
+/** The terminal was revoked: the server refuses it and the application purges its data (OFF-04). */
+export class DeviceRevoked extends DomainError {
+  readonly code = 'DEVICE_REVOKED';
+  constructor(message = 'Ce terminal a été révoqué par votre SIS.') {
+    super(message);
+    this.name = 'DeviceRevoked';
+  }
+}
+
+/** The request is not signed by the key of the terminal (or the signature is malformed). */
+export class DeviceProofInvalid extends DomainError {
+  readonly code = 'DEVICE_PROOF_INVALID';
+  constructor(message = 'La preuve d’identité du terminal est invalide.') {
+    super(message);
+    this.name = 'DeviceProofInvalid';
+  }
+}
+
+/** The clock of the terminal is too far from the server: the request cannot be dated. */
+export class DeviceClockSkew extends DomainError {
+  readonly code = 'DEVICE_CLOCK_SKEW';
+  constructor(message = 'L’heure du terminal est trop éloignée de celle du serveur.') {
+    super(message);
+    this.name = 'DeviceClockSkew';
+  }
+}

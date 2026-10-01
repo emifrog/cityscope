@@ -2,6 +2,7 @@ export * from './authorization';
 export * from './canonical';
 export * from './catalog';
 export * from './context';
+export * from './distribution';
 export * from './errors';
 export * from './files';
 export * from './objects';

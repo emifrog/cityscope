@@ -1,7 +1,7 @@
-import { etareSnapshotSchema, type EtareSnapshot } from '@etare/contracts';
-import { canonicalJson } from '@etare/domain';
+import { etareSnapshotSchema, type EtareSnapshot, type Signature } from '@etare/contracts';
+import { SIGNATURE_CONTEXTS, canonicalJson } from '@etare/domain';
 import { PermanentJobError } from './jobs';
-import type { ObjectStoreAdmin } from './ports';
+import type { ContentSigner, ObjectStoreAdmin } from './ports';
 
 export const PUBLICATION_BUILD_JOB = 'publication.build';
 export const MANIFEST_VERSION = 1;
@@ -42,6 +42,8 @@ export interface BuiltPublication {
   readonly manifestHash: string;
   readonly templateVersion: string | null;
   readonly pdfStorageKey: string | null;
+  /** Ed25519 signature of the canonical manifest; null without a publication key (not distributable). */
+  readonly manifestSignature: Signature | null;
 }
 
 /** Monotonic attempt number of the running queue job: stale workers cannot commit. */
@@ -151,11 +153,13 @@ export function publicationFiles(snapshot: EtareSnapshot, data: { sha256: string
   ];
 }
 
-/** Runtime tools: SHA-256 (hex) and size of the UTF-8 bytes of a text, clock. */
+/** Runtime tools: SHA-256 (hex) and size of the UTF-8 bytes of a text, clock, publication key. */
 export interface BuildTools {
   readonly sha256: (text: string) => Promise<string>;
   readonly byteLength: (text: string) => number;
   readonly now: () => Date;
+  /** Signs manifests for offline distribution (ADR-015); without it, publications stay off the terminals. */
+  readonly signer?: ContentSigner | null;
 }
 
 /** The snapshot must still be the one that was approved (schema and SHA-256). */
@@ -177,8 +181,8 @@ export interface GeneratedFile {
 /**
  * Builds the payload and the manifest of a publication from its frozen
  * snapshot only. The manifest lists every file by hash (the generated PDF
- * included), is serialized canonically and hashed; its Ed25519 signature
- * comes with the offline packages.
+ * included), is serialized canonically, hashed and signed with the
+ * publication key: terminals check that signature before installing it.
  */
 export async function buildPublicationContent(
   publication: PublicationToBuild,
@@ -223,12 +227,14 @@ export async function buildPublicationContent(
       ...(generated ? [generated.file] : []),
     ],
   };
+  const manifestText = canonicalJson(manifest);
   return {
     payload,
     manifest,
-    manifestHash: await tools.sha256(canonicalJson(manifest)),
+    manifestHash: await tools.sha256(manifestText),
     templateVersion: generated?.templateVersion ?? null,
     pdfStorageKey: generated?.storageKey ?? null,
+    manifestSignature: tools.signer?.sign(SIGNATURE_CONTEXTS.manifest, manifestText) ?? null,
   };
 }
 

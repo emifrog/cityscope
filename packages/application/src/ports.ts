@@ -10,6 +10,11 @@ import type {
   EtareRevision,
   EtareSnapshot,
   BuildingCreate,
+  CatalogEntry,
+  Device,
+  DeviceEnrollment,
+  Signature,
+  SyncReceipt,
   BuildingUpdate,
   Classification,
   ClassificationCreate,
@@ -54,7 +59,15 @@ import type {
   SiteUpdate,
   ValidationQueueItem,
 } from '@etare/contracts';
-import type { Permission, RequestContext, ResolvedAccess, ScanStatus } from '@etare/domain';
+import type {
+  DevicePlatform,
+  DeviceStatus,
+  Permission,
+  RequestContext,
+  ResolvedAccess,
+  ScanStatus,
+  SignatureContext,
+} from '@etare/domain';
 
 /**
  * A request session: one database transaction carrying the verified request
@@ -77,6 +90,7 @@ export interface RequestSession {
   readonly zones: ZoneRepository;
   readonly risks: RiskRepository;
   readonly etare: EtareRepository;
+  readonly devices: DeviceRepository;
   readonly jobs: JobScheduler;
   readonly audit: AuditRecorder;
 }
@@ -374,4 +388,62 @@ export interface MalwareScanner {
   scan(
     content: Uint8Array,
   ): Promise<{ verdict: 'clean' | 'infected' | 'not_scanned'; engine: string; signature?: string }>;
+}
+
+/** Ed25519 signer of distributed content: publication key (worker) or catalogue key (API). */
+export interface ContentSigner {
+  readonly keyId: string;
+  /** Signs the context line followed by the content (canonical JSON). */
+  sign(context: SignatureContext, content: string): Signature;
+}
+
+/** Checks the signature of a terminal with its raw public key. */
+export interface DeviceSignatureVerifier {
+  verify(publicKey: string, text: string, signature: string): boolean;
+}
+
+/** A publication as distributed to terminals: signed manifest and data, as built by the worker. */
+export interface DistributedPackage {
+  readonly manifest: unknown;
+  readonly manifestHash: string;
+  readonly signature: Signature;
+  readonly payload: unknown;
+}
+
+/**
+ * Terminals of the current SIS. The administration reads under RLS
+ * (device:manage); enrollment and synchronization go through database
+ * functions that re-check offline:download and the terminal (ADR-015).
+ */
+export interface DeviceRepository {
+  list(): Promise<{ items: Device[]; currentGeneration: number; undistributedPublications: number }>;
+  get(id: string): Promise<Device | null>;
+  create(name: string, codeHash: string, expiresAt: Date): Promise<Device>;
+  /** New code for a terminal waiting for its enrollment. */
+  renewCode(id: string, expectedVersion: number, codeHash: string, expiresAt: Date): Promise<Device>;
+  revoke(id: string, expectedVersion: number, reason: string): Promise<Device>;
+  /** Consumes a valid code of the current SIS; throws when it is unknown, used or expired. */
+  enroll(input: {
+    readonly codeHash: string;
+    readonly publicKey: string;
+    readonly platform: DevicePlatform;
+    readonly appVersion: string;
+  }): Promise<DeviceEnrollment>;
+  /** Status and key of a terminal of the current SIS (null when unknown). */
+  syncDevice(id: string): Promise<{ status: DeviceStatus; publicKey: string | null } | null>;
+  /** Distributable publications at the current generation; records the contact of the terminal. */
+  catalog(
+    deviceId: string,
+    appVersion: string | null,
+  ): Promise<{ generation: number; tenantName: string; publications: CatalogEntry[] }>;
+  /** Null when the publication is not (or no longer) distributable. */
+  package(deviceId: string, publicationId: string): Promise<DistributedPackage | null>;
+  /** Storage keys of the requested files of a distributable publication, by hash. */
+  packageFiles(
+    deviceId: string,
+    publicationId: string,
+    sha256: readonly string[],
+  ): Promise<{ sha256: string; storageKey: string }[]>;
+  /** Records the receipt; returns the number of sites reported as installed. */
+  receipt(deviceId: string, receipt: SyncReceipt): Promise<number>;
 }

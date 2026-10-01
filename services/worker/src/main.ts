@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { hostname } from 'node:os';
 import { antivirusNotConfigured } from '@etare/application';
+import { Ed25519Signer } from '@etare/adapters/crypto';
 import { createLogger } from '@etare/adapters/logging';
 import { PdfLibEtareRenderer } from '@etare/adapters/pdf';
 import {
@@ -25,11 +26,13 @@ const pool = createPool({
 
 const sha256 = async (content: Uint8Array | string) => createHash('sha256').update(content).digest('hex');
 const objects = env.storage ? SupabaseObjectStorage.fromSecretKey(env.storage.url, env.storage.secretKey) : null;
+// Publication key: signs manifests for the terminals; it never leaves the worker (ADR-015).
+const signer = env.publicationSigningKey ? Ed25519Signer.fromPkcs8(env.publicationSigningKey) : null;
 const registry = new HandlerRegistry([
   noopHandler,
   publicationBuildHandler({
     store: new PostgresPublicationBuildStore(pool),
-    tools: { sha256, byteLength: (text) => Buffer.byteLength(text, 'utf8'), now: () => new Date() },
+    tools: { sha256, byteLength: (text) => Buffer.byteLength(text, 'utf8'), now: () => new Date(), signer },
     // Without storage, publications are built without their PDF (said at startup).
     artifacts: objects ? { renderer: new PdfLibEtareRenderer(), objects, sha256Bytes: sha256 } : null,
   }),
@@ -46,6 +49,12 @@ if (objects) {
   logger.warn('antivirus engine not configured: files are checked for size, SHA-256 and real type only');
 } else {
   logger.warn('object storage not configured: no file verification, publications are built without their PDF');
+}
+
+if (signer) {
+  logger.info('publication manifests signed for offline distribution', { key_id: signer.keyId });
+} else {
+  logger.warn('publication signing key not configured: new publications cannot be distributed to terminals');
 }
 
 const worker = createWorker({

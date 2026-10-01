@@ -47,3 +47,24 @@ describe('environment parsing', () => {
     ).toBe(2);
   });
 });
+
+describe('signing keys (ADR-015)', () => {
+  const api = { DATABASE_URL: 'postgresql://etare_api:pw@db:5432/etare', SUPABASE_URL: 'https://auth.example.org' };
+  const worker = { WORKER_DATABASE_URL: 'postgresql://etare_worker:pw@db:5432/etare' };
+
+  it('are optional in development: distribution is simply off', () => {
+    expect(readApiEnv(api).catalogSigningKey).toBeNull();
+    expect(readWorkerEnv(worker).publicationSigningKey).toBeNull();
+  });
+
+  it('are mandatory in shared environments', () => {
+    for (const appEnv of ['staging', 'production']) {
+      expect(() => readApiEnv({ ...api, APP_ENV: appEnv })).toThrow(/CATALOG_SIGNING_KEY/);
+      expect(() => readWorkerEnv({ ...worker, APP_ENV: appEnv })).toThrow(/PUBLICATION_SIGNING_KEY/);
+      expect(readApiEnv({ ...api, APP_ENV: appEnv, CATALOG_SIGNING_KEY: 'k' }).catalogSigningKey).toBe('k');
+      expect(readWorkerEnv({ ...worker, APP_ENV: appEnv, PUBLICATION_SIGNING_KEY: 'k' }).publicationSigningKey).toBe(
+        'k',
+      );
+    }
+  });
+});

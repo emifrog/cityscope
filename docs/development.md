@@ -16,10 +16,15 @@
 ```bash
 pnpm install
 pnpm db:start      # génère la clé JWT locale (ES256) puis démarre Supabase ; migrations + seed appliqués
-pnpm setup:local   # écrit .env.local et apps/web/.env.local (jamais committés)
+pnpm setup:local   # écrit .env.local, apps/web/.env.local et apps/mobile/dart_defines.local.json (jamais committés)
 pnpm seed:assets   # dépose les fichiers de démonstration (plan du seed) dans le stockage local
 pnpm dev           # http://127.0.0.1:3000
 ```
+
+`pnpm setup:local` génère aussi, une fois pour toutes, les deux clés locales de distribution hors ligne
+(ADR-015) : `PUBLICATION_SIGNING_KEY` (worker) et `CATALOG_SIGNING_KEY` (API). Elles sont conservées
+d’une exécution à l’autre et leurs clés publiques sont écrites dans la configuration du mobile
+(`TRUSTED_SIGNING_KEYS`). Les supprimer de `.env.local` oblige à réenrôler les terminaux de test.
 
 Services locaux : API Supabase `http://127.0.0.1:54321`, PostgreSQL `127.0.0.1:54322`, Studio
 `http://127.0.0.1:54323`, e-mails de test (Mailpit) `http://127.0.0.1:54324`.

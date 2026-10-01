@@ -27,6 +27,7 @@ pas exposé par la Data API Supabase (`supabase/config.toml` → `api.schemas`),
 | `20261003000200_etare_workflow.sql`                | Sprint 3 : `member_name` (noms des membres du SIS pour le workflow), fabrication des publications par le worker (`worker_start/complete/fail_publication`)                                                                         |
 | `20261003000400_publication_build_consistency.sql` | Correctifs du 30/09/2026 : fencing de la fabrication par le bail du travail (`lock_publication_job`), PDF immuable (`publication.pdf_storage_key`), baux expirés sans effet, échec définitif d’un travail propagé à la publication |
 | `20261003000300_publication_pdf.sql`               | Sprint 3 : `worker_publication_assets` (clés de stockage des fonds de plans contrôlés d’une publication, pour le PDF)                                                                                                              |
+| `20261004000100_offline_distribution.sql`          | Sprint 4 : manifeste signé (`publication.manifest_signature`), terminaux (`device`), génération du catalogue par SIS, état et publications des terminaux, fonctions `admin_*_device`, `enroll_device`, `sync_*`                    |
 
 ## Correspondance avec les documents de cadrage
 
@@ -80,7 +81,7 @@ synchronisation, `access_event`, intégrations.
 ```text
 données de travail ──submit──► etare_revision (snapshot + SHA-256 figés)
       ──approval (validateur distinct, même empreinte)──► révision approuvée
-      ──publication (queued → building → ready → published)──► paquet OPS (à venir)
+      ──publication (queued → building → ready → published)──► paquet signé ──► terminaux (ADR-015)
 ```
 
 Le contenu figé est l’instantané canonique de l’ADR-013 ; son SHA-256 (JSON canonique) est calculé par l’API
@@ -110,6 +111,31 @@ Garanties SQL (`tg_etare_revision_guard`, `tg_approval_guard`, `tg_publication_g
 - un profil OPS ne voit que les publications au statut `published`, jamais les brouillons,
   les paquets en construction ni les publications retirées. La consultation des états intermédiaires
   est réservée aux profils disposant aussi de `etare:read`.
+
+## Distribution hors ligne
+
+Voir ADR-015. Le worker écrit la signature Ed25519 du manifeste avec le résultat de la fabrication
+(`worker_complete_publication`) ; elle ne change plus ensuite (`tg_publication_signature_guard`). Une
+publication est **distribuable** si elle est publiée, signée, d’un site non sensible et lisible par
+l’utilisateur (`distributable_publication`).
+
+- `device` : terminal d’un SIS, `pending` (code d’enrôlement haché, échéance) → `active` (clé publique,
+  plateforme, enrôleur) → `revoked` (date, auteur, motif). Jamais supprimé ; enrôlement et révocation
+  définitifs (`tg_device_guard`) ; nom unique parmi les terminaux non révoqués ; clé publique unique.
+  Créations et changements audités, sans le hash du code.
+- `distribution_generation` : compteur par SIS, avancé par `tg_publication_distribution_generation`
+  chaque fois qu’une version entre en publication ou en sort.
+- `device_sync_state` (dernier contact, version d’application, génération annoncée, dernier reçu) et
+  `device_publication` (versions actives sur le terminal, une par site) : écrits par les fonctions de
+  synchronisation seulement, non audités ligne à ligne (ils changent à chaque contact).
+- L’administration lit ces tables sous RLS (`device:manage`, second facteur) et les modifie par
+  `admin_create_device`, `admin_renew_device_code`, `admin_revoke_device` (version attendue).
+- Les terminaux passent par `enroll_device` (code valide du SIS courant, une seule fois), `sync_device`
+  (statut et clé, pour que l’API vérifie la preuve), `sync_catalog` (génération et liste lues dans une
+  seule instruction), `sync_package`, `sync_package_files` (clés de stockage par empreinte, parmi les
+  fichiers du manifeste et les fichiers contrôlés référencés par la charge utile) et `sync_receipt`.
+  Toutes exigent `offline:download` et un terminal enrôlé, non révoqué, du SIS courant. Voir le test
+  `120_offline_distribution`.
 
 ## Auteurs des données de travail et séparation des tâches
 

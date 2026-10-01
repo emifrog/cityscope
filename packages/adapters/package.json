@@ -10,6 +10,7 @@
     "./auth": "./src/auth/token-verifier.ts",
     "./storage": "./src/storage/supabase-object-storage.ts",
     "./cartography": "./src/cartography/ign.ts",
+    "./crypto": "./src/crypto/ed25519.ts",
     "./pdf": "./src/pdf/etare-pdf.ts"
   },
   "scripts": {

@@ -67,17 +67,17 @@ select results_eq(
   'the build reads the frozen revision and its approval'
 );
 select is(
-  app.worker_complete_publication('0600009f-0000-4000-8000-000000000002', '{}', '{"files": []}', repeat('d', 64), null, null,
+  app.worker_complete_publication('0600009f-0000-4000-8000-000000000002', '{}', '{"files": []}', repeat('d', 64), null, null, null,
     '06000090-0000-4000-8000-000000000002', 2), null, 'an attempt that does not own the lease cannot publish');
 select is(app.worker_fail_publication('0600009f-0000-4000-8000-000000000002', 'LATE_FAILURE',
     '06000090-0000-4000-8000-000000000002', 2), false, 'a stale attempt cannot fail the publication');
 select throws_ok($$ select app.worker_complete_publication('0600009f-0000-4000-8000-000000000002', '{}',
     '{"files":[{"path":"etare.pdf","sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}]}',
-    repeat('d',64), 'test', 'tenants/other/pdf.pdf', '06000090-0000-4000-8000-000000000002', 1) $$,
+    repeat('d',64), 'test', 'tenants/other/pdf.pdf', null, '06000090-0000-4000-8000-000000000002', 1) $$,
     '23514', 'PDF_STORAGE_KEY_MISMATCH', 'the object key must match the tenant, publication and manifest PDF hash');
 select is(
   app.worker_complete_publication('0600009f-0000-4000-8000-000000000002', '{"data": {}}', jsonb_build_object('files', jsonb_build_array(jsonb_build_object('path','etare.pdf','sha256',repeat('a',64)))),
-                                  repeat('d', 64), 'etare-pdf/2', 'tenants/06000000-0000-4000-8000-000000000000/publications/0600009f-0000-4000-8000-000000000002/etare-' || repeat('a',64) || '.pdf', '06000090-0000-4000-8000-000000000002', 1),
+                                  repeat('d', 64), 'etare-pdf/2', 'tenants/06000000-0000-4000-8000-000000000000/publications/0600009f-0000-4000-8000-000000000002/etare-' || repeat('a',64) || '.pdf', null, '06000090-0000-4000-8000-000000000002', 1),
   'published',
   'the built publication is activated'
 );
@@ -156,7 +156,7 @@ set local role etare_worker;
 select is((select count(*) from app.worker_start_publication('0600009f-0000-4000-8000-000000000007',
   '06000000-0000-4000-8000-000000000000', '06000090-0000-4000-8000-000000000007', 1)), 0::bigint,
   'a job without the canonical idempotency key cannot start');
-select is(app.worker_complete_publication('0600009f-0000-4000-8000-000000000005', '{}', '{"files":[]}', repeat('d',64), null, null,
+select is(app.worker_complete_publication('0600009f-0000-4000-8000-000000000005', '{}', '{"files":[]}', repeat('d',64), null, null, null,
   '06000090-0000-4000-8000-000000000005', 5), null, 'an expired lease cannot publish even before reclamation');
 select is((select count(*) from app.worker_start_publication('0600009f-0000-4000-8000-000000000005',
   '06000000-0000-4000-8000-000000000000', '06000090-0000-4000-8000-000000000005', 5)), 0::bigint, 'an expired lease cannot start');

@@ -1,6 +1,7 @@
 export * from './asset-verification-store';
 export * from './building-repository';
 export * from './cursor';
+export * from './device-repository';
 export * from './document-repository';
 export * from './etare-repository';
 export * from './health';

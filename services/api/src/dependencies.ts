@@ -1,5 +1,6 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import {
+  Ed25519Signer,
   IgnCartographyCatalog,
   IgnGeocoder,
   PostgresHealthProbe,
@@ -9,6 +10,7 @@ import {
   createLogger,
   createPool,
   createSupabaseTokenVerifier,
+  ed25519Verifier,
 } from '@etare/adapters';
 import { readApiEnv, type Env } from '@etare/config';
 import { buildOpenApiDocument } from '@etare/contracts/openapi';
@@ -35,6 +37,11 @@ export function createApiDependencies(env: Env): ApiDependencies {
     cartography: new IgnCartographyCatalog(),
     geocoder: new IgnGeocoder(),
     sha256: async (text) => createHash('sha256').update(text, 'utf8').digest('hex'),
+    // Catalogue key: server-side only; terminals trust its public key (ADR-015).
+    catalogSigner: config.catalogSigningKey ? Ed25519Signer.fromPkcs8(config.catalogSigningKey) : null,
+    verifier: ed25519Verifier,
+    randomBytes: (length) => new Uint8Array(randomBytes(length)),
+    now: () => new Date(),
     logger: createLogger({ component: 'api', version, env: config.appEnv }),
     version,
     openApiDocument: () => (openApi ??= buildOpenApiDocument()),

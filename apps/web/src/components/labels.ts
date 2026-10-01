@@ -1,5 +1,7 @@
 import type {
   ClassificationType,
+  DeviceState,
+  SyncReceiptStatus,
   PublicationStatus,
   RevisionStatus,
   FieldKind,
@@ -242,4 +244,19 @@ export const CHANGE_LABELS: Readonly<Record<'added' | 'removed' | 'modified', st
   added: 'Ajout',
   removed: 'Suppression',
   modified: 'Modification',
+};
+
+export const DEVICE_STATE_LABELS: Readonly<Record<DeviceState, string>> = {
+  pending: 'En attente d’enrôlement',
+  never_synced: 'Jamais synchronisé',
+  up_to_date: 'À jour',
+  late: 'En retard',
+  error: 'Erreur',
+  revoked: 'Révoqué',
+};
+
+export const SYNC_RECEIPT_STATUS_LABELS: Readonly<Record<SyncReceiptStatus, string>> = {
+  installed: 'installation complète',
+  partial: 'installation partielle',
+  error: 'échec',
 };

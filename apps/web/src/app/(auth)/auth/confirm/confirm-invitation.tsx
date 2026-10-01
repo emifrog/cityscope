@@ -81,7 +81,13 @@ export function ConfirmInvitation({ tokenHash }: { tokenHash: string | null }) {
   }
 
   return (
-    <form noValidate onSubmit={choosePassword} className="space-y-4">
+    <form
+      noValidate
+      // POST: a submission before hydration never puts credentials in the URL (history, logs).
+      method="post"
+      onSubmit={choosePassword}
+      className="space-y-4"
+    >
       {failure ? <Alert tone="critical">{failure}</Alert> : null}
       <Field
         label="Nouveau mot de passe"

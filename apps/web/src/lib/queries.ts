@@ -30,6 +30,7 @@ export const queryKeys = {
   site: (tenantId: string, id: string) => ['tenant', tenantId, 'site', id] as const,
   siteRecords: (tenantId: string, id: string, kind: string) => ['tenant', tenantId, 'site', id, kind] as const,
   members: (tenantId: string) => ['tenant', tenantId, 'members'] as const,
+  devices: (tenantId: string) => ['tenant', tenantId, 'devices'] as const,
   etare: (tenantId: string) => ['tenant', tenantId, 'etare'] as const,
   revision: (tenantId: string, id: string) => ['tenant', tenantId, 'etare', 'revision', id] as const,
   riskTypes: (tenantId: string, includeDeprecated?: boolean) =>
@@ -253,6 +254,17 @@ export function useMembers() {
     enabled,
     queryFn: ({ signal }) => api.listMembers({ ...options, signal }),
     // MFA_REQUIRED / FORBIDDEN are answers, not transient failures.
+    retry: false,
+  });
+}
+
+/** Terminals of the SIS and their synchronization (device:manage, second factor). */
+export function useDevices() {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.devices(tenantId ?? 'none'),
+    enabled,
+    queryFn: ({ signal }) => api.listDevices({ ...options, signal }),
     retry: false,
   });
 }

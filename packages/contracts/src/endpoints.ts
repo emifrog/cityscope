@@ -91,6 +91,21 @@ import {
   siteListQuerySchema,
   siteListResponseSchema,
 } from './resources';
+import {
+  deviceCreateSchema,
+  deviceEnrollSchema,
+  deviceEnrollmentCodeSchema,
+  deviceEnrollmentSchema,
+  deviceListSchema,
+  deviceRevokeSchema,
+  deviceSchema,
+  signedCatalogSchema,
+  syncDownloadRequestSchema,
+  syncDownloadsSchema,
+  syncPackageSchema,
+  syncReceiptResultSchema,
+  syncReceiptSchema,
+} from './sync';
 
 export const API_VERSION = 'v1';
 export const API_BASE_PATH = `/api/${API_VERSION}`;
@@ -120,6 +135,8 @@ export interface EndpointContract {
    * 'if-match': the request must carry If-Match (428 otherwise, 412 if stale).
    */
   readonly concurrency?: 'etag' | 'if-match';
+  /** true: the request must be signed by an enrolled terminal (X-Device-Id, X-Device-Time, X-Device-Signature). */
+  readonly deviceProof?: boolean;
   readonly successStatus: 200 | 201 | 202;
   readonly response: z.ZodType;
 }
@@ -799,6 +816,104 @@ export const endpoints = {
     concurrency: 'if-match',
     successStatus: 200,
     response: memberSchema,
+  }),
+
+  // ---------------------------------------------------------------- terminals and offline distribution
+  listDevices: tenantEndpoint({
+    operationId: 'listDevices',
+    method: 'get',
+    path: '/devices',
+    summary: 'Terminaux du SIS, état de synchronisation et version installée (administration)',
+    tags: ['devices'],
+    successStatus: 200,
+    response: deviceListSchema,
+  }),
+  createDevice: tenantEndpoint({
+    operationId: 'createDevice',
+    method: 'post',
+    path: '/devices',
+    summary: 'Déclarer un terminal : code d’enrôlement à usage unique, valable 24 h, affiché une seule fois',
+    tags: ['devices'],
+    body: deviceCreateSchema,
+    successStatus: 201,
+    response: deviceEnrollmentCodeSchema,
+  }),
+  renewDeviceEnrollment: tenantEndpoint({
+    operationId: 'renewDeviceEnrollment',
+    method: 'post',
+    path: '/devices/{id}/enrollment-code',
+    summary: 'Nouveau code d’enrôlement pour un terminal pas encore enrôlé (l’ancien ne vaut plus)',
+    tags: ['devices'],
+    params: idParamsSchema,
+    concurrency: 'if-match',
+    successStatus: 200,
+    response: deviceEnrollmentCodeSchema,
+  }),
+  revokeDevice: tenantEndpoint({
+    operationId: 'revokeDevice',
+    method: 'post',
+    path: '/devices/{id}/revocation',
+    summary: 'Révoquer un terminal : refus serveur immédiat, purge locale au prochain contact (OFF-04)',
+    tags: ['devices'],
+    params: idParamsSchema,
+    body: deviceRevokeSchema,
+    concurrency: 'if-match',
+    successStatus: 200,
+    response: deviceSchema,
+  }),
+  enrollDevice: tenantEndpoint({
+    operationId: 'enrollDevice',
+    method: 'post',
+    path: '/sync/enrollment',
+    summary: 'Enrôler ce terminal avec le code remis par l’administrateur et sa clé publique',
+    tags: ['sync'],
+    body: deviceEnrollSchema,
+    successStatus: 201,
+    response: deviceEnrollmentSchema,
+  }),
+  getSyncCatalog: tenantEndpoint({
+    operationId: 'getSyncCatalog',
+    method: 'get',
+    path: '/sync/catalog',
+    summary: 'Catalogue signé des publications autorisées pour ce terminal (génération monotone)',
+    tags: ['sync'],
+    deviceProof: true,
+    successStatus: 200,
+    response: signedCatalogSchema,
+  }),
+  getSyncPackage: tenantEndpoint({
+    operationId: 'getSyncPackage',
+    method: 'get',
+    path: '/sync/publications/{id}',
+    summary: 'Manifeste signé et données d’une publication distribuée',
+    tags: ['sync'],
+    params: idParamsSchema,
+    deviceProof: true,
+    successStatus: 200,
+    response: syncPackageSchema,
+  }),
+  createSyncDownloads: tenantEndpoint({
+    operationId: 'createSyncDownloads',
+    method: 'post',
+    path: '/sync/publications/{id}/downloads',
+    summary: 'URL de téléchargement (5 min) des fichiers d’une publication, par empreinte',
+    tags: ['sync'],
+    params: idParamsSchema,
+    body: syncDownloadRequestSchema,
+    deviceProof: true,
+    successStatus: 200,
+    response: syncDownloadsSchema,
+  }),
+  recordSyncReceipt: tenantEndpoint({
+    operationId: 'recordSyncReceipt',
+    method: 'post',
+    path: '/sync/receipts',
+    summary: 'Accuser l’installation : génération et publications actives sur le terminal',
+    tags: ['sync'],
+    body: syncReceiptSchema,
+    deviceProof: true,
+    successStatus: 200,
+    response: syncReceiptResultSchema,
   }),
 } as const satisfies Record<string, EndpointContract>;
 

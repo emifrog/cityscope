@@ -10,3 +10,4 @@ export * from './plans';
 export * from './referential';
 export * from './resources';
 export * from './risks';
+export * from './sync';

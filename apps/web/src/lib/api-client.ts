@@ -34,6 +34,11 @@ import {
   type MapSitesQuery,
   type MapSitesResponse,
   type MeResponse,
+  type Device,
+  type DeviceCreate,
+  type DeviceEnrollmentCode,
+  type DeviceList,
+  type DeviceRevoke,
   type Member,
   type MemberInvitation,
   type MemberInvite,
@@ -490,6 +495,27 @@ export const api = {
     call(endpoints.updateMember.response, pathOf(endpoints.updateMember.path, { id }), options, {
       method: 'PATCH',
       body: patch,
+      ifMatch: version,
+    }),
+
+  // ---------------------------------------------------------------- terminals (ADMIN-02)
+  listDevices: (options: ApiCallOptions): Promise<DeviceList> =>
+    call(endpoints.listDevices.response, endpoints.listDevices.path, options),
+
+  /** Declares a terminal: the one-time enrollment code is only in this answer. */
+  createDevice: (options: ApiCallOptions, input: DeviceCreate): Promise<DeviceEnrollmentCode> =>
+    call(endpoints.createDevice.response, endpoints.createDevice.path, options, { method: 'POST', body: input }),
+
+  renewDeviceEnrollment: (options: ApiCallOptions, id: string, version: number): Promise<DeviceEnrollmentCode> =>
+    call(endpoints.renewDeviceEnrollment.response, pathOf(endpoints.renewDeviceEnrollment.path, { id }), options, {
+      method: 'POST',
+      ifMatch: version,
+    }),
+
+  revokeDevice: (options: ApiCallOptions, id: string, version: number, input: DeviceRevoke): Promise<Device> =>
+    call(endpoints.revokeDevice.response, pathOf(endpoints.revokeDevice.path, { id }), options, {
+      method: 'POST',
+      body: input,
       ifMatch: version,
     }),
 };

@@ -2,6 +2,7 @@ export * from './auth/identity-provisioner';
 export * from './auth/token-verifier';
 export * from './cartography/ign';
 export * from './cartography/ign-geocoder';
+export * from './crypto/ed25519';
 export * from './logging/logger';
 export * from './pdf/etare-pdf';
 export * from './postgres/index';

@@ -4,6 +4,8 @@ import {
   addPlanRevision,
   confirmUpload,
   createBuilding,
+  createDevice,
+  createSyncDownloads,
   createDocument,
   createClassification,
   createContact,
@@ -17,7 +19,10 @@ import {
   createSiteRisk,
   createZone,
   decideRevision,
+  enrollDevice,
   getAssetDownload,
+  getSyncCatalog,
+  getSyncPackage,
   getRevision,
   getSiteEtare,
   getMe,
@@ -29,6 +34,7 @@ import {
   reverseGeocode,
   searchAddresses,
   listClassifications,
+  listDevices,
   listContacts,
   listDocuments,
   listExternalIds,
@@ -43,6 +49,9 @@ import {
   listValidations,
   previewSiteEtare,
   publishRevision,
+  recordSyncReceipt,
+  renewDeviceEnrollment,
+  revokeDevice,
   submitRevision,
   listSiteRisks,
   listSiteZones,
@@ -60,14 +69,28 @@ import {
   updateZone,
   updateSite,
   type CartographyCatalog,
+  type ContentSigner,
+  type DeviceProof,
+  type DeviceSignatureVerifier,
   type Geocoder,
   type HealthProbe,
   type IdentityProvisioner,
   type ObjectStorage,
   type SessionFactory,
 } from '@etare/application';
-import { API_BASE_PATH, TENANT_HEADER, endpoints, type EndpointContract } from '@etare/contracts';
 import {
+  API_BASE_PATH,
+  APP_VERSION_HEADER,
+  DEVICE_ID_HEADER,
+  DEVICE_SIGNATURE_HEADER,
+  DEVICE_TIME_HEADER,
+  TENANT_HEADER,
+  endpoints,
+  type EndpointContract,
+} from '@etare/contracts';
+import {
+  DeviceProofInvalid,
+  EMPTY_BODY_SHA256,
   InvalidInput,
   PreconditionRequired,
   TenantRequired,
@@ -91,8 +114,13 @@ export interface ApiDependencies {
   readonly identities: IdentityProvisioner | null;
   readonly cartography: CartographyCatalog;
   readonly geocoder: Geocoder;
-  /** SHA-256 (hex) of the UTF-8 bytes of a text (revision snapshots). */
+  /** SHA-256 (hex) of the UTF-8 bytes of a text (revision snapshots, enrollment codes, request bodies). */
   readonly sha256: (text: string) => Promise<string>;
+  /** Catalogue key (offline distribution); null when not configured: terminal endpoints answer 503. */
+  readonly catalogSigner: ContentSigner | null;
+  readonly verifier: DeviceSignatureVerifier;
+  readonly randomBytes: (length: number) => Uint8Array;
+  readonly now: () => Date;
   readonly logger: Logger;
   readonly version: string;
   readonly openApiDocument: () => unknown;
@@ -104,6 +132,11 @@ const CLIENT_HEADER = 'x-client-platform';
 const tenantIdSchema = z.uuid();
 const originSchema = z.enum(['web', 'mobile', 'integration']);
 const MAX_JSON_BODY_BYTES = 64 * 1024;
+/** An installation receipt lists the publications of the terminal (thousands of sites). */
+const MAX_RECEIPT_BODY_BYTES = 1024 * 1024;
+const deviceIdSchema = z.uuid();
+const deviceTimeSchema = z.string().regex(/^\d{1,15}$/);
+const appVersionSchema = z.string().regex(/^[0-9A-Za-z.+-]{1,32}$/);
 
 /** Accepts "3", W/"3" or 3 (the ETag previously returned by the API). */
 export function parseIfMatch(header: string | undefined): number {
@@ -138,17 +171,16 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
   });
 
   // JSON bodies are small: bigger payloads (files) go to object storage through signed URLs.
-  app.use(
-    '*',
-    bodyLimit({
-      maxSize: MAX_JSON_BODY_BYTES,
-      onError: (c) =>
-        c.json(
-          { error: { code: 'PAYLOAD_TOO_LARGE', message: 'Requête trop volumineuse.', trace_id: c.get('traceId') } },
-          413,
-        ),
-    }),
-  );
+  // Installation receipts are the one exception (the list of the publications of a terminal).
+  const tooLarge = (c: Context<Env>) =>
+    c.json(
+      { error: { code: 'PAYLOAD_TOO_LARGE', message: 'Requête trop volumineuse.', trace_id: c.get('traceId') } },
+      413,
+    );
+  const jsonLimit = bodyLimit({ maxSize: MAX_JSON_BODY_BYTES, onError: tooLarge });
+  const receiptLimit = bodyLimit({ maxSize: MAX_RECEIPT_BODY_BYTES, onError: tooLarge });
+  const receiptPath = `${API_BASE_PATH}${endpoints.recordSyncReceipt.path}`;
+  app.use('*', (c, next) => (c.req.path === receiptPath ? receiptLimit(c, next) : jsonLimit(c, next)));
 
   app.onError((error, c) => {
     const traceId = c.get('traceId');
@@ -208,6 +240,48 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
       throw new InvalidInput('Corps de requête JSON invalide.');
     }
     return schema.parse(raw);
+  }
+
+  /**
+   * A request of an enrolled terminal: the raw body is read once, so that the
+   * signature covers the exact bytes received; the proof is checked by the use case.
+   */
+  async function deviceRequest<S extends z.ZodType>(
+    c: Context<Env>,
+    endpoint: EndpointContract,
+    schema?: S,
+  ): Promise<{ context: RequestContext; proof: DeviceProof; body: z.infer<S> | undefined }> {
+    const context = await requestContext(c, endpoint);
+    const deviceId = deviceIdSchema.safeParse(c.req.header(DEVICE_ID_HEADER));
+    const time = deviceTimeSchema.safeParse(c.req.header(DEVICE_TIME_HEADER));
+    const signature = c.req.header(DEVICE_SIGNATURE_HEADER);
+    if (!deviceId.success || !time.success || !signature) throw new DeviceProofInvalid();
+    const raw = schema ? await c.req.text() : '';
+    let body: z.infer<S> | undefined;
+    if (schema) {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        throw new InvalidInput('Corps de requête JSON invalide.');
+      }
+      body = schema.parse(parsed);
+    }
+    const url = new URL(c.req.url);
+    const appVersion = appVersionSchema.safeParse(c.req.header(APP_VERSION_HEADER));
+    return {
+      context,
+      body,
+      proof: {
+        deviceId: deviceId.data,
+        timestamp: Number(time.data),
+        signature,
+        method: c.req.method,
+        path: `${url.pathname}${url.search}`,
+        bodySha256: schema ? await deps.sha256(raw) : EMPTY_BODY_SHA256,
+        appVersion: appVersion.success ? appVersion.data : null,
+      },
+    };
   }
 
   const idOf = (c: Context<Env>) => endpoints.getSite.params.parse(c.req.param()).id;
@@ -605,6 +679,68 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     const version = expectedVersion(c);
     const patch = await readBody(c, endpoints.updateMember.body);
     return respond(c, endpoints.updateMember, await updateMember(deps.sessions, context, idOf(c), version, patch));
+  });
+
+  // ---------------------------------------------------------------- terminals (administration)
+  app.get(routerPath(endpoints.listDevices.path), async (c) => {
+    const context = await requestContext(c, endpoints.listDevices);
+    return respond(c, endpoints.listDevices, await listDevices(deps.sessions, context));
+  });
+
+  app.post(routerPath(endpoints.createDevice.path), async (c) => {
+    const context = await requestContext(c, endpoints.createDevice);
+    const input = await readBody(c, endpoints.createDevice.body);
+    return respond(c, endpoints.createDevice, await createDevice(deps, context, input));
+  });
+
+  app.post(routerPath(endpoints.renewDeviceEnrollment.path), async (c) => {
+    const context = await requestContext(c, endpoints.renewDeviceEnrollment);
+    const version = expectedVersion(c);
+    return respond(c, endpoints.renewDeviceEnrollment, await renewDeviceEnrollment(deps, context, idOf(c), version));
+  });
+
+  app.post(routerPath(endpoints.revokeDevice.path), async (c) => {
+    const context = await requestContext(c, endpoints.revokeDevice);
+    const version = expectedVersion(c);
+    const input = await readBody(c, endpoints.revokeDevice.body);
+    return respond(c, endpoints.revokeDevice, await revokeDevice(deps.sessions, context, idOf(c), version, input));
+  });
+
+  // ---------------------------------------------------------------- offline distribution (terminals)
+  app.post(routerPath(endpoints.enrollDevice.path), async (c) => {
+    const context = await requestContext(c, endpoints.enrollDevice);
+    const input = await readBody(c, endpoints.enrollDevice.body);
+    return respond(c, endpoints.enrollDevice, await enrollDevice(deps, context, input));
+  });
+
+  app.get(routerPath(endpoints.getSyncCatalog.path), async (c) => {
+    const { context, proof } = await deviceRequest(c, endpoints.getSyncCatalog);
+    return respond(c, endpoints.getSyncCatalog, await getSyncCatalog(deps, context, proof));
+  });
+
+  app.get(routerPath(endpoints.getSyncPackage.path), async (c) => {
+    const { context, proof } = await deviceRequest(c, endpoints.getSyncPackage);
+    return respond(c, endpoints.getSyncPackage, await getSyncPackage(deps, context, proof, idOf(c)));
+  });
+
+  app.post(routerPath(endpoints.createSyncDownloads.path), async (c) => {
+    const { context, proof, body } = await deviceRequest(
+      c,
+      endpoints.createSyncDownloads,
+      endpoints.createSyncDownloads.body,
+    );
+    if (!body) throw new InvalidInput();
+    return respond(c, endpoints.createSyncDownloads, await createSyncDownloads(deps, context, proof, idOf(c), body));
+  });
+
+  app.post(routerPath(endpoints.recordSyncReceipt.path), async (c) => {
+    const { context, proof, body } = await deviceRequest(
+      c,
+      endpoints.recordSyncReceipt,
+      endpoints.recordSyncReceipt.body,
+    );
+    if (!body) throw new InvalidInput();
+    return respond(c, endpoints.recordSyncReceipt, await recordSyncReceipt(deps, context, proof, body));
   });
 
   return app;

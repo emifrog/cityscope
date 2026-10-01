@@ -31,6 +31,13 @@ export function assertDedicatedDatabaseRole(connectionString: string, role: 'eta
 
 const appEnvSchema = z.enum(APP_ENVS).default('development');
 
+/** Shared environments distribute to terminals: their signing keys are mandatory (ADR-015). */
+function requiredOutsideDevelopment(appEnv: AppEnv, name: string, value: string | undefined): void {
+  if ((appEnv === 'staging' || appEnv === 'production') && !value) {
+    throw new Error(`${name} is required in ${appEnv} (offline distribution).`);
+  }
+}
+
 const authSchema = z.object({
   SUPABASE_URL: z.url(),
   /** Defaults to {SUPABASE_URL}/auth/v1. */
@@ -45,6 +52,8 @@ const apiEnvSchema = authSchema.extend({
   DATABASE_URL: z.string().min(1),
   /** Server-side only: signs short-lived download URLs after authorization (storage gateway). */
   SUPABASE_SECRET_KEY: z.string().min(1).optional(),
+  /** Server-side only: Ed25519 key (PKCS#8 DER, base64) signing the catalogues of the terminals. */
+  CATALOG_SIGNING_KEY: z.string().min(1).optional(),
 });
 
 export interface ApiEnv {
@@ -52,17 +61,21 @@ export interface ApiEnv {
   readonly databaseUrl: string;
   readonly supabaseUrl: string;
   readonly supabaseSecretKey: string | undefined;
+  /** Null when offline distribution is not configured (terminal endpoints answer 503). */
+  readonly catalogSigningKey: string | null;
   readonly auth: { readonly issuer: string; readonly jwksUrl: string; readonly audience: string };
 }
 
 export function readApiEnv(env: Env): ApiEnv {
   const parsed = apiEnvSchema.parse(env);
+  requiredOutsideDevelopment(parsed.APP_ENV, 'CATALOG_SIGNING_KEY', parsed.CATALOG_SIGNING_KEY);
   const issuer = parsed.AUTH_ISSUER ?? `${parsed.SUPABASE_URL.replace(/\/$/, '')}/auth/v1`;
   return {
     appEnv: parsed.APP_ENV,
     databaseUrl: assertDedicatedDatabaseRole(parsed.DATABASE_URL, 'etare_api'),
     supabaseUrl: parsed.SUPABASE_URL,
     supabaseSecretKey: parsed.SUPABASE_SECRET_KEY,
+    catalogSigningKey: parsed.CATALOG_SIGNING_KEY ?? null,
     auth: {
       issuer,
       jwksUrl: parsed.AUTH_JWKS_URL ?? `${issuer}/.well-known/jwks.json`,
@@ -84,6 +97,8 @@ const workerEnvSchema = z.object({
   /** Object storage access for file verification (server-side secret, never exposed). */
   SUPABASE_URL: z.url().optional(),
   SUPABASE_SECRET_KEY: z.string().min(1).optional(),
+  /** Ed25519 key (PKCS#8 DER, base64) signing the manifests of publications (never given to the API). */
+  PUBLICATION_SIGNING_KEY: z.string().min(1).optional(),
 });
 
 export interface WorkerEnv {
@@ -95,10 +110,13 @@ export interface WorkerEnv {
   readonly concurrency: number;
   /** Null when the worker cannot reach the object storage (file verification disabled). */
   readonly storage: { readonly url: string; readonly secretKey: string } | null;
+  /** Null when publications are built without a signature (not distributable offline). */
+  readonly publicationSigningKey: string | null;
 }
 
 export function readWorkerEnv(env: Env): WorkerEnv {
   const parsed = workerEnvSchema.parse(env);
+  requiredOutsideDevelopment(parsed.APP_ENV, 'PUBLICATION_SIGNING_KEY', parsed.PUBLICATION_SIGNING_KEY);
   return {
     appEnv: parsed.APP_ENV,
     databaseUrl: assertDedicatedDatabaseRole(parsed.WORKER_DATABASE_URL, 'etare_worker'),
@@ -110,6 +128,7 @@ export function readWorkerEnv(env: Env): WorkerEnv {
       parsed.SUPABASE_URL && parsed.SUPABASE_SECRET_KEY
         ? { url: parsed.SUPABASE_URL, secretKey: parsed.SUPABASE_SECRET_KEY }
         : null,
+    publicationSigningKey: parsed.PUBLICATION_SIGNING_KEY ?? null,
   };
 }
 

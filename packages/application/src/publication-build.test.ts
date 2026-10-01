@@ -125,6 +125,14 @@ describe('publication content', () => {
     });
   });
 
+  it('signs the canonical manifest when a publication key is given', async () => {
+    expect((await buildPublicationContent(await toBuild(), tools)).manifestSignature).toBeNull();
+    const sign = vi.fn(() => ({ algorithm: 'Ed25519' as const, key_id: 'publication', signature: 'sig' }));
+    const built = await buildPublicationContent(await toBuild(), { ...tools, signer: { keyId: 'publication', sign } });
+    expect(built.manifestSignature).toEqual({ algorithm: 'Ed25519', key_id: 'publication', signature: 'sig' });
+    expect(sign).toHaveBeenCalledWith('etare.manifest.v1', canonicalJson(built.manifest));
+  });
+
   it('refuses a snapshot that is not the approved one', async () => {
     const altered = { ...snapshot, site: { ...snapshot.site, name: 'Autre nom' } };
     await expect(buildPublicationContent(await toBuild(altered), tools)).rejects.toThrow(PermanentJobError);

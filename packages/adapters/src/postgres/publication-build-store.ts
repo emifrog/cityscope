@@ -64,7 +64,7 @@ export class PostgresPublicationBuildStore implements PublicationBuildStore {
     lease: PublicationBuildLease,
   ): Promise<'published' | 'superseded' | null> {
     const { rows } = await this.pool.query<{ outcome: 'published' | 'superseded' | null }>(
-      'select app.worker_complete_publication($1, $2::jsonb, $3::jsonb, $4, $5, $6, $7, $8) as outcome',
+      'select app.worker_complete_publication($1, $2::jsonb, $3::jsonb, $4, $5, $6, $7::jsonb, $8, $9) as outcome',
       [
         publicationId,
         JSON.stringify(built.payload),
@@ -72,6 +72,7 @@ export class PostgresPublicationBuildStore implements PublicationBuildStore {
         built.manifestHash,
         built.templateVersion,
         built.pdfStorageKey,
+        built.manifestSignature ? JSON.stringify(built.manifestSignature) : null,
         lease.jobId,
         lease.attempt,
       ],

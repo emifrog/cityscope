@@ -23,7 +23,9 @@ sur une tablette Android. Le terminal peut être perdu.
 ## Point ouvert (à arbitrer au sprint de synchronisation)
 
 Granularité des mises à jour différentielles : le cahier des charges (OFF-02) parle d’objets modifiés,
-l’architecture (§11) de fichiers ajoutés ou modifiés adressés par empreinte.
+l’architecture (§11) de fichiers ajoutés ou modifiés adressés par empreinte. **Tranché le 01/10/2026 par
+l’ADR-015** : différentiel par empreinte de fichier, le fichier de données du site étant retransmis en
+entier quand le site change.
 
 ## Conséquences
 

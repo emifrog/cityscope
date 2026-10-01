@@ -37,7 +37,13 @@ export function LoginForm({ next }: { next: string }) {
   });
 
   return (
-    <form noValidate onSubmit={onSubmit} className="space-y-4">
+    <form
+      noValidate
+      // POST: a submission before hydration never puts credentials in the URL (history, logs).
+      method="post"
+      onSubmit={onSubmit}
+      className="space-y-4"
+    >
       {failure ? <Alert tone="critical">{failure}</Alert> : null}
       <div>
         <Label htmlFor="email">Adresse e-mail professionnelle</Label>

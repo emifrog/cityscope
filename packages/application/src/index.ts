@@ -1,5 +1,6 @@
 export * from './asset-verification';
 export * from './cartography';
+export * from './distribution';
 export * from './documents';
 export * from './etare';
 export * from './etare-snapshot';

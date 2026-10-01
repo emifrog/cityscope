@@ -9,11 +9,13 @@ import { TabLinks } from '@/components/tab-links';
 import { usePermissions } from '@/lib/queries';
 import { useSession } from '@/providers/session-provider';
 import { useTenant } from '@/providers/tenant-provider';
+import { DevicesAdmin } from './devices-admin';
 import { MembersAdmin } from './members-admin';
 import { RiskCatalogAdmin } from './risk-catalog-admin';
 
 const TABS: readonly { key: string; label: string; permission: Permission }[] = [
   { key: 'membres', label: 'Membres', permission: 'member:manage' },
+  { key: 'terminaux', label: 'Terminaux', permission: 'device:manage' },
   { key: 'risques', label: 'Catalogue des risques', permission: 'catalog:manage' },
 ];
 
@@ -41,10 +43,10 @@ export function AdminView() {
     <>
       <PageHeader
         title="Administration"
-        description="Membres du SIS, rôles et catalogue des risques. Terminaux et paramètres : à venir."
+        description="Membres du SIS et rôles, terminaux et synchronisation, catalogue des risques. Paramètres : à venir."
       />
       <TabLinks tabs={tabs} active={tab.key} param="onglet" basePath="/administration" />
-      {tab.key === 'membres' ? <MembersAdmin /> : <RiskCatalogAdmin />}
+      {tab.key === 'membres' ? <MembersAdmin /> : tab.key === 'terminaux' ? <DevicesAdmin /> : <RiskCatalogAdmin />}
     </>
   );
 }

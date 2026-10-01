@@ -2,6 +2,8 @@ import type { RequestSession, SessionFactory, SessionOptions } from '@etare/appl
 import {
   AccessDenied,
   Conflict,
+  DeviceNotEnrolled,
+  DeviceRevoked,
   InvalidInput,
   NotFound,
   PreconditionFailed,
@@ -14,6 +16,7 @@ import {
 } from '@etare/domain';
 import { z } from 'zod';
 import { PostgresBuildingRepository } from './building-repository';
+import { PostgresDeviceRepository } from './device-repository';
 import { PostgresEtareRepository } from './etare-repository';
 import { PostgresAssetRepository, PostgresDocumentRepository } from './document-repository';
 import { PostgresIdentityReader } from './identity-reader';
@@ -72,6 +75,7 @@ export class PostgresSessionFactory implements SessionFactory {
         zones: new PostgresZoneRepository(client),
         risks: new PostgresRiskRepository(client),
         etare: new PostgresEtareRepository(client),
+        devices: new PostgresDeviceRepository(client),
         jobs: new PostgresJobScheduler(client),
         audit: new PostgresAuditRecorder(client),
       });
@@ -122,6 +126,8 @@ const UNIQUE_MESSAGES: Readonly<Record<string, string>> = {
   catalog_code_national: 'Ce code appartient au catalogue national : choisissez-en un autre.',
   risk_type_tenant_code_uq: 'Ce code est déjà utilisé dans le catalogue de votre SIS.',
   etare_revision_open_uq: 'Une révision est déjà en cours pour ce site (brouillon ou en attente de validation).',
+  device_name_uq: 'Un terminal actif ou en attente porte déjà ce nom dans votre SIS.',
+  device_public_key_uq: 'Cette clé de terminal est déjà enrôlée : réinstallez l’application.',
 };
 
 /** Messages of the placement rules (plans, scope of objects and risks). */
@@ -171,6 +177,18 @@ export function translateDatabaseError(error: unknown): unknown {
       return new Conflict('Le SIS doit conserver au moins un administrateur actif.');
     case 'ET404':
       return new NotFound('Membre introuvable dans votre SIS.');
+    case 'ETD04':
+      return new NotFound('Terminal introuvable dans votre SIS.');
+    case 'ETD12':
+      return new PreconditionFailed('Ce terminal a été modifié entre-temps : rechargez la liste.');
+    case 'ETD09':
+      return new Conflict('Action impossible dans l’état actuel du terminal (déjà enrôlé ou révoqué).');
+    case 'ETENR':
+      return new InvalidInput('Code d’enrôlement inconnu, déjà utilisé ou expiré : demandez-en un nouveau.');
+    case 'ETDNE':
+      return new DeviceNotEnrolled();
+    case 'ETDRV':
+      return new DeviceRevoked();
     case 'ET412':
       return new PreconditionFailed('Ce membre a été modifié entre-temps : rechargez la liste avant d’enregistrer.');
     case '23505':
