@@ -8,6 +8,7 @@ import 'package:etare_ops/src/features/ops/presentation/pdf_reader.dart';
 import 'package:etare_ops/src/features/sync/application/sync_providers.dart';
 import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
 import 'package:etare_ops/src/features/sync/domain/device_identity.dart';
+import 'package:etare_ops/src/features/sync/domain/sync_trigger.dart';
 import 'package:flutter/widgets.dart' show Size, SizedBox, Text;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -22,7 +23,7 @@ import 'ops_fixtures.dart';
 /// Pas de réseau dans ces tests : la synchronisation automatique ne fait rien.
 class IdleSync extends SyncController {
   @override
-  Future<void> synchronize() async {}
+  Future<void> synchronize({SyncTrigger trigger = SyncTrigger.manual}) async {}
 }
 
 final now = DateTime.utc(2026, 10, 1, 10);
@@ -50,6 +51,7 @@ Future<void> pumpApp(
   WidgetTester tester,
   AppDatabase database, {
   List<Override> overrides = const [],
+  SyncController Function() sync = IdleSync.new,
 }) async {
   tester.view
     ..physicalSize = const Size(1200, 1900)
@@ -76,7 +78,7 @@ Future<void> pumpApp(
             keySeed: [],
           ),
         ),
-        syncControllerProvider.overrideWith(IdleSync.new),
+        syncControllerProvider.overrideWith(sync),
         // PDFium est natif : un lecteur simulé montre ce qui lui est confié.
         pdfViewBuilderProvider.overrideWithValue(
           (context, bytes, sourceName) =>

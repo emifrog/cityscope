@@ -337,6 +337,26 @@ void main() {
     expect((await installed())[siteA], publicationId(1));
   });
 
+  test('bail perdu avant l’activation (moteur gelé, SYN-01) : rien n’est '
+      'installé ni écrit, l’autre moteur tient l’état', () async {
+    server.publish(publicationOf(siteA, 1));
+    await sync();
+    final before = await database.syncStateDao.read();
+    server.publish(publicationOf(siteA, 2));
+    deviceClock = deviceClock.add(const Duration(minutes: 5));
+
+    await expectLater(
+      service.run(userId: userId, holdsLease: () async => false),
+      throwsA(isA<SyncSuperseded>()),
+    );
+
+    expect(await installed(), {siteA: publicationId(1)});
+    final after = await database.syncStateDao.read();
+    expect(after.lastSyncAt, before.lastSyncAt);
+    expect(after.catalogGeneration, before.catalogGeneration);
+    expect(server.receipts, hasLength(1));
+  });
+
   group('version minimale de l’application (SYN-02)', () {
     test('application trop ancienne : le référentiel installé reste lisible, '
         'les retraits s’appliquent, la mise à jour est demandée', () async {

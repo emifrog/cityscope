@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:dio/dio.dart';
 import 'package:etare_ops/src/core/di/providers.dart';
@@ -9,11 +10,13 @@ import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/reports/application/report_providers.dart';
 import 'package:etare_ops/src/features/sync/application/enrollment_service.dart';
 import 'package:etare_ops/src/features/sync/application/sync_service.dart';
+import 'package:etare_ops/src/features/sync/background/background_scheduler.dart';
 import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
 import 'package:etare_ops/src/features/sync/data/sync_api.dart';
 import 'package:etare_ops/src/features/sync/data/sync_status_repository.dart';
 import 'package:etare_ops/src/features/sync/domain/device_identity.dart';
 import 'package:etare_ops/src/features/sync/domain/sync_status.dart';
+import 'package:etare_ops/src/features/sync/domain/sync_trigger.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -103,23 +106,66 @@ final class SyncRunFailed extends SyncRunState {
   final String message;
 }
 
+/// Une tâche de fond (autre moteur Flutter du processus) synchronise déjà :
+/// l'affichage attend sa fin puis relit la base (SYN-01).
+final class SyncRunBusy extends SyncRunState {
+  const SyncRunBusy();
+}
+
 final syncControllerProvider = NotifierProvider<SyncController, SyncRunState>(
   SyncController.new,
 );
 
+/// Intervalle de relecture du bail tenu par un autre moteur.
+final syncLeasePollIntervalProvider = Provider<Duration>(
+  (ref) => const Duration(seconds: 3),
+);
+
+/// Volume téléchargé au plus par une synchronisation périodique (SYN-01).
+final backgroundDownloadBudgetProvider = Provider<int>(
+  (ref) => backgroundDownloadBudgetBytes,
+);
+
+/// Une seule synchronisation à la fois : dans ce moteur (état en cours) et
+/// entre moteurs (bail dans la base, renouvelé tant qu'elle dure, rendu à la
+/// fin ; un bail échu est repris après un arrêt brutal).
 class SyncController extends Notifier<SyncRunState> {
   static const _logger = AppLogger('sync');
+
+  /// Durée d'un bail, renouvelé toutes les [_leaseRenewal].
+  static const leaseTtl = Duration(minutes: 2);
+  static const _leaseRenewal = Duration(seconds: 30);
+
+  /// Identité de ce moteur pour le bail.
+  final String _owner =
+      'moteur-${DateTime.now().microsecondsSinceEpoch}-'
+      '${Random.secure().nextInt(1 << 32)}';
 
   @override
   SyncRunState build() => const SyncRunIdle();
 
   bool get isRunning => state is SyncRunInProgress;
 
-  /// Lance une synchronisation (sans effet si une autre est en cours).
-  Future<void> synchronize() async {
-    if (isRunning) return;
+  /// Lance une synchronisation (sans effet si une autre est en cours, ici ou
+  /// dans une tâche de fond). [trigger] fixe le budget de téléchargement.
+  Future<void> synchronize({SyncTrigger trigger = SyncTrigger.manual}) async {
+    if (isRunning || state is SyncRunBusy) return;
     final userId = ref.read(authControllerProvider).value?.user.id;
     if (userId == null) return;
+    final leases = ref.read(appDatabaseProvider).syncStateDao;
+    final clock = ref.read(clockProvider);
+    if (!await leases.tryAcquireLease(_owner, clock(), leaseTtl)) {
+      _logger.info('Synchronisation déjà menée par un autre moteur.');
+      if (!trigger.unattended) {
+        state = const SyncRunBusy();
+        await _awaitOtherEngine();
+      }
+      return;
+    }
+    final renewal = Timer.periodic(
+      _leaseRenewal,
+      (_) => unawaited(leases.tryAcquireLease(_owner, clock(), leaseTtl)),
+    );
     state = const SyncRunInProgress(SyncProgress(step: SyncStep.catalog));
     try {
       final report = await ref
@@ -127,13 +173,31 @@ class SyncController extends Notifier<SyncRunState> {
           .run(
             userId: userId,
             onProgress: (progress) => state = SyncRunInProgress(progress),
+            maxDownloadBytes: trigger.budgeted
+                ? ref.read(backgroundDownloadBudgetProvider)
+                : null,
+            holdsLease: () => leases.tryAcquireLease(_owner, clock(), leaseTtl),
           );
       if (report is SyncPurged) ref.invalidate(deviceIdentityProvider);
       state = SyncRunFinished(report);
+      if (report case SyncCompleted(:final deferredBytes)
+          when deferredBytes > 0) {
+        // Trop lourd pour le réseau mobile : la suite attend le Wi-Fi.
+        await ref.read(backgroundSchedulerProvider).scheduleUnmetered();
+      }
       // Puis la file des signalements, et la suite donnée par la Prévision.
       if (report is SyncCompleted || report is SyncUpdateRequired) {
-        ref.read(reportOutboxProvider.notifier).sendInBackground();
+        final outbox = ref.read(reportOutboxProvider.notifier);
+        if (trigger.unattended) {
+          await outbox.send();
+        } else {
+          outbox.sendInBackground();
+        }
       }
+    } on SyncSuperseded {
+      // Gelé ou arrêté trop longtemps : un autre moteur a repris la main.
+      _logger.warning('Bail perdu : synchronisation abandonnée.');
+      state = const SyncRunIdle();
     } on SyncIntegrityException catch (error) {
       _logger.warning('Synchronisation refusée : ${error.code}');
       state = SyncRunFailed(
@@ -144,9 +208,29 @@ class SyncController extends Notifier<SyncRunState> {
     } on Object catch (error) {
       _logger.warning('Synchronisation interrompue.', error: error);
       state = SyncRunFailed(describeError(error));
+    } finally {
+      renewal.cancel();
+      await leases.releaseLease(_owner);
     }
   }
 
-  /// Synchronisation automatique au démarrage, si la tablette est enrôlée.
-  void synchronizeInBackground() => unawaited(synchronize());
+  /// Attend la fin de la synchronisation menée par un autre moteur, puis
+  /// relit la base : ses écritures passent par une autre connexion, que les
+  /// flux de celle-ci n'ont pas vues.
+  Future<void> _awaitOtherEngine() async {
+    final database = ref.read(appDatabaseProvider);
+    final clock = ref.read(clockProvider);
+    final interval = ref.read(syncLeasePollIntervalProvider);
+    while (await database.syncStateDao.leaseHolder(clock()) != null) {
+      await Future<void>.delayed(interval);
+      if (!ref.mounted) return;
+    }
+    database.markTablesUpdated(database.allTables);
+    ref.invalidate(deviceIdentityProvider);
+    if (state is SyncRunBusy) state = const SyncRunIdle();
+  }
+
+  /// Synchronisation sans attendre son résultat (ouverture, bouton).
+  void synchronizeInBackground({SyncTrigger trigger = SyncTrigger.manual}) =>
+      unawaited(synchronize(trigger: trigger));
 }

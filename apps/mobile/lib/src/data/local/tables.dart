@@ -61,6 +61,13 @@ class SyncState extends Table {
   /// récent ne dit pas laquelle. Null : application compatible.
   TextColumn get requiredAppVersion => text().nullable()();
 
+  /// Synchronisation en cours (SYN-01) : moteur qui la mène (application ou
+  /// tâche de fond) et fin de son bail. Une seule à la fois, même entre deux
+  /// moteurs du même processus ; un bail échu est repris (arrêt brutal).
+  TextColumn get syncLeaseOwner => text().nullable()();
+
+  DateTimeColumn get syncLeaseExpiresAt => dateTime().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 

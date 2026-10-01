@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:etare_ops/src/core/di/providers.dart';
 import 'package:etare_ops/src/core/storage/secure_store.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
+import 'package:etare_ops/src/features/auth/data/session_store.dart';
 import 'package:etare_ops/src/features/auth/domain/auth_failure.dart';
 import 'package:etare_ops/src/features/auth/domain/auth_repository.dart';
 import 'package:etare_ops/src/features/auth/domain/auth_session.dart';
@@ -24,6 +25,7 @@ final class FakeAuthRepository implements AuthRepository {
   Completer<AuthSession>? refreshCompleter;
   Exception? refreshError;
   int refreshCalls = 0;
+  final List<String> refreshedTokens = [];
   final List<String> signedOutTokens = [];
 
   @override
@@ -38,6 +40,7 @@ final class FakeAuthRepository implements AuthRepository {
   @override
   Future<AuthSession> refreshSession(String refreshToken) async {
     refreshCalls++;
+    refreshedTokens.add(refreshToken);
     if (refreshError case final error?) throw error;
     return refreshCompleter!.future;
   }
@@ -159,5 +162,52 @@ void main() {
     expect(await controller.refreshAccessToken(), isNull);
     expect(container.read(authControllerProvider).value, isNull);
     expect(store.values, isEmpty);
+  });
+
+  group('session partagée avec la tâche de fond (SYN-01)', () {
+    Future<AuthController> signedIn(ProviderContainer container) async {
+      repository.signInResult = session('1');
+      await container.read(authControllerProvider.future);
+      final controller = container.read(authControllerProvider.notifier);
+      await controller.signIn(email: 'a@b.fr', password: 'x');
+      return controller;
+    }
+
+    test('session déjà renouvelée par la tâche de fond : reprise, sans '
+        'rejouer l’ancien jeton', () async {
+      final container = createContainer();
+      final controller = await signedIn(container);
+      await SessionStore(store).write(session('fond'));
+
+      expect(await controller.refreshAccessToken(), 'access-fond');
+      expect(repository.refreshCalls, 0);
+      expect(container.read(authControllerProvider).value, session('fond'));
+    });
+
+    test('session renouvelée mais déjà expirante : rafraîchie avec le jeton '
+        'le plus récent', () async {
+      final container = createContainer();
+      final controller = await signedIn(container);
+      await SessionStore(store)
+          .write(session('fond', expiresAt: DateTime.utc(2026, 9, 27)));
+      repository.refreshCompleter = Completer<AuthSession>()
+        ..complete(session('3'));
+
+      expect(await controller.refreshAccessToken(), 'access-3');
+      expect(repository.refreshedTokens, ['refresh-fond']);
+    });
+
+    test(
+      'session effacée par la tâche de fond (expirée) : déconnexion',
+      () async {
+        final container = createContainer();
+        final controller = await signedIn(container);
+        await SessionStore(store).clear();
+
+        expect(await controller.refreshAccessToken(), isNull);
+        expect(repository.refreshCalls, 0);
+        expect(container.read(authControllerProvider).value, isNull);
+      },
+    );
   });
 }

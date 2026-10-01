@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:etare_ops/src/core/di/providers.dart';
 import 'package:etare_ops/src/core/formatting/date_formatting.dart';
 import 'package:etare_ops/src/core/routing/app_routes.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
@@ -9,6 +12,7 @@ import 'package:etare_ops/src/features/reports/application/report_providers.dart
 import 'package:etare_ops/src/features/sync/application/sync_providers.dart';
 import 'package:etare_ops/src/features/sync/domain/device_identity.dart';
 import 'package:etare_ops/src/features/sync/domain/sync_status.dart';
+import 'package:etare_ops/src/features/sync/domain/sync_trigger.dart';
 import 'package:etare_ops/src/features/sync/presentation/offline_status_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -29,17 +33,46 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  /// Au retour dans l'application, une synchronisation est relancée si la
+  /// dernière tentative date de plus que cela (SYN-01).
+  static const resumeSyncAfter = Duration(minutes: 15);
+
+  late final AppLifecycleListener _lifecycle;
+
   @override
   void initState() {
     super.initState();
+    _lifecycle = AppLifecycleListener(onResume: _onResume);
     // Synchronisation automatique à l'ouverture si la tablette est enrôlée :
     // la consultation reste locale, le réseau ne bloque jamais l'écran.
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final identity = await ref.read(deviceIdentityProvider.future);
-      if (identity != null && mounted) {
-        ref.read(syncControllerProvider.notifier).synchronizeInBackground();
-      }
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _synchronize());
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
+  Future<void> _synchronize() async {
+    final identity = await ref.read(deviceIdentityProvider.future);
+    if (identity != null && mounted) {
+      ref
+          .read(syncControllerProvider.notifier)
+          .synchronizeInBackground(trigger: SyncTrigger.automatic);
+    }
+  }
+
+  void _onResume() {
+    // Une tâche de fond a pu écrire dans la base par sa propre connexion :
+    // les écrans relisent, puis la synchronisation reprend si elle date.
+    final database = ref.read(appDatabaseProvider);
+    database.markTablesUpdated(database.allTables);
+    final last = ref.read(syncStatusProvider).value?.lastAttemptAt;
+    final now = ref.read(clockProvider)();
+    if (last == null || now.difference(last) > resumeSyncAfter) {
+      unawaited(_synchronize());
+    }
   }
 
   @override
@@ -87,7 +120,7 @@ class FreshnessBanner extends ConsumerWidget {
     final status = ref.watch(syncStatusProvider).value ?? SyncStatus.initial;
     final run = ref.watch(syncControllerProvider);
     final now = ref.watch(clockProvider)();
-    final (label, color, icon) = freshnessStyle(status.freshness(now));
+    final (label, color, icon) = syncStatusStyle(status, now);
     final synced = status.lastSyncAt;
     return Material(
       color: color.withValues(alpha: 0.08),
@@ -126,7 +159,7 @@ class FreshnessBanner extends ConsumerWidget {
                   ],
                 ),
               ),
-              if (run is SyncRunInProgress)
+              if (run is SyncRunInProgress || run is SyncRunBusy)
                 const SizedBox.square(
                   dimension: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),

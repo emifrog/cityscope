@@ -11,6 +11,7 @@ import 'generated/schema_v1.dart' as v1;
 import 'generated/schema_v2.dart' as v2;
 import 'generated/schema_v3.dart' as v3;
 import 'generated/schema_v4.dart' as v4;
+import 'generated/schema_v5.dart' as v5;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -178,4 +179,49 @@ void main() {
       );
     },
   );
+
+  // Tablette en v4 : l'état est conservé, aucun bail n'est tenu (SYN-01).
+  test('la migration v4 → v5 conserve l’état, sans bail en cours', () async {
+    const oldSyncStateData = [
+      v4.SyncStateData(
+        id: 1,
+        activeGeneration: 6,
+        lastSyncAt: '2026-10-01T12:00:00.000Z',
+        status: 'failed',
+        catalogGeneration: 7,
+        authorizedUserId: 'user-1',
+        receiptPending: 1,
+        requiredAppVersion: '0.2.0',
+      ),
+    ];
+    const expectedNewSyncStateData = [
+      v5.SyncStateData(
+        id: 1,
+        activeGeneration: 6,
+        lastSyncAt: '2026-10-01T12:00:00.000Z',
+        status: 'failed',
+        catalogGeneration: 7,
+        authorizedUserId: 'user-1',
+        receiptPending: 1,
+        requiredAppVersion: '0.2.0',
+      ),
+    ];
+
+    await verifier.testWithDataIntegrity(
+      oldVersion: 4,
+      newVersion: 5,
+      createOld: v4.DatabaseAtV4.new,
+      createNew: v5.DatabaseAtV5.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, oldDb) {
+        batch.insertAll(oldDb.syncState, oldSyncStateData);
+      },
+      validateItems: (newDb) async {
+        expect(
+          expectedNewSyncStateData,
+          await newDb.select(newDb.syncState).get(),
+        );
+      },
+    );
+  });
 }

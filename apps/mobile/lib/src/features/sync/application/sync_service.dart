@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:etare_ops/src/core/config/app_info.dart';
 import 'package:etare_ops/src/core/errors/app_exception.dart';
 import 'package:etare_ops/src/core/errors/error_messages.dart';
+import 'package:etare_ops/src/core/formatting/date_formatting.dart';
 import 'package:etare_ops/src/core/json/json_reader.dart';
 import 'package:etare_ops/src/core/logging/app_logger.dart';
 import 'package:etare_ops/src/core/security/trusted_keys.dart';
@@ -93,6 +94,7 @@ final class SyncCompleted extends SyncReport {
     required this.failures,
     required this.downloadedBytes,
     required this.interrupted,
+    this.deferredBytes = 0,
   });
 
   final int installed;
@@ -104,7 +106,23 @@ final class SyncCompleted extends SyncReport {
   /// Réseau perdu en cours de route : la suite reprendra au prochain contact.
   final bool interrupted;
 
-  bool get complete => failures.isEmpty && !interrupted;
+  /// Volume annoncé des versions laissées pour plus tard parce qu'elles
+  /// dépassaient le budget de téléchargement (synchronisation en arrière-plan,
+  /// SYN-01) ; 0 si rien n'a été reporté.
+  final int deferredBytes;
+
+  bool get complete => failures.isEmpty && !interrupted && deferredBytes == 0;
+}
+
+/// Ce moteur n'a plus le bail de synchronisation (il a été gelé ou arrêté
+/// trop longtemps et un autre l'a repris) : il n'active ni n'écrit rien.
+final class SyncSuperseded implements Exception {
+  const SyncSuperseded();
+}
+
+/// Une version dépasse le budget de téléchargement de cette synchronisation.
+final class _DownloadDeferred implements Exception {
+  const _DownloadDeferred();
 }
 
 /// Application trop ancienne pour le catalogue reçu (SYN-02) : aucune nouvelle
@@ -152,10 +170,29 @@ final class SyncService {
 
   DateTime get _now => _clock().toUtc();
 
+  /// Confirme, juste avant d'activer, que ce moteur mène toujours la
+  /// synchronisation (bail partagé entre moteurs, SYN-01).
+  Future<bool> Function()? _holdsLease;
+
+  Future<void> _activate(ActivationRecord activation) async {
+    final holdsLease = _holdsLease;
+    if (holdsLease != null && !await holdsLease()) {
+      throw const SyncSuperseded();
+    }
+    await _offline.activate(activation);
+  }
+
+  /// [maxDownloadBytes] borne ce qui est téléchargé (fichiers manquants) : une
+  /// version qui le dépasserait est reportée, les précédentes sont installées
+  /// (synchronisation en arrière-plan sur réseau mobile, SYN-01). Null : sans
+  /// limite.
   Future<SyncReport> run({
     required String userId,
     void Function(SyncProgress progress)? onProgress,
+    int? maxDownloadBytes,
+    Future<bool> Function()? holdsLease,
   }) async {
+    _holdsLease = holdsLease;
     final identity = await _identities.read();
     if (identity == null) return const SyncNotEnrolled();
     if (!_trustedKeys.has(KeyPurpose.publication) ||
@@ -173,7 +210,12 @@ final class SyncService {
       ),
     );
     try {
-      return await _synchronize(device, userId, onProgress ?? (_) {});
+      return await _synchronize(
+        device,
+        userId,
+        onProgress ?? (_) {},
+        maxDownloadBytes,
+      );
     } on ApiException catch (error) {
       switch (error.code) {
         case ApiErrorCode.deviceRevoked ||
@@ -191,6 +233,9 @@ final class SyncService {
           await _fail(describeError(error));
           rethrow;
       }
+    } on SyncSuperseded {
+      // L'autre moteur tient l'état : rien n'est écrit ici.
+      rethrow;
     } on SyncIntegrityException catch (error) {
       if (error.code == _updateRequired) {
         // Catalogue d'un format plus récent : rien n'est lu ni installé.
@@ -240,6 +285,7 @@ final class SyncService {
     DeviceCredentials device,
     String userId,
     void Function(SyncProgress progress) onProgress,
+    int? maxDownloadBytes,
   ) async {
     onProgress(const SyncProgress(step: SyncStep.catalog));
     final catalog = await _verifiedCatalog(device, userId);
@@ -265,7 +311,17 @@ final class SyncService {
     var interrupted = false;
     var doneBytes = 0;
     var downloadedBytes = 0;
+    var deferredBytes = 0;
+    var reservedBytes = 0;
     final totalBytes = plan.announcedBytes;
+    // Budget de téléchargement : une version entière, ou rien.
+    bool reserve(int bytes) {
+      final budget = maxDownloadBytes;
+      if (budget != null && reservedBytes + bytes > budget) return false;
+      reservedBytes += bytes;
+      return true;
+    }
+
     for (final (index, entry) in plan.toInstall.indexed) {
       void report(int bytes) {
         doneBytes += bytes;
@@ -286,8 +342,15 @@ final class SyncService {
         final record = await _prepare(device, entry, keep, (bytes, downloaded) {
           downloadedBytes += downloaded;
           report(bytes);
-        });
+        }, reserve);
         prepared.add(record);
+      } on _DownloadDeferred {
+        // Trop lourd pour cette synchronisation : cette version et les
+        // suivantes attendront le Wi-Fi ou une synchronisation manuelle.
+        deferredBytes = plan.toInstall
+            .skip(index)
+            .fold(0, (total, pending) => total + pending.sizeBytes);
+        break;
       } on NetworkException {
         // Coupure : on active ce qui est prêt, la suite reprendra.
         interrupted = true;
@@ -313,8 +376,8 @@ final class SyncService {
         sitesTotal: plan.toInstall.length,
       ),
     );
-    final complete = failures.isEmpty && !interrupted;
-    await _offline.activate(
+    final complete = failures.isEmpty && !interrupted && deferredBytes == 0;
+    await _activate(
       ActivationRecord(
         install: prepared,
         removeSites: plan.toRemove,
@@ -324,7 +387,9 @@ final class SyncService {
         authorizationExpiresAt: catalog.authorizationExpiresAt,
         complete: complete,
         now: _now,
-        error: complete ? null : _partialMessage(failures, interrupted),
+        error: complete
+            ? null
+            : _partialMessage(failures, interrupted, deferredBytes),
         keepBlobs: keep,
         // Version de paquet trop récente pour ce lecteur : mise à jour requise
         // (version exigée inconnue), l'ancienne version du site reste.
@@ -344,7 +409,8 @@ final class SyncService {
           : (prepared.isEmpty && interrupted ? 'error' : 'partial'),
       errorCode: interrupted
           ? 'NETWORK_INTERRUPTED'
-          : failures.firstOrNull?.code,
+          : failures.firstOrNull?.code ??
+                (deferredBytes > 0 ? 'DOWNLOAD_DEFERRED' : null),
     );
     return SyncCompleted(
       installed: prepared.length,
@@ -353,6 +419,7 @@ final class SyncService {
       failures: List.unmodifiable(failures),
       downloadedBytes: downloadedBytes,
       interrupted: interrupted,
+      deferredBytes: deferredBytes,
     );
   }
 
@@ -370,7 +437,7 @@ final class SyncService {
     _logger.warning(
       'Application ${AppInfo.version} trop ancienne (minimum $minVersion).',
     );
-    await _offline.activate(
+    await _activate(
       ActivationRecord(
         install: const [],
         removeSites: plan.toRemove,
@@ -438,6 +505,7 @@ final class SyncService {
     CatalogEntry entry,
     Set<String> keep,
     void Function(int bytes, int downloaded) onBytes,
+    bool Function(int bytes) reserve,
   ) async {
     final package = await _api.package(device, entry.publicationId);
     final signatureValid = await verifyServerSignature(
@@ -485,6 +553,13 @@ final class SyncService {
       for (final file in files)
         if (!present.contains(file.sha256)) file,
     ];
+    final missingBytes = missing.fold(
+      0,
+      (total, file) => total + file.sizeBytes,
+    );
+    if (missingBytes > 0 && !reserve(missingBytes)) {
+      throw const _DownloadDeferred();
+    }
     for (final file in files) {
       if (present.contains(file.sha256)) onBytes(file.sizeBytes, 0);
     }
@@ -626,10 +701,19 @@ final class SyncService {
         ),
       );
 
-  static String _partialMessage(List<SyncFailure> failures, bool interrupted) {
+  static String _partialMessage(
+    List<SyncFailure> failures,
+    bool interrupted,
+    int deferredBytes,
+  ) {
     if (interrupted) {
       return 'Réseau interrompu : la synchronisation reprendra au prochain '
           'contact. Les versions déjà installées restent consultables.';
+    }
+    if (failures.isEmpty && deferredBytes > 0) {
+      return 'Mise à jour volumineuse (environ ${formatBytesFr(deferredBytes)}) '
+          'reportée : elle se fera en Wi-Fi, ou lancez « Synchroniser ». Les '
+          'versions déjà installées restent consultables.';
     }
     final tooNew = [
       for (final failure in failures)

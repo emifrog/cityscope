@@ -112,8 +112,22 @@ class AuthController extends AsyncNotifier<AuthSession?> {
       _pendingRefresh ??= _refresh().whenComplete(() => _pendingRefresh = null);
 
   Future<AuthSession?> _refresh() async {
-    final current = state.value;
+    var current = state.value;
     if (current == null) return null;
+    // Une tâche de fond (autre moteur, SYN-01) a pu renouveler la session :
+    // reprendre la sienne plutôt que de rejouer un jeton déjà utilisé, ce que
+    // le serveur d'authentification traiterait comme un vol de session.
+    final stored = await _store.read();
+    if (stored == null) {
+      await _clearLocalSession();
+      return null;
+    }
+    if (stored.refreshToken != current.refreshToken) {
+      state = AsyncData(stored);
+      final now = ref.read(clockProvider)();
+      if (!stored.expiresWithin(_refreshMargin, now: now)) return stored;
+      current = stored;
+    }
     try {
       final session = await _repository.refreshSession(current.refreshToken);
       await _store.write(session);

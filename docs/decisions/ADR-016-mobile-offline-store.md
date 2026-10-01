@@ -95,3 +95,5 @@ lecture en flux de gros documents.
   l'ancienne : l'agent est invité à synchroniser.
 - Messages exacts : sans réseau (le document manque, il faudra du réseau), version plus distribuée,
   fichier altéré (rien n'est enregistré), tablette refusée (la synchronisation purge).
+- La synchronisation n'a plus lieu seulement à l'ouverture : tâche de fond Android, reprise au retour,
+  budget sur réseau mobile et bail partagé entre moteurs (schéma local v5), voir l'ADR-018.

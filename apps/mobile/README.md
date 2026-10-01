@@ -260,10 +260,15 @@ Principes :
    remet le code à usage unique.
 2. Connecté, l'agent saisit le code : la tablette génère sa clé Ed25519, en
    prouve la détention, et garde sa graine dans le Keystore.
-3. À chaque ouverture de l'accueil (et à la demande), la tablette demande
-   son catalogue signé, ne télécharge que les fichiers d'empreinte nouvelle,
-   vérifie signatures, empreintes et tailles, puis active le nouveau jeu en
-   une transaction et accuse réception.
+3. À l'ouverture de l'accueil, au retour dans l'application (dernière
+   tentative de plus de 15 min), à la demande, et toutes les heures en
+   arrière-plan sur Android (ADR-018), la tablette demande son catalogue
+   signé, ne télécharge que les fichiers d'empreinte nouvelle, vérifie
+   signatures, empreintes et tailles, puis active le nouveau jeu en une
+   transaction et accuse réception. En arrière-plan : réseau disponible,
+   batterie et stockage non faibles ; au-delà de 50 Mo, la suite attend le
+   Wi-Fi ; une seule synchronisation à la fois (bail dans la base, schéma
+   v5), confiée à l'application si elle est ouverte.
 4. La consultation locale est autorisée 7 jours à l'utilisateur du dernier
    catalogue ; la fraîcheur (à jour, en retard, erreur) est toujours
    affichée.

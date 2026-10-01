@@ -6,6 +6,7 @@ import 'package:etare_ops/src/core/theme/brand.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/sync/application/sync_providers.dart';
 import 'package:etare_ops/src/features/sync/application/sync_service.dart';
+import 'package:etare_ops/src/features/sync/background/background_scheduler.dart';
 import 'package:etare_ops/src/features/sync/domain/device_identity.dart';
 import 'package:etare_ops/src/features/sync/domain/sync_status.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,6 +29,17 @@ import 'package:material_ui/material_ui.dart';
         Icons.cloud_off_outlined,
       ),
     };
+
+/// En-tête de l'état : la fraîcheur, sauf quand l'application doit d'abord
+/// être mise à jour (SYN-02) — ce n'est pas une panne de synchronisation.
+(String, Color, IconData) syncStatusStyle(SyncStatus status, DateTime now) =>
+    status.appUpdateRequired
+    ? (
+        'Application à mettre à jour',
+        BrandColors.important,
+        Icons.system_update,
+      )
+    : freshnessStyle(status.freshness(now));
 
 /// État hors ligne de la tablette : enrôlement, fraîcheur, autorisation
 /// locale, synchronisation et sa progression (OFF-01, OFF-04, OPS-05).
@@ -124,7 +136,7 @@ class _Enrolled extends ConsumerWidget {
     final userId = ref.watch(
       authControllerProvider.select((state) => state.value?.user.id),
     );
-    final (label, color, icon) = freshnessStyle(status.freshness(now));
+    final (label, color, icon) = syncStatusStyle(status, now);
     final running = run is SyncRunInProgress;
     final canConsult = status.canConsult(userId: userId, now: now);
     final expiresAt = status.authorizationExpiresAt;
@@ -180,6 +192,19 @@ class _Enrolled extends ConsumerWidget {
         const SizedBox(height: 12),
         if (run case SyncRunInProgress(:final progress))
           _Progress(progress: progress)
+        else if (run is SyncRunBusy)
+          const Row(
+            children: [
+              SizedBox.square(
+                dimension: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text('Synchronisation en arrière-plan en cours…'),
+              ),
+            ],
+          )
         else ...[
           if (run case SyncRunFailed(:final message))
             Padding(
@@ -203,6 +228,12 @@ class _Enrolled extends ConsumerWidget {
                 .synchronizeInBackground(),
             icon: const Icon(Icons.sync),
             label: const Text('Synchroniser'),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Synchronisation automatique '
+            '${ref.watch(backgroundSchedulerProvider).summary}.',
+            style: textTheme.bodySmall?.copyWith(color: BrandColors.textMuted),
           ),
         ],
       ],

@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:etare_ops/src/app.dart';
 import 'package:etare_ops/src/core/config/app_config.dart';
 import 'package:etare_ops/src/core/di/providers.dart';
@@ -6,6 +9,7 @@ import 'package:etare_ops/src/core/storage/secure_store.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/data/local/encrypted_database.dart';
 import 'package:etare_ops/src/features/startup/presentation/startup_error_screen.dart';
+import 'package:etare_ops/src/features/sync/background/background_scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -55,6 +59,8 @@ Future<void> bootstrap() async {
     return;
   }
 
+  unawaited(_startBackgroundSync());
+
   runApp(
     ProviderScope(
       overrides: [
@@ -68,4 +74,18 @@ Future<void> bootstrap() async {
       child: const EtareOpsApp(),
     ),
   );
+}
+
+/// Planifie la synchronisation périodique Android (SYN-01) ; un échec ne
+/// bloque jamais le démarrage (ouverture, retour et bouton restent).
+Future<void> _startBackgroundSync() async {
+  if (!Platform.isAndroid) return;
+  try {
+    await const WorkmanagerScheduler().start();
+  } on Object catch (error) {
+    _logger.warning(
+      'Synchronisation en arrière-plan non planifiée.',
+      error: error,
+    );
+  }
 }

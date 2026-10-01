@@ -21,8 +21,11 @@ void main() {
     );
     await pumpApp(tester, database);
 
-    // L'accueil le dit en permanence ; le site installé reste consultable.
+    // L'accueil le dit en permanence, sans parler de panne ; le site
+    // installé reste consultable.
     expect(find.byKey(FreshnessBanner.updateRequiredKey), findsOneWidget);
+    expect(find.textContaining('Application à mettre à jour'), findsOneWidget);
+    expect(find.textContaining('Erreur de synchronisation'), findsNothing);
     expect(find.text('EHPAD Les Oliviers'), findsOneWidget);
 
     // Le détail : version exigée, version installée, conséquence.

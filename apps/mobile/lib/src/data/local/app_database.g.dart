@@ -351,6 +351,28 @@ class $SyncStateTable extends SyncState
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _syncLeaseOwnerMeta = const VerificationMeta(
+    'syncLeaseOwner',
+  );
+  @override
+  late final GeneratedColumn<String> syncLeaseOwner = GeneratedColumn<String>(
+    'sync_lease_owner',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncLeaseExpiresAtMeta =
+      const VerificationMeta('syncLeaseExpiresAt');
+  @override
+  late final GeneratedColumn<DateTime> syncLeaseExpiresAt =
+      GeneratedColumn<DateTime>(
+        'sync_lease_expires_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -365,6 +387,8 @@ class $SyncStateTable extends SyncState
     authorizationExpiresAt,
     receiptPending,
     requiredAppVersion,
+    syncLeaseOwner,
+    syncLeaseExpiresAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -471,6 +495,24 @@ class $SyncStateTable extends SyncState
         ),
       );
     }
+    if (data.containsKey('sync_lease_owner')) {
+      context.handle(
+        _syncLeaseOwnerMeta,
+        syncLeaseOwner.isAcceptableOrUnknown(
+          data['sync_lease_owner']!,
+          _syncLeaseOwnerMeta,
+        ),
+      );
+    }
+    if (data.containsKey('sync_lease_expires_at')) {
+      context.handle(
+        _syncLeaseExpiresAtMeta,
+        syncLeaseExpiresAt.isAcceptableOrUnknown(
+          data['sync_lease_expires_at']!,
+          _syncLeaseExpiresAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -528,6 +570,14 @@ class $SyncStateTable extends SyncState
         DriftSqlType.string,
         data['${effectivePrefix}required_app_version'],
       ),
+      syncLeaseOwner: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_lease_owner'],
+      ),
+      syncLeaseExpiresAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}sync_lease_expires_at'],
+      ),
     );
   }
 
@@ -566,6 +616,12 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
   /// minimale exigée par le catalogue, ou chaîne vide quand un format plus
   /// récent ne dit pas laquelle. Null : application compatible.
   final String? requiredAppVersion;
+
+  /// Synchronisation en cours (SYN-01) : moteur qui la mène (application ou
+  /// tâche de fond) et fin de son bail. Une seule à la fois, même entre deux
+  /// moteurs du même processus ; un bail échu est repris (arrêt brutal).
+  final String? syncLeaseOwner;
+  final DateTime? syncLeaseExpiresAt;
   const SyncStateRow({
     required this.id,
     this.activeGeneration,
@@ -579,6 +635,8 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     this.authorizationExpiresAt,
     required this.receiptPending,
     this.requiredAppVersion,
+    this.syncLeaseOwner,
+    this.syncLeaseExpiresAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -615,6 +673,12 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     if (!nullToAbsent || requiredAppVersion != null) {
       map['required_app_version'] = Variable<String>(requiredAppVersion);
     }
+    if (!nullToAbsent || syncLeaseOwner != null) {
+      map['sync_lease_owner'] = Variable<String>(syncLeaseOwner);
+    }
+    if (!nullToAbsent || syncLeaseExpiresAt != null) {
+      map['sync_lease_expires_at'] = Variable<DateTime>(syncLeaseExpiresAt);
+    }
     return map;
   }
 
@@ -650,6 +714,12 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       requiredAppVersion: requiredAppVersion == null && nullToAbsent
           ? const Value.absent()
           : Value(requiredAppVersion),
+      syncLeaseOwner: syncLeaseOwner == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncLeaseOwner),
+      syncLeaseExpiresAt: syncLeaseExpiresAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncLeaseExpiresAt),
     );
   }
 
@@ -675,6 +745,10 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       requiredAppVersion: serializer.fromJson<String?>(
         json['requiredAppVersion'],
       ),
+      syncLeaseOwner: serializer.fromJson<String?>(json['syncLeaseOwner']),
+      syncLeaseExpiresAt: serializer.fromJson<DateTime?>(
+        json['syncLeaseExpiresAt'],
+      ),
     );
   }
   @override
@@ -695,6 +769,8 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       ),
       'receiptPending': serializer.toJson<bool>(receiptPending),
       'requiredAppVersion': serializer.toJson<String?>(requiredAppVersion),
+      'syncLeaseOwner': serializer.toJson<String?>(syncLeaseOwner),
+      'syncLeaseExpiresAt': serializer.toJson<DateTime?>(syncLeaseExpiresAt),
     };
   }
 
@@ -711,6 +787,8 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     Value<DateTime?> authorizationExpiresAt = const Value.absent(),
     bool? receiptPending,
     Value<String?> requiredAppVersion = const Value.absent(),
+    Value<String?> syncLeaseOwner = const Value.absent(),
+    Value<DateTime?> syncLeaseExpiresAt = const Value.absent(),
   }) => SyncStateRow(
     id: id ?? this.id,
     activeGeneration: activeGeneration.present
@@ -736,6 +814,12 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     requiredAppVersion: requiredAppVersion.present
         ? requiredAppVersion.value
         : this.requiredAppVersion,
+    syncLeaseOwner: syncLeaseOwner.present
+        ? syncLeaseOwner.value
+        : this.syncLeaseOwner,
+    syncLeaseExpiresAt: syncLeaseExpiresAt.present
+        ? syncLeaseExpiresAt.value
+        : this.syncLeaseExpiresAt,
   );
   SyncStateRow copyWithCompanion(SyncStateCompanion data) {
     return SyncStateRow(
@@ -769,6 +853,12 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       requiredAppVersion: data.requiredAppVersion.present
           ? data.requiredAppVersion.value
           : this.requiredAppVersion,
+      syncLeaseOwner: data.syncLeaseOwner.present
+          ? data.syncLeaseOwner.value
+          : this.syncLeaseOwner,
+      syncLeaseExpiresAt: data.syncLeaseExpiresAt.present
+          ? data.syncLeaseExpiresAt.value
+          : this.syncLeaseExpiresAt,
     );
   }
 
@@ -786,7 +876,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
           ..write('authorizedUserId: $authorizedUserId, ')
           ..write('authorizationExpiresAt: $authorizationExpiresAt, ')
           ..write('receiptPending: $receiptPending, ')
-          ..write('requiredAppVersion: $requiredAppVersion')
+          ..write('requiredAppVersion: $requiredAppVersion, ')
+          ..write('syncLeaseOwner: $syncLeaseOwner, ')
+          ..write('syncLeaseExpiresAt: $syncLeaseExpiresAt')
           ..write(')'))
         .toString();
   }
@@ -805,6 +897,8 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     authorizationExpiresAt,
     receiptPending,
     requiredAppVersion,
+    syncLeaseOwner,
+    syncLeaseExpiresAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -821,7 +915,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
           other.authorizedUserId == this.authorizedUserId &&
           other.authorizationExpiresAt == this.authorizationExpiresAt &&
           other.receiptPending == this.receiptPending &&
-          other.requiredAppVersion == this.requiredAppVersion);
+          other.requiredAppVersion == this.requiredAppVersion &&
+          other.syncLeaseOwner == this.syncLeaseOwner &&
+          other.syncLeaseExpiresAt == this.syncLeaseExpiresAt);
 }
 
 class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
@@ -837,6 +933,8 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
   final Value<DateTime?> authorizationExpiresAt;
   final Value<bool> receiptPending;
   final Value<String?> requiredAppVersion;
+  final Value<String?> syncLeaseOwner;
+  final Value<DateTime?> syncLeaseExpiresAt;
   const SyncStateCompanion({
     this.id = const Value.absent(),
     this.activeGeneration = const Value.absent(),
@@ -850,6 +948,8 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     this.authorizationExpiresAt = const Value.absent(),
     this.receiptPending = const Value.absent(),
     this.requiredAppVersion = const Value.absent(),
+    this.syncLeaseOwner = const Value.absent(),
+    this.syncLeaseExpiresAt = const Value.absent(),
   });
   SyncStateCompanion.insert({
     this.id = const Value.absent(),
@@ -864,6 +964,8 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     this.authorizationExpiresAt = const Value.absent(),
     this.receiptPending = const Value.absent(),
     this.requiredAppVersion = const Value.absent(),
+    this.syncLeaseOwner = const Value.absent(),
+    this.syncLeaseExpiresAt = const Value.absent(),
   });
   static Insertable<SyncStateRow> custom({
     Expression<int>? id,
@@ -878,6 +980,8 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     Expression<DateTime>? authorizationExpiresAt,
     Expression<bool>? receiptPending,
     Expression<String>? requiredAppVersion,
+    Expression<String>? syncLeaseOwner,
+    Expression<DateTime>? syncLeaseExpiresAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -894,6 +998,9 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
       if (receiptPending != null) 'receipt_pending': receiptPending,
       if (requiredAppVersion != null)
         'required_app_version': requiredAppVersion,
+      if (syncLeaseOwner != null) 'sync_lease_owner': syncLeaseOwner,
+      if (syncLeaseExpiresAt != null)
+        'sync_lease_expires_at': syncLeaseExpiresAt,
     });
   }
 
@@ -910,6 +1017,8 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     Value<DateTime?>? authorizationExpiresAt,
     Value<bool>? receiptPending,
     Value<String?>? requiredAppVersion,
+    Value<String?>? syncLeaseOwner,
+    Value<DateTime?>? syncLeaseExpiresAt,
   }) {
     return SyncStateCompanion(
       id: id ?? this.id,
@@ -925,6 +1034,8 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
           authorizationExpiresAt ?? this.authorizationExpiresAt,
       receiptPending: receiptPending ?? this.receiptPending,
       requiredAppVersion: requiredAppVersion ?? this.requiredAppVersion,
+      syncLeaseOwner: syncLeaseOwner ?? this.syncLeaseOwner,
+      syncLeaseExpiresAt: syncLeaseExpiresAt ?? this.syncLeaseExpiresAt,
     );
   }
 
@@ -969,6 +1080,14 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     if (requiredAppVersion.present) {
       map['required_app_version'] = Variable<String>(requiredAppVersion.value);
     }
+    if (syncLeaseOwner.present) {
+      map['sync_lease_owner'] = Variable<String>(syncLeaseOwner.value);
+    }
+    if (syncLeaseExpiresAt.present) {
+      map['sync_lease_expires_at'] = Variable<DateTime>(
+        syncLeaseExpiresAt.value,
+      );
+    }
     return map;
   }
 
@@ -986,7 +1105,9 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
           ..write('authorizedUserId: $authorizedUserId, ')
           ..write('authorizationExpiresAt: $authorizationExpiresAt, ')
           ..write('receiptPending: $receiptPending, ')
-          ..write('requiredAppVersion: $requiredAppVersion')
+          ..write('requiredAppVersion: $requiredAppVersion, ')
+          ..write('syncLeaseOwner: $syncLeaseOwner, ')
+          ..write('syncLeaseExpiresAt: $syncLeaseExpiresAt')
           ..write(')'))
         .toString();
   }
@@ -5599,6 +5720,8 @@ typedef $$SyncStateTableCreateCompanionBuilder = SyncStateCompanion Function({
   Value<DateTime?> authorizationExpiresAt,
   Value<bool> receiptPending,
   Value<String?> requiredAppVersion,
+  Value<String?> syncLeaseOwner,
+  Value<DateTime?> syncLeaseExpiresAt,
 });
 typedef $$SyncStateTableUpdateCompanionBuilder = SyncStateCompanion Function({
   Value<int> id,
@@ -5613,6 +5736,8 @@ typedef $$SyncStateTableUpdateCompanionBuilder = SyncStateCompanion Function({
   Value<DateTime?> authorizationExpiresAt,
   Value<bool> receiptPending,
   Value<String?> requiredAppVersion,
+  Value<String?> syncLeaseOwner,
+  Value<DateTime?> syncLeaseExpiresAt,
 });
 
 class $$SyncStateTableFilterComposer
@@ -5681,6 +5806,16 @@ class $$SyncStateTableFilterComposer
 
   ColumnFilters<String> get requiredAppVersion => $composableBuilder(
     column: $table.requiredAppVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncLeaseOwner => $composableBuilder(
+    column: $table.syncLeaseOwner,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get syncLeaseExpiresAt => $composableBuilder(
+    column: $table.syncLeaseExpiresAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -5753,6 +5888,16 @@ class $$SyncStateTableOrderingComposer
     column: $table.requiredAppVersion,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get syncLeaseOwner => $composableBuilder(
+    column: $table.syncLeaseOwner,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get syncLeaseExpiresAt => $composableBuilder(
+    column: $table.syncLeaseExpiresAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SyncStateTableAnnotationComposer
@@ -5817,6 +5962,16 @@ class $$SyncStateTableAnnotationComposer
     column: $table.requiredAppVersion,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get syncLeaseOwner => $composableBuilder(
+    column: $table.syncLeaseOwner,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get syncLeaseExpiresAt => $composableBuilder(
+    column: $table.syncLeaseExpiresAt,
+    builder: (column) => column,
+  );
 }
 
 class $$SyncStateTableTableManager
@@ -5862,6 +6017,8 @@ class $$SyncStateTableTableManager
                 Value<DateTime?> authorizationExpiresAt = const Value.absent(),
                 Value<bool> receiptPending = const Value.absent(),
                 Value<String?> requiredAppVersion = const Value.absent(),
+                Value<String?> syncLeaseOwner = const Value.absent(),
+                Value<DateTime?> syncLeaseExpiresAt = const Value.absent(),
               }) => SyncStateCompanion(
                 id: id,
                 activeGeneration: activeGeneration,
@@ -5875,6 +6032,8 @@ class $$SyncStateTableTableManager
                 authorizationExpiresAt: authorizationExpiresAt,
                 receiptPending: receiptPending,
                 requiredAppVersion: requiredAppVersion,
+                syncLeaseOwner: syncLeaseOwner,
+                syncLeaseExpiresAt: syncLeaseExpiresAt,
               ),
           createCompanionCallback:
               ({
@@ -5890,6 +6049,8 @@ class $$SyncStateTableTableManager
                 Value<DateTime?> authorizationExpiresAt = const Value.absent(),
                 Value<bool> receiptPending = const Value.absent(),
                 Value<String?> requiredAppVersion = const Value.absent(),
+                Value<String?> syncLeaseOwner = const Value.absent(),
+                Value<DateTime?> syncLeaseExpiresAt = const Value.absent(),
               }) => SyncStateCompanion.insert(
                 id: id,
                 activeGeneration: activeGeneration,
@@ -5903,6 +6064,8 @@ class $$SyncStateTableTableManager
                 authorizationExpiresAt: authorizationExpiresAt,
                 receiptPending: receiptPending,
                 requiredAppVersion: requiredAppVersion,
+                syncLeaseOwner: syncLeaseOwner,
+                syncLeaseExpiresAt: syncLeaseExpiresAt,
               ),
           withReferenceMapper: (p0) => p0
               .map(
