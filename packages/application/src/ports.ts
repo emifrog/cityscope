@@ -1,4 +1,7 @@
 import type {
+  MyPortalInvitation,
+  PortalInvitation,
+  PortalSettings,
   AddressCandidate,
   Building,
   Document,
@@ -71,6 +74,7 @@ import type {
   DevicePlatform,
   DeviceStatus,
   Permission,
+  PortalAccessState,
   RequestContext,
   ResolvedAccess,
   ScanStatus,
@@ -100,6 +104,7 @@ export interface RequestSession {
   readonly etare: EtareRepository;
   readonly devices: DeviceRepository;
   readonly fieldReports: FieldReportRepository;
+  readonly portal: PortalAccessRepository;
   readonly jobs: JobScheduler;
   readonly audit: AuditRecorder;
 }
@@ -349,6 +354,40 @@ export interface Geocoder {
 }
 
 /** Administration of the identity provider (server-side secret, never exposed to clients). */
+/** What an inviter asks for (dates already resolved by the use case). */
+export interface PortalInviteInput {
+  readonly email: string;
+  readonly displayName: string | null;
+  readonly organization: string | null;
+  readonly siteIds: readonly string[];
+  readonly expiresAt: Date;
+  readonly accessUntil: Date | null;
+}
+
+/** Exploitant access to the portal of a SIS (POR-01, ADR-019). */
+export interface PortalAccessRepository {
+  /** Invitations of the current SIS (RLS: portal:invite). */
+  listInvitations(): Promise<PortalInvitation[]>;
+  getInvitation(id: string): Promise<PortalInvitation | null>;
+  /**
+   * Invites on sites of the current SIS. Null when the address has no account
+   * and no identity is given: the identity is provisioned first.
+   */
+  invite(
+    input: PortalInviteInput,
+    authSubject: string | null,
+  ): Promise<{ invitationId: string; accountCreated: boolean } | null>;
+  revoke(id: string, expectedVersion: number, reason: string): Promise<PortalInvitation>;
+  /** Pending invitations of the caller, in every SIS (no tenant context). */
+  myInvitations(): Promise<MyPortalInvitation[]>;
+  /** Accepts an invitation of the caller; returns its SIS. */
+  accept(id: string): Promise<string>;
+  /** Null when the caller may not read them. */
+  settings(): Promise<PortalSettings | null>;
+  updateSettings(settings: PortalSettings): Promise<PortalSettings>;
+  accessState(): Promise<PortalAccessState>;
+}
+
 export interface IdentityProvisioner {
   /**
    * Creates the identity and sends the invitation e-mail. When the address

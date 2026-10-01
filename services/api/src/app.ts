@@ -33,6 +33,14 @@ import {
   getRevision,
   getSiteEtare,
   getMe,
+  acceptPortalInvitation,
+  createPortalInvitation,
+  getPortalAccess,
+  getPortalSettings,
+  listMyPortalInvitations,
+  listPortalInvitations,
+  revokePortalInvitation,
+  updatePortalSettings,
   getPublicationPdf,
   getMapCatalog,
   getSite,
@@ -708,6 +716,56 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     const version = expectedVersion(c);
     const patch = await readBody(c, endpoints.updateMember.body);
     return respond(c, endpoints.updateMember, await updateMember(deps.sessions, context, idOf(c), version, patch));
+  });
+
+  // ---------------------------------------------------------------- exploitant access (POR-01, ADR-019)
+  app.get(routerPath(endpoints.listPortalInvitations.path), async (c) => {
+    const context = await requestContext(c, endpoints.listPortalInvitations);
+    return respond(c, endpoints.listPortalInvitations, await listPortalInvitations(deps.sessions, context));
+  });
+
+  app.post(routerPath(endpoints.createPortalInvitation.path), async (c) => {
+    const context = await requestContext(c, endpoints.createPortalInvitation);
+    const input = await readBody(c, endpoints.createPortalInvitation.body);
+    const portal = { sessions: deps.sessions, identities: deps.identities, now: deps.now };
+    return respond(c, endpoints.createPortalInvitation, await createPortalInvitation(portal, context, input));
+  });
+
+  app.post(routerPath(endpoints.revokePortalInvitation.path), async (c) => {
+    const context = await requestContext(c, endpoints.revokePortalInvitation);
+    const version = expectedVersion(c);
+    const input = await readBody(c, endpoints.revokePortalInvitation.body);
+    return respond(
+      c,
+      endpoints.revokePortalInvitation,
+      await revokePortalInvitation(deps.sessions, context, idOf(c), version, input),
+    );
+  });
+
+  app.get(routerPath(endpoints.listMyPortalInvitations.path), async (c) => {
+    const context = await requestContext(c, endpoints.listMyPortalInvitations);
+    return respond(c, endpoints.listMyPortalInvitations, await listMyPortalInvitations(deps.sessions, context));
+  });
+
+  app.post(routerPath(endpoints.acceptPortalInvitation.path), async (c) => {
+    const context = await requestContext(c, endpoints.acceptPortalInvitation);
+    return respond(c, endpoints.acceptPortalInvitation, await acceptPortalInvitation(deps.sessions, context, idOf(c)));
+  });
+
+  app.get(routerPath(endpoints.getPortalSettings.path), async (c) => {
+    const context = await requestContext(c, endpoints.getPortalSettings);
+    return respond(c, endpoints.getPortalSettings, await getPortalSettings(deps.sessions, context));
+  });
+
+  app.put(routerPath(endpoints.updatePortalSettings.path), async (c) => {
+    const context = await requestContext(c, endpoints.updatePortalSettings);
+    const input = await readBody(c, endpoints.updatePortalSettings.body);
+    return respond(c, endpoints.updatePortalSettings, await updatePortalSettings(deps.sessions, context, input));
+  });
+
+  app.get(routerPath(endpoints.getPortalAccess.path), async (c) => {
+    const context = await requestContext(c, endpoints.getPortalAccess);
+    return respond(c, endpoints.getPortalAccess, await getPortalAccess(deps.sessions, context));
   });
 
   // ---------------------------------------------------------------- terminals (administration)

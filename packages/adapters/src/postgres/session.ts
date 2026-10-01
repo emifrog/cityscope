@@ -19,6 +19,7 @@ import { PostgresBuildingRepository } from './building-repository';
 import { PostgresDeviceRepository } from './device-repository';
 import { PostgresEtareRepository } from './etare-repository';
 import { PostgresFieldReportRepository } from './field-report-repository';
+import { PostgresPortalAccessRepository } from './portal-repository';
 import { PostgresAssetRepository, PostgresDocumentRepository } from './document-repository';
 import { PostgresIdentityReader } from './identity-reader';
 import { PostgresMemberRepository } from './member-repository';
@@ -78,6 +79,7 @@ export class PostgresSessionFactory implements SessionFactory {
         etare: new PostgresEtareRepository(client),
         devices: new PostgresDeviceRepository(client),
         fieldReports: new PostgresFieldReportRepository(client),
+        portal: new PostgresPortalAccessRepository(client),
         jobs: new PostgresJobScheduler(client),
         audit: new PostgresAuditRecorder(client),
       });
@@ -156,6 +158,16 @@ const REPORT_MESSAGES: readonly (readonly [string, string])[] = [
   ['FIELD_REPORT_PHOTOS', 'Cinq photos au plus, images PNG, JPEG ou WebP de 15 Mo au plus.'],
 ];
 
+/** Messages of the exploitant portal rules (POR-01). */
+const PORTAL_MESSAGES: readonly (readonly [string, string])[] = [
+  ['PORTAL_INVITATION_SITES', 'Choisissez de un à cinquante sites de votre SIS.'],
+  [
+    'PORTAL_INVITATION_DATES',
+    'Une invitation est valable de 1 à 30 jours ; la fin de l’accès vient après, dans les 5 ans.',
+  ],
+  ['EXPLOITANT_SCOPE', 'Un exploitant n’accède qu’à des sites, jamais à tout le SIS.'],
+];
+
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : '';
 }
@@ -179,6 +191,9 @@ export function translateDatabaseError(error: unknown): unknown {
       return new AccessDenied('Vous n’êtes pas membre de ce SIS.');
     case '42501':
       if (messageOf(error).includes('SELF_APPROVAL_FORBIDDEN')) return new SelfApprovalForbidden();
+      if (messageOf(error).includes('PORTAL_MEMBERSHIP_INACTIVE')) {
+        return new AccessDenied('Votre accès à ce SIS est suspendu ou révoqué : contactez le SIS.');
+      }
       return new AccessDenied();
     case 'ETSLF':
       return new AccessDenied('Vous ne pouvez pas modifier vos propres habilitations.');
@@ -212,6 +227,16 @@ export function translateDatabaseError(error: unknown): unknown {
       return new NotFound('Signalement introuvable pour ce terminal.');
     case 'ET412':
       return new PreconditionFailed('Ce membre a été modifié entre-temps : rechargez la liste avant d’enregistrer.');
+    case 'ETPIS':
+      return new NotFound('Site introuvable dans votre SIS.');
+    case 'ETPIN':
+      return new NotFound('Invitation introuvable dans votre SIS.');
+    case 'ETPIU':
+      return new NotFound(
+        'Invitation introuvable, déjà utilisée, révoquée ou expirée : demandez-en une nouvelle au SIS.',
+      );
+    case 'ETPI2':
+      return new PreconditionFailed('Cette invitation a été modifiée entre-temps : rechargez la liste.');
     case '23505':
       return new Conflict(UNIQUE_MESSAGES[constraintOf(error) ?? ''] ?? 'Cet élément existe déjà.');
     case '23503':
@@ -225,6 +250,12 @@ export function translateDatabaseError(error: unknown): unknown {
       }
       if (messageOf(error).includes('FIELD_REPORT_REVISION')) {
         return new InvalidInput('Un signalement s’intègre à une révision en brouillon de ce site.');
+      }
+      for (const [code, message] of PORTAL_MESSAGES) {
+        if (messageOf(error).includes(code)) return new InvalidInput(message);
+      }
+      if (messageOf(error).includes('PORTAL_INVITATION_REVOKED')) {
+        return new Conflict('Cette invitation est déjà révoquée : la révocation est définitive.');
       }
       if (messageOf(error).includes('REVISION_HASH_MISMATCH')) {
         return new PreconditionFailed('La révision a changé depuis votre lecture : rechargez-la avant de décider.');

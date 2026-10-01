@@ -37,6 +37,10 @@ export const queryKeys = {
   etare: (tenantId: string) => ['tenant', tenantId, 'etare'] as const,
   revision: (tenantId: string, id: string) => ['tenant', tenantId, 'etare', 'revision', id] as const,
   fieldReports: (tenantId: string) => ['tenant', tenantId, 'field-reports'] as const,
+  portalInvitations: (tenantId: string) => ['tenant', tenantId, 'portal-invitations'] as const,
+  portalSettings: (tenantId: string) => ['tenant', tenantId, 'portal-settings'] as const,
+  portalAccess: (tenantId: string) => ['tenant', tenantId, 'portal-access'] as const,
+  myPortalInvitations: (userId: string) => ['me', userId, 'portal-invitations'] as const,
   riskTypes: (tenantId: string, includeDeprecated?: boolean) =>
     includeDeprecated === undefined
       ? (['tenant', tenantId, 'risk-types'] as const)
@@ -237,6 +241,45 @@ const reportAwaitsPhotos = (report: FieldReport | undefined, now = Date.now()) =
   );
 
 /** Field reports of the SIS (OPS-04); `wanted`: only for those who instruct them. */
+export function usePortalInvitations(wanted = true) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.portalInvitations(tenantId ?? 'none'),
+    enabled: enabled && wanted,
+    queryFn: ({ signal }) => api.listPortalInvitations({ ...options, signal }),
+  });
+}
+
+export function usePortalSettings(wanted = true) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.portalSettings(tenantId ?? 'none'),
+    enabled: enabled && wanted,
+    queryFn: ({ signal }) => api.getPortalSettings({ ...options, signal }),
+  });
+}
+
+/** Where the signed-in person stands on the portal of the active SIS. */
+export function usePortalAccess(wanted = true) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.portalAccess(tenantId ?? 'none'),
+    enabled: enabled && wanted,
+    queryFn: ({ signal }) => api.getPortalAccess({ ...options, signal }),
+  });
+}
+
+/** Pending invitations of the signed-in person (no active SIS needed: they may not be a member yet). */
+export function useMyPortalInvitations() {
+  const { session } = useSession();
+  const token = session?.access_token;
+  return useQuery({
+    queryKey: queryKeys.myPortalInvitations(session?.user.id ?? 'none'),
+    enabled: Boolean(token),
+    queryFn: ({ signal }) => api.listMyPortalInvitations({ token: token ?? '', signal }),
+  });
+}
+
 export function useFieldReports(query: Partial<FieldReportListQuery> = {}, wanted = true) {
   const { tenantId, options, enabled } = useApiContext();
   return useQuery({

@@ -11,6 +11,7 @@ export * from './map';
 export * from './members';
 export * from './objects';
 export * from './plans';
+export * from './portal-access';
 export * from './publication-build';
 export * from './ports';
 export * from './referential';

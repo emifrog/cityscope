@@ -144,6 +144,18 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       update: unstubbed('fieldReports.update'),
       ...overrides.fieldReports,
     },
+    portal: {
+      listInvitations: unstubbed('portal.listInvitations'),
+      getInvitation: unstubbed('portal.getInvitation'),
+      invite: unstubbed('portal.invite'),
+      revoke: unstubbed('portal.revoke'),
+      myInvitations: unstubbed('portal.myInvitations'),
+      accept: unstubbed('portal.accept'),
+      settings: unstubbed('portal.settings'),
+      updateSettings: unstubbed('portal.updateSettings'),
+      accessState: unstubbed('portal.accessState'),
+      ...overrides.portal,
+    },
     jobs: { enqueue: unstubbed('jobs.enqueue'), ...overrides.jobs },
     audit: { record: unstubbed('audit.record'), ...overrides.audit },
   };

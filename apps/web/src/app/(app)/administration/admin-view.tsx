@@ -12,11 +12,13 @@ import { useTenant } from '@/providers/tenant-provider';
 import { DevicesAdmin } from './devices-admin';
 import { MembersAdmin } from './members-admin';
 import { RiskCatalogAdmin } from './risk-catalog-admin';
+import { SettingsAdmin } from './settings-admin';
 
 const TABS: readonly { key: string; label: string; permission: Permission }[] = [
   { key: 'membres', label: 'Membres', permission: 'member:manage' },
   { key: 'terminaux', label: 'Terminaux', permission: 'device:manage' },
   { key: 'risques', label: 'Catalogue des risques', permission: 'catalog:manage' },
+  { key: 'parametres', label: 'Paramètres', permission: 'member:manage' },
 ];
 
 /** Administration of the SIS: one tab per permission held. */
@@ -43,10 +45,18 @@ export function AdminView() {
     <>
       <PageHeader
         title="Administration"
-        description="Membres du SIS et rôles, terminaux et synchronisation, catalogue des risques. Paramètres : à venir."
+        description="Membres du SIS et rôles, terminaux et synchronisation, catalogue des risques, paramètres du SIS."
       />
       <TabLinks tabs={tabs} active={tab.key} param="onglet" basePath="/administration" />
-      {tab.key === 'membres' ? <MembersAdmin /> : tab.key === 'terminaux' ? <DevicesAdmin /> : <RiskCatalogAdmin />}
+      {tab.key === 'membres' ? (
+        <MembersAdmin />
+      ) : tab.key === 'terminaux' ? (
+        <DevicesAdmin />
+      ) : tab.key === 'parametres' ? (
+        <SettingsAdmin />
+      ) : (
+        <RiskCatalogAdmin />
+      )}
     </>
   );
 }

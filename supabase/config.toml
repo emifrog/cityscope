@@ -252,7 +252,7 @@ otp_expiry = 3600
 # which verifies the token only when the person clicks (mail scanners cannot consume it).
 # Hosted projects: same subject and body to set in Authentication > Emails > Invite user.
 [auth.email.template.invite]
-subject = "Invitation à la plateforme ETARE"
+subject = "Invitation à FireScape"
 content_path = "./supabase/templates/invite.html"
 
 # Uncomment to customize notification email template

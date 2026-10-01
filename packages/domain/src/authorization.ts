@@ -27,7 +27,9 @@ export const PERMISSIONS = [
   'field_report:create',
   'field_report:review',
   'contribution:create',
+  'contribution:review',
   'portal:read',
+  'portal:invite',
   'audit:read',
   'member:manage',
   'device:manage',
@@ -41,7 +43,14 @@ export const PRIVILEGED_PERMISSIONS: ReadonlySet<Permission> = new Set<Permissio
   'publication:publish',
   'member:manage',
   'device:manage',
+  'portal:invite',
 ]);
+
+/**
+ * Portal permissions of the exploitants: they need the second factor when the
+ * SIS requires it (tenant setting, required by default, ADR-019).
+ */
+export const PORTAL_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>(['portal:read', 'contribution:create']);
 
 /**
  * Roles a SIS administrator may grant to a whole SIS (mirrors app.grantable_role_ids):
@@ -71,6 +80,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission
     'publication:read',
     'offline:download',
     'field_report:review',
+    'contribution:review',
+    'portal:invite',
     'audit:read',
     'member:manage',
     'device:manage',
@@ -86,6 +97,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission
     'publication:read',
     'offline:download',
     'field_report:review',
+    'contribution:review',
+    'portal:invite',
   ],
   PREVISION_VALIDATOR: [
     'site:read',
@@ -95,6 +108,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission
     'publication:read',
     'offline:download',
     'field_report:review',
+    'contribution:review',
   ],
   OPS_USER: ['publication:read', 'offline:download', 'field_report:create'],
   EXPLOITANT: ['portal:read', 'contribution:create'],

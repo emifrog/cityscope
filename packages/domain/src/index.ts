@@ -7,6 +7,7 @@ export * from './errors';
 export * from './field-reports';
 export * from './files';
 export * from './objects';
+export * from './portal';
 export * from './site';
 export * from './storage';
 export * from './workflow';

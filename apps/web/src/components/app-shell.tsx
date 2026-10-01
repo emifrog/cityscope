@@ -6,14 +6,14 @@ import { LogOut, Menu, Search, UserRound } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { brand } from '@/config/brand';
 import { NAV_ITEMS, isActivePath } from '@/lib/navigation';
 import { PRIVILEGED_ACTION_LABELS } from './labels';
 import { useSession } from '@/providers/session-provider';
 import { useTenant } from '@/providers/tenant-provider';
 
-function TenantSwitcher() {
+export function TenantSwitcher() {
   const { memberships, activeTenant, setActiveTenant } = useTenant();
   if (!activeTenant) return null;
   if (memberships.length === 1) {
@@ -62,6 +62,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { session, signOut } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
+  const { me, activeTenant } = useTenant();
+  // Exploitants (and people invited but not yet members) have no back-office: their space is the portal.
+  const portalOnly = me !== undefined && !(activeTenant?.roles.some((role) => role !== 'EXPLOITANT') ?? false);
+  useEffect(() => {
+    if (portalOnly) router.replace('/portail');
+  }, [portalOnly, router]);
 
   function search(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

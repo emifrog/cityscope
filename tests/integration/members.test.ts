@@ -83,7 +83,7 @@ describe('member administration', () => {
 
     // The e-mail opens the web application, which verifies the token only when the person clicks.
     const mail = await latestEmailTo(email);
-    expect(mail.subject).toBe('Invitation à la plateforme ETARE');
+    expect(mail.subject).toBe('Invitation à FireScape');
     const link = /href="([^"]+\/auth\/confirm\?token_hash=[^"]+)"/.exec(mail.html)?.[1]?.replaceAll('&amp;', '&');
     expect(link).toBeDefined();
     const tokenHash = new URL(link ?? 'http://invalid').searchParams.get('token_hash');

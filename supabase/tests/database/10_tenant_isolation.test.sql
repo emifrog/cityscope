@@ -120,8 +120,9 @@ select is((select count(*) from app.site), 0::bigint, 'OPS users never read the 
 select is((select count(*) from app.publication where site_id = '06000002-0000-4000-8000-000000000001'), 1::bigint, 'OPS users read published versions of their tenant');
 
 -- ---------------------------------------------------------------- site-scoped operator
+-- (with the second factor the SIS requires by default from exploitants, ADR-019)
 select lives_ok(
-  $$ select app.begin_request('supabase', '00000000-0000-4000-a000-000000000005', '06000000-0000-4000-8000-000000000000', 'aal1', null, 'web') $$,
+  $$ select app.begin_request('supabase', '00000000-0000-4000-a000-000000000005', '06000000-0000-4000-8000-000000000000', 'aal2', null, 'web') $$,
   'the operator (exploitant) opens a request'
 );
 select ok(

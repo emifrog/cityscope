@@ -8,6 +8,7 @@ export * from './map';
 export * from './members';
 export * from './objects';
 export * from './plans';
+export * from './portal';
 export * from './referential';
 export * from './resources';
 export * from './risks';

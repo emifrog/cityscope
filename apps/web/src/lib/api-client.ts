@@ -38,6 +38,14 @@ import {
   type MapSitesQuery,
   type MapSitesResponse,
   type MeResponse,
+  type MyPortalInvitation,
+  type PortalAccess,
+  type PortalInvitation,
+  type PortalInvitationAccepted,
+  type PortalInvitationCreate,
+  type PortalInvitationCreated,
+  type PortalInvitationRevoke,
+  type PortalSettings,
   type Device,
   type DeviceCreate,
   type DeviceEnrollmentCode,
@@ -105,7 +113,7 @@ export interface ApiCallOptions {
 }
 
 interface RequestSpec {
-  readonly method?: 'GET' | 'POST' | 'PATCH';
+  readonly method?: 'GET' | 'POST' | 'PATCH' | 'PUT';
   readonly query?: Readonly<Record<string, string | number | undefined>>;
   readonly body?: unknown;
   /** Version the change is based on (optimistic concurrency). */
@@ -415,6 +423,49 @@ export const api = {
       body: input,
       ifMatch: version,
     }),
+
+  // ---------------------------------------------------------------- exploitant access (POR-01)
+  listPortalInvitations: (options: ApiCallOptions): Promise<PortalInvitation[]> =>
+    itemsOf(call(endpoints.listPortalInvitations.response, endpoints.listPortalInvitations.path, options)),
+
+  createPortalInvitation: (options: ApiCallOptions, input: PortalInvitationCreate): Promise<PortalInvitationCreated> =>
+    call(endpoints.createPortalInvitation.response, endpoints.createPortalInvitation.path, options, {
+      method: 'POST',
+      body: input,
+    }),
+
+  revokePortalInvitation: (
+    options: ApiCallOptions,
+    id: string,
+    version: number,
+    input: PortalInvitationRevoke,
+  ): Promise<PortalInvitation> =>
+    call(endpoints.revokePortalInvitation.response, pathOf(endpoints.revokePortalInvitation.path, { id }), options, {
+      method: 'POST',
+      body: input,
+      ifMatch: version,
+    }),
+
+  /** Pending invitations of the signed-in person, in every SIS (no active SIS needed). */
+  listMyPortalInvitations: (options: ApiCallOptions): Promise<MyPortalInvitation[]> =>
+    itemsOf(call(endpoints.listMyPortalInvitations.response, endpoints.listMyPortalInvitations.path, options)),
+
+  acceptPortalInvitation: (options: ApiCallOptions, id: string): Promise<PortalInvitationAccepted> =>
+    call(endpoints.acceptPortalInvitation.response, pathOf(endpoints.acceptPortalInvitation.path, { id }), options, {
+      method: 'POST',
+    }),
+
+  getPortalSettings: (options: ApiCallOptions): Promise<PortalSettings> =>
+    call(endpoints.getPortalSettings.response, endpoints.getPortalSettings.path, options),
+
+  updatePortalSettings: (options: ApiCallOptions, input: PortalSettings): Promise<PortalSettings> =>
+    call(endpoints.updatePortalSettings.response, endpoints.updatePortalSettings.path, options, {
+      method: 'PUT',
+      body: input,
+    }),
+
+  getPortalAccess: (options: ApiCallOptions): Promise<PortalAccess> =>
+    call(endpoints.getPortalAccess.response, endpoints.getPortalAccess.path, options),
 
   // ---------------------------------------------------------------- field reports (OPS-04)
   listFieldReports: (options: ApiCallOptions, query: Partial<FieldReportListQuery> = {}): Promise<FieldReportList> =>

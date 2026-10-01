@@ -152,6 +152,19 @@ Les terminaux passent par `sync_submit_report`, `sync_report_photos`, `sync_repo
 `sync_reports` (terminal enrôlé, `offline:download`, `field_report:create`). Les photos
 (`field_report_photo`) sont des `asset` de la chaîne contrôlée. Voir le test `140_field_reports`.
 
+## Accès des exploitants
+
+Voir ADR-019. `app.portal_invitation` (et ses sites, `portal_invitation_site`) invite une personne sur
+des sites du SIS : acceptable jusqu'à `expires_at` (30 jours au plus), une seule fois, révocable, avec
+une fin d'accès facultative (`access_until`). Le trigger `portal_invitation_guard` interdit toute
+modification de la personne, des dates et des sites, toute suppression, et rend la révocation définitive.
+`portal_invite` (inviteurs, `portal:invite` en `aal2`), `my_portal_invitations` et
+`portal_accept_invitation` (invité, sans SIS actif), `portal_revoke_invitation` et
+`portal_access_state` sont des fonctions `SECURITY DEFINER`. L'acceptation crée l'adhésion si besoin et
+une liaison `EXPLOITANT` par site ; `exploitant_binding_scope` refuse toute liaison `EXPLOITANT` à
+l'échelle du SIS. Les permissions `portal_mfa` exigent `aal2` si le paramètre du SIS
+`portal_mfa_required` (défaut : vrai) l'impose. Voir le test `150_exploitant_access`.
+
 ## Auteurs des données de travail et séparation des tâches
 
 Chaque écriture d’une donnée de travail (site, bâtiment, niveau, zone, plan, objet, risque, document,
