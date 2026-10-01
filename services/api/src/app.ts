@@ -2,10 +2,16 @@ import type { AccessTokenVerifier, Logger } from '@etare/adapters';
 import {
   addDocumentVersion,
   addPlanRevision,
+  confirmFieldReportUploads,
   confirmUpload,
   createBuilding,
   createDevice,
   createSyncDownloads,
+  getFieldReport,
+  listFieldReports,
+  listSyncReports,
+  submitFieldReport,
+  updateFieldReport,
   createDocument,
   createClassification,
   createContact,
@@ -762,6 +768,53 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     );
     if (!body) throw new InvalidInput();
     return respond(c, endpoints.recordSyncReceipt, await recordSyncReceipt(deps, context, proof, body));
+  });
+
+  // ---------------------------------------------------------------- field reports (OPS-04, ADR-017)
+  app.post(routerPath(endpoints.submitFieldReport.path), async (c) => {
+    const { context, proof, body } = await deviceRequest(
+      c,
+      endpoints.submitFieldReport,
+      endpoints.submitFieldReport.body,
+    );
+    if (!body) throw new InvalidInput();
+    return respond(c, endpoints.submitFieldReport, await submitFieldReport(deps, context, proof, body));
+  });
+
+  app.post(routerPath(endpoints.confirmFieldReportUploads.path), async (c) => {
+    const { context, proof } = await deviceRequest(c, endpoints.confirmFieldReportUploads);
+    return respond(
+      c,
+      endpoints.confirmFieldReportUploads,
+      await confirmFieldReportUploads(deps, context, proof, idOf(c)),
+    );
+  });
+
+  app.get(routerPath(endpoints.listSyncReports.path), async (c) => {
+    const { context, proof } = await deviceRequest(c, endpoints.listSyncReports);
+    return respond(c, endpoints.listSyncReports, await listSyncReports(deps, context, proof));
+  });
+
+  app.get(routerPath(endpoints.listFieldReports.path), async (c) => {
+    const context = await requestContext(c, endpoints.listFieldReports);
+    const query = endpoints.listFieldReports.query.parse(c.req.query());
+    return respond(c, endpoints.listFieldReports, await listFieldReports(deps.sessions, context, query));
+  });
+
+  app.get(routerPath(endpoints.getFieldReport.path), async (c) => {
+    const context = await requestContext(c, endpoints.getFieldReport);
+    return respond(c, endpoints.getFieldReport, await getFieldReport(deps.sessions, context, idOf(c)));
+  });
+
+  app.patch(routerPath(endpoints.updateFieldReport.path), async (c) => {
+    const context = await requestContext(c, endpoints.updateFieldReport);
+    const version = expectedVersion(c);
+    const patch = await readBody(c, endpoints.updateFieldReport.body);
+    return respond(
+      c,
+      endpoints.updateFieldReport,
+      await updateFieldReport(deps.sessions, context, idOf(c), version, patch),
+    );
   });
 
   return app;

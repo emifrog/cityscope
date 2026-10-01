@@ -164,7 +164,7 @@ export async function enrollDevice(
  * of the active SIS must have signed this very request with its key, at a
  * time close to the server clock, and must not be revoked.
  */
-async function asDevice<T>(
+export async function asDevice<T>(
   deps: DistributionDependencies,
   context: RequestContext,
   proof: DeviceProof,

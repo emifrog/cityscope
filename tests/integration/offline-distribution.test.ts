@@ -5,7 +5,7 @@
  * PDF, checked photos), with installation receipts and revocation. Runs on a
  * site published for the test.
  */
-import { createHash, createPublicKey, generateKeyPairSync, sign, type KeyObject } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import {
   Ed25519Signer,
   PdfLibEtareRenderer,
@@ -26,10 +26,11 @@ import {
   syncCatalogSchema,
   type EtareRevision,
 } from '@etare/contracts';
-import { deviceRequestText, enrollmentText, normalizeEnrollmentCode, signedText } from '@etare/domain';
+import { signedText } from '@etare/domain';
 import { HandlerRegistry, assetVerificationHandler, createWorker, publicationBuildHandler } from '@etare/worker';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { TENANT_06, TENANT_83, authApi, requireEnv, signIn, withSecondFactor } from './helpers';
+import { Terminal } from './terminal';
 
 const app = createApiApp(createApiDependencies(process.env));
 const catalogKey = Ed25519Signer.fromPkcs8(requireEnv('CATALOG_SIGNING_KEY'));
@@ -88,49 +89,6 @@ const as =
     });
 
 const codeOf = async (response: Response) => ((await response.json()) as { error: { code: string } }).error.code;
-
-/** The OPS application: its key, generated on the device, and how it signs its requests. */
-class Terminal {
-  readonly key: KeyObject = generateKeyPairSync('ed25519').privateKey;
-  readonly publicKey = Buffer.from(createPublicKey(this.key).export({ format: 'jwk' }).x ?? '', 'base64url').toString(
-    'base64',
-  );
-  deviceId = '';
-
-  constructor(
-    private readonly token: string,
-    private readonly tenant: string,
-  ) {}
-
-  signText(text: string): string {
-    return sign(null, Buffer.from(text, 'utf8'), this.key).toString('base64');
-  }
-
-  async request(method: string, path: string, body?: unknown, options: { signedPath?: string } = {}) {
-    const raw = body === undefined ? '' : JSON.stringify(body);
-    const timestamp = Date.now();
-    const text = deviceRequestText({
-      method,
-      path: `${API_BASE_PATH}${options.signedPath ?? path}`,
-      timestamp,
-      bodySha256: await sha256(raw),
-    });
-    return app.request(`${API_BASE_PATH}${path}`, {
-      method,
-      headers: {
-        authorization: `Bearer ${this.token}`,
-        'x-tenant-id': this.tenant,
-        'x-client-platform': 'mobile',
-        'x-app-version': '1.0.0',
-        'content-type': 'application/json',
-        'x-device-id': this.deviceId,
-        'x-device-time': String(timestamp),
-        'x-device-signature': this.signText(text),
-      },
-      ...(body === undefined ? {} : { body: raw }),
-    });
-  }
-}
 
 let admin06: Call;
 let ops06: Call;
@@ -226,7 +184,7 @@ afterAll(async () => {
 });
 
 describe('offline distribution', () => {
-  const terminal = () => new Terminal(opsToken, TENANT_06);
+  const terminal = () => new Terminal(app, opsToken, TENANT_06);
   let device: Terminal;
   let enrollmentCode = '';
 
@@ -243,19 +201,7 @@ describe('offline distribution', () => {
   it('enrolls the terminal of a field user who proves its key, once', async () => {
     device = terminal();
     const enroll = (code: string, publicKey = device.publicKey) =>
-      ops06('POST', '/sync/enrollment', {
-        code,
-        public_key: publicKey,
-        platform: 'android',
-        app_version: '1.0.0',
-        proof: device.signText(
-          enrollmentText({
-            tenantId: TENANT_06,
-            code: normalizeEnrollmentCode(code) ?? '',
-            publicKey: device.publicKey,
-          }),
-        ),
-      });
+      ops06('POST', '/sync/enrollment', device.enrollment(code, publicKey));
     // The proof must come from the private key of the public key sent.
     expect(await codeOf(await enroll(enrollmentCode, terminal().publicKey))).toBe('DEVICE_PROOF_INVALID');
     const enrolled = await enroll(enrollmentCode.toLowerCase());
@@ -358,11 +304,11 @@ describe('offline distribution', () => {
       signedPath: '/sync/catalog',
     });
     expect(await codeOf(replayed)).toBe('DEVICE_PROOF_INVALID');
-    const stranger = new Terminal(opsToken, TENANT_06);
+    const stranger = new Terminal(app, opsToken, TENANT_06);
     stranger.deviceId = device.deviceId;
     expect(await codeOf(await stranger.request('GET', '/sync/catalog'))).toBe('DEVICE_PROOF_INVALID');
     // Same terminal presented in another SIS: unknown there.
-    const elsewhere = new Terminal(editor83Token, TENANT_83);
+    const elsewhere = new Terminal(app, editor83Token, TENANT_83);
     elsewhere.deviceId = device.deviceId;
     expect(await codeOf(await elsewhere.request('GET', '/sync/catalog'))).toBe('DEVICE_NOT_ENROLLED');
     expect((await admin06('GET', '/devices')).status).toBe(200);

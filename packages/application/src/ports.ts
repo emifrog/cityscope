@@ -61,6 +61,11 @@ import type {
   SiteListResponse,
   SiteUpdate,
   ValidationQueueItem,
+  FieldReport,
+  FieldReportListQuery,
+  FieldReportSubmit,
+  FieldReportUpdate,
+  SyncReportStatus,
 } from '@etare/contracts';
 import type {
   DevicePlatform,
@@ -94,6 +99,7 @@ export interface RequestSession {
   readonly risks: RiskRepository;
   readonly etare: EtareRepository;
   readonly devices: DeviceRepository;
+  readonly fieldReports: FieldReportRepository;
   readonly jobs: JobScheduler;
   readonly audit: AuditRecorder;
 }
@@ -424,6 +430,42 @@ export interface DistributedPackage {
  * (device:manage); enrollment and synchronization go through database
  * functions that re-check offline:download and the terminal (ADR-015).
  */
+/** A report as recorded, with the hash of the content the server accepted. */
+export interface SubmittedReport {
+  readonly reportId: string;
+  /** False when the same report had already been received (replay). */
+  readonly created: boolean;
+  readonly contentHash: string;
+  readonly receivedAt: string;
+}
+
+/** A photo of a report and the state of its file (quarantine key while pending). */
+export interface ReportPhotoFile {
+  readonly assetId: string;
+  readonly quarantineKey: string | null;
+  readonly mimeType: string;
+  readonly sha256: string;
+  readonly scanStatus: 'pending' | 'clean' | 'rejected';
+}
+
+/**
+ * Field reports (OPS-04, ADR-017). Terminal operations go through PostgreSQL
+ * functions that re-check the terminal, offline:download and
+ * field_report:create; the instruction runs under RLS (field_report:review).
+ */
+export interface FieldReportRepository {
+  /** Records the report once per terminal identifier; a replay returns the same report. */
+  submit(deviceId: string, tenantId: string, input: FieldReportSubmit): Promise<SubmittedReport>;
+  photos(deviceId: string, reportId: string): Promise<ReportPhotoFile[]>;
+  /** Plans the verification of the photos still waiting; returns how many. */
+  uploaded(deviceId: string, reportId: string): Promise<number>;
+  /** Reports of the agent from this terminal (90 days), with their outcome. */
+  forDevice(deviceId: string): Promise<SyncReportStatus[]>;
+  list(query: FieldReportListQuery): Promise<{ items: FieldReport[]; nextCursor: string | null; openCount: number }>;
+  get(id: string): Promise<FieldReport | null>;
+  update(id: string, expectedVersion: number, patch: FieldReportUpdate): Promise<FieldReport | null>;
+}
+
 export interface DeviceRepository {
   list(): Promise<{ items: Device[]; currentGeneration: number; undistributedPublications: number }>;
   get(id: string): Promise<Device | null>;

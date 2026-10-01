@@ -18,6 +18,7 @@ import { z } from 'zod';
 import { PostgresBuildingRepository } from './building-repository';
 import { PostgresDeviceRepository } from './device-repository';
 import { PostgresEtareRepository } from './etare-repository';
+import { PostgresFieldReportRepository } from './field-report-repository';
 import { PostgresAssetRepository, PostgresDocumentRepository } from './document-repository';
 import { PostgresIdentityReader } from './identity-reader';
 import { PostgresMemberRepository } from './member-repository';
@@ -76,6 +77,7 @@ export class PostgresSessionFactory implements SessionFactory {
         risks: new PostgresRiskRepository(client),
         etare: new PostgresEtareRepository(client),
         devices: new PostgresDeviceRepository(client),
+        fieldReports: new PostgresFieldReportRepository(client),
         jobs: new PostgresJobScheduler(client),
         audit: new PostgresAuditRecorder(client),
       });
@@ -147,6 +149,13 @@ const CHECK_MESSAGES: Readonly<Record<string, string>> = {
   risk_occurrence_check2: 'Tracé invalide sur le plan : le contour ne doit pas se recouper.',
 };
 
+/** Messages of the refusals raised by app.sync_submit_report (SQLSTATE ETRPI). */
+const REPORT_MESSAGES: readonly (readonly [string, string])[] = [
+  ['FIELD_REPORT_ITEM', 'Élément ou position absent de la version consultée.'],
+  ['FIELD_REPORT_TIME', 'Constat daté dans le futur : vérifiez l’heure de la tablette.'],
+  ['FIELD_REPORT_PHOTOS', 'Cinq photos au plus, images PNG, JPEG ou WebP de 15 Mo au plus.'],
+];
+
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : '';
 }
@@ -189,6 +198,18 @@ export function translateDatabaseError(error: unknown): unknown {
       return new DeviceNotEnrolled();
     case 'ETDRV':
       return new DeviceRevoked();
+    case 'ETRPM':
+      return new Conflict(
+        'Un autre signalement utilise déjà cet identifiant : il n’a pas été enregistré une seconde fois.',
+      );
+    case 'ETRPB':
+      return new InvalidInput('Version consultée inconnue pour ce site : synchronisez la tablette puis réessayez.');
+    case 'ETRPI':
+      return new InvalidInput(
+        REPORT_MESSAGES.find(([code]) => messageOf(error).includes(code))?.[1] ?? 'Signalement refusé.',
+      );
+    case 'ETRPU':
+      return new NotFound('Signalement introuvable pour ce terminal.');
     case 'ET412':
       return new PreconditionFailed('Ce membre a été modifié entre-temps : rechargez la liste avant d’enregistrer.');
     case '23505':
@@ -196,6 +217,15 @@ export function translateDatabaseError(error: unknown): unknown {
     case '23503':
       return new NotFound('Élément lié introuvable dans votre SIS.');
     case '23514':
+      if (messageOf(error).includes('FIELD_REPORT_CLOSED')) {
+        return new Conflict('Ce signalement a déjà été décidé : la décision est définitive.');
+      }
+      if (messageOf(error).includes('FIELD_REPORT_ASSIGNEE')) {
+        return new InvalidInput('Affectez le signalement à un membre actif du SIS.');
+      }
+      if (messageOf(error).includes('FIELD_REPORT_REVISION')) {
+        return new InvalidInput('Un signalement s’intègre à une révision en brouillon de ce site.');
+      }
       if (messageOf(error).includes('REVISION_HASH_MISMATCH')) {
         return new PreconditionFailed('La révision a changé depuis votre lecture : rechargez-la avant de décider.');
       }

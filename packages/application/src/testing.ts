@@ -134,6 +134,16 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       receipt: unstubbed('devices.receipt'),
       ...overrides.devices,
     },
+    fieldReports: {
+      submit: unstubbed('fieldReports.submit'),
+      photos: unstubbed('fieldReports.photos'),
+      uploaded: unstubbed('fieldReports.uploaded'),
+      forDevice: unstubbed('fieldReports.forDevice'),
+      list: unstubbed('fieldReports.list'),
+      get: unstubbed('fieldReports.get'),
+      update: unstubbed('fieldReports.update'),
+      ...overrides.fieldReports,
+    },
     jobs: { enqueue: unstubbed('jobs.enqueue'), ...overrides.jobs },
     audit: { record: unstubbed('audit.record'), ...overrides.audit },
   };

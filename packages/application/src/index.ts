@@ -4,6 +4,7 @@ export * from './distribution';
 export * from './documents';
 export * from './etare';
 export * from './etare-snapshot';
+export * from './field-reports';
 export * from './geocoding';
 export * from './jobs';
 export * from './map';

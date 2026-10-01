@@ -28,6 +28,7 @@ pas exposé par la Data API Supabase (`supabase/config.toml` → `api.schemas`),
 | `20261003000400_publication_build_consistency.sql` | Correctifs du 30/09/2026 : fencing de la fabrication par le bail du travail (`lock_publication_job`), PDF immuable (`publication.pdf_storage_key`), baux expirés sans effet, échec définitif d’un travail propagé à la publication |
 | `20261003000300_publication_pdf.sql`               | Sprint 3 : `worker_publication_assets` (clés de stockage des fonds de plans contrôlés d’une publication, pour le PDF)                                                                                                              |
 | `20261004000100_offline_distribution.sql`          | Sprint 4 : manifeste signé (`publication.manifest_signature`), terminaux (`device`), génération du catalogue par SIS, état et publications des terminaux, fonctions `admin_*_device`, `enroll_device`, `sync_*`                    |
+| `20261005000100_field_reports.sql`                 | Sprint 5 : signalements terrain (`field_report`, `field_report_photo`), permission `field_report:review`, fonctions `sync_*report*` des terminaux, photos de signalement exclues des auteurs des données de travail                |
 | `20261004000200_object_photos.sql`                 | Sprint 4 : photos des objets (`object_photo`) : image contrôlée du même site, rattachement immuable, archivage définitif, jamais supprimée                                                                                         |
 
 ## Correspondance avec les documents de cadrage
@@ -138,6 +139,19 @@ l’utilisateur (`distributable_publication`).
   Toutes exigent `offline:download` et un terminal enrôlé, non révoqué, du SIS courant. Voir le test
   `120_offline_distribution`.
 
+## Signalements terrain
+
+Voir ADR-017. `app.field_report` conserve le constat d’un agent sur la version publiée qu’il consultait
+(`publication_id`, élément et point sur plan vérifiés dans l’instantané de cette version), reçu une seule
+fois par (SIS, terminal, `client_report_id`) avec l’empreinte du contenu accepté (`content_hash`). Le
+trigger `field_report_guard` rend le constat immuable et non supprimable, fait avancer l’instruction
+(`new` → `triaged` → `resolved` ou `rejected`, décision motivée et définitive), n’affecte qu’à un
+membre actif du SIS et ne relie qu’à une révision en brouillon du même site. L’API ne peut modifier que
+les colonnes d’instruction, sous RLS (`field_report:review`) ; l’agent voit ses propres signalements.
+Les terminaux passent par `sync_submit_report`, `sync_report_photos`, `sync_report_uploaded` et
+`sync_reports` (terminal enrôlé, `offline:download`, `field_report:create`). Les photos
+(`field_report_photo`) sont des `asset` de la chaîne contrôlée. Voir le test `140_field_reports`.
+
 ## Auteurs des données de travail et séparation des tâches
 
 Chaque écriture d’une donnée de travail (site, bâtiment, niveau, zone, plan, objet, risque, document,
@@ -145,7 +159,8 @@ contact, classification, identifiant externe) enregistre son auteur dans `app.si
 PostgreSQL : l’API ne peut ni écrire ni effacer cette table. Les mises à jour purement techniques (pointeur
 de publication active) ne comptent pas. À la soumission d’une révision, tous les auteurs de modifications
 postérieures à la dernière révision approuvée deviennent contributeurs de cette révision : aucun d’eux ne
-peut l’approuver (test `60_referential_editing`).
+peut l’approuver (test `60_referential_editing`). Une photo jointe à un signalement terrain n’est pas une
+donnée de travail : son dépôt n’inscrit pas l’agent parmi les auteurs (test `140_field_reports`).
 
 ## Concurrence optimiste
 

@@ -71,7 +71,8 @@ select throws_ok(
 );
 
 select pg_temp.act_as('00000000-0000-4000-a000-000000000006', '06000000-0000-4000-8000-000000000000');
-select is((select count(*) from app.object_photo), 1::bigint, 'a reader of the site sees its photos');
+select is((select count(*) from app.object_photo where id = '0600000e-0000-4000-8000-000000000001'), 1::bigint,
+  'a reader of the site sees its photos');
 select throws_ok(
   $$ insert into app.object_photo (tenant_id, site_id, object_id, asset_id)
      values ('06000000-0000-4000-8000-000000000000', '06000002-0000-4000-8000-000000000001',

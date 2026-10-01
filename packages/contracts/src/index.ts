@@ -1,6 +1,7 @@
 export * from './documents';
 export * from './endpoints';
 export * from './etare';
+export * from './field-reports';
 export * from './errors';
 export * from './geocoding';
 export * from './map';

@@ -9,6 +9,16 @@ import {
   documentVersionCreateSchema,
   uploadConfirmationSchema,
 } from './documents';
+import {
+  fieldReportListQuerySchema,
+  fieldReportListSchema,
+  fieldReportReceiptSchema,
+  fieldReportSchema,
+  fieldReportSubmitSchema,
+  fieldReportUpdateSchema,
+  fieldReportUploadedSchema,
+  syncReportsSchema,
+} from './field-reports';
 import { addressCandidatesSchema, addressSearchQuerySchema, reverseGeocodingQuerySchema } from './geocoding';
 import { mapCatalogSchema, mapSitesQuerySchema, mapSitesResponseSchema } from './map';
 import {
@@ -941,6 +951,73 @@ export const endpoints = {
     deviceProof: true,
     successStatus: 200,
     response: syncReceiptResultSchema,
+  }),
+
+  // ---------------------------------------------------------------- field reports (OPS-04, ADR-017)
+  submitFieldReport: tenantEndpoint({
+    operationId: 'submitFieldReport',
+    method: 'post',
+    path: '/sync/reports',
+    summary:
+      'Transmettre un signalement terrain (une seule fois par identifiant du terminal) et obtenir les URL de dépôt des photos',
+    tags: ['field-reports'],
+    body: fieldReportSubmitSchema,
+    deviceProof: true,
+    successStatus: 200,
+    response: fieldReportReceiptSchema,
+  }),
+  confirmFieldReportUploads: tenantEndpoint({
+    operationId: 'confirmFieldReportUploads',
+    method: 'post',
+    path: '/sync/reports/{id}/uploaded',
+    summary: 'Photos du signalement envoyées : demander leur contrôle',
+    tags: ['field-reports'],
+    params: idParamsSchema,
+    deviceProof: true,
+    successStatus: 202,
+    response: fieldReportUploadedSchema,
+  }),
+  listSyncReports: tenantEndpoint({
+    operationId: 'listSyncReports',
+    method: 'get',
+    path: '/sync/reports',
+    summary: 'Suite donnée aux signalements de l’agent depuis ce terminal (90 derniers jours)',
+    tags: ['field-reports'],
+    deviceProof: true,
+    successStatus: 200,
+    response: syncReportsSchema,
+  }),
+  listFieldReports: tenantEndpoint({
+    operationId: 'listFieldReports',
+    method: 'get',
+    path: '/field-reports',
+    summary: 'Signalements terrain à instruire (ou instruits) dans le SIS actif',
+    tags: ['field-reports'],
+    query: fieldReportListQuerySchema,
+    successStatus: 200,
+    response: fieldReportListSchema,
+  }),
+  getFieldReport: tenantEndpoint({
+    operationId: 'getFieldReport',
+    method: 'get',
+    path: '/field-reports/{id}',
+    summary: 'Détail d’un signalement : constat, photos, version consultée et version actuelle',
+    tags: ['field-reports'],
+    params: idParamsSchema,
+    successStatus: 200,
+    response: fieldReportSchema,
+  }),
+  updateFieldReport: tenantEndpoint({
+    operationId: 'updateFieldReport',
+    method: 'patch',
+    path: '/field-reports/{id}',
+    summary: 'Instruire un signalement : prise en charge, affectation, intégration au brouillon, décision motivée',
+    tags: ['field-reports'],
+    params: idParamsSchema,
+    body: fieldReportUpdateSchema,
+    concurrency: 'if-match',
+    successStatus: 200,
+    response: fieldReportSchema,
   }),
 } as const satisfies Record<string, EndpointContract>;
 
