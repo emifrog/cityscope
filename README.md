@@ -11,10 +11,12 @@ carte IGN, plans de niveaux, objets (avec photos), zones et risques, contrôle a
 validation par un validateur indépendant avec double authentification, publication immuable et PDF.
 Les versions publiées sont distribuées, signées, aux tablettes enrôlées par l’administration du SIS
 et consultées **sans réseau** dans l’application OPS (recherche, synthèse, plans tactiles, fiches).
-**Restent à venir** : signalement terrain, portail exploitant, politique des sites sensibles.
+**Restent à venir** : signalement terrain, portail exploitant, lecture PDF et carte sur tablette,
+périmètres de synchronisation, politique des sites sensibles et qualification du pilote.
 La CI GitHub (TypeScript et build, base et intégration, Flutter) s’exécute à chaque push sur `main`.
-Voir le [suivi des exigences](docs/suivi-exigences.md), le
-[bilan d’alignement](docs/bilan-alignement-2026-09-30.md) et les rapports des Sprints
+Voir la **[roadmap complète du développement](docs/roadmap-developpement.md)**,
+le [bilan actuel du dépôt](docs/bilan-depot-2026-10-01.md), le
+[suivi des exigences](docs/suivi-exigences.md) et les rapports des Sprints
 [0](docs/sprint-0-report.md), [1](docs/sprint-1-report.md), [2](docs/sprint-2-report.md),
 [3](docs/sprint-3-report.md) et [4](docs/sprint-4-report.md).
 
@@ -77,7 +79,8 @@ docs/               architecture, développement, base, sécurité, ADR
 - [Architecture](docs/architecture.md) · [Développement](docs/development.md) ·
   [Base de données](docs/database.md) · [Sécurité](docs/security.md)
 - [Décisions d’architecture (ADR)](docs/decisions/)
-- [Suivi des exigences](docs/suivi-exigences.md) · [Bilan d’alignement du 30/09/2026](docs/bilan-alignement-2026-09-30.md)
+- [Roadmap complète](docs/roadmap-developpement.md) · [Bilan du dépôt au 01/10/2026](docs/bilan-depot-2026-10-01.md)
+- [Suivi des exigences](docs/suivi-exigences.md) · [Bilan historique du 30/09/2026](docs/bilan-alignement-2026-09-30.md)
 - Rapports de sprint : [0](docs/sprint-0-report.md) · [1](docs/sprint-1-report.md) ·
   [2](docs/sprint-2-report.md) · [3](docs/sprint-3-report.md) · [4](docs/sprint-4-report.md)
 - Documents de cadrage : [`docs/reference/`](docs/reference/)

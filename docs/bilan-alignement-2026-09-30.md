@@ -2,6 +2,10 @@
 
 **Date : 30 septembre 2026. Commit examiné : `dfd24f9fa4a60fed95ef6d5d0c3b25059c7c7daf`.**
 
+> Rapport historique du Sprint 3. Les corrections A à D ont été intégrées dans `dd976d0` et le Sprint 4
+> a livré la consultation OPS hors ligne. Pour l’état courant, consulter le
+> [bilan du 1er octobre](bilan-depot-2026-10-01.md) et la [roadmap](roadmap-developpement.md).
+
 ## Avis
 
 **Le projet reste aligné sur son positionnement et son architecture.** Le back-office couvre désormais

@@ -278,9 +278,11 @@ Principes :
   détection root/jailbreak.
 - Signature release (la variante release est signée avec la clé de debug),
   icône et nom définitifs, thème sombre.
-- Politique d'effacement des données locales à la déconnexion (à définir
-  avec la synchronisation ; le SIS sélectionné est conservé dans
-  `local_meta`, les jetons sont effacés).
+- À la déconnexion, les jetons sont effacés ; le cache chiffré et le SIS sélectionné
+  sont conservés. Les écrans OPS exigent une autorisation locale valide liée à
+  l'utilisateur connecté. La révocation du terminal déclenche la purge au prochain
+  contact (ADR-016). La politique de conservation à la déconnexion et le traitement
+  des futurs signalements non envoyés restent à valider avec le SIS.
 - iOS : dossier conservé et identifiant aligné (`fr.etare.ops`) mais non
   compilé ni testé (pas de macOS) ; une exception ATS sera nécessaire pour
   viser la pile locale en HTTP depuis le simulateur.

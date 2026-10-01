@@ -105,8 +105,8 @@ Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4, composants de sty
   clés commencent par `['tenant', tenantId]` : changer de SIS ou se déconnecter purge le cache.
 - Routes : `/login`, `/verification` (second facteur), `/auth/confirm` (activation d’une invitation),
   `/` (tableau de bord), `/sites`, `/sites/[id]` (onglets dont Documents), `/compte` (habilitations,
-  double authentification), `/administration` (membres), `/carte`, et les modules à venir (`/etare`,
-  `/validations`, `/signalements`, `/contributions`).
+  double authentification), `/administration` (membres, terminaux, risques), `/carte`, `/etare`,
+  `/validations` ; `/signalements` et `/contributions` sont encore des écrans d’attente.
 - Carte : MapLibre GL JS chargé à la demande côté navigateur ; son worker et le module qu’il importe sont
   copiés depuis le paquet installé vers `public/maplibre/` (`scripts/copy-browser-workers.mjs`, avant `dev`
   et `build`), le bundler ne pouvant pas les résoudre. Le style est construit depuis le catalogue
@@ -141,8 +141,9 @@ Handlers : `system.noop`, `publication.build` (fabrication d’une publication �
 figée : charge utile, manifeste signé par la clé de publication Ed25519 (ADR-015), empreintes, PDF ETARE dessiné avec `pdf-lib` et déposé sous une clé
 adressée par son empreinte, activation — ADR-013, ADR-014 ; chaque écriture est protégée par le jeton de
 fencing du bail, et le handler s’arrête dès que le runner signale la perte du bail) et `asset.verify` (contrôle des
-fichiers déposés, ADR-009), enregistré dès que `SUPABASE_URL` et `SUPABASE_SECRET_KEY` sont fournis. PDF, paquets hors ligne, miniatures, imports,
-notifications et empreintes s’ajouteront comme handlers. Voir ADR-007.
+fichiers déposés, ADR-009), enregistré dès que `SUPABASE_URL` et `SUPABASE_SECRET_KEY` sont fournis.
+Miniatures, imports et notifications restent à ajouter. La fabrication des publications, de leurs
+manifestes signés et de leurs PDF est déjà assurée par `publication.build`. Voir ADR-007.
 
 ## Distribution hors ligne
 
@@ -166,8 +167,9 @@ locale, synthèse, listes par entrée, plans tactiles avec calques, fiches et ph
 
 `CartographyCatalog` (application) + `IgnCartographyCatalog` (adaptateurs) décrivent les sources IGN
 (Plan IGN raster WMTS, tuiles vectorielles, orthophotos) avec attribution et **droits hors ligne
-« non vérifiés »**. Aucun écran ne code une URL de tuile en dur. Le module carte arrive au Sprint 2
-(MapLibre GL JS). Voir ADR-006.
+« non vérifiés »**. Aucun écran ne code une URL de tuile en dur. La carte web MapLibre GL JS est
+livrée depuis le Sprint 2. La carte de contexte sur tablette et les packs IGN hors ligne restent à
+développer après qualification des droits ; voir ADR-006 et la [roadmap](roadmap-developpement.md).
 
 ## Écarts assumés par rapport à l’arborescence du prompt
 
