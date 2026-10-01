@@ -6,21 +6,19 @@ class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => const Scaffold(
     backgroundColor: BrandColors.navy,
     body: Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Brand.logoIcon, size: 72, color: BrandColors.accent),
-          const SizedBox(height: 16),
-          Text(
-            Brand.productName,
-            style: Theme.of(context).textTheme.headlineMedium
-                ?.copyWith(color: BrandColors.onDark),
+          Image(
+            image: AssetImage(Brand.logoInverseAsset),
+            width: 220,
+            semanticLabel: Brand.productName,
           ),
-          const SizedBox(height: 32),
-          const CircularProgressIndicator(
+          SizedBox(height: 32),
+          CircularProgressIndicator(
             color: BrandColors.onDark,
             semanticsLabel: 'Chargement',
           ),

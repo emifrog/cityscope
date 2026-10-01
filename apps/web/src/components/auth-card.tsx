@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import type { ReactNode } from 'react';
 import { brand } from '@/config/brand';
 
@@ -6,14 +7,9 @@ export function AuthCard({ title, children, footer }: { title: string; children:
   return (
     <main className="flex min-h-screen items-center justify-center bg-brand-navy px-4">
       <div className="w-full max-w-md rounded-card bg-surface p-8 shadow-lg">
-        <div className="mb-6 flex items-center gap-3">
-          <span aria-hidden="true" className="text-2xl text-brand-accent">
-            {brand.logoGlyph}
-          </span>
-          <div>
-            <p className="text-lg font-bold text-foreground">{brand.productName}</p>
-            <p className="text-sm text-muted">{brand.tagline}</p>
-          </div>
+        <div className="mb-6">
+          <Image src={brand.logo} alt={brand.productName} priority className="h-12 w-auto" />
+          <p className="mt-2 text-sm text-muted">{brand.tagline}</p>
         </div>
         <h1 className="mb-4 text-xl font-semibold">{title}</h1>
         {children}

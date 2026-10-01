@@ -28,6 +28,7 @@
     "contracts:generate": "tsx scripts/generate-openapi.ts",
     "contracts:check": "tsx scripts/generate-openapi.ts --check",
     "cartography:check": "tsx scripts/check-cartography.ts",
+    "brand:assets": "tsx scripts/brand-assets.ts",
     "setup:local": "tsx scripts/setup-local.ts",
     "integration": "tsx scripts/integration.ts",
     "db:push:integration": "supabase db push --linked"
@@ -49,6 +50,7 @@
     "jsdom": "30.1.1",
     "pg": "8.23.0",
     "prettier": "3.9.9",
+    "sharp": "0.35.4",
     "supabase": "2.118.0",
     "tsx": "4.23.15",
     "typescript": "6.0.3",

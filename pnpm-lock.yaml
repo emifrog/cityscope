@@ -56,6 +56,9 @@ importers:
       prettier:
         specifier: 3.9.9
         version: 3.9.9
+      sharp:
+        specifier: 0.35.4
+        version: 0.35.4(@types/node@22.20.4)
       supabase:
         specifier: 2.118.0
         version: 2.118.0

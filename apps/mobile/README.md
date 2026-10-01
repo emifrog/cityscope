@@ -1,14 +1,16 @@
 # Application OPS (Flutter)
 
-Application mobile **opérationnelle** de la plateforme ETARE numérique :
+Application mobile **opérationnelle** de **FireScape**, la plateforme ETARE numérique :
 consultation terrain des plans ETARE par les sapeurs-pompiers (SIS/SDIS).
 Android en priorité, structure compatible iOS.
 
 > Sprint 4 : enrôlement de la tablette, synchronisation signée et
 > installation hors ligne chiffrée des ETARE publiés (ADR-015, ADR-016).
 
-Nom commercial non arrêté : le produit s'appelle provisoirement « Produit
-ETARE » et l'identifiant d'application `fr.etare.ops` est **provisoire**.
+Nom commercial : **FireScape** (libellé sous l'icône et sur les écrans).
+L'identifiant d'application `fr.etare.ops` reste **provisoire** : il sera fixé
+avec le domaine de publication avant la première diffusion (le changer ensuite
+imposerait de réinstaller et de réenrôler chaque tablette).
 
 ---
 
@@ -184,14 +186,16 @@ Principes :
   requête ; un rafraîchissement anticipé a lieu 60 s avant l'expiration.
 - **Navigation** : `/splash` (restauration de session) → `/login` ou
   `/home` selon l'état d'authentification (`resolveRedirect`, testée).
-- **Identité visuelle** : tout est dans `lib/src/core/theme/brand.dart`
-  (nom, pictogramme, couleurs). Le libellé Android
+- **Identité visuelle** : nom, logos et couleurs dans
+  `lib/src/core/theme/brand.dart` ; libellés Android
   (`android/app/src/main/res/values/strings.xml`) et iOS
-  (`ios/Runner/Info.plist`, `CFBundleDisplayName`) sont à aligner en même
-  temps.
+  (`ios/Runner/Info.plist`, `CFBundleDisplayName`) alignés. Logos
+  (`assets/brand/`), icônes Android (classique, adaptative et monochrome) et
+  iOS sont générés par `pnpm brand:assets` depuis les originaux de
+  `assets/brand/` à la racine du dépôt.
 - **UX terrain** : cibles tactiles ≥ 48 dp (boutons principaux 56 dp),
-  textes agrandis, contrastes élevés ; texte blanc sur orange réservé au
-  texte gras ≥ 18 sp.
+  textes agrandis, contrastes élevés ; jamais de texte blanc sur l'orange du
+  logo (3,3:1) : les actions utilisent l'orange foncé `accentStrong` (4,9:1).
 
 ## 6. Chiffrement de la base locale
 

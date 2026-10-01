@@ -142,7 +142,7 @@ export function EtareDocument({ snapshot, versionLabel }: { snapshot: EtareSnaps
     >
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-xs font-semibold text-brand-accent uppercase">
+          <p className="text-xs font-semibold text-brand-accent-strong uppercase">
             ETARE {site.etare_number ?? 'sans numéro'}
           </p>
           <h2 className="text-xl font-bold">{site.name}</h2>

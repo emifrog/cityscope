@@ -3,6 +3,7 @@
 import { PRIVILEGED_PERMISSIONS, permissionsForRoles } from '@etare/domain';
 import { Alert, Badge, Button, cn } from '@etare/ui';
 import { LogOut, Menu, Search, UserRound } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, type FormEvent, type ReactNode } from 'react';
@@ -82,11 +83,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Menu aria-hidden="true" className="size-5" />
           <span className="sr-only">Menu</span>
         </Button>
-        <Link href="/" className="flex items-center gap-2 font-bold whitespace-nowrap">
-          <span aria-hidden="true" className="text-brand-accent">
-            {brand.logoGlyph}
-          </span>
-          <span>{brand.productName}</span>
+        <Link href="/" className="shrink-0">
+          <Image src={brand.logoInverse} alt={brand.productName} priority className="h-8 w-auto" />
         </Link>
         <form role="search" onSubmit={search} className="mx-auto hidden w-full max-w-xl lg:block">
           <label className="relative block">

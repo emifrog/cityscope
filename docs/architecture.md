@@ -131,7 +131,8 @@ Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4, composants de sty
   validation, aperçu fidèle rendu depuis l’instantané par `components/etare/etare-document.tsx`,
   soumission, historique), page « ETARE » (dossiers du SIS), « Validations » (file et écran de contrôle :
   modifications depuis la version publiée, contributeurs, empreinte, décision motivée).
-- Thème remplaçable : jetons dans `packages/ui/src/styles/globals.css`, nom/logo dans `src/config/brand.ts`.
+- Identité FireScape : jetons dans `packages/ui/src/styles/globals.css`, nom et logos dans
+  `src/config/brand.ts` (déclinaisons générées depuis `assets/brand/` par `pnpm brand:assets`).
 
 ## Worker (services/worker)
 

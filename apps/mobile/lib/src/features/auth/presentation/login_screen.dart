@@ -205,26 +205,12 @@ class _BrandHeader extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     return Column(
       children: [
-        Container(
-          width: 88,
-          height: 88,
-          decoration: const BoxDecoration(
-            color: BrandColors.navy,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Brand.logoIcon,
-            size: 48,
-            color: BrandColors.accent,
-          ),
+        const Image(
+          image: AssetImage(Brand.logoAsset),
+          width: 220,
+          semanticLabel: Brand.productName,
         ),
-        const SizedBox(height: 16),
-        Text(
-          Brand.productName,
-          style: textTheme.headlineMedium?.copyWith(color: BrandColors.navy),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 12),
         Text(
           Brand.appSubtitle,
           style: textTheme.bodyLarge?.copyWith(color: BrandColors.textMuted),

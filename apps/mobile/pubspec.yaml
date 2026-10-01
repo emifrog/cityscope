@@ -63,3 +63,6 @@ hooks:
 
 flutter:
   uses-material-design: true
+  # Logos FireScape générés par `pnpm brand:assets` (originaux dans assets/brand/ à la racine).
+  assets:
+    - assets/brand/

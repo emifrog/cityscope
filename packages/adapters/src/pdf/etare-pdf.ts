@@ -9,7 +9,7 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFImage, type PDFP
  * published and the SHA-256 of the approved content. Standard PDF fonts
  * (WinAnsi): characters they cannot encode are replaced by their closest form.
  */
-export const ETARE_PDF_TEMPLATE_VERSION = 'etare-pdf/2';
+export const ETARE_PDF_TEMPLATE_VERSION = 'etare-pdf/3';
 
 const PORTRAIT: [number, number] = [595.28, 841.89];
 const LANDSCAPE: [number, number] = [841.89, 595.28];
@@ -24,9 +24,10 @@ const hex = (value: string): RGB =>
     Number.parseInt(value.slice(5, 7), 16) / 255,
   );
 
+/** FireScape palette; the accent is the strong orange, readable as text on white. */
 const COLORS = {
-  navy: hex('#13233f'),
-  accent: hex('#e8601c'),
+  navy: hex('#012b5c'),
+  accent: hex('#c84300'),
   text: hex('#0f172a'),
   muted: hex('#475569'),
   border: hex('#cbd5e1'),
@@ -461,8 +462,8 @@ export class PdfLibEtareRenderer implements EtarePdfRenderer {
 
     doc.setTitle(writer.encode(`${title} — version publiée n° ${publication.number}`));
     doc.setSubject('Établissement répertorié — version publiée');
-    doc.setCreator('Produit ETARE');
-    doc.setProducer(`Produit ETARE (${ETARE_PDF_TEMPLATE_VERSION})`);
+    doc.setCreator('FireScape');
+    doc.setProducer(`FireScape (${ETARE_PDF_TEMPLATE_VERSION})`);
     doc.setLanguage('fr-FR');
     doc.setCreationDate(publication.createdAt);
     doc.setModificationDate(publication.createdAt);

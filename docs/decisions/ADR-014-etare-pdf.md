@@ -14,8 +14,9 @@ travail.
 
 1. **Produit par le worker pendant la fabrication de la publication**, à partir de l’instantané figé
    (ADR-013) : `generateEtarePdf` (application) prépare les entrées, `PdfLibEtareRenderer` (adaptateur,
-   `pdf-lib` 1.17.1, MIT) dessine. Version de gabarit `etare-pdf/2` (depuis le 30/09/2026), enregistrée
-   dans `publication.template_version`.
+   `pdf-lib` 1.17.1, MIT) dessine. Version de gabarit `etare-pdf/3` (depuis le 01/10/2026 : couleurs et
+   producteur FireScape ; `etare-pdf/2` depuis le 30/09/2026), enregistrée dans
+   `publication.template_version`.
 2. **Identification sur chaque page** : « VERSION PUBLIÉE N° n », date et heure de publication (heure de
    Paris), numéro de révision, empreinte SHA-256 du contenu validé, pagination ; métadonnées du document
    (titre, date, producteur et gabarit).

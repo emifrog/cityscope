@@ -1,10 +1,11 @@
-# etare-platform
+# FireScape
 
-Plateforme SaaS de gestion de la connaissance opérationnelle des bâtiments et sites à risques des SIS :
-création, validation, publication immuable et consultation hors ligne des plans ETARE numériques.
+**La connaissance opérationnelle du bâtiment.** Plateforme SaaS de gestion de la connaissance
+opérationnelle des bâtiments et sites à risques des SIS : création, validation, publication immuable et
+consultation hors ligne des plans ETARE numériques. Dépôt technique `etare-platform`.
 
-> Nom commercial et logo à définir : identité provisoire dans `apps/web/src/config/brand.ts`,
-> `packages/ui/src/styles/globals.css` et `apps/mobile/lib/src/core/theme/brand.dart`.
+> Identité (nom, logos, couleurs) : [`assets/brand/`](assets/brand/README.md) ; déclinaisons web et
+> mobile générées par `pnpm brand:assets`.
 
 **État : Sprint 5 livré.** Le back-office couvre la préparation d’un ETARE : référentiel des sites,
 carte IGN, plans de niveaux, objets (avec photos), zones et risques, contrôle avant validation,
@@ -55,6 +56,7 @@ Détails, dépannage, mobile et worker : [`docs/development.md`](docs/developmen
 | `pnpm dev:integration`            | web + API locaux contre l’environnement d’intégration partagé           |
 | `pnpm integration check`          | vérifie l’environnement d’intégration (voir `docs/development.md`)      |
 | `pnpm contracts:generate`         | régénère `packages/contracts/openapi.json`                              |
+| `pnpm brand:assets`               | régénère logos et icônes (web, Android, iOS) depuis `assets/brand/`     |
 | `flutter analyze && flutter test` | dans `apps/mobile`                                                      |
 
 ## Arborescence
@@ -72,6 +74,7 @@ packages/schemas    briques Zod partagées (GeoJSON, coordonnées locales...)
 packages/config     environnement, tsconfig de base
 packages/ui         composants et jetons de thème
 supabase/           config, migrations (source unique du schéma), seed fictif, tests pgTAP
+assets/brand        originaux du logo FireScape (déclinaisons : pnpm brand:assets)
 infra/              images Docker, Terraform (à venir)
 tests/integration   tests d’intégration
 docs/               architecture, développement, base, sécurité, ADR

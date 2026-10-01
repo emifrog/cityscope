@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Nom affiché sous l'icône. PROVISOIRE : à aligner sur Brand.productName
-         (lib/src/core/theme/brand.dart) lorsque le nom commercial sera arrêté. -->
-    <string name="app_name">Produit ETARE</string>
+    <!-- Nom affiché sous l'icône : identique à Brand.productName
+         (lib/src/core/theme/brand.dart). -->
+    <string name="app_name">FireScape</string>
 </resources>

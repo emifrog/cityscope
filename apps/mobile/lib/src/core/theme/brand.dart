@@ -1,28 +1,38 @@
 import 'package:material_ui/material_ui.dart';
 
-/// Identité visuelle centralisée : SEUL fichier à modifier lorsque le nom
-/// commercial et le logo définitifs seront arrêtés.
+/// Identité visuelle FireScape, centralisée ici.
 ///
-/// Les couleurs reprennent les jetons partagés avec l'application web.
+/// Les logos sont générés par `pnpm brand:assets` depuis les originaux de
+/// `assets/brand/` à la racine du dépôt ; les couleurs reprennent les jetons
+/// partagés avec l'application web.
 abstract final class Brand {
-  /// Nom provisoire du produit (nom commercial non décidé).
-  static const productName = 'Produit ETARE';
+  /// Nom commercial du produit.
+  static const productName = 'FireScape';
+
+  /// Signature de la marque.
+  static const tagline = 'La connaissance opérationnelle du bâtiment.';
 
   /// Sous-titre de l'application mobile opérationnelle.
   static const appSubtitle = 'Application opérationnelle';
 
-  /// Pictogramme provisoire en attendant le logo définitif.
-  static const IconData logoIcon = Icons.local_fire_department;
+  /// Logo empilé pour fond clair.
+  static const logoAsset = 'assets/brand/firescape-logo.png';
+
+  /// Logo empilé pour fond marine (pictogramme et nom en blanc).
+  static const logoInverseAsset = 'assets/brand/firescape-logo-inverse.png';
 }
 
 /// Palette de marque (jetons partagés web / mobile).
 abstract final class BrandColors {
-  /// Barres d'application, couleur primaire.
-  static const navy = Color(0xFF13233F);
+  /// Marine du logo : barres d'application, couleur primaire.
+  static const navy = Color(0xFF012B5C);
 
-  /// Actions principales. Texte blanc en gras ≥ 18 sp uniquement
-  /// (contraste 3,4:1, conforme WCAG AA « grand texte »).
-  static const accent = Color(0xFFE8601C);
+  /// Orange du logo : marques et repères. Texte blanc interdit dessus
+  /// (contraste 3,3:1) : les actions utilisent [accentStrong].
+  static const accent = Color(0xFFFE5002);
+
+  /// Orange foncé des actions principales : texte blanc à 4,9:1 (WCAG AA).
+  static const accentStrong = Color(0xFFC84300);
 
   static const background = Color(0xFFF5F7FA);
   static const surface = Color(0xFFFFFFFF);

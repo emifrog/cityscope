@@ -29,10 +29,10 @@ export interface MapColors {
 export function mapColors(style: Pick<CSSStyleDeclaration, 'getPropertyValue'> | null): MapColors {
   const read = (name: string, fallback: string) => style?.getPropertyValue(name).trim() || fallback;
   return {
-    published: read('--color-brand-accent', '#e8601c'),
+    published: read('--color-brand-accent', '#fe5002'),
     known: read('--color-muted', '#475569'),
     verified: read('--color-success', '#15803d'),
-    cluster: read('--color-brand-navy', '#13233f'),
+    cluster: read('--color-brand-navy', '#012b5c'),
     selected: read('--color-focus', '#1d4ed8'),
   };
 }

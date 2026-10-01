@@ -11,7 +11,7 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Joindre une photo existante à un signalement terrain.</string>
 	<key>CFBundleDisplayName</key>
-	<string>Produit ETARE</string>
+	<string>FireScape</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

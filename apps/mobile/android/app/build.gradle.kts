@@ -5,7 +5,8 @@ plugins {
 }
 
 android {
-    // Identifiant PROVISOIRE : le nom commercial n'est pas encore arrêté.
+    // Identifiant technique PROVISOIRE (le nom commercial FireScape est arrêté) : à fixer
+    // avec le domaine de publication avant la première diffusion, une fois pour toutes.
     namespace = "fr.etare.ops"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion

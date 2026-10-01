@@ -16,7 +16,7 @@ abstract final class AppTheme {
       brightness: Brightness.light,
       primary: BrandColors.navy,
       onPrimary: BrandColors.onDark,
-      secondary: BrandColors.accent,
+      secondary: BrandColors.accentStrong,
       onSecondary: BrandColors.onDark,
       tertiary: BrandColors.info,
       onTertiary: BrandColors.onDark,
@@ -85,7 +85,7 @@ abstract final class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: BrandColors.accent,
+          backgroundColor: BrandColors.accentStrong,
           foregroundColor: BrandColors.onDark,
           disabledBackgroundColor: BrandColors.border,
           disabledForegroundColor: BrandColors.textMuted,
