@@ -10,7 +10,7 @@ import { createApiApp, createApiDependencies } from '@etare/api';
 import { API_BASE_PATH, endpoints } from '@etare/contracts';
 import { HandlerRegistry, createWorker, notificationHandler } from '@etare/worker';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { EHPAD_ID, TENANT_06, authApi, requireEnv, signIn, withSecondFactor } from './helpers';
+import { EHPAD_ID, TENANT_06, authApi, requireEnv, signIn, withSecondFactor, drain } from './helpers';
 
 const app = createApiApp(createApiDependencies(process.env));
 const workerPool = createPool({
@@ -125,7 +125,7 @@ describe('notifications of the exploitant portal', () => {
     );
     expect(queued?.recipient.email).toBe(EXPLOITANT);
 
-    await sending.runOnce();
+    await drain(sending);
     const mail = await emailWith('Invitation au portail exploitant');
     expect(mail.Text).toContain('SDIS DEMO 06 vous invite');
     expect(mail.Text).toContain('http://localhost:3000/portail');
@@ -161,7 +161,7 @@ describe('notifications of the exploitant portal', () => {
     expect(asked.status).toBe(200);
 
     // No mail server: the question is recorded all the same, the notification fails visibly.
-    await withoutMail.runOnce();
+    await drain(withoutMail);
     const failed = (await notifications()).find(
       (item) => item.kind === 'contribution_info_request' && item.about.startsWith('Travaux en façade'),
     );
@@ -176,7 +176,7 @@ describe('notifications of the exploitant portal', () => {
     );
     expect(retried.status).toBe('pending');
     expect((await admin('POST', `/notifications/${failed?.id}/retry`)).status).toBe(409);
-    await sending.runOnce();
+    await drain(sending);
     const mail = await emailWith('Précision demandée sur votre proposition');
     expect(mail.Text).toContain('« Travaux en façade »');
     // Never the content of the exchange.

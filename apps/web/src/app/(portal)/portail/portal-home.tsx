@@ -32,12 +32,14 @@ function InvitationCard({ invitation }: { invitation: MyPortalInvitation }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Invitation de {invitation.tenant_name}</CardTitle>
-        <CardDescription>
-          {invitation.invited_by_name} vous invite à consulter ce que le SIS sait de{' '}
-          {invitation.sites.length > 1 ? 'ces sites' : 'ce site'} et à proposer des mises à jour
-          {invitation.organization ? `, au titre de « ${invitation.organization} »` : ''}.
-        </CardDescription>
+        <div>
+          <CardTitle>Invitation de {invitation.tenant_name}</CardTitle>
+          <CardDescription>
+            {invitation.invited_by_name} vous invite à consulter ce que le SIS sait de{' '}
+            {invitation.sites.length > 1 ? 'ces sites' : 'ce site'} et à proposer des mises à jour
+            {invitation.organization ? `, au titre de « ${invitation.organization} »` : ''}.
+          </CardDescription>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         <ul className="list-disc pl-5 text-sm">
@@ -86,11 +88,13 @@ export function PortalHome() {
         {state === 'mfa_required' ? (
           <Card>
             <CardHeader>
-              <CardTitle>Double authentification exigée</CardTitle>
-              <CardDescription>
-                {activeTenant?.tenant_name} demande un code à usage unique, en plus de votre mot de passe, pour accéder
-                à vos sites. Activez-la ici ; si elle l’est déjà, reconnectez-vous et saisissez votre code.
-              </CardDescription>
+              <div>
+                <CardTitle>Double authentification exigée</CardTitle>
+                <CardDescription>
+                  {activeTenant?.tenant_name} demande un code à usage unique, en plus de votre mot de passe, pour
+                  accéder à vos sites. Activez-la ici ; si elle l’est déjà, reconnectez-vous et saisissez votre code.
+                </CardDescription>
+              </div>
             </CardHeader>
             <CardContent>
               <SecondFactorSection />

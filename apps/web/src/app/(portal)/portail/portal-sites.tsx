@@ -17,11 +17,13 @@ export function PortalSites() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Vos sites</CardTitle>
-        <CardDescription>
-          Ce que le service d’incendie et de secours a publié pour ses équipes : identité, contacts, plans et documents
-          partagés avec vous.
-        </CardDescription>
+        <div>
+          <CardTitle>Vos sites</CardTitle>
+          <CardDescription>
+            Ce que le service d’incendie et de secours a publié pour ses équipes : identité, contacts, plans et
+            documents partagés avec vous.
+          </CardDescription>
+        </div>
       </CardHeader>
       <CardContent>
         {sites.data.length === 0 ? <p className="text-sm text-muted">Aucun site ne vous est ouvert.</p> : null}

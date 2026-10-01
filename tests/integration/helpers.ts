@@ -114,3 +114,13 @@ export async function latestEmailTo(address: string): Promise<{ subject: string;
   }
   throw new Error(`No e-mail received for ${address}.`);
 }
+
+/**
+ * Runs a test worker until the queue holds nothing it can claim (bounded): jobs
+ * of earlier steps (notifications, verifications) never hide the one awaited.
+ */
+export async function drain(worker: { runOnce(): Promise<number> }, rounds = 10): Promise<void> {
+  for (let round = 0; round < rounds; round += 1) {
+    if ((await worker.runOnce()) === 0) return;
+  }
+}

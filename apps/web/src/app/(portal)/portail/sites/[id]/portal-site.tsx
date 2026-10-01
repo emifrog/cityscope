@@ -29,8 +29,10 @@ function Section({ title, description, children }: { title: string; description?
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        {description ? <CardDescription>{description}</CardDescription> : null}
+        <div>
+          <CardTitle>{title}</CardTitle>
+          {description ? <CardDescription>{description}</CardDescription> : null}
+        </div>
       </CardHeader>
       <CardContent>{children}</CardContent>
     </Card>

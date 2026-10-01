@@ -21,7 +21,7 @@ import { antivirusNotConfigured } from '@etare/application';
 import { API_BASE_PATH, endpoints, type EtareRevision } from '@etare/contracts';
 import { HandlerRegistry, assetVerificationHandler, createWorker, publicationBuildHandler } from '@etare/worker';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { TENANT_06, authApi, requireEnv, signIn, withSecondFactor } from './helpers';
+import { TENANT_06, authApi, requireEnv, signIn, withSecondFactor, drain } from './helpers';
 
 const app = createApiApp(createApiDependencies(process.env));
 const workerPool = createPool({
@@ -106,7 +106,7 @@ const publish = async (summary: string) => {
     publish: true,
   });
   expect(decided.status).toBe(200);
-  await worker.runOnce();
+  await drain(worker);
 };
 
 beforeAll(async () => {
@@ -219,7 +219,7 @@ describe('proposals of an exploitant', () => {
       await (await exploitant('POST', `/portal/contributions/${contributionId}/uploaded`)).json(),
     );
     expect(confirmed.verifications).toBe(1);
-    await worker.runOnce();
+    await drain(worker);
   });
 
   it('lets the Prévision see the proposal, its photo, and ask a question', async () => {

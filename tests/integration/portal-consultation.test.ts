@@ -19,7 +19,7 @@ import { antivirusNotConfigured } from '@etare/application';
 import { API_BASE_PATH, endpoints, type EtareRevision } from '@etare/contracts';
 import { HandlerRegistry, assetVerificationHandler, createWorker, publicationBuildHandler } from '@etare/worker';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { EHPAD_ID, TENANT_06, authApi, requireEnv, signIn, withSecondFactor } from './helpers';
+import { EHPAD_ID, TENANT_06, authApi, requireEnv, signIn, withSecondFactor, drain } from './helpers';
 
 const app = createApiApp(createApiDependencies(process.env));
 const workerPool = createPool({
@@ -135,8 +135,7 @@ beforeAll(async () => {
   };
   sharedId = await upload('Notice du système de sécurité incendie', shared, true);
   internalId = await upload('SECRET consignes internes', internal, false);
-  await worker.runOnce();
-  await worker.runOnce();
+  await drain(worker);
 
   const draft = endpoints.createRevision.response.parse(
     await (await editor('POST', `/sites/${siteId}/etare/revisions`, { change_summary: 'Portail' })).json(),
@@ -152,7 +151,7 @@ beforeAll(async () => {
     publish: true,
   });
   expect(decided.status).toBe(200);
-  await worker.runOnce();
+  await drain(worker);
 
   // The exploitant of the demo, invited on this site too (existing account: no e-mail).
   const invited = endpoints.createPortalInvitation.response.parse(
