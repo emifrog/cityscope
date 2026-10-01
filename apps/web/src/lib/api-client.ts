@@ -26,6 +26,10 @@ import {
   type EtareRevision,
   type ExternalId,
   type ExternalIdCreate,
+  type FieldReport,
+  type FieldReportList,
+  type FieldReportListQuery,
+  type FieldReportUpdate,
   type Level,
   type LevelCreate,
   type LevelUpdate,
@@ -409,6 +413,25 @@ export const api = {
     call(endpoints.submitRevision.response, pathOf(endpoints.submitRevision.path, { id }), options, {
       method: 'POST',
       body: input,
+      ifMatch: version,
+    }),
+
+  // ---------------------------------------------------------------- field reports (OPS-04)
+  listFieldReports: (options: ApiCallOptions, query: Partial<FieldReportListQuery> = {}): Promise<FieldReportList> =>
+    call(endpoints.listFieldReports.response, endpoints.listFieldReports.path, options, { query }),
+
+  getFieldReport: (options: ApiCallOptions, id: string): Promise<FieldReport> =>
+    call(endpoints.getFieldReport.response, pathOf(endpoints.getFieldReport.path, { id }), options),
+
+  updateFieldReport: (
+    options: ApiCallOptions,
+    id: string,
+    version: number,
+    patch: FieldReportUpdate,
+  ): Promise<FieldReport> =>
+    call(endpoints.updateFieldReport.response, pathOf(endpoints.updateFieldReport.path, { id }), options, {
+      method: 'PATCH',
+      body: patch,
       ifMatch: version,
     }),
 

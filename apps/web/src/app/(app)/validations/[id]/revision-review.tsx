@@ -26,7 +26,7 @@ import {
 } from '@/components/labels';
 import { PageHeader } from '@/components/page-header';
 import { api } from '@/lib/api-client';
-import { queryKeys, useApiMutation, usePermissions, useRevision } from '@/lib/queries';
+import { queryKeys, useApiMutation, useFieldReports, usePermissions, useRevision } from '@/lib/queries';
 import { useTenant } from '@/providers/tenant-provider';
 
 const dateTime = new Intl.DateTimeFormat('fr-FR', {
@@ -65,6 +65,37 @@ function Changes({ changes }: { changes: readonly EtareChange[] | null }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+/** Field reports the editors integrated into this revision (traceability up to the publication). */
+function IntegratedReports({ revisionId }: { revisionId: string }) {
+  const reviewsReports = usePermissions().has('field_report:review');
+  const reports = useFieldReports({ view: 'all', revision_id: revisionId, limit: 100 }, reviewsReports);
+  if (!reviewsReports || !reports.data || reports.data.items.length === 0) return null;
+  return (
+    <Card>
+      <CardHeader>
+        <div>
+          <CardTitle className="text-base">Signalements intégrés ({reports.data.items.length})</CardTitle>
+          <CardDescription>Écarts remontés du terrain que cette révision corrige.</CardDescription>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <ul className="space-y-2 text-sm">
+          {reports.data.items.map((report) => (
+            <li key={report.id}>
+              <Link href={`/signalements/${report.id}`} className="line-clamp-2 text-info hover:underline">
+                {report.description}
+              </Link>
+              <span className="text-xs text-muted">
+                {report.reporter.name} · {when(report.observed_at)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -173,6 +204,8 @@ export function RevisionReview({ id }: { id: string }) {
               </Link>
             </CardContent>
           </Card>
+
+          <IntegratedReports revisionId={revision.id} />
 
           {revision.decision ? (
             <Card>

@@ -17,6 +17,9 @@ import type {
   PlanType,
   Permission,
   RecordStatus,
+  ReportCategory,
+  ReportSeverity,
+  ReportStatus,
   Role,
   ScanStatus,
   Sensitivity,
@@ -259,4 +262,32 @@ export const SYNC_RECEIPT_STATUS_LABELS: Readonly<Record<SyncReceiptStatus, stri
   installed: 'installation complète',
   partial: 'installation partielle',
   error: 'échec',
+};
+
+export const REPORT_CATEGORY_LABELS: Readonly<Record<ReportCategory, string>> = {
+  access: 'Accès',
+  water: 'Eau',
+  risk: 'Risque',
+  contact: 'Contact',
+  plan: 'Plan',
+  other: 'Autre',
+};
+
+export const REPORT_SEVERITY_LABELS: Readonly<Record<ReportSeverity, string>> = {
+  info: 'Information',
+  important: 'Important',
+  urgent: 'Urgent',
+};
+
+export const REPORT_STATUS_LABELS: Readonly<Record<ReportStatus, string>> = {
+  new: 'Nouveau',
+  triaged: 'Pris en charge',
+  resolved: 'Traité',
+  rejected: 'Rejeté',
+};
+
+export const REPORT_ITEM_LABELS: Readonly<Record<'object' | 'risk' | 'zone', string>> = {
+  object: 'Point',
+  risk: 'Risque',
+  zone: 'Zone',
 };

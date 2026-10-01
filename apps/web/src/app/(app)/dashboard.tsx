@@ -6,10 +6,8 @@ import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { ROLE_LABELS } from '@/components/labels';
 import { PageHeader } from '@/components/page-header';
 import { SitesTable } from '@/components/sites-table';
-import { useEtareDossiers, usePermissions, useSites, useValidations } from '@/lib/queries';
+import { useEtareDossiers, useFieldReports, usePermissions, useSites, useValidations } from '@/lib/queries';
 import { useTenant } from '@/providers/tenant-provider';
-
-const PLANNED_INDICATORS = [{ label: 'Signalements terrain', sprint: 'Sprint 5' }];
 
 function Indicator({ label, value, note, href }: { label: string; value: string; note: string; href?: string }) {
   return (
@@ -35,6 +33,8 @@ export function Dashboard() {
   const readsEtare = usePermissions().has('etare:read');
   const dossiers = useEtareDossiers(readsEtare);
   const queue = useValidations(readsEtare);
+  const reviewsReports = usePermissions().has('field_report:review');
+  const reports = useFieldReports({ view: 'open', limit: 1 }, reviewsReports);
 
   if (loading) return <LoadingCard lines={4} />;
   if (error) return <ApiErrorAlert error={error} />;
@@ -88,15 +88,12 @@ export function Dashboard() {
           note="File des validations"
           href="/validations"
         />
-        {PLANNED_INDICATORS.map((indicator) => (
-          <Card key={indicator.label}>
-            <CardContent>
-              <p className="text-sm text-muted">{indicator.label}</p>
-              <p className="mt-1 text-3xl font-bold text-muted">—</p>
-              <Badge className="mt-2">{indicator.sprint}</Badge>
-            </CardContent>
-          </Card>
-        ))}
+        <Indicator
+          label="Signalements à traiter"
+          value={reviewsReports && reports.data ? String(reports.data.open_count) : '—'}
+          note="Remontés par les intervenants"
+          href="/signalements"
+        />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">

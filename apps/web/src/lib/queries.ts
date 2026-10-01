@@ -3,6 +3,8 @@
 import type {
   Document,
   DocumentUploadResponse,
+  FieldReport,
+  FieldReportListQuery,
   FileDeclaration,
   MapSitesQuery,
   OperationalObject,
@@ -34,6 +36,7 @@ export const queryKeys = {
   devices: (tenantId: string) => ['tenant', tenantId, 'devices'] as const,
   etare: (tenantId: string) => ['tenant', tenantId, 'etare'] as const,
   revision: (tenantId: string, id: string) => ['tenant', tenantId, 'etare', 'revision', id] as const,
+  fieldReports: (tenantId: string) => ['tenant', tenantId, 'field-reports'] as const,
   riskTypes: (tenantId: string, includeDeprecated?: boolean) =>
     includeDeprecated === undefined
       ? (['tenant', tenantId, 'risk-types'] as const)
@@ -225,6 +228,48 @@ export function useRevision(id: string) {
     enabled,
     queryFn: ({ signal }) => api.getRevision({ ...options, signal }, id),
     refetchInterval: (query) => (building(query.state.data?.revision.publication?.status) ? BUILD_POLL_MS : false),
+  });
+}
+
+const reportAwaitsPhotos = (report: FieldReport | undefined, now = Date.now()) =>
+  (report?.photos ?? []).some(
+    (asset) => asset.scan_status === 'pending' && now - Date.parse(asset.created_at) < VERDICT_WAIT_MS,
+  );
+
+/** Field reports of the SIS (OPS-04); `wanted`: only for those who instruct them. */
+export function useFieldReports(query: Partial<FieldReportListQuery> = {}, wanted = true) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: [...queryKeys.fieldReports(tenantId ?? 'none'), 'list', query],
+    enabled: enabled && wanted,
+    queryFn: ({ signal }) => api.listFieldReports({ ...options, signal }, query),
+  });
+}
+
+/** Pages of field reports for the instruction list (open, closed or all). */
+export function useFieldReportPages(view: FieldReportListQuery['view'], pageSize = 50) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useInfiniteQuery({
+    queryKey: [...queryKeys.fieldReports(tenantId ?? 'none'), 'pages', view, pageSize],
+    enabled,
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam, signal }) =>
+      api.listFieldReports(
+        { ...options, signal },
+        { view, limit: pageSize, ...(pageParam ? { cursor: pageParam } : {}) },
+      ),
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
+  });
+}
+
+/** One field report; refreshed while a photo waits for the verdict of the worker. */
+export function useFieldReport(id: string) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: [...queryKeys.fieldReports(tenantId ?? 'none'), 'detail', id],
+    enabled,
+    queryFn: ({ signal }) => api.getFieldReport({ ...options, signal }, id),
+    refetchInterval: (query) => (reportAwaitsPhotos(query.state.data) ? VERDICT_POLL_MS : false),
   });
 }
 

@@ -5,6 +5,10 @@ export const metadata: Metadata = { title: 'Contributions' };
 
 export default function Page() {
   return (
-    <ComingSoon title="Contributions" description="Propositions de mise à jour des exploitants." sprint="Sprint 5" />
+    <ComingSoon
+      title="Contributions"
+      description="Propositions de mise à jour des exploitants."
+      sprint="lot du portail exploitant (R2)"
+    />
   );
 }
