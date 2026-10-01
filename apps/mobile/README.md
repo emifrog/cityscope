@@ -164,8 +164,8 @@ Fonctionnalités présentes : `auth` (connexion/déconnexion, session),
 `account` (`/me`, SIS actif), `sites` (repository `/sites`, sans écran),
 `sync` (enrôlement, synchronisation signée, installation hors ligne,
 fraîcheur), `ops` (synthèse d'un site, listes risques / accès / eau /
-coupures / contacts / documents, plans tactiles avec calques et fiches, lus
-sur la tablette), `home` (recherche locale et fraîcheur), `account` (compte,
+coupures / contacts / documents, plans tactiles avec calques et fiches,
+photos des points en plein écran, lus sur la tablette), `home` (recherche locale et fraîcheur), `account` (compte,
 SIS, état de la tablette, déconnexion), `startup` (attente, erreurs de
 démarrage).
 
@@ -268,8 +268,8 @@ Principes :
 
 ## 9. Volontairement NON fait au Sprint 0
 
-- Fonctions OPS (risques, accès, plans, eau, coupures, contacts) : tuiles
-  « Bientôt » uniquement.
+- ~~Fonctions OPS (risques, accès, plans, eau, coupures, contacts)~~ :
+  livrées au Sprint 4 (lecture locale ; signalement terrain à venir).
 - ~~Synchronisation hors ligne et stockage des publications~~ : livrés au
   Sprint 4 (sections 6 et 8).
 - Cartographie, géolocalisation, caméra.

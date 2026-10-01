@@ -134,7 +134,7 @@ Voir ADR-015.
   méthode, le chemin, l’heure (± 5 min) et le corps ; PostgreSQL revérifie `offline:download`, le SIS et
   l’état du terminal. Un terminal révoqué est refusé à la requête suivante (`DEVICE_REVOKED`).
 - Fichiers : URL signées de 5 minutes, seulement pour des empreintes présentes dans le manifeste d’une
-  version distribuable ; téléchargements audités. Les sites sensibles ne sont pas distribués (Sprint 4).
+  version distribuable ; téléchargements audités. Les sites sensibles ne sont pas distribués.
 - Le catalogue accorde une consultation locale de 7 jours à l’utilisateur ; une horloge de tablette
   manipulée peut prolonger cette durée hors réseau (limite décrite par l’architecture §19).
 
@@ -164,5 +164,6 @@ jetables (`pnpm setup:local`). Les clés de signature des environnements partag�
   enrôlé ; pas de codes de secours ni de réinitialisation du mot de passe en libre-service.
 - Révocation des sessions à la suspension (la base refuse déjà chaque requête), SSO OIDC/SAML : non
   développés.
-- Autorisation hors ligne signée, révocation de terminaux, chiffrement des fichiers mobiles : Sprint 3+.
+- Tablette : ni verrouillage applicatif propre (PIN, biométrie), ni attestation d’intégrité du
+  terminal, ni rotation de la clé de la base locale.
 - Chaînage d’empreintes / export externe du journal d’audit : à décider.

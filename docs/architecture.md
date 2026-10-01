@@ -7,7 +7,7 @@ Référence : dossier d’architecture technique v1.0 (`docs/reference/05_…`).
 
 ```text
  Navigateur (back-office)          Tablette OPS (Flutter, hors ligne)
-        │  HTTPS, Bearer JWT              │  HTTPS, Bearer JWT (+ paquets signés, à venir)
+        │  HTTPS, Bearer JWT              │  HTTPS, Bearer JWT + signature du terminal
         ▼                                 ▼
  ┌──────────────────────────── apps/web (Next.js 16) ────────────────────────────┐
  │  pages React (client)      /api/v1/*  → route handler mince → services/api    │
@@ -123,7 +123,9 @@ Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4, composants de sty
   (`plan-workspace.tsx`) : calques, ajout d’objets, de zones et de risques (Terra Draw), suppression,
   annulation de la dernière action, liste des éléments à replacer après un changement de fond et liste
   accessible au clavier des éléments du fond affiché ; pictogrammes de risques dessinés à la volée.
-- Administration : onglets selon les permissions (Membres, Catalogue des risques du SIS).
+- Administration : onglets selon les permissions (Membres, Terminaux, Catalogue des risques du SIS).
+- Photos des objets (PLAN-05) : section « Photos » de l’édition d’un objet, sur la carte comme sur le
+  plan (`object-photos.tsx`) : dépôt contrôlé, vignettes par URL signée, légende, retrait.
 - ETARE (ADR-013) : onglet « ETARE » de la fiche site (version publiée, révision en cours, contrôles avant
   validation, aperçu fidèle rendu depuis l’instantané par `components/etare/etare-document.tsx`,
   soumission, historique), page « ETARE » (dossiers du SIS), « Validations » (file et écran de contrôle :
@@ -136,17 +138,29 @@ Boucle de réservation (`app.claim_jobs`, `FOR UPDATE SKIP LOCKED`), bail avec h
 exponentielle avec aléa, erreurs permanentes → état `dead`, arrêt propre sur SIGTERM. Les handlers
 valident leur payload avant tout effet et doivent être idempotents (livraison « au moins une fois »).
 Handlers : `system.noop`, `publication.build` (fabrication d’une publication à partir de la révision
-figée : charge utile, manifeste, empreintes, PDF ETARE dessiné avec `pdf-lib` et déposé sous une clé
+figée : charge utile, manifeste signé par la clé de publication Ed25519 (ADR-015), empreintes, PDF ETARE dessiné avec `pdf-lib` et déposé sous une clé
 adressée par son empreinte, activation — ADR-013, ADR-014 ; chaque écriture est protégée par le jeton de
 fencing du bail, et le handler s’arrête dès que le runner signale la perte du bail) et `asset.verify` (contrôle des
 fichiers déposés, ADR-009), enregistré dès que `SUPABASE_URL` et `SUPABASE_SECRET_KEY` sont fournis. PDF, paquets hors ligne, miniatures, imports,
 notifications et empreintes s’ajouteront comme handlers. Voir ADR-007.
 
+## Distribution hors ligne
+
+Voir ADR-015. Deux clés Ed25519 : la clé de publication (worker) signe chaque manifeste à la
+fabrication, la clé de catalogue (API) signe le catalogue propre à chaque terminal. Les routes
+`/sync/*` exigent le jeton de l’utilisateur et la signature du terminal (`X-Device-*`), vérifiée par
+l’API puis par PostgreSQL (fonctions `sync_*`, permission `offline:download`). Les fichiers sont
+adressés par empreinte et servis par URL signées de 5 minutes ; seuls les fichiers d’empreinte
+nouvelle sont transférés.
+
 ## Mobile (apps/mobile)
 
-Squelette Flutter en couches (`presentation / application / domain / data`), go_router, Riverpod, dio,
-Drift sur SQLite **chiffrée (SQLCipher)**, stockage sécurisé des jetons et de la clé de base. Détails dans
-`apps/mobile/README.md`. La synchronisation hors ligne n’est pas encore développée (ADR-004).
+Flutter en couches (`presentation / application / domain / data`), go_router, Riverpod, dio, Drift
+sur SQLite **chiffrée (SQLCipher)**, stockage sécurisé des jetons, de la clé de base et de la graine du
+terminal. Les versions publiées installées (données, plans, photos, documents, PDF) sont stockées dans
+la base chiffrée et activées en une transaction (ADR-016). Écrans OPS lus sans réseau : recherche
+locale, synthèse, listes par entrée, plans tactiles avec calques, fiches et photos. Détails dans
+`apps/mobile/README.md`.
 
 ## Cartographie
 

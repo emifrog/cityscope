@@ -6,16 +6,17 @@ création, validation, publication immuable et consultation hors ligne des plans
 > Nom commercial et logo à définir : identité provisoire dans `apps/web/src/config/brand.ts`,
 > `packages/ui/src/styles/globals.css` et `apps/mobile/lib/src/core/theme/brand.dart`.
 
-**État : Sprint 3 livré, corrections de la revue du 30 septembre 2026 appliquées.** Le back-office
-couvre la préparation d’un ETARE : référentiel des sites, carte IGN, plans de niveaux, objets, zones et
-risques, contrôle avant validation, validation par un validateur indépendant avec double
-authentification, publication immuable et PDF. **Restent à venir** : consultation OPS hors ligne sur
-l’application mobile (paquets signés, synchronisation), portail exploitant, signalements terrain.
+**État : Sprint 4 livré.** Le back-office couvre la préparation d’un ETARE : référentiel des sites,
+carte IGN, plans de niveaux, objets (avec photos), zones et risques, contrôle avant validation,
+validation par un validateur indépendant avec double authentification, publication immuable et PDF.
+Les versions publiées sont distribuées, signées, aux tablettes enrôlées par l’administration du SIS
+et consultées **sans réseau** dans l’application OPS (recherche, synthèse, plans tactiles, fiches).
+**Restent à venir** : signalement terrain, portail exploitant, politique des sites sensibles.
 La CI GitHub (TypeScript et build, base et intégration, Flutter) s’exécute à chaque push sur `main`.
 Voir le [suivi des exigences](docs/suivi-exigences.md), le
 [bilan d’alignement](docs/bilan-alignement-2026-09-30.md) et les rapports des Sprints
-[0](docs/sprint-0-report.md), [1](docs/sprint-1-report.md), [2](docs/sprint-2-report.md) et
-[3](docs/sprint-3-report.md).
+[0](docs/sprint-0-report.md), [1](docs/sprint-1-report.md), [2](docs/sprint-2-report.md),
+[3](docs/sprint-3-report.md) et [4](docs/sprint-4-report.md).
 
 ## Démarrage rapide
 
@@ -78,7 +79,7 @@ docs/               architecture, développement, base, sécurité, ADR
 - [Décisions d’architecture (ADR)](docs/decisions/)
 - [Suivi des exigences](docs/suivi-exigences.md) · [Bilan d’alignement du 30/09/2026](docs/bilan-alignement-2026-09-30.md)
 - Rapports de sprint : [0](docs/sprint-0-report.md) · [1](docs/sprint-1-report.md) ·
-  [2](docs/sprint-2-report.md) · [3](docs/sprint-3-report.md)
+  [2](docs/sprint-2-report.md) · [3](docs/sprint-3-report.md) · [4](docs/sprint-4-report.md)
 - Documents de cadrage : [`docs/reference/`](docs/reference/)
 
 ## Sécurité en bref
