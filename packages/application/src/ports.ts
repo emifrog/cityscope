@@ -31,6 +31,9 @@ import type {
   MapFeaturesResponse,
   MapSitesQuery,
   MapSitesResponse,
+  ObjectPhoto,
+  ObjectPhotoCreate,
+  ObjectPhotoUpdate,
   ObjectType,
   OperationalObject,
   OperationalObjectCreate,
@@ -321,6 +324,12 @@ export interface OperationalObjectRepository {
   /** Null when the site is not visible. */
   create(siteId: string, input: OperationalObjectCreate): Promise<OperationalObject | null>;
   update(id: string, expectedVersion: number, patch: OperationalObjectUpdate): Promise<OperationalObject | null>;
+  /** Declares a photo of a visible object, its file pending verification (PLAN-05). Null when the object is not visible. */
+  createPhoto(
+    objectId: string,
+    input: ObjectPhotoCreate,
+  ): Promise<{ photo: ObjectPhoto; upload: PendingUpload } | null>;
+  updatePhoto(id: string, expectedVersion: number, patch: ObjectPhotoUpdate): Promise<ObjectPhoto | null>;
   /** Building footprints and exterior objects within a small extent (map details). */
   mapFeatures(query: MapFeaturesQuery): Promise<MapFeaturesResponse>;
 }

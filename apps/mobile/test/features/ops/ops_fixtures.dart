@@ -15,6 +15,7 @@ const planRevision = '06000007-0000-4000-8000-000000000001';
 const levelId = '06000004-0000-4000-8000-000000000002';
 const oxygenId = '06000009-0000-4000-8000-000000000002';
 const oxygenRiskId = '0600000b-0000-4000-8000-000000000001';
+const photoId = '0600000e-0000-4000-8000-000000000001';
 
 Map<String, Object?> point(double x, double y) => {
   'plan_revision_id': planRevision,
@@ -150,6 +151,21 @@ final payload = {
         'criticality': 'critical',
         'status': 'active',
         'verified_at': '2026-09-18T09:00:00.000Z',
+        'photos': [
+          {
+            'id': photoId,
+            'caption': 'Armoire TGBT',
+            'asset': {
+              'id': '06000005-0000-4000-8000-0000000000e1',
+              'filename': 'tgbt.png',
+              'mime_type': 'image/png',
+              'size_bytes': tinyPng.length,
+              'sha256': sha256Hex(tinyPng),
+            },
+          },
+          // Illisible (sans fichier) : ignorée, le reste de la fiche reste lisible.
+          {'id': 'photo-sans-fichier', 'caption': 'Perdue'},
+        ],
       },
       {
         'id': oxygenId,
@@ -271,6 +287,13 @@ InstallRecord installRecord() {
     files: [
       FileRecord(
         path: 'plans/$planRevision.png',
+        sha256: sha256Hex(tinyPng),
+        sizeBytes: tinyPng.length,
+        mediaType: 'image/png',
+        required: true,
+      ),
+      FileRecord(
+        path: 'photos/$photoId.png',
         sha256: sha256Hex(tinyPng),
         sizeBytes: tinyPng.length,
         mediaType: 'image/png',

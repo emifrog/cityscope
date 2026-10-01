@@ -10,6 +10,7 @@ import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/home/presentation/home_screen.dart';
 import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
 import 'package:etare_ops/src/features/ops/domain/plan_items.dart';
+import 'package:etare_ops/src/features/ops/presentation/document_screen.dart';
 import 'package:etare_ops/src/features/ops/presentation/item_sheet.dart';
 import 'package:etare_ops/src/features/ops/presentation/plan_screen.dart';
 import 'package:etare_ops/src/features/ops/presentation/section_screen.dart';
@@ -22,7 +23,7 @@ import 'package:flutter/widgets.dart'
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:material_ui/material_ui.dart' show FilterChip;
+import 'package:material_ui/material_ui.dart' show FilterChip, Image;
 
 import '../../support/app_harness.dart';
 import 'ops_fixtures.dart';
@@ -164,6 +165,38 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('01 99 00 12 34'), findsOneWidget);
     expect(find.text('Disponibilité : 24/7'), findsOneWidget);
+    await finish(tester, database);
+  });
+
+  testWidgets('photos d’un point lues hors ligne, en plein écran (PLAN-05)', (
+    tester,
+  ) async {
+    final database = await installedDatabase();
+    await pumpApp(tester, database);
+    await tester.tap(find.text('EHPAD Les Oliviers'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(SiteScreen.tileKey(OpsSection.cuts)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('TGBT principal'));
+    await tester.pumpAndSettle();
+
+    final thumbnail = find.byKey(PhotoStrip.thumbnailKey(photoId));
+    expect(thumbnail, findsOneWidget);
+    expect(
+      find.descendant(of: thumbnail, matching: find.byType(Image)),
+      findsOneWidget,
+    );
+    await tester.tap(thumbnail);
+    await tester.pumpAndSettle();
+    expect(find.byType(DocumentScreen), findsOneWidget);
+    expect(find.text('Armoire TGBT'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(InteractiveViewer),
+        matching: find.byType(Image),
+      ),
+      findsOneWidget,
+    );
     await finish(tester, database);
   });
 

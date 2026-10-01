@@ -1,6 +1,10 @@
 import type {
   MapFeaturesQuery,
   MapFeaturesResponse,
+  ObjectPhoto,
+  ObjectPhotoCreate,
+  ObjectPhotoUpdate,
+  ObjectPhotoUpload,
   ObjectType,
   OperationalObject,
   OperationalObjectCreate,
@@ -8,6 +12,7 @@ import type {
 } from '@etare/contracts';
 import { InvalidInput, geometryMatchesKind, validateObjectProperties, type RequestContext } from '@etare/domain';
 import type { SessionFactory } from './ports';
+import { requireStorage, uploadTicket, type DocumentDependencies } from './uploads';
 import { found, inTenant } from './use-cases';
 
 const GEOMETRY_LABELS = { point: 'un point', line: 'une ligne', polygon: 'une surface' } as const;
@@ -92,4 +97,33 @@ export async function listMapFeatures(
   query: MapFeaturesQuery,
 ): Promise<MapFeaturesResponse> {
   return inTenant(sessions, context, 'site:read', (session) => session.objects.mapFeatures(query));
+}
+
+/**
+ * Photos of an object (PLAN-05): the image follows the controlled upload
+ * chain of documents; it reaches the snapshot and the tablets once checked.
+ */
+export async function createObjectPhoto(
+  deps: DocumentDependencies,
+  context: RequestContext,
+  objectId: string,
+  input: ObjectPhotoCreate,
+): Promise<ObjectPhotoUpload> {
+  const storage = requireStorage(deps);
+  const created = await inTenant(deps.sessions, context, 'site:write', async (session) =>
+    found(await session.objects.createPhoto(objectId, input), 'Objet introuvable.'),
+  );
+  return { photo: created.photo, upload: await uploadTicket(storage, created.upload) };
+}
+
+export function updateObjectPhoto(
+  sessions: SessionFactory,
+  context: RequestContext,
+  id: string,
+  expectedVersion: number,
+  patch: ObjectPhotoUpdate,
+): Promise<ObjectPhoto> {
+  return inTenant(sessions, context, 'site:write', async (session) =>
+    found(await session.objects.updatePhoto(id, expectedVersion, patch), 'Photo introuvable.'),
+  );
 }

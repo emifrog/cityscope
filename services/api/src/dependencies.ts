@@ -20,7 +20,12 @@ import type { ApiDependencies } from './app';
 export function createApiDependencies(env: Env): ApiDependencies {
   const config = readApiEnv(env);
   const version = env['APP_VERSION'] ?? 'dev';
-  const pool = createPool({ connectionString: config.databaseUrl, applicationName: 'etare-api' });
+  const logger = createLogger({ component: 'api', version, env: config.appEnv });
+  const pool = createPool({
+    connectionString: config.databaseUrl,
+    applicationName: 'etare-api',
+    onIdleError: (error) => logger.warn('idle database connection lost', { error: error.message }),
+  });
   let openApi: unknown;
   return {
     sessions: new PostgresSessionFactory(pool),
@@ -42,7 +47,7 @@ export function createApiDependencies(env: Env): ApiDependencies {
     verifier: ed25519Verifier,
     randomBytes: (length) => new Uint8Array(randomBytes(length)),
     now: () => new Date(),
-    logger: createLogger({ component: 'api', version, env: config.appEnv }),
+    logger,
     version,
     openApiDocument: () => (openApi ??= buildOpenApiDocument()),
   };

@@ -49,8 +49,8 @@ terminal l’interroge, et un terminal perdu doit pouvoir être refusé.
 7. **Différentiel par empreinte** (arbitrage du point ouvert de l’ADR-004) : le cahier des charges parle de
    retransmettre les « objets modifiés » (OFF-02), l’architecture de fichiers adressés par empreinte
    (§11, prioritaire pour l’infrastructure). Retenu : un site inchangé n’est pas retéléchargé ; pour un
-   site modifié, seuls les plans, documents et PDF d’empreinte nouvelle sont transférés, plus son fichier
-   de données (quelques dizaines de Ko).
+   site modifié, seuls les plans, photos, documents et PDF d’empreinte nouvelle sont transférés, plus son
+   fichier de données (quelques dizaines de Ko).
 8. **Reçus et administration.** `POST /sync/receipts` (jusqu’à 1 Mo) enregistre la génération installée,
    l’issue (`installed`, `partial`, `error`) et les publications actives du terminal
    (`device_publication`, pour retrouver les terminaux restés sur une version). L’onglet « Terminaux »

@@ -43,6 +43,7 @@ import {
   useSiteObjects,
 } from '@/lib/queries';
 import { ObjectForm, type ObjectFormValues } from './object-form';
+import { ObjectPhotos } from './object-photos';
 
 type Editing =
   | { readonly kind: 'none' }
@@ -514,6 +515,7 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
                     : undefined
                 }
               />
+              {editing.object ? <ObjectPhotos siteId={site.id} objectId={editing.object.id} /> : null}
             </CardContent>
           </Card>
         ) : null}

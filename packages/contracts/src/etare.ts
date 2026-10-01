@@ -116,6 +116,14 @@ export const etareSnapshotSchema = z
           criticality: z.enum(CRITICALITIES),
           status: z.enum(OBJECT_STATUSES).exclude(['archived']),
           verified_at: isoDateTimeSchema.nullable(),
+          /** Checked photos (PLAN-05); absent when there are none, as in snapshots made before them. */
+          photos: z
+            .array(
+              z
+                .object({ id: uuidSchema, caption: z.string().nullable(), asset: snapshotAsset })
+                .meta({ id: 'SnapshotObjectPhoto' }),
+            )
+            .optional(),
         })
         .meta({ id: 'SnapshotObject' }),
     ),

@@ -1,10 +1,14 @@
-import type { OperationalObjectRepository } from '@etare/application';
+import type { OperationalObjectRepository, PendingUpload } from '@etare/application';
 import {
   mapFeaturesResponseSchema,
+  objectPhotoSchema,
   objectTypeSchema,
   operationalObjectSchema,
   type MapFeaturesQuery,
   type MapFeaturesResponse,
+  type ObjectPhoto,
+  type ObjectPhotoCreate,
+  type ObjectPhotoUpdate,
   type ObjectType,
   type OperationalObject,
   type OperationalObjectCreate,
@@ -18,6 +22,7 @@ import {
   planPositionJoin,
   localGeometry,
 } from './plan-position';
+import { ASSET_COLUMNS, insertPendingAsset, toAsset, type AssetColumns } from './pending-asset';
 import type { PoolClient } from './pool';
 import { applyAssignments, asGeoJsonText, assignments, lockVersion, toIso } from './versioned';
 
@@ -32,6 +37,16 @@ const OBJECT_SELECT = `
          t.name as type_name, t.category, o.name, o.label, extensions.st_asgeojson(o.geom, 7)::json as geometry,
          ${planPositionColumn('o')}, o.properties, o.instructions,
          o.criticality, o.status, o.verified_at, o.row_version,
+         coalesce((
+           select jsonb_agg(jsonb_build_object(
+                    'id', p.id, 'object_id', p.object_id, 'caption', p.caption, 'sort_order', p.sort_order,
+                    'status', p.status, 'created_at', p.created_at, 'row_version', p.row_version,
+                    'asset', jsonb_build_object('id', a.id, 'filename', a.filename, 'mime_type', a.mime_type,
+                      'size_bytes', a.size_bytes, 'sha256', a.sha256, 'scan_status', a.scan_status,
+                      'rejection_reason', a.scan_detail ->> 'reason', 'created_at', a.created_at))
+                  order by p.sort_order, p.created_at, p.id)
+           from app.object_photo p join app.asset a on a.tenant_id = p.tenant_id and a.id = p.asset_id
+           where p.object_id = o.id and p.status = 'active'), '[]'::jsonb) as photos,
          case when o.geom is not null and s.geom is not null
               then round(extensions.st_distance(o.geom::extensions.geography, s.geom::extensions.geography))::float8
          end as distance_m
@@ -50,8 +65,49 @@ interface ObjectRow extends Omit<OperationalObject, 'verified_at'> {
   verified_at: Date | null;
 }
 
+/** Timestamps of JSON aggregates come as PostgreSQL text: normalized to ISO 8601. */
+const isoText = (value: unknown) => (typeof value === 'string' ? new Date(value).toISOString() : value);
+
+type JsonPhoto = Record<string, unknown> & { asset: Record<string, unknown> };
+
 const toObject = (row: ObjectRow): OperationalObject =>
-  operationalObjectSchema.parse({ ...row, verified_at: toIso(row.verified_at) });
+  operationalObjectSchema.parse({
+    ...row,
+    verified_at: toIso(row.verified_at),
+    photos: (row.photos as unknown as JsonPhoto[]).map((photo) => ({
+      ...photo,
+      created_at: isoText(photo['created_at']),
+      asset: { ...photo.asset, created_at: isoText(photo.asset['created_at']) },
+    })),
+  });
+
+interface PhotoRow extends AssetColumns {
+  id: string;
+  object_id: string;
+  caption: string | null;
+  sort_order: number;
+  status: 'active' | 'archived';
+  created_at: Date;
+  row_version: number;
+}
+
+const PHOTO_SELECT = `
+  select p.id, p.object_id, p.caption, p.sort_order, p.status, p.created_at, p.row_version, ${ASSET_COLUMNS}
+  from app.object_photo p
+  join app.asset a on a.tenant_id = p.tenant_id and a.id = p.asset_id
+  where p.tenant_id = app.current_tenant_id()`;
+
+const toPhoto = (row: PhotoRow): ObjectPhoto =>
+  objectPhotoSchema.parse({
+    id: row.id,
+    object_id: row.object_id,
+    caption: row.caption,
+    sort_order: row.sort_order,
+    status: row.status,
+    created_at: row.created_at.toISOString(),
+    row_version: row.row_version,
+    asset: toAsset(row),
+  });
 
 export class PostgresOperationalObjectRepository implements OperationalObjectRepository {
   constructor(private readonly client: PoolClient) {}
@@ -130,6 +186,42 @@ export class PostgresOperationalObjectRepository implements OperationalObjectRep
     if (patch.verified) values.push({ column: 'verified_at', raw: 'now()' });
     await applyAssignments(this.client, 'app.operational_object', id, values);
     return this.get(id);
+  }
+
+  async createPhoto(
+    objectId: string,
+    input: ObjectPhotoCreate,
+  ): Promise<{ photo: ObjectPhoto; upload: PendingUpload } | null> {
+    const { rows } = await this.client.query<{ tenant_id: string; site_id: string; next_order: number }>(
+      `select o.tenant_id, o.site_id,
+              coalesce((select max(p.sort_order) + 1 from app.object_photo p where p.object_id = o.id), 0) as next_order
+       from app.operational_object o
+       where o.id = $1 and o.tenant_id = app.current_tenant_id() and o.status <> 'archived'`,
+      [objectId],
+    );
+    const object = rows[0];
+    if (!object) return null;
+    const upload = await insertPendingAsset(this.client, object.tenant_id, object.site_id, input.file);
+    const inserted = await this.client.query<{ id: string }>(
+      `insert into app.object_photo (tenant_id, site_id, object_id, asset_id, caption, sort_order)
+       values ($1, $2, $3, $4, $5, $6) returning id`,
+      [object.tenant_id, object.site_id, objectId, upload.assetId, input.caption ?? null, object.next_order],
+    );
+    const photo = await this.photo(inserted.rows[0]?.id ?? '');
+    if (!photo) throw new Error('Photo not readable after its creation.');
+    return { photo, upload };
+  }
+
+  async updatePhoto(id: string, expectedVersion: number, patch: ObjectPhotoUpdate): Promise<ObjectPhoto | null> {
+    if (!(await lockVersion(this.client, 'app.object_photo', id, expectedVersion))) return null;
+    const values = assignments(patch, { caption: 'caption', status: 'status' });
+    await applyAssignments(this.client, 'app.object_photo', id, values);
+    return this.photo(id);
+  }
+
+  private async photo(id: string): Promise<ObjectPhoto | null> {
+    const { rows } = await this.client.query<PhotoRow>(`${PHOTO_SELECT} and p.id = $1`, [id]);
+    return rows[0] ? toPhoto(rows[0]) : null;
   }
 
   async mapFeatures(query: MapFeaturesQuery): Promise<MapFeaturesResponse> {

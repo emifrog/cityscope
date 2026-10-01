@@ -24,6 +24,7 @@ const water = (id: string, distance: number | null, overrides: Partial<Operation
   verified_at: null,
   distance_m: distance,
   row_version: 1,
+  photos: [],
   ...overrides,
 });
 

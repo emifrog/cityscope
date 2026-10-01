@@ -3,8 +3,11 @@ import 'dart:async';
 import 'package:etare_ops/src/core/formatting/date_formatting.dart';
 import 'package:etare_ops/src/core/routing/app_routes.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
+import 'package:etare_ops/src/features/ops/application/ops_providers.dart';
 import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
 import 'package:etare_ops/src/features/ops/domain/published_site.dart';
+import 'package:etare_ops/src/features/ops/presentation/document_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -192,6 +195,10 @@ class ItemSheet extends StatelessWidget {
             child: Text(text, style: textTheme.bodyLarge),
           ),
         ],
+        if (object != null && object.photos.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          PhotoStrip(object: object),
+        ],
         const SizedBox(height: 12),
         if (location != null) row('Emplacement', location),
         if (risk?.quantity case final quantity?)
@@ -239,6 +246,101 @@ class ItemSheet extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Photos d'un point (PLAN-05), lues dans la base chiffrée ; un appui
+/// ouvre la photo en plein écran, avec zoom.
+class PhotoStrip extends ConsumerWidget {
+  const PhotoStrip({required this.object, super.key});
+
+  static Key thumbnailKey(String photoId) => Key('item.photo.$photoId');
+
+  final SiteObject object;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => SizedBox(
+    height: 148,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: object.photos.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 8),
+      itemBuilder: (context, index) {
+        final photo = object.photos[index];
+        final caption = photo.caption ?? 'Photo ${index + 1}';
+        final file = ref.watch(installedFileProvider(photo.assetSha256));
+        return Semantics(
+          button: true,
+          label: caption,
+          excludeSemantics: true,
+          child: InkWell(
+            key: thumbnailKey(photo.id),
+            borderRadius: BorderRadius.circular(8),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (context) => DocumentScreen(
+                  title: object.title,
+                  sha256: photo.assetSha256,
+                  mimeType: photo.mimeType,
+                  caption: caption,
+                ),
+              ),
+            ),
+            child: SizedBox(
+              width: 160,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: SizedBox(
+                        width: 160,
+                        child: switch (file) {
+                          AsyncData(value: final bytes?) => Image.memory(
+                            bytes,
+                            fit: BoxFit.cover,
+                            cacheWidth: 480,
+                            errorBuilder: (_, _, _) =>
+                                const _PhotoPlaceholder(),
+                          ),
+                          AsyncLoading() => const ColoredBox(
+                            color: BrandColors.background,
+                          ),
+                          _ => const _PhotoPlaceholder(),
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    caption,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
+
+class _PhotoPlaceholder extends StatelessWidget {
+  const _PhotoPlaceholder();
+
+  @override
+  Widget build(BuildContext context) => const ColoredBox(
+    color: BrandColors.background,
+    child: Center(
+      child: Icon(
+        Icons.image_not_supported_outlined,
+        color: BrandColors.textMuted,
+      ),
+    ),
+  );
 }
 
 class _Badge extends StatelessWidget {

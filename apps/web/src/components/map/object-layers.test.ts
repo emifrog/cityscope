@@ -24,6 +24,7 @@ const object = (overrides: Partial<OperationalObject>): OperationalObject => ({
   verified_at: null,
   distance_m: 91,
   row_version: 1,
+  photos: [],
   ...overrides,
 });
 

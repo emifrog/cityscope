@@ -6,11 +6,12 @@ import type {
   DocumentUploadResponse,
   DocumentVersionCreate,
   UploadConfirmation,
-  UploadTicket,
 } from '@etare/contracts';
-import { Conflict, ServiceUnavailable, type RequestContext } from '@etare/domain';
-import type { ObjectStorage, PendingUpload, SessionFactory } from './ports';
+import { Conflict, type RequestContext } from '@etare/domain';
+import { requireStorage, uploadTicket, type DocumentDependencies } from './uploads';
 import { found, inTenant } from './use-cases';
+
+export type { DocumentDependencies } from './uploads';
 
 /**
  * Documents and files (SITE-05). Files never transit through the API: the
@@ -18,24 +19,8 @@ import { found, inTenant } from './use-cases';
  * the file, and only verified files can be downloaded, through short-lived
  * URLs issued after an authorization check in PostgreSQL (and audited).
  */
-export interface DocumentDependencies {
-  readonly sessions: SessionFactory;
-  /** Null when the storage gateway is not configured (no server-side storage key). */
-  readonly storage: ObjectStorage | null;
-}
-
 export const ASSET_VERIFICATION_JOB = 'asset.verify';
 const DOWNLOAD_URL_SECONDS = 60;
-
-function requireStorage(deps: DocumentDependencies): ObjectStorage {
-  if (!deps.storage) throw new ServiceUnavailable('Le stockage des fichiers n’est pas configuré.');
-  return deps.storage;
-}
-
-async function ticket(storage: ObjectStorage, upload: PendingUpload): Promise<UploadTicket> {
-  const { url, headers, expiresAt } = await storage.createUploadUrl(upload.quarantineKey, upload.mimeType);
-  return { asset_id: upload.assetId, method: 'PUT', url, headers, expires_at: expiresAt.toISOString() };
-}
 
 export function listDocuments(
   deps: DocumentDependencies,
@@ -58,8 +43,7 @@ export async function createDocument(
   const created = await inTenant(deps.sessions, context, 'site:write', async (session) =>
     found(await session.documents.create(siteId, input), 'Site introuvable.'),
   );
-  // The signed URL is requested after the commit: no network call inside the transaction.
-  return { document: created.document, upload: await ticket(storage, created.upload) };
+  return { document: created.document, upload: await uploadTicket(storage, created.upload) };
 }
 
 export async function addDocumentVersion(
@@ -72,7 +56,7 @@ export async function addDocumentVersion(
   const created = await inTenant(deps.sessions, context, 'site:write', async (session) =>
     found(await session.documents.addVersion(documentId, input), 'Document introuvable.'),
   );
-  return { document: created.document, upload: await ticket(storage, created.upload) };
+  return { document: created.document, upload: await uploadTicket(storage, created.upload) };
 }
 
 export function updateDocument(

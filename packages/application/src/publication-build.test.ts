@@ -73,7 +73,33 @@ const snapshot: EtareSnapshot = {
     },
   ],
   zones: [],
-  objects: [],
+  objects: [
+    {
+      id: '06000008-0000-4000-8000-000000000001',
+      type_code: 'PEI',
+      type_name: 'Point d’eau incendie',
+      category: 'water',
+      name: null,
+      label: 'PI 12',
+      building_id: null,
+      level_id: null,
+      zone_id: null,
+      geometry: null,
+      plan_position: null,
+      properties: {},
+      instructions: null,
+      criticality: 'info',
+      status: 'active',
+      verified_at: null,
+      photos: [
+        {
+          id: '06000009-0000-4000-8000-000000000001',
+          caption: 'Accès au poteau',
+          asset: fileAsset('06000009-0000-4000-8000-0000000000a1', 'image/jpeg'),
+        },
+      ],
+    },
+  ],
   risks: [],
   catalog: { object_types: [], risk_types: [] },
   documents: (['always', 'on_demand', 'never'] as const).map((policy, index) => ({
@@ -114,6 +140,7 @@ describe('publication content', () => {
     expect(files.map((file) => [file.path, file.required])).toEqual([
       ['data/site.json', true],
       ['plans/06000007-0000-4000-8000-000000000001.png', true],
+      ['photos/06000009-0000-4000-8000-000000000001.jpg', true],
       ['documents/0600000b-0000-4000-8000-000000000000.pdf', true],
       ['documents/0600000b-0000-4000-8000-000000000001.pdf', false],
     ]);

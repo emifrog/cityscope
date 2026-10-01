@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:etare_ops/src/features/ops/domain/plan_items.dart';
 import 'package:etare_ops/src/features/ops/domain/published_site.dart';
+import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'ops_fixtures.dart';
@@ -31,7 +32,13 @@ void main() {
     test('risques par gravité, points par criticité et par entrée', () {
       expect(site.risks.map((risk) => risk.severity), [4, 3]);
       expect(site.risks.first.critical, isTrue);
-      expect(site.objectsOf({'energy'}).single.title, 'TGBT principal');
+      final tgbt = site.objectsOf({'energy'}).single;
+      expect(tgbt.title, 'TGBT principal');
+      // Photo contrôlée (PLAN-05) ; une photo illisible est ignorée.
+      expect(tgbt.photos.map((photo) => (photo.id, photo.caption)), [
+        (photoId, 'Armoire TGBT'),
+      ]);
+      expect(tgbt.photos.single.assetSha256, sha256Hex(tinyPng));
       final pei = site.objectsOf({'water'}).single;
       expect(pei.outOfService, isTrue);
       expect(pei.location, (7.2509, 43.7074));

@@ -11,6 +11,7 @@ import {
   createContact,
   createExternalId,
   createLevel,
+  createObjectPhoto,
   createPlan,
   createSite,
   createSiteObject,
@@ -64,6 +65,7 @@ import {
   updateMember,
   updatePlan,
   updateSiteObject,
+  updateObjectPhoto,
   updateRiskType,
   updateSiteRisk,
   updateZone,
@@ -479,6 +481,25 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     const version = expectedVersion(c);
     const patch = await readBody(c, endpoints.updateObject.body);
     return respond(c, endpoints.updateObject, await updateSiteObject(deps.sessions, context, idOf(c), version, patch));
+  });
+
+  // Photos follow the controlled upload chain of documents (PLAN-05).
+  app.post(routerPath(endpoints.createObjectPhoto.path), async (c) => {
+    const context = await requestContext(c, endpoints.createObjectPhoto);
+    const input = await readBody(c, endpoints.createObjectPhoto.body);
+    const files = { sessions: deps.sessions, storage: deps.storage };
+    return respond(c, endpoints.createObjectPhoto, await createObjectPhoto(files, context, idOf(c), input));
+  });
+
+  app.patch(routerPath(endpoints.updateObjectPhoto.path), async (c) => {
+    const context = await requestContext(c, endpoints.updateObjectPhoto);
+    const version = expectedVersion(c);
+    const patch = await readBody(c, endpoints.updateObjectPhoto.body);
+    return respond(
+      c,
+      endpoints.updateObjectPhoto,
+      await updateObjectPhoto(deps.sessions, context, idOf(c), version, patch),
+    );
   });
 
   // ---------------------------------------------------------------- plans

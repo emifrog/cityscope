@@ -229,6 +229,7 @@ final class SiteObject {
     this.verifiedAt,
     this.location,
     this.placement,
+    this.photos = const [],
   });
 
   final String id;
@@ -250,8 +251,27 @@ final class SiteObject {
   final (double, double)? location;
   final PlanPlacement? placement;
 
+  /// Photos contrôlées (PLAN-05), installées avec la version.
+  final List<ObjectPhoto> photos;
+
   String get title => name ?? label ?? typeName;
   bool get outOfService => status == 'out_of_service';
+}
+
+/// Photo d'un point : le fichier, par empreinte, est dans la base chiffrée.
+@immutable
+final class ObjectPhoto {
+  const ObjectPhoto({
+    required this.id,
+    required this.assetSha256,
+    required this.mimeType,
+    this.caption,
+  });
+
+  final String id;
+  final String assetSha256;
+  final String mimeType;
+  final String? caption;
 }
 
 @immutable
@@ -535,6 +555,16 @@ final class PublishedSite {
           verifiedAt: date(item, 'verified_at'),
           location: _point(_object(item, 'geometry')),
           placement: PlanPlacement.fromJson(_object(item, 'plan_position')),
+          photos: _each(item['photos'], (photo) {
+            final asset = _object(photo, 'asset');
+            if (asset == null) return null;
+            return ObjectPhoto(
+              id: photo.requireString('id'),
+              caption: photo.optionalString('caption'),
+              assetSha256: asset.requireString('sha256'),
+              mimeType: asset.optionalString('mime_type') ?? 'image/jpeg',
+            );
+          }),
         ),
       ),
       risks: _each(

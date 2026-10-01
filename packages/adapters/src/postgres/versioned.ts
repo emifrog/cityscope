@@ -10,6 +10,7 @@ export type VersionedTable =
   | 'app.contact'
   | 'app.document'
   | 'app.operational_object'
+  | 'app.object_photo'
   | 'app.plan'
   | 'app.zone'
   | 'app.risk_occurrence'

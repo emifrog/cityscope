@@ -42,6 +42,15 @@ foi de ce que le navigateur annonce (extension, type MIME). Les fichiers ne tran
   purge planifiée des dépôts abandonnés et des objets orphelins de quarantaine reste à écrire.
 - Miniatures, conversion et extraction de texte s’ajouteront comme handlers en aval du verdict `clean`.
 
+## Complément du Sprint 4 — photos des objets (PLAN-05)
+
+Une photo attachée à un point opérationnel (accès, organe de coupure, PEI…) emprunte la même chaîne :
+`POST /objects/{id}/photos` déclare le fichier (PNG, JPEG ou WebP, 15 Mo au plus) et rend l’URL de
+dépôt, puis le worker rend son verdict. Elle est distincte des documents du site : rattachée à un objet,
+ordonnée, légendée, archivée plutôt que supprimée (`PATCH /object-photos/{id}`). Une photo contrôlée
+entre dans l’instantané ETARE et dans le paquet hors ligne (`photos/{id}.{ext}`, fichier obligatoire) ;
+la tablette l’affiche depuis sa base chiffrée, dans la fiche de l’objet.
+
 ## Critère de réexamen
 
 Fichiers volumineux (vidéos, maquettes 3D) imposant un dépôt fractionné, ou stockage objet hors Supabase.

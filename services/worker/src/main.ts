@@ -22,6 +22,7 @@ const pool = createPool({
   connectionString: env.databaseUrl,
   applicationName: 'etare-worker',
   max: env.concurrency + 2,
+  onIdleError: (error) => logger.warn('idle database connection lost', { error: error.message }),
 });
 
 const sha256 = async (content: Uint8Array | string) => createHash('sha256').update(content).digest('hex');

@@ -11,12 +11,16 @@ class DocumentScreen extends ConsumerWidget {
     required this.title,
     required this.sha256,
     required this.mimeType,
+    this.caption,
     super.key,
   });
 
   final String title;
   final String sha256;
   final String mimeType;
+
+  /// Légende affichée en entier sous une photo (le titre peut être tronqué).
+  final String? caption;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -26,9 +30,23 @@ class DocumentScreen extends ConsumerWidget {
       body: SafeArea(
         child: switch (file) {
           AsyncData(value: final bytes?) when mimeType.startsWith('image/') =>
-            InteractiveViewer(
-              maxScale: 8,
-              child: Center(child: Image.memory(bytes)),
+            Column(
+              children: [
+                Expanded(
+                  child: InteractiveViewer(
+                    maxScale: 8,
+                    child: Center(child: Image.memory(bytes)),
+                  ),
+                ),
+                if (caption case final text?)
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      text,
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                  ),
+              ],
             ),
           AsyncData(value: final bytes?) => _Notice(
             icon: Icons.picture_as_pdf_outlined,

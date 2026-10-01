@@ -49,6 +49,10 @@ import {
   type SiteListResponse,
   type SiteUpdate,
   type ObjectType,
+  type ObjectPhoto,
+  type ObjectPhotoCreate,
+  type ObjectPhotoUpdate,
+  type ObjectPhotoUpload,
   type OperationalObject,
   type OperationalObjectCreateInput,
   type OperationalObjectUpdate,
@@ -308,6 +312,29 @@ export const api = {
     patch: OperationalObjectUpdate,
   ): Promise<OperationalObject> =>
     call(endpoints.updateObject.response, pathOf(endpoints.updateObject.path, { id }), options, {
+      method: 'PATCH',
+      body: patch,
+      ifMatch: version,
+    }),
+
+  /** Declares a photo of an object; the answer carries the signed upload URL (PLAN-05). */
+  createObjectPhoto: (
+    options: ApiCallOptions,
+    objectId: string,
+    input: ObjectPhotoCreate,
+  ): Promise<ObjectPhotoUpload> =>
+    call(endpoints.createObjectPhoto.response, pathOf(endpoints.createObjectPhoto.path, { id: objectId }), options, {
+      method: 'POST',
+      body: input,
+    }),
+
+  updateObjectPhoto: (
+    options: ApiCallOptions,
+    id: string,
+    version: number,
+    patch: ObjectPhotoUpdate,
+  ): Promise<ObjectPhoto> =>
+    call(endpoints.updateObjectPhoto.response, pathOf(endpoints.updateObjectPhoto.path, { id }), options, {
       method: 'PATCH',
       body: patch,
       ifMatch: version,

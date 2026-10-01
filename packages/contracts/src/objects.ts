@@ -9,9 +9,63 @@ import {
   uuidSchema,
 } from '@etare/schemas';
 import { z } from 'zod';
+import { assetSchema, fileDeclarationSchema, uploadTicketSchema } from './documents';
 import { planPlacementSchema, planPositionSchema } from './plans';
 
 const text = (max: number) => z.string().trim().min(1).max(max);
+
+// ------------------------------------------------------------------ photos of an object (PLAN-05)
+/** Photos are images only, and smaller than other files: they travel to every tablet. */
+export const PHOTO_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
+export const MAX_PHOTO_BYTES = 15 * 1024 * 1024;
+
+export const objectPhotoSchema = z
+  .object({
+    id: uuidSchema,
+    object_id: uuidSchema,
+    caption: z.string().nullable(),
+    sort_order: z.number().int(),
+    status: z.enum(['active', 'archived']),
+    /** The file and its verification state: only a checked photo is published. */
+    asset: assetSchema,
+    created_at: isoDateTimeSchema,
+    row_version: z.number().int().positive(),
+  })
+  .meta({ id: 'ObjectPhoto' });
+export type ObjectPhoto = z.infer<typeof objectPhotoSchema>;
+
+export const objectPhotoCreateSchema = z
+  .object({
+    caption: z.string().trim().min(1).max(200).nullable().optional(),
+    file: fileDeclarationSchema
+      .refine((file) => (PHOTO_MIME_TYPES as readonly string[]).includes(file.mime_type), {
+        message: 'Une photo est une image PNG, JPEG ou WebP.',
+        path: ['mime_type'],
+      })
+      .refine((file) => file.size_bytes <= MAX_PHOTO_BYTES, {
+        message: `Photo trop volumineuse (maximum ${MAX_PHOTO_BYTES / 1024 / 1024} Mo).`,
+        path: ['size_bytes'],
+      }),
+  })
+  .meta({ id: 'ObjectPhotoCreate' });
+export type ObjectPhotoCreate = z.infer<typeof objectPhotoCreateSchema>;
+
+export const objectPhotoUploadSchema = z
+  .object({ photo: objectPhotoSchema, upload: uploadTicketSchema })
+  .meta({ id: 'ObjectPhotoUpload' });
+export type ObjectPhotoUpload = z.infer<typeof objectPhotoUploadSchema>;
+
+export const objectPhotoUpdateSchema = z
+  .object({
+    caption: z.string().trim().min(1).max(200).nullable().optional(),
+    /** Archiving is final (a photo is never deleted). */
+    status: z.literal('archived').optional(),
+  })
+  .refine((value) => value.caption !== undefined || value.status !== undefined, {
+    message: 'Aucune modification à enregistrer.',
+  })
+  .meta({ id: 'ObjectPhotoUpdate' });
+export type ObjectPhotoUpdate = z.infer<typeof objectPhotoUpdateSchema>;
 
 /** Position of an object on the map: a point, a line (fire lane) or a polygon (aerial ladder area). */
 export const exteriorGeometrySchema = z.union([pointSchema, lineStringSchema, polygonSchema]);
@@ -59,6 +113,8 @@ export const operationalObjectSchema = z
     verified_at: isoDateTimeSchema.nullable(),
     /** Distance in metres from the site reference point, when both are placed on the map. */
     distance_m: z.number().nullable(),
+    /** Active photos, in display order (PLAN-05). */
+    photos: z.array(objectPhotoSchema),
     row_version: z.number().int().positive(),
   })
   .meta({ id: 'OperationalObject' });

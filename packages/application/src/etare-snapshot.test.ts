@@ -111,7 +111,24 @@ const object = (id: string, overrides: Partial<OperationalObject> = {}): Operati
   verified_at: null,
   distance_m: null,
   row_version: 1,
+  photos: [],
   ...overrides,
+});
+
+const photo = (
+  id: string,
+  sortOrder: number,
+  status: 'clean' | 'pending' | 'rejected' = 'clean',
+  photoStatus: 'active' | 'archived' = 'active',
+): OperationalObject['photos'][number] => ({
+  id,
+  object_id: 'o1',
+  caption: `Photo ${id}`,
+  sort_order: sortOrder,
+  status: photoStatus,
+  created_at: '2026-09-30T10:00:00Z',
+  row_version: 1,
+  asset: { ...asset(`${id}-a`, status), mime_type: 'image/jpeg' },
 });
 
 const document = (id: string, status: 'clean' | 'pending'): Document => ({
@@ -222,6 +239,25 @@ describe('canonical snapshot', () => {
     expect(snapshot.plans.map((item) => item.id)).toEqual(['p1']);
     expect(snapshot.documents).toEqual([]);
   });
+
+  it('carries the checked photos of an object, and no key at all without photos', () => {
+    const photos = [photo('ph1', 0), photo('ph2', 1, 'pending'), photo('ph3', 2, 'clean', 'archived')];
+    const snapshot = buildSnapshot(data({ objects: [object('o1', { photos }), object('o0')] }));
+    expect(snapshot.objects.find((item) => item.id === 'o1')?.photos).toEqual([
+      {
+        id: 'ph1',
+        caption: 'Photo ph1',
+        asset: {
+          id: 'ph1-a',
+          filename: 'ph1-a.png',
+          mime_type: 'image/jpeg',
+          size_bytes: 1000,
+          sha256: 'a'.repeat(64),
+        },
+      },
+    ]);
+    expect(snapshot.objects.find((item) => item.id === 'o0')).not.toHaveProperty('photos');
+  });
 });
 
 describe('checks before submission', () => {
@@ -255,6 +291,21 @@ describe('checks before submission', () => {
     expect(levelOf(checks, 'site_location')).toBe('error');
     expect(levelOf(checks, 'positions_to_replace')).toBe('error');
     expect(levelOf(checks, 'documents')).toBe('error');
+  });
+
+  it('blocks a photo still being checked or refused, not an archived one', () => {
+    const checked = preSubmissionChecks(data({ objects: [object('o1', { photos: [photo('ph1', 0)] })] }), NOW);
+    expect(checked.find((check) => check.code === 'photos')).toMatchObject({ level: 'ok', detail: '1 photo prête.' });
+    const pending = preSubmissionChecks(
+      data({
+        objects: [object('o1', { photos: [photo('ph1', 0, 'rejected'), photo('ph2', 1, 'pending', 'archived')] })],
+      }),
+      NOW,
+    );
+    expect(pending.find((check) => check.code === 'photos')).toMatchObject({
+      level: 'error',
+      detail: 'o1 : photo en cours de contrôle ou refusée.',
+    });
   });
 
   it('asks to check contacts older than a year', () => {

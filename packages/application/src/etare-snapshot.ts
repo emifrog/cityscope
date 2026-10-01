@@ -47,6 +47,24 @@ const currentBackground = (plan: Plan) => plan.revisions.find((revision) => revi
  * Builds the canonical snapshot of a site: only what the terrain may use
  * (active records, OPS contacts, checked files, current backgrounds).
  */
+/** Checked photos of an object, in their order; the key is omitted when there are none. */
+function snapshotPhotos(object: OperationalObject) {
+  const photos = object.photos
+    .filter((photo) => photo.status === 'active' && photo.asset.scan_status === 'clean')
+    .map((photo) => ({
+      id: photo.id,
+      caption: photo.caption,
+      asset: {
+        id: photo.asset.id,
+        filename: photo.asset.filename,
+        mime_type: photo.asset.mime_type,
+        size_bytes: photo.asset.size_bytes,
+        sha256: photo.asset.sha256,
+      },
+    }));
+  return photos.length > 0 ? { photos } : {};
+}
+
 export function buildSnapshot(data: WorkingData): EtareSnapshot {
   const { site } = data;
   const snapshot: Omit<EtareSnapshot, 'catalog'> = {
@@ -141,6 +159,7 @@ export function buildSnapshot(data: WorkingData): EtareSnapshot {
         criticality: object.criticality,
         status: object.status,
         verified_at: object.verified_at,
+        ...snapshotPhotos(object),
       })),
     risks: data.risks
       .filter((risk) => risk.status === 'active')
@@ -328,6 +347,22 @@ export function preSubmissionChecks(data: WorkingData, now: Date): EtareCheck[] 
       : documents.length === 0
         ? 'Aucun document.'
         : plural(documents.length, 'document prêt', 'documents prêts') + '.',
+  );
+
+  const photographed = data.objects.filter((object) => object.status !== 'archived');
+  const photos = photographed.flatMap((object) => object.photos.filter((photo) => photo.status === 'active'));
+  const unready = photographed.filter((object) =>
+    object.photos.some((photo) => photo.status === 'active' && photo.asset.scan_status !== 'clean'),
+  );
+  add(
+    'photos',
+    unready.length > 0 ? 'error' : 'ok',
+    'Photos contrôlées',
+    unready.length > 0
+      ? `${unready.map((object) => object.label ?? object.name ?? object.type_name).join(', ')} : photo en cours de contrôle ou refusée.`
+      : photos.length === 0
+        ? 'Aucune photo.'
+        : plural(photos.length, 'photo prête', 'photos prêtes') + '.',
   );
   return checks;
 }

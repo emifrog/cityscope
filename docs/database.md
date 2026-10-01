@@ -28,6 +28,7 @@ pas exposé par la Data API Supabase (`supabase/config.toml` → `api.schemas`),
 | `20261003000400_publication_build_consistency.sql` | Correctifs du 30/09/2026 : fencing de la fabrication par le bail du travail (`lock_publication_job`), PDF immuable (`publication.pdf_storage_key`), baux expirés sans effet, échec définitif d’un travail propagé à la publication |
 | `20261003000300_publication_pdf.sql`               | Sprint 3 : `worker_publication_assets` (clés de stockage des fonds de plans contrôlés d’une publication, pour le PDF)                                                                                                              |
 | `20261004000100_offline_distribution.sql`          | Sprint 4 : manifeste signé (`publication.manifest_signature`), terminaux (`device`), génération du catalogue par SIS, état et publications des terminaux, fonctions `admin_*_device`, `enroll_device`, `sync_*`                    |
+| `20261004000200_object_photos.sql`                 | Sprint 4 : photos des objets (`object_photo`) : image contrôlée du même site, rattachement immuable, archivage définitif, jamais supprimée                                                                                         |
 
 ## Correspondance avec les documents de cadrage
 
@@ -172,6 +173,13 @@ l’application (`packages/domain/src/objects.ts`) : seules les propriétés dé
 Les distances au point du site se calculent en `geography` (mètres). Voir le test
 `90_operational_objects`.
 
+Une photo d’objet (`app.object_photo`, PLAN-05) relie un `asset` à un objet du même site. Le trigger
+`object_photo_guard` exige une image (PNG, JPEG, WebP) déposée pour ce site, garde le rattachement à
+l’objet et au fichier, rend l’archivage définitif et interdit la suppression ; un fichier n’illustre
+qu’une photo. La photo suit la chaîne de dépôt contrôlé (ADR-009) : seules les photos actives au verdict
+`clean` entrent dans l’instantané ETARE, et une photo en contrôle ou refusée bloque la soumission
+(contrôle « Photos contrôlées »). Voir le test `130_object_photos`.
+
 ## Éléments des plans et risques
 
 Le trigger `placement` (`zone`, `operational_object`, `risk_occurrence`) applique les règles de
@@ -204,5 +212,7 @@ les tables métier et par `app.record_audit_event()`. Aucun rôle applicatif ne 
 
 `supabase/tests/database/*.test.sql` (pgTAP, `pnpm test:db`) : invariants structurels, isolation
 multi-SIS, RBAC/MFA/séparation des tâches, immutabilité des publications, audit, file de tâches,
-édition du référentiel, verdict des fichiers, habilitations, placement sur les plans et catalogue des risques. Les tests d’intégration ajoutent des données à la base
-locale : les assertions portent sur l’isolation, pas sur des listes exactes.
+édition du référentiel, verdict des fichiers, habilitations, placement sur les plans et catalogue des
+risques, distribution hors ligne et photos des objets. Les tests d’intégration ajoutent des données à la
+base locale : les assertions portent sur l’isolation, pas sur des listes exactes. Les tests pgTAP
+supposent la base du seed : relancer `pnpm db:reset` après une démonstration (publication, enrôlement).

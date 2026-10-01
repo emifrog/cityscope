@@ -5,6 +5,7 @@ import type {
   DocumentUploadResponse,
   FileDeclaration,
   MapSitesQuery,
+  OperationalObject,
   Plan,
   SiteListQuery,
   UploadTicket,
@@ -146,13 +147,17 @@ export const useBuildings = (siteId: string) => useSiteList(siteId, 'buildings',
 export const useClassifications = (siteId: string) => useSiteList(siteId, 'classifications', api.listClassifications);
 export const useContacts = (siteId: string) => useSiteList(siteId, 'contacts', api.listContacts);
 export const useExternalIds = (siteId: string) => useSiteList(siteId, 'external-ids', api.listExternalIds);
-/** Operational objects of a site; null (no site selected): nothing requested. */
+/**
+ * Operational objects of a site; null (no site selected): nothing requested.
+ * Refreshed while a photo waits for the verdict of the worker.
+ */
 export function useSiteObjects(siteId: string | null) {
   const { tenantId, options, enabled } = useApiContext();
   return useQuery({
     queryKey: queryKeys.siteRecords(tenantId ?? 'none', siteId ?? 'none', 'objects'),
     enabled: enabled && siteId !== null,
     queryFn: ({ signal }) => api.listSiteObjects({ ...options, signal }, siteId ?? ''),
+    refetchInterval: (query) => (photosAwaitVerdict(query.state.data) ? VERDICT_POLL_MS : false),
   });
 }
 
@@ -281,6 +286,13 @@ function awaitsVerdict(documents: readonly Document[] | undefined, now = Date.no
     ),
   );
 }
+
+const photosAwaitVerdict = (objects: readonly OperationalObject[] | undefined, now = Date.now()) =>
+  (objects ?? []).some((object) =>
+    object.photos.some(
+      (photo) => photo.asset.scan_status === 'pending' && now - Date.parse(photo.asset.created_at) < VERDICT_WAIT_MS,
+    ),
+  );
 
 const plansAwaitVerdict = (plans: readonly Plan[] | undefined, now = Date.now()) =>
   (plans ?? []).some((plan) =>

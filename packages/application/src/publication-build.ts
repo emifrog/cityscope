@@ -121,9 +121,9 @@ const EXTENSIONS: Readonly<Record<string, string>> = {
 const extension = (mimeType: string) => EXTENSIONS[mimeType] ?? 'bin';
 
 /**
- * Files of the publication, by hash: the data file, the plan backgrounds and
- * the documents meant for offline use ("always" required, "on demand"
- * optional). Paths are relative, without traversal (architecture §10).
+ * Files of the publication, by hash: the data file, the plan backgrounds, the
+ * photos of objects and the documents meant for offline use ("always"
+ * required, "on demand" optional). Paths are relative, without traversal (architecture §10).
  */
 export function publicationFiles(snapshot: EtareSnapshot, data: { sha256: string; sizeBytes: number }): ManifestFile[] {
   return [
@@ -141,6 +141,15 @@ export function publicationFiles(snapshot: EtareSnapshot, data: { sha256: string
       media_type: plan.background.asset.mime_type,
       required: true,
     })),
+    ...snapshot.objects.flatMap((object) =>
+      (object.photos ?? []).map((photo) => ({
+        path: `photos/${photo.id}.${extension(photo.asset.mime_type)}`,
+        sha256: photo.asset.sha256,
+        size_bytes: photo.asset.size_bytes,
+        media_type: photo.asset.mime_type,
+        required: true,
+      })),
+    ),
     ...snapshot.documents
       .filter((document) => document.offline_policy !== 'never')
       .map((document) => ({

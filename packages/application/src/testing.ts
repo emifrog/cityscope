@@ -70,6 +70,8 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       get: unstubbed('objects.get'),
       create: unstubbed('objects.create'),
       update: unstubbed('objects.update'),
+      createPhoto: unstubbed('objects.createPhoto'),
+      updatePhoto: unstubbed('objects.updatePhoto'),
       mapFeatures: unstubbed('objects.mapFeatures'),
       ...overrides.objects,
     },

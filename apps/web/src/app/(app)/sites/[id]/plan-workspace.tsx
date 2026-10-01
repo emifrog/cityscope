@@ -52,6 +52,7 @@ import {
   useSiteZones,
 } from '@/lib/queries';
 import { ObjectForm, type ObjectFormValues } from './object-form';
+import { ObjectPhotos } from './object-photos';
 import { RiskForm, ZoneForm, type RiskFormValues, type ZoneFormValues } from './plan-item-forms';
 
 type ItemKind = 'object' | 'zone' | 'risk';
@@ -594,18 +595,21 @@ export function PlanWorkspace({
               ) : null}
               {problem ? <p className="text-sm text-critical">{problem}</p> : null}
               {editing.kind === 'object' ? (
-                <ObjectForm
-                  key={editing.item?.id ?? `new-${editing.type.id}`}
-                  type={editing.type}
-                  object={editing.item}
-                  geometryReady={geometryReady}
-                  saving={saving}
-                  error={run.error}
-                  surface="plan"
-                  onSave={saveObject}
-                  onCancel={stop}
-                  onDelete={editing.item ? remove : undefined}
-                />
+                <>
+                  <ObjectForm
+                    key={editing.item?.id ?? `new-${editing.type.id}`}
+                    type={editing.type}
+                    object={editing.item}
+                    geometryReady={geometryReady}
+                    saving={saving}
+                    error={run.error}
+                    surface="plan"
+                    onSave={saveObject}
+                    onCancel={stop}
+                    onDelete={editing.item ? remove : undefined}
+                  />
+                  {editing.item ? <ObjectPhotos siteId={siteId} objectId={editing.item.id} /> : null}
+                </>
               ) : editing.kind === 'zone' ? (
                 <ZoneForm
                   key={editing.item?.id ?? 'new-zone'}

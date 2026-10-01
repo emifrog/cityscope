@@ -65,8 +65,10 @@ class _NotEnrolled extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final purged =
-        run is SyncRunFinished && (run as SyncRunFinished).report is SyncPurged;
+    final purge = switch (run) {
+      SyncRunFinished(report: SyncPurged(:final reason)) => reason,
+      _ => null,
+    };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -80,10 +82,9 @@ class _NotEnrolled extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        if (purged)
+        if (purge != null)
           Text(
-            'Cette tablette a été révoquée par votre SIS : les données hors '
-            'ligne ont été effacées.',
+            purgeMessage(purge),
             style: textTheme.bodyLarge?.copyWith(color: BrandColors.critical),
           )
         else

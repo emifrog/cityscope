@@ -1,13 +1,15 @@
 /**
  * Sprint 4 — offline distribution through the real stack (OFF-01 to OFF-04,
  * ADMIN-02): a terminal declared by the administration, enrolled with its own
- * key, then served a signed catalogue, a signed package and its files, with
- * installation receipts and revocation. Runs on a site published for the test.
+ * key, then served a signed catalogue, a signed package and its files (data,
+ * PDF, checked photos), with installation receipts and revocation. Runs on a
+ * site published for the test.
  */
 import { createHash, createPublicKey, generateKeyPairSync, sign, type KeyObject } from 'node:crypto';
 import {
   Ed25519Signer,
   PdfLibEtareRenderer,
+  PostgresAssetVerificationStore,
   PostgresJobQueue,
   PostgresPublicationBuildStore,
   SupabaseObjectStorage,
@@ -16,6 +18,7 @@ import {
   verifyEd25519,
 } from '@etare/adapters';
 import { createApiApp, createApiDependencies } from '@etare/api';
+import { antivirusNotConfigured } from '@etare/application';
 import {
   API_BASE_PATH,
   endpoints,
@@ -24,7 +27,7 @@ import {
   type EtareRevision,
 } from '@etare/contracts';
 import { deviceRequestText, enrollmentText, normalizeEnrollmentCode, signedText } from '@etare/domain';
-import { HandlerRegistry, createWorker, publicationBuildHandler } from '@etare/worker';
+import { HandlerRegistry, assetVerificationHandler, createWorker, publicationBuildHandler } from '@etare/worker';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { TENANT_06, TENANT_83, authApi, requireEnv, signIn, withSecondFactor } from './helpers';
 
@@ -37,9 +40,16 @@ const workerPool = createPool({
 });
 
 const sha256 = async (content: string | Uint8Array) => createHash('sha256').update(content).digest('hex');
+const objects = SupabaseObjectStorage.fromSecretKey(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SECRET_KEY'));
 const worker = createWorker({
   queue: new PostgresJobQueue(workerPool, 'integration-distribution'),
   registry: new HandlerRegistry([
+    assetVerificationHandler({
+      store: new PostgresAssetVerificationStore(workerPool),
+      objects,
+      scanner: antivirusNotConfigured,
+      sha256,
+    }),
     publicationBuildHandler({
       store: new PostgresPublicationBuildStore(workerPool),
       tools: {
@@ -50,7 +60,7 @@ const worker = createWorker({
       },
       artifacts: {
         renderer: new PdfLibEtareRenderer(),
-        objects: SupabaseObjectStorage.fromSecretKey(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SECRET_KEY')),
+        objects,
         sha256Bytes: sha256,
       },
     }),
@@ -130,6 +140,7 @@ let adminFactor: { token: string; factorId: string } | undefined;
 let validatorFactor: { token: string; factorId: string } | undefined;
 let siteId = '';
 let publicationId = '';
+const photo = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, ...new TextEncoder().encode(`photo ${Date.now()}`)]);
 
 beforeAll(async () => {
   const [editor, validator, adminToken, ops, editor83] = await Promise.all([
@@ -158,6 +169,33 @@ beforeAll(async () => {
   });
   expect(created.status).toBe(201);
   siteId = ((await created.json()) as { id: string }).id;
+  // A hydrant with a checked photo (PLAN-05): the image travels with the package.
+  const types = endpoints.listObjectTypes.response.parse(await (await editor06('GET', '/object-types')).json()).items;
+  const hydrant = endpoints.createSiteObject.response.parse(
+    await (
+      await editor06('POST', `/sites/${siteId}/objects`, {
+        object_type_id: types.find((type) => type.code === 'PEI')?.id,
+        label: 'PEI 1',
+        geometry: { type: 'Point', coordinates: [7.2701, 43.7101] },
+      })
+    ).json(),
+  );
+  const declared = endpoints.createObjectPhoto.response.parse(
+    await (
+      await editor06('POST', `/objects/${hydrant.id}/photos`, {
+        caption: 'Poteau',
+        file: {
+          filename: 'pei.jpg',
+          mime_type: 'image/jpeg',
+          size_bytes: photo.byteLength,
+          sha256: await sha256(photo),
+        },
+      })
+    ).json(),
+  );
+  await fetch(declared.upload.url, { method: 'PUT', headers: declared.upload.headers, body: photo });
+  await editor06('POST', `/assets/${declared.upload.asset_id}/uploaded`);
+  await worker.runOnce();
   const draft = endpoints.createRevision.response.parse(
     await (await editor06('POST', `/sites/${siteId}/etare/revisions`, { change_summary: 'Hors ligne' })).json(),
   );
@@ -269,16 +307,21 @@ describe('offline distribution', () => {
     expect(Buffer.byteLength(pkg.data, 'utf8')).toBe(dataFile?.size_bytes);
 
     const pdf = manifest.files.find((file) => file.path === 'etare.pdf');
+    const image = manifest.files.find((file) => file.path.startsWith('photos/'));
+    expect(image).toMatchObject({ sha256: await sha256(photo), media_type: 'image/jpeg', required: true });
     const downloads = await device.request('POST', `/sync/publications/${publicationId}/downloads`, {
-      sha256: [pdf?.sha256, dataFile?.sha256, 'f'.repeat(64)],
+      sha256: [pdf?.sha256, image?.sha256, dataFile?.sha256, 'f'.repeat(64)],
     });
     expect(downloads.status).toBe(200);
     const { files } = endpoints.createSyncDownloads.response.parse(await downloads.json());
     // Only files of the package stored in object storage: never the data file nor an unknown hash.
-    expect(files.map((file) => file.sha256)).toEqual([pdf?.sha256]);
-    const bytes = new Uint8Array(await (await fetch(files[0]?.url ?? '')).arrayBuffer());
-    expect(await sha256(bytes)).toBe(pdf?.sha256);
-    expect(bytes.byteLength).toBe(pdf?.size_bytes);
+    expect(files.map((file) => file.sha256).sort()).toEqual([pdf?.sha256, image?.sha256].sort());
+    for (const expected of [pdf, image]) {
+      const url = files.find((file) => file.sha256 === expected?.sha256)?.url ?? '';
+      const bytes = new Uint8Array(await (await fetch(url)).arrayBuffer());
+      expect(await sha256(bytes)).toBe(expected?.sha256);
+      expect(bytes.byteLength).toBe(expected?.size_bytes);
+    }
   });
 
   it('records the installation receipt shown to the administration', async () => {
