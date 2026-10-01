@@ -283,9 +283,18 @@ Le PDF du dossier ETARE (depuis la synthèse du site) et les documents
 installés sont lus dans l'application avec `pdfrx` (MIT, moteur PDFium) :
 le fichier est ouvert depuis la mémoire, après lecture dans la base
 chiffrée, jamais copié en clair sur la tablette. Zoom au geste, pages
-précédente et suivante, message explicite si le PDF est illisible. Les
-documents « à la demande » ne sont pas encore téléchargeables depuis la
-tablette (DOC-02).
+précédente et suivante, message explicite si le PDF est illisible.
+
+Documents « à la demande » (DOC-02) : listés avec les documents essentiels,
+avec leur taille et leur état (« à télécharger », « sur la tablette »,
+progression). L'agent les télécharge explicitement depuis l'écran du
+document : requête signée par le terminal, fichier vérifié contre la taille
+et l'empreinte du manifeste signé, puis enregistré dans la base chiffrée. Il
+y reste tant que la version installée le référence (une nouvelle version qui
+change le document l'efface ; il faut alors le retélécharger), jusqu'au
+retrait par l'agent (« Retirer de la tablette ») ou à la purge du terminal.
+Sans réseau, l'écran dit exactement que le document manque et qu'il faudra
+du réseau pour l'obtenir. Les documents « jamais » restent au back-office.
 
 ## 8 bis. Signalements terrain (OPS-04, ADR-017)
 

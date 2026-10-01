@@ -1,6 +1,7 @@
 import 'package:etare_ops/src/core/formatting/date_formatting.dart';
 import 'package:etare_ops/src/core/routing/app_routes.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
+import 'package:etare_ops/src/features/ops/application/document_downloads.dart';
 import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
 import 'package:etare_ops/src/features/ops/domain/published_site.dart';
 import 'package:etare_ops/src/features/ops/presentation/document_screen.dart';
@@ -36,9 +37,8 @@ class SectionScreen extends ConsumerWidget {
           for (final contact in site.contacts) _ContactCard(contact: contact),
         ],
         OpsSection.documents => [
-          for (final document in site.documents)
-            if (document.offlinePolicy == 'always')
-              _DocumentTile(site: site, document: document),
+          for (final document in site.tabletDocuments)
+            _DocumentTile(site: site, document: document),
         ],
         _ => [
           for (final object in site.objectsOf(section.categories))
@@ -235,18 +235,27 @@ class _ContactCard extends StatelessWidget {
   }
 }
 
-class _DocumentTile extends StatelessWidget {
+class _DocumentTile extends ConsumerWidget {
   const _DocumentTile({required this.site, required this.document});
 
   final PublishedSite site;
   final SiteDocument document;
 
+  static Key keyOf(SiteDocument document) => Key('document.${document.id}');
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final expired =
         document.expiresAt != null &&
         document.expiresAt!.isBefore(DateTime.now().toUtc());
+    final availability = document.onDemand
+        ? _availability(ref, (
+            siteId: site.siteId,
+            sha256: document.assetSha256,
+          ))
+        : null;
     return ListTile(
+      key: keyOf(document),
       minVerticalPadding: 12,
       leading: Icon(
         document.mimeType.startsWith('image/')
@@ -258,14 +267,28 @@ class _DocumentTile extends StatelessWidget {
         document.title,
         style: Theme.of(context).textTheme.titleMedium,
       ),
-      subtitle: Text(
-        [
-          documentCategoryLabels[document.category] ?? document.category,
-          'version ${document.versionNo}',
-          if (document.expiresAt case final expires?)
-            '${expired ? 'expirée le' : 'valable jusqu’au'} ${formatDateFr(expires)}',
-        ].join(' · '),
-        style: expired ? const TextStyle(color: BrandColors.critical) : null,
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            [
+              documentCategoryLabels[document.category] ?? document.category,
+              'version ${document.versionNo}',
+              if (document.expiresAt case final expires?)
+                '${expired ? 'expirée le' : 'valable jusqu’au'} ${formatDateFr(expires)}',
+            ].join(' · '),
+            style: expired
+                ? const TextStyle(color: BrandColors.critical)
+                : null,
+          ),
+          if (availability case (final text, final color)) ...[
+            const SizedBox(height: 2),
+            Text(
+              text,
+              style: TextStyle(color: color, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ],
       ),
       trailing: const Icon(Icons.chevron_right),
       onTap: () => Navigator.of(context).push(
@@ -274,9 +297,35 @@ class _DocumentTile extends StatelessWidget {
             title: document.title,
             sha256: document.assetSha256,
             mimeType: document.mimeType,
+            onDemandSiteId: document.onDemand ? site.siteId : null,
           ),
         ),
       ),
     );
+  }
+
+  /// État d'un document « à la demande » : sur la tablette, à télécharger
+  /// (avec sa taille), en cours ou en échec (DOC-02).
+  static (String, Color) _availability(WidgetRef ref, SiteFile file) {
+    final size = ref.watch(installedFileInfoProvider(file)).value?.sizeBytes;
+    final sizeText = size == null ? '' : ' · ${formatBytesFr(size)}';
+    final present = ref.watch(fileOnTabletProvider(file.sha256)).value ?? false;
+    return switch (ref.watch(documentDownloadProvider(file))) {
+      _ when present => ('Sur la tablette$sizeText', BrandColors.success),
+      DocumentDownloading(:final fraction) => (
+        fraction == null
+            ? 'Téléchargement…'
+            : 'Téléchargement… ${(fraction * 100).round()} %',
+        BrandColors.info,
+      ),
+      DocumentDownloadFailed() => (
+        'Téléchargement échoué : touchez pour réessayer',
+        BrandColors.critical,
+      ),
+      DocumentDownloadIdle() => (
+        'À télécharger (réseau nécessaire)$sizeText',
+        BrandColors.important,
+      ),
+    };
   }
 }

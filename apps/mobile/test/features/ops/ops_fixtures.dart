@@ -8,6 +8,12 @@ import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
 final tinyPdf = utf8.encode('%PDF-1.4\n% ETARE de démonstration\n%%EOF\n');
 const documentVersionId = '0600000b-0000-4000-8000-0000000000d1';
 
+/// Document « à la demande » (DOC-02) : listé, téléchargé seulement si l'agent
+/// le demande ; un document « jamais » reste au back-office.
+final onDemandPdf = utf8.encode('%PDF-1.4\n% Plan de prévention\n%%EOF\n');
+const onDemandDocumentId = '0600000a-0000-4000-8000-0000000000d2';
+const onDemandVersionId = '0600000b-0000-4000-8000-0000000000d2';
+
 final tinyPng = base64.decode(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
 );
@@ -265,6 +271,44 @@ final payload = {
           },
         },
       },
+      {
+        'id': onDemandDocumentId,
+        'title': 'Plan de prévention',
+        'category': 'instruction',
+        'offline_policy': 'on_demand',
+        'version': {
+          'id': onDemandVersionId,
+          'version_no': 3,
+          'valid_from': null,
+          'expires_at': null,
+          'asset': {
+            'id': '06000005-0000-4000-8000-0000000000d2',
+            'filename': 'prevention.pdf',
+            'mime_type': 'application/pdf',
+            'size_bytes': onDemandPdf.length,
+            'sha256': sha256Hex(onDemandPdf),
+          },
+        },
+      },
+      {
+        'id': '0600000a-0000-4000-8000-0000000000d3',
+        'title': 'Contrat de maintenance',
+        'category': 'other',
+        'offline_policy': 'never',
+        'version': {
+          'id': '0600000b-0000-4000-8000-0000000000d3',
+          'version_no': 1,
+          'valid_from': null,
+          'expires_at': null,
+          'asset': {
+            'id': '06000005-0000-4000-8000-0000000000d3',
+            'filename': 'contrat.pdf',
+            'mime_type': 'application/pdf',
+            'size_bytes': 10,
+            'sha256': 'c' * 64,
+          },
+        },
+      },
     ],
     'catalog': {
       'object_types': [
@@ -329,6 +373,13 @@ InstallRecord installRecord() {
         sizeBytes: tinyPdf.length,
         mediaType: 'application/pdf',
         required: true,
+      ),
+      FileRecord(
+        path: 'documents/$onDemandVersionId.pdf',
+        sha256: sha256Hex(onDemandPdf),
+        sizeBytes: onDemandPdf.length,
+        mediaType: 'application/pdf',
+        required: false,
       ),
       FileRecord(
         path: 'photos/$photoId.png',

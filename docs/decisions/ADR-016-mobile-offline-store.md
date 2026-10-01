@@ -78,3 +78,20 @@ au-delà de 1 Mo), sans fichier temporaire.
 
 Mesures sur la tablette cible (taille de base, temps d’ouverture d’une fiche < 2 s, mémoire), ou besoin de
 lecture en flux de gros documents.
+
+## Complément du Sprint 6 — documents « à la demande » (DOC-02)
+
+- Un document `on_demand` figure dans le manifeste signé comme fichier non obligatoire (taille,
+  empreinte, type) ; il n'est ni compté dans la taille annoncée par le catalogue ni téléchargé par la
+  synchronisation. La tablette le liste avec sa taille et son état.
+- Le téléchargement est **explicite** (bouton de l'écran du document) et passe par la même requête
+  signée que la synchronisation (`POST /sync/publications/{id}/downloads`, auditée). Le fichier est
+  vérifié contre la taille et l'empreinte du manifeste de la **version installée**, puis rangé dans
+  `file_blob` (base chiffrée), seulement si une version installée le référence encore : une
+  synchronisation concurrente ne peut pas laisser un fichier orphelin visible.
+- Conservation : tant qu'une version installée le référence (le nettoyage des fichiers orphelins de
+  l'activation s'en charge ensuite), jusqu'au retrait par l'agent (jamais un fichier obligatoire) ou à
+  la purge. Une version plus récente publiée sur le serveur rend le document indisponible pour
+  l'ancienne : l'agent est invité à synchroniser.
+- Messages exacts : sans réseau (le document manque, il faudra du réseau), version plus distribuée,
+  fichier altéré (rien n'est enregistré), tablette refusée (la synchronisation purge).

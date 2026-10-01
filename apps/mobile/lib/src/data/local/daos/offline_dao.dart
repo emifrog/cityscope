@@ -198,6 +198,61 @@ class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
     publicationFiles,
   )..where((t) => t.publicationId.equals(publicationId))).get();
 
+  /// Fichier [sha256] de la version installée d'un site, tel que son
+  /// manifeste signé le décrit (taille, type, obligatoire ou non).
+  Future<PublicationFileRow?> installedFile(
+    String siteId,
+    String sha256,
+  ) async {
+    final site = await installedSite(siteId);
+    if (site == null) return null;
+    return (select(publicationFiles)
+          ..where(
+            (t) =>
+                t.publicationId.equals(site.publicationId) &
+                t.sha256.equals(sha256),
+          )
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  /// Présence locale d'un fichier, suivie en continu (documents à la demande).
+  Stream<bool> watchBlobPresent(String sha256) =>
+      (selectOnly(fileBlobs)
+            ..addColumns([fileBlobs.sha256])
+            ..where(fileBlobs.sha256.equals(sha256)))
+          .watch()
+          .map((rows) => rows.isNotEmpty);
+
+  /// Range un document « à la demande » vérifié (DOC-02), seulement si une
+  /// version installée le référence encore : une synchronisation a pu la
+  /// remplacer pendant le téléchargement. Renvoie `false` sinon.
+  Future<bool> storeOnDemandBlob(
+    String sha256,
+    Uint8List content,
+    DateTime now,
+  ) => transaction(() async {
+    final referenced = await (select(
+      publicationFiles,
+    )..where((t) => t.sha256.equals(sha256))).get();
+    if (referenced.isEmpty) return false;
+    await storeBlob(sha256, content, now);
+    return true;
+  });
+
+  /// Retire un document « à la demande » de la tablette ; un fichier
+  /// obligatoire d'une version installée n'est jamais retiré.
+  Future<bool> discardOnDemandBlob(String sha256) => transaction(() async {
+    final required = await (select(
+      publicationFiles,
+    )..where((t) => t.sha256.equals(sha256) & t.required.equals(true))).get();
+    if (required.isNotEmpty) return false;
+    final deleted = await (delete(
+      fileBlobs,
+    )..where((t) => t.sha256.equals(sha256))).go();
+    return deleted > 0;
+  });
+
   /// Active le nouveau jeu en une transaction. Une version n'est activée que
   /// si tous ses fichiers obligatoires sont présents : sinon rien n'est écrit.
   Future<void> activate(ActivationRecord activation) => transaction(() async {

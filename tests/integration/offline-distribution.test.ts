@@ -99,6 +99,7 @@ let validatorFactor: { token: string; factorId: string } | undefined;
 let siteId = '';
 let publicationId = '';
 const photo = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, ...new TextEncoder().encode(`photo ${Date.now()}`)]);
+const onDemand = new TextEncoder().encode(`%PDF-1.4\n% à la demande ${Date.now()}\n%%EOF\n`);
 
 beforeAll(async () => {
   const [editor, validator, adminToken, ops, editor83] = await Promise.all([
@@ -153,6 +154,25 @@ beforeAll(async () => {
   );
   await fetch(declared.upload.url, { method: 'PUT', headers: declared.upload.headers, body: photo });
   await editor06('POST', `/assets/${declared.upload.asset_id}/uploaded`);
+  await worker.runOnce();
+  // A document downloaded by the terminal on demand only (DOC-02).
+  const document = endpoints.createDocument.response.parse(
+    await (
+      await editor06('POST', `/sites/${siteId}/documents`, {
+        title: 'Plan de prévention',
+        category: 'instruction',
+        offline_policy: 'on_demand',
+        file: {
+          filename: 'prevention.pdf',
+          mime_type: 'application/pdf',
+          size_bytes: onDemand.byteLength,
+          sha256: await sha256(onDemand),
+        },
+      })
+    ).json(),
+  );
+  await fetch(document.upload.url, { method: 'PUT', headers: document.upload.headers, body: onDemand });
+  await editor06('POST', `/assets/${document.upload.asset_id}/uploaded`);
   await worker.runOnce();
   const draft = endpoints.createRevision.response.parse(
     await (await editor06('POST', `/sites/${siteId}/etare/revisions`, { change_summary: 'Hors ligne' })).json(),
@@ -268,6 +288,35 @@ describe('offline distribution', () => {
       expect(await sha256(bytes)).toBe(expected?.sha256);
       expect(bytes.byteLength).toBe(expected?.size_bytes);
     }
+  });
+
+  it('lists an on-demand document as optional and serves it when the terminal asks for it (DOC-02)', async () => {
+    const pkg = endpoints.getSyncPackage.response.parse(
+      await (await device.request('GET', `/sync/publications/${publicationId}`)).json(),
+    );
+    const manifest = publicationManifestSchema.parse(JSON.parse(pkg.manifest));
+    const optional = manifest.files.find((file) => file.path.startsWith('documents/'));
+    expect(optional).toMatchObject({
+      sha256: await sha256(onDemand),
+      size_bytes: onDemand.byteLength,
+      media_type: 'application/pdf',
+      required: false,
+    });
+    // Not counted in the size the catalogue announces for the installation.
+    const catalog = syncCatalogSchema.parse(
+      JSON.parse(
+        endpoints.getSyncCatalog.response.parse(await (await device.request('GET', '/sync/catalog')).json()).catalog,
+      ),
+    );
+    const required = manifest.files.filter((file) => file.required).reduce((sum, file) => sum + file.size_bytes, 0);
+    expect(catalog.publications.find((item) => item.publication_id === publicationId)?.size_bytes).toBe(required);
+
+    const downloads = await device.request('POST', `/sync/publications/${publicationId}/downloads`, {
+      sha256: [optional?.sha256],
+    });
+    const { files } = endpoints.createSyncDownloads.response.parse(await downloads.json());
+    const bytes = new Uint8Array(await (await fetch(files[0]?.url ?? '')).arrayBuffer());
+    expect(await sha256(bytes)).toBe(optional?.sha256);
   });
 
   it('records the installation receipt shown to the administration', async () => {

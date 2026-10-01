@@ -242,11 +242,15 @@ final class SyncApi {
   }
 
   /// Télécharge un fichier depuis une URL signée du stockage (sans jeton).
-  Future<Uint8List> download(Uri url) async {
+  Future<Uint8List> download(
+    Uri url, {
+    void Function(int received, int total)? onProgress,
+  }) async {
     try {
       final response = await _files.getUri<List<int>>(
         url,
         options: Options(responseType: ResponseType.bytes),
+        onReceiveProgress: onProgress,
       );
       final data = response.data;
       if (data == null) throw const UnexpectedResponseException('Fichier vide');

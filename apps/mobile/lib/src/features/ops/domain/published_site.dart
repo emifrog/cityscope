@@ -339,6 +339,15 @@ final class SiteDocument {
   final String mimeType;
   final String filename;
   final DateTime? expiresAt;
+
+  /// Installé avec chaque version (« essentiel hors ligne »).
+  bool get essential => offlinePolicy == 'always';
+
+  /// Téléchargé sur la tablette seulement à la demande de l'agent (DOC-02).
+  bool get onDemand => offlinePolicy == 'on_demand';
+
+  /// Proposé sur la tablette ; les autres restent au back-office.
+  bool get onTablet => essential || onDemand;
 }
 
 /// Champ déclaré par le catalogue pour les propriétés d'un type.
@@ -651,6 +660,15 @@ final class PublishedSite {
   final List<SiteDocument> documents;
   final Map<String, Map<String, FieldDefinition>> objectFields;
   final Map<String, Map<String, FieldDefinition>> riskFields;
+
+  /// Documents proposés sur la tablette : essentiels (installés) puis « à la
+  /// demande » (DOC-02).
+  List<SiteDocument> get tabletDocuments => [
+    for (final document in documents)
+      if (document.essential) document,
+    for (final document in documents)
+      if (document.onDemand) document,
+  ];
 
   List<SiteObject> objectsOf(Set<String> categories) => [
     for (final object in objects)

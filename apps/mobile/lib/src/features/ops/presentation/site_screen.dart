@@ -40,10 +40,7 @@ class _Synthesis extends StatelessWidget {
     OpsSection.risks => site.risks.length,
     OpsSection.plans => site.plans.length,
     OpsSection.contacts => site.contacts.length,
-    OpsSection.documents =>
-      site.documents
-          .where((document) => document.offlinePolicy == 'always')
-          .length,
+    OpsSection.documents => site.tabletDocuments.length,
     _ => site.objectsOf(section.categories).length,
   };
 

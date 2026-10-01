@@ -297,16 +297,21 @@ final class FakeSyncServer {
     if (downloads != null) {
       final body = jsonDecode(rawBody!) as Map<String, Object?>;
       final hashes = (body['sha256']! as List<Object?>).cast<String>();
+      // Comme l'API : rien pour une version qui n'est plus distribuée.
+      final distributed = catalog.values.any(
+        (publication) => publication.publicationId == downloads.group(1),
+      );
       return _json(200, {
         'files': [
-          for (final hash in hashes)
-            {
-              'sha256': hash,
-              'url': 'https://storage.test/$hash',
-              'expires_at': serverClock
-                  .add(const Duration(minutes: 5))
-                  .toIso8601String(),
-            },
+          if (distributed)
+            for (final hash in hashes)
+              {
+                'sha256': hash,
+                'url': 'https://storage.test/$hash',
+                'expires_at': serverClock
+                    .add(const Duration(minutes: 5))
+                    .toIso8601String(),
+              },
         ],
       });
     }
