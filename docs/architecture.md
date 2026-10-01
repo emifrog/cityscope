@@ -106,7 +106,8 @@ Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4, composants de sty
 - Routes : `/login`, `/verification` (second facteur), `/auth/confirm` (activation d’une invitation),
   `/` (tableau de bord), `/sites`, `/sites/[id]` (onglets dont Documents), `/compte` (habilitations,
   double authentification), `/administration` (membres, terminaux, risques), `/carte`, `/etare`,
-  `/validations` ; `/signalements` et `/contributions` sont encore des écrans d’attente.
+  `/validations`, `/signalements` (instruction des signalements terrain, ADR-017) ; `/contributions` est
+  encore un écran d’attente (portail exploitant).
 - Carte : MapLibre GL JS chargé à la demande côté navigateur ; son worker et le module qu’il importe sont
   copiés depuis le paquet installé vers `public/maplibre/` (`scripts/copy-browser-workers.mjs`, avant `dev`
   et `build`), le bundler ne pouvant pas les résoudre. Le style est construit depuis le catalogue
@@ -141,7 +142,8 @@ Handlers : `system.noop`, `publication.build` (fabrication d’une publication �
 figée : charge utile, manifeste signé par la clé de publication Ed25519 (ADR-015), empreintes, PDF ETARE dessiné avec `pdf-lib` et déposé sous une clé
 adressée par son empreinte, activation — ADR-013, ADR-014 ; chaque écriture est protégée par le jeton de
 fencing du bail, et le handler s’arrête dès que le runner signale la perte du bail) et `asset.verify` (contrôle des
-fichiers déposés, ADR-009), enregistré dès que `SUPABASE_URL` et `SUPABASE_SECRET_KEY` sont fournis.
+fichiers déposés, ADR-009 ; antivirus ClamAV par `ANTIVIRUS_URL`, obligatoire hors développement),
+enregistré dès que `SUPABASE_URL` et `SUPABASE_SECRET_KEY` sont fournis.
 Miniatures, imports et notifications restent à ajouter. La fabrication des publications, de leurs
 manifestes signés et de leurs PDF est déjà assurée par `publication.build`. Voir ADR-007.
 
@@ -160,7 +162,9 @@ Flutter en couches (`presentation / application / domain / data`), go_router, Ri
 sur SQLite **chiffrée (SQLCipher)**, stockage sécurisé des jetons, de la clé de base et de la graine du
 terminal. Les versions publiées installées (données, plans, photos, documents, PDF) sont stockées dans
 la base chiffrée et activées en une transaction (ADR-016). Écrans OPS lus sans réseau : recherche
-locale, synthèse, listes par entrée, plans tactiles avec calques, fiches et photos. Détails dans
+locale, synthèse, listes par entrée, plans tactiles avec calques, fiches et photos, PDF lus en mémoire
+(pdfrx). Signalements terrain (ADR-017) : saisie hors ligne, file chiffrée liée à l’auteur, envoi signé
+et idempotent, suivi de la suite donnée. Détails dans
 `apps/mobile/README.md`.
 
 ## Cartographie

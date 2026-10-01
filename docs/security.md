@@ -135,6 +135,11 @@ Voir ADR-015.
   l’état du terminal. Un terminal révoqué est refusé à la requête suivante (`DEVICE_REVOKED`).
 - Fichiers : URL signées de 5 minutes, seulement pour des empreintes présentes dans le manifeste d’une
   version distribuable ; téléchargements audités. Les sites sensibles ne sont pas distribués.
+- Signalements terrain (ADR-017) : transmis par requête signée du terminal, reçus une seule fois par
+  identifiant (empreinte du contenu accepté), élément et position vérifiés dans la version consultée ;
+  photos par la chaîne contrôlée et l’antivirus ; constat immuable, instruction réservée à
+  `field_report:review`. Sur la tablette, la file chiffrée est liée à son auteur et purgée à la
+  révocation. Une photo de signalement n’inscrit pas l’agent parmi les auteurs des données de travail.
 - Le catalogue accorde une consultation locale de 7 jours à l’utilisateur ; une horloge de tablette
   manipulée peut prolonger cette durée hors réseau (limite décrite par l’architecture §19).
 
