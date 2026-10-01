@@ -179,3 +179,115 @@ class SiteSearch extends Table {
   @override
   Set<Column<Object>> get primaryKey => {siteId};
 }
+
+/// Signalements terrain de l'agent (OPS-04, ADR-017) : conservés dans la base
+/// chiffrée jusqu'à l'accusé du serveur, liés à leur auteur. Le corps envoyé
+/// est reconstruit à l'identique depuis ces colonnes (renvoi idempotent).
+@DataClassName('FieldReportRow')
+class FieldReports extends Table {
+  @override
+  String get tableName => 'field_report';
+
+  /// Identifiant attribué hors ligne : clé d'idempotence côté serveur.
+  TextColumn get clientReportId => text()();
+
+  /// Sujet du jeton de l'auteur : seul lui voit et envoie ce signalement.
+  TextColumn get authorUserId => text()();
+
+  TextColumn get tenantId => text()();
+
+  TextColumn get siteId => text()();
+
+  TextColumn get siteName => text()();
+
+  /// Version publiée consultée lors du constat.
+  TextColumn get publicationId => text()();
+
+  IntColumn get publicationNumber => integer()();
+
+  TextColumn get category => text()();
+
+  TextColumn get severity => text()();
+
+  TextColumn get description => text()();
+
+  /// Heure du constat, texte ISO 8601 exact (le corps renvoyé doit être identique).
+  TextColumn get observedAt => text()();
+
+  TextColumn get itemType => text().nullable()();
+
+  TextColumn get itemId => text().nullable()();
+
+  TextColumn get itemLabel => text().nullable()();
+
+  TextColumn get planRevisionId => text().nullable()();
+
+  TextColumn get planTitle => text().nullable()();
+
+  RealColumn get planX => real().nullable()();
+
+  RealColumn get planY => real().nullable()();
+
+  IntColumn get photoCount => integer().withDefault(const Constant(0))();
+
+  /// `pending` (à transmettre ou photos en cours), `sent` (accusé et photos
+  /// transmises), `error` (refusé : à supprimer ou à corriger).
+  TextColumn get localState => text().withDefault(const Constant('pending'))();
+
+  TextColumn get lastError => text().nullable()();
+
+  IntColumn get attempts => integer().withDefault(const Constant(0))();
+
+  DateTimeColumn get nextAttemptAt => dateTime().nullable()();
+
+  TextColumn get serverReportId => text().nullable()();
+
+  TextColumn get contentHash => text().nullable()();
+
+  DateTimeColumn get receivedAt => dateTime().nullable()();
+
+  /// État d'instruction côté serveur (`new`, `triaged`, `resolved`, `rejected`).
+  TextColumn get serverStatus => text().nullable()();
+
+  TextColumn get decisionComment => text().nullable()();
+
+  DateTimeColumn get decidedAt => dateTime().nullable()();
+
+  IntColumn get resolutionRevisionNo => integer().nullable()();
+
+  IntColumn get resolutionPublicationNumber => integer().nullable()();
+
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {clientReportId};
+}
+
+/// Photos d'un signalement, chiffrées dans la base jusqu'à leur transmission
+/// (jamais conservées en clair sur la tablette).
+@DataClassName('FieldReportPhotoRow')
+class FieldReportPhotos extends Table {
+  @override
+  String get tableName => 'field_report_photo';
+
+  TextColumn get clientReportId => text().references(
+    FieldReports,
+    #clientReportId,
+    onDelete: KeyAction.cascade,
+  )();
+
+  IntColumn get position => integer()();
+
+  TextColumn get sha256 => text()();
+
+  TextColumn get mimeType => text()();
+
+  TextColumn get filename => text()();
+
+  BlobColumn get content => blob()();
+
+  BoolColumn get uploaded => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {clientReportId, position};
+}

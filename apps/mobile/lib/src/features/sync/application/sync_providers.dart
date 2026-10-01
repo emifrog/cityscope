@@ -6,6 +6,7 @@ import 'package:etare_ops/src/core/errors/error_messages.dart';
 import 'package:etare_ops/src/core/logging/app_logger.dart';
 import 'package:etare_ops/src/core/network/dio_factory.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
+import 'package:etare_ops/src/features/reports/application/report_providers.dart';
 import 'package:etare_ops/src/features/sync/application/enrollment_service.dart';
 import 'package:etare_ops/src/features/sync/application/sync_service.dart';
 import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
@@ -59,6 +60,7 @@ final syncServiceProvider = Provider<SyncService>((ref) {
   return SyncService(
     api: ref.watch(syncApiProvider),
     offline: database.offlineDao,
+    reports: database.reportsDao,
     state: database.syncStateDao,
     identities: ref.watch(deviceIdentityStoreProvider),
     trustedKeys: ref.watch(appConfigProvider).trustedKeys,
@@ -128,6 +130,10 @@ class SyncController extends Notifier<SyncRunState> {
           );
       if (report is SyncPurged) ref.invalidate(deviceIdentityProvider);
       state = SyncRunFinished(report);
+      // Puis la file des signalements, et la suite donnée par la Prévision.
+      if (report is SyncCompleted) {
+        ref.read(reportOutboxProvider.notifier).sendInBackground();
+      }
     } on SyncIntegrityException catch (error) {
       _logger.warning('Synchronisation refusée : ${error.code}');
       state = SyncRunFailed(

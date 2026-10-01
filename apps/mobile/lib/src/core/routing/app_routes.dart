@@ -17,6 +17,31 @@ abstract final class AppRoutes {
   static String section(String siteId, String section) =>
       '/home/site/$siteId/section/$section';
 
+  /// Signalements de l'agent et suite donnée (OPS-04).
+  static const reports = '/home/reports';
+
+  /// Signaler un écart sur un site, éventuellement sur un élément ou un point
+  /// d'un plan de la version consultée.
+  static String report(
+    String siteId, {
+    String? itemType,
+    String? itemId,
+    String? planRevisionId,
+    double? x,
+    double? y,
+  }) {
+    final query = {
+      if (itemType != null && itemId != null) 'item': '$itemType:$itemId',
+      if (planRevisionId != null && x != null && y != null)
+        'plan':
+            '$planRevisionId:${x.toStringAsFixed(1)}:${y.toStringAsFixed(1)}',
+    };
+    return Uri(
+      path: '/home/site/$siteId/report',
+      queryParameters: query.isEmpty ? null : query,
+    ).toString();
+  }
+
   /// Plan tactile (OPS-02), éventuellement centré sur un élément.
   static String plan(String siteId, String planId, {String? focus}) =>
       '/home/site/$siteId/plan/$planId${focus == null ? '' : '?focus=$focus'}';

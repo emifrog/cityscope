@@ -77,6 +77,7 @@ void main() {
       final report = await SyncService(
         api: syncApi,
         offline: database.offlineDao,
+        reports: database.reportsDao,
         state: database.syncStateDao,
         identities: identities,
         trustedKeys: TrustedKeys.parse(_require('ETARE_E2E_TRUSTED_KEYS')),

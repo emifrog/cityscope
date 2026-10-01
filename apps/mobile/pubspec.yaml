@@ -37,6 +37,9 @@ dependencies:
   cryptography: ^2.9.0
   # SHA-256 des fichiers téléchargés (dart-lang, BSD-3-Clause).
   crypto: ^3.0.7
+  # Photo des signalements (appareil photo ou galerie, compression à la prise),
+  # flutter.dev, Apache-2.0.
+  image_picker: ^1.2.3
 
 dev_dependencies:
   build_runner: ^2.16.1

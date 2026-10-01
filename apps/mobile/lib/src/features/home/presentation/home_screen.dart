@@ -5,6 +5,7 @@ import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/ops/application/ops_providers.dart';
 import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
+import 'package:etare_ops/src/features/reports/application/report_providers.dart';
 import 'package:etare_ops/src/features/sync/application/sync_providers.dart';
 import 'package:etare_ops/src/features/sync/domain/device_identity.dart';
 import 'package:etare_ops/src/features/sync/domain/sync_status.dart';
@@ -21,6 +22,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 
   static const searchFieldKey = Key('home.search');
   static const accountButtonKey = Key('home.account');
+  static const reportsButtonKey = Key('home.reports');
 
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
@@ -48,6 +50,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       appBar: AppBar(
         title: const Text(Brand.productName),
         actions: [
+          const _ReportsButton(),
           IconButton(
             key: HomeScreen.accountButtonKey,
             tooltip: 'Compte et tablette',
@@ -240,4 +243,26 @@ class _Message extends StatelessWidget {
       ],
     ],
   );
+}
+
+/// Accès aux signalements de l'agent, avec le nombre en attente d'envoi.
+class _ReportsButton extends ConsumerWidget {
+  const _ReportsButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pending = ref.watch(pendingReportCountProvider).value ?? 0;
+    return IconButton(
+      key: HomeScreen.reportsButtonKey,
+      tooltip: pending == 0
+          ? 'Mes signalements'
+          : 'Mes signalements ($pending en attente d’envoi)',
+      onPressed: () => context.push(AppRoutes.reports),
+      icon: Badge(
+        isLabelVisible: pending > 0,
+        label: Text('$pending'),
+        child: const Icon(Icons.flag_outlined),
+      ),
+    );
+  }
 }

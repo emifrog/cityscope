@@ -74,6 +74,22 @@ final class FakePublication {
   });
 }
 
+/// Signalement reçu par le serveur simulé (OPS-04).
+final class FakeReport {
+  FakeReport({required this.id, required this.body, required this.photos});
+
+  final String id;
+
+  /// Corps reçu à la première réception : un renvoi doit être identique.
+  final String body;
+  final List<String> photos;
+  int confirmations = 0;
+  String status = 'new';
+  String? decisionComment;
+  int? revisionNo;
+  int? publicationNumber;
+}
+
 /// Serveur de synchronisation simulé : signe catalogues et manifestes avec de
 /// vraies clés Ed25519 et vérifie la signature de la tablette sur chaque
 /// requête (méthode, chemin, heure, corps), comme l'API.
@@ -124,6 +140,19 @@ final class FakeSyncServer {
 
   /// Tablette sans réseau : aucune réponse de l'API.
   bool apiOffline = false;
+
+  /// Signalements reçus, par identifiant du terminal.
+  final Map<String, FakeReport> reports = {};
+
+  /// Le serveur enregistre le prochain signalement mais sa réponse se perd.
+  bool loseNextReportAnswer = false;
+
+  /// Code d'erreur opposé aux signalements (ex. VALIDATION_FAILED).
+  String? refuseReportsWith;
+
+  /// Objets du stockage déposés par URL signée.
+  final Map<String, List<int>> storedObjects = {};
+  int duplicateUploads = 0;
 
   final List<String> packageRequests = [];
   final List<String> downloadedFiles = [];
@@ -259,6 +288,101 @@ final class FakeSyncServer {
       });
     }
 
+    if (path.endsWith('/sync/reports') && options.method == 'POST') {
+      final refusal = refuseReportsWith;
+      if (refusal != null) return _error(400, refusal);
+      final body = jsonDecode(rawBody!) as Map<String, Object?>;
+      final clientId = body['client_report_id']! as String;
+      final existing = reports[clientId];
+      if (existing != null && existing.body != rawBody) {
+        return _error(409, 'CONFLICT');
+      }
+      final report =
+          existing ??
+          FakeReport(
+            id: '0600eeee-0000-4000-8000-${(reports.length + 1).toString().padLeft(12, '0')}',
+            body: rawBody,
+            photos: [
+              for (final photo in body['photos']! as List<Object?>)
+                (photo! as Map<String, Object?>)['sha256']! as String,
+            ],
+          );
+      reports[clientId] = report;
+      if (loseNextReportAnswer) {
+        loseNextReportAnswer = false;
+        throw DioException.connectionError(
+          requestOptions: options,
+          reason: 'réponse perdue (simulé)',
+        );
+      }
+      return _json(200, {
+        'report_id': report.id,
+        'client_report_id': clientId,
+        'content_hash': sha256OfText(report.body),
+        'received_at': serverClock.toIso8601String(),
+        'created': existing == null,
+        // Photos encore en attente de contrôle : URL de dépôt renouvelées.
+        'uploads': [
+          if (report.confirmations == 0)
+            for (final hash in report.photos)
+              {
+                'sha256': hash,
+                'upload': {
+                  'asset_id': hash.substring(0, 32),
+                  'method': 'PUT',
+                  'url': 'https://storage.test/upload/${report.id}/$hash',
+                  'headers': {'content-type': 'image/png', 'x-upsert': 'false'},
+                  'expires_at': serverClock
+                      .add(const Duration(hours: 2))
+                      .toIso8601String(),
+                },
+              },
+        ],
+      });
+    }
+
+    final uploaded = RegExp(r'/sync/reports/([^/]+)/uploaded$')
+        .firstMatch(path);
+    if (uploaded != null) {
+      final report = reports.values.firstWhere(
+        (r) => r.id == uploaded.group(1),
+      );
+      report.confirmations++;
+      return _json(202, {
+        'report_id': report.id,
+        'verifications': report.photos.length,
+      });
+    }
+
+    if (path.endsWith('/sync/reports') && options.method == 'GET') {
+      return _json(200, {
+        'items': [
+          for (final MapEntry(key: clientId, value: report) in reports.entries)
+            {
+              'report_id': report.id,
+              'client_report_id': clientId,
+              'status': report.status,
+              'decision_comment': report.decisionComment,
+              'decided_at': report.decisionComment == null
+                  ? null
+                  : serverClock.toIso8601String(),
+              'received_at': serverClock.toIso8601String(),
+              'photos': {
+                'pending': 0,
+                'clean': report.photos.length,
+                'rejected': 0,
+              },
+              'resolution': report.revisionNo == null
+                  ? null
+                  : {
+                      'revision_no': report.revisionNo,
+                      'publication_number': report.publicationNumber,
+                    },
+            },
+        ],
+      });
+    }
+
     if (path.endsWith('/sync/receipts')) {
       final body = jsonDecode(rawBody!) as Map<String, Object?>;
       receipts.add(body);
@@ -271,6 +395,22 @@ final class FakeSyncServer {
   }
 
   Future<ResponseBody> handleFile(RequestOptions options) async {
+    if (options.method == 'PUT') {
+      // Dépôt par URL signée : jamais de remplacement (x-upsert: false).
+      final key = options.uri.path;
+      if (storedObjects.containsKey(key)) {
+        duplicateUploads++;
+        return ResponseBody.fromString(
+          '{"statusCode":"409","error":"Duplicate","code":"KeyAlreadyExists"}',
+          400,
+          headers: {
+            Headers.contentTypeHeader: [Headers.jsonContentType],
+          },
+        );
+      }
+      storedObjects[key] = List<int>.from(options.data as List<int>);
+      return ResponseBody.fromString('{"Key":"$key"}', 200);
+    }
     final hash = options.uri.pathSegments.last;
     final offlineAfter = filesOfflineAfter;
     if (offlineAfter != null && downloadedFiles.length >= offlineAfter) {

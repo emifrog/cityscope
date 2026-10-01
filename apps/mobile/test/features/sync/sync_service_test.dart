@@ -58,6 +58,7 @@ void main() {
     service = SyncService(
       api: api,
       offline: database.offlineDao,
+      reports: database.reportsDao,
       state: database.syncStateDao,
       identities: identities,
       trustedKeys: server.trustedKeys,

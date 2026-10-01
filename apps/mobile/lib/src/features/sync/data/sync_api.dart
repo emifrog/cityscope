@@ -195,6 +195,52 @@ final class SyncApi {
     );
   }
 
+  /// Transmet un signalement (renvoi idempotent : même corps, même accusé).
+  Future<JsonMap> submitReport(DeviceCredentials device, JsonMap body) =>
+      _signed(device, 'POST', '/sync/reports', body: body);
+
+  /// Photos du signalement envoyées : le serveur planifie leur contrôle.
+  Future<void> confirmReportUploads(
+    DeviceCredentials device,
+    String reportId,
+  ) async {
+    await _signed(device, 'POST', '/sync/reports/$reportId/uploaded');
+  }
+
+  /// Suite donnée aux signalements de l'agent depuis ce terminal.
+  Future<List<JsonMap>> reportStatuses(DeviceCredentials device) async =>
+      (await _signed(
+        device,
+        'GET',
+        '/sync/reports',
+      )).requireObjectList('items');
+
+  /// Dépose un fichier par une URL signée du stockage (sans jeton). Renvoie
+  /// faux quand le fichier y était déjà (envoi précédent dont la réponse a été
+  /// perdue) : il n'est jamais remplacé.
+  Future<bool> upload(
+    Uri url,
+    Map<String, String> headers,
+    Uint8List content,
+  ) async {
+    try {
+      await _files.putUri<Object?>(
+        url,
+        data: content,
+        options: Options(headers: headers, responseType: ResponseType.plain),
+      );
+      return true;
+    } on DioException catch (error) {
+      final body = '${error.response?.data ?? ''}';
+      if (error.response?.statusCode == 409 ||
+          body.contains('KeyAlreadyExists') ||
+          body.contains('"statusCode":"409"')) {
+        return false;
+      }
+      throw mapDioException(error);
+    }
+  }
+
   /// Télécharge un fichier depuis une URL signée du stockage (sans jeton).
   Future<Uint8List> download(Uri url) async {
     try {

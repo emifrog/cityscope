@@ -51,6 +51,7 @@ class ItemSheet extends StatelessWidget {
   });
 
   static const planButtonKey = Key('item.plan');
+  static const reportButtonKey = Key('item.report');
 
   final PublishedSite site;
   final SiteObject? object;
@@ -223,6 +224,25 @@ class ItemSheet extends StatelessWidget {
           ),
         if (object?.verifiedAt case final verified?)
           row('Vérifié le', formatDateFr(verified)),
+        const SizedBox(height: 16),
+        OutlinedButton.icon(
+          key: ItemSheet.reportButtonKey,
+          onPressed: () {
+            final (type, id) = object != null
+                ? ('object', object.id)
+                : risk != null
+                ? ('risk', risk.id)
+                : ('zone', zone!.id);
+            Navigator.of(context).pop();
+            unawaited(
+              context.push<void>(
+                AppRoutes.report(site.siteId, itemType: type, itemId: id),
+              ),
+            );
+          },
+          icon: const Icon(Icons.flag_outlined),
+          label: const Text('Signaler un écart'),
+        ),
         if (plan != null && !fromPlan) ...[
           const SizedBox(height: 16),
           FilledButton.icon(

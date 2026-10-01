@@ -66,7 +66,7 @@ class _NotEnrolled extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final purge = switch (run) {
-      SyncRunFinished(report: SyncPurged(:final reason)) => reason,
+      SyncRunFinished(report: final SyncPurged purged) => purged,
       _ => null,
     };
     return Column(
@@ -84,7 +84,10 @@ class _NotEnrolled extends StatelessWidget {
         const SizedBox(height: 8),
         if (purge != null)
           Text(
-            purgeMessage(purge),
+            purgeMessage(
+              purge.reason,
+              discardedReports: purge.discardedReports,
+            ),
             style: textTheme.bodyLarge?.copyWith(color: BrandColors.critical),
           )
         else
@@ -251,8 +254,15 @@ class _Progress extends StatelessWidget {
 }
 
 /// Message lisible d'une purge (révocation, terminal inconnu).
-String purgeMessage(ApiErrorCode reason) => switch (reason) {
-  ApiErrorCode.deviceRevoked =>
-    'Tablette révoquée par votre SIS : données hors ligne effacées.',
-  _ => 'Tablette inconnue du serveur : données effacées, réenrôlez-la.',
-};
+String purgeMessage(ApiErrorCode reason, {int discardedReports = 0}) {
+  final base = switch (reason) {
+    ApiErrorCode.deviceRevoked =>
+      'Tablette révoquée par votre SIS : données hors ligne effacées.',
+    _ => 'Tablette inconnue du serveur : données effacées, réenrôlez-la.',
+  };
+  return switch (discardedReports) {
+    0 => base,
+    1 => '$base 1 signalement non transmis a été effacé.',
+    _ => '$base $discardedReports signalements non transmis ont été effacés.',
+  };
+}

@@ -6,6 +6,7 @@ import 'package:etare_ops/src/features/account/application/account_providers.dar
 import 'package:etare_ops/src/features/account/domain/role_labels.dart';
 import 'package:etare_ops/src/features/account/domain/user_account.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
+import 'package:etare_ops/src/features/reports/application/report_providers.dart';
 import 'package:etare_ops/src/features/sync/presentation/offline_status_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -202,6 +203,37 @@ class _SignOutButtonState extends ConsumerState<_SignOutButton> {
   bool _busy = false;
 
   Future<void> _signOut() async {
+    // Les signalements non transmis restent sur la tablette, liés à leur
+    // auteur : ils partiront à sa prochaine connexion (ADR-017).
+    final pending = ref.read(pendingReportCountProvider).value ?? 0;
+    if (pending > 0) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Signalements en attente'),
+          content: Text(
+            pending == 1
+                ? '1 signalement n’a pas encore été transmis. Il reste chiffré '
+                      'sur la tablette, invisible des autres utilisateurs, et '
+                      'partira à votre prochaine connexion.'
+                : '$pending signalements n’ont pas encore été transmis. Ils '
+                      'restent chiffrés sur la tablette, invisibles des autres '
+                      'utilisateurs, et partiront à votre prochaine connexion.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Rester connecté'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Se déconnecter'),
+            ),
+          ],
+        ),
+      );
+      if (!(confirmed ?? false)) return;
+    }
     setState(() => _busy = true);
     try {
       await ref.read(authControllerProvider.notifier).signOut();

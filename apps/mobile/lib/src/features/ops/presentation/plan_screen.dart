@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:etare_ops/src/core/routing/app_routes.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
 import 'package:etare_ops/src/features/ops/application/ops_providers.dart';
 import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
@@ -11,6 +12,7 @@ import 'package:etare_ops/src/features/ops/presentation/item_sheet.dart';
 import 'package:etare_ops/src/features/ops/presentation/ops_scaffold.dart';
 import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Plan tactile (OPS-02, maquette écran 08) : zoom et déplacement aux
@@ -137,6 +139,36 @@ class _PlanViewState extends State<PlanView> {
       ..scaleByDouble(scale, scale, 1, 1);
   }
 
+  /// Appui long : signaler un écart à cet endroit du plan (et sur l'élément
+  /// touché, s'il y en a un).
+  void _onLongPress(LongPressStartDetails details) {
+    final position = details.localPosition;
+    final hit = hitTest(
+      _items,
+      (position.dx, position.dy),
+      24 / _scale,
+      _visible,
+    );
+    final (String? type, String? id) = switch (hit) {
+      ObjectItem(:final object) => ('object', object.id),
+      RiskItem(:final risk) => ('risk', risk.id),
+      ZoneItem(:final zone) => ('zone', zone.id),
+      null => (null, null),
+    };
+    unawaited(
+      context.push<void>(
+        AppRoutes.report(
+          widget.site.siteId,
+          itemType: type,
+          itemId: id,
+          planRevisionId: widget.plan.revisionId,
+          x: position.dx.clamp(0, widget.plan.width).toDouble(),
+          y: position.dy.clamp(0, widget.plan.height).toDouble(),
+        ),
+      ),
+    );
+  }
+
   void _onTap(TapUpDetails details) {
     final position = details.localPosition;
     // Tolérance constante à l'écran (≈ 24 dp), quel que soit le zoom.
@@ -212,6 +244,7 @@ class _PlanViewState extends State<PlanView> {
                   child: GestureDetector(
                     key: PlanView.canvasKey,
                     onTapUp: _onTap,
+                    onLongPressStart: _onLongPress,
                     child: SizedBox(
                       width: widget.plan.width,
                       height: widget.plan.height,

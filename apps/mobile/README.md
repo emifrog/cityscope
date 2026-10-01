@@ -264,7 +264,25 @@ Principes :
    catalogue ; la fraîcheur (à jour, en retard, erreur) est toujours
    affichée.
 5. Révocation : au premier contact, données, état et identité de la tablette
-   sont effacés.
+   sont effacés, signalements non transmis compris (leur nombre est affiché).
+
+## 8 bis. Signalements terrain (OPS-04, ADR-017)
+
+1. Depuis la synthèse d'un site, la fiche d'un point, d'un risque ou d'une
+   zone, ou par un appui long sur le plan, l'agent signale un écart :
+   catégorie, importance, description, jusqu'à 5 photos (appareil photo du
+   système ou galerie, compressées à la prise).
+2. Le signalement et ses photos sont enregistrés dans la base chiffrée, même
+   sans réseau ; la copie temporaire de la photo est supprimée aussitôt lue.
+3. La file est transmise après chaque synchronisation et à la demande
+   (« Mes signalements ») : corps reconstruit à l'identique (un accusé perdu
+   ne crée pas de doublon), photos déposées par URL signée, puis contrôle
+   demandé. Une fois transmis, les photos quittent la tablette.
+4. L'agent suit « en attente d'envoi », « reçu », puis « traité » avec le
+   motif de la Prévision et, le cas échéant, la version publiée qui corrige.
+5. Les signalements sont liés à leur auteur : invisibles des autres
+   utilisateurs de la tablette, conservés à la déconnexion (avertissement si
+   des envois sont en attente) et transmis à sa prochaine connexion.
 
 ## 9. Volontairement NON fait au Sprint 0
 
@@ -272,17 +290,19 @@ Principes :
   livrées au Sprint 4 (lecture locale ; signalement terrain à venir).
 - ~~Synchronisation hors ligne et stockage des publications~~ : livrés au
   Sprint 4 (sections 6 et 8).
-- Cartographie, géolocalisation, caméra.
+- Cartographie et géolocalisation (la caméra sert aux photos des signalements,
+  par l’application appareil photo du système, sans permission).
 - Client API généré depuis l'OpenAPI (client manuel provisoire).
 - Verrouillage applicatif (PIN/biométrie), épinglage de certificats,
   détection root/jailbreak.
 - Signature release (la variante release est signée avec la clé de debug),
   icône et nom définitifs, thème sombre.
-- À la déconnexion, les jetons sont effacés ; le cache chiffré et le SIS sélectionné
-  sont conservés. Les écrans OPS exigent une autorisation locale valide liée à
-  l'utilisateur connecté. La révocation du terminal déclenche la purge au prochain
-  contact (ADR-016). La politique de conservation à la déconnexion et le traitement
-  des futurs signalements non envoyés restent à valider avec le SIS.
+- À la déconnexion, les jetons sont effacés ; le cache chiffré, le SIS sélectionné
+  et les signalements non transmis (liés à leur auteur) sont conservés. Les écrans
+  OPS exigent une autorisation locale valide liée à l'utilisateur connecté. La
+  révocation du terminal déclenche la purge au prochain contact, file des
+  signalements comprise (ADR-016, ADR-017). Ces règles restent à valider avec le
+  SIS (DEC-04).
 - iOS : dossier conservé et identifiant aligné (`fr.etare.ops`) mais non
   compilé ni testé (pas de macOS) ; une exception ATS sera nécessaire pour
   viser la pile locale en HTTP depuis le simulateur.

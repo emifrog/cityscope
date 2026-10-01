@@ -61,6 +61,15 @@ ce qu’elle conserve (OFF-03), reprendre après une coupure et dire en permanen
   TypeScript réelle et installe ses publications : il a révélé et fait corriger l’identité portée par
   l’autorisation (sujet du jeton, pas l’identifiant interne).
 
+## Complément du Sprint 5 — file des signalements (ADR-017)
+
+Le schéma local passe en v3 : tables `field_report` et `field_report_photo`, dans la même base
+SQLCipher. Un signalement y est enregistré hors ligne avec ses photos (BLOB), lié à son auteur ; le
+corps transmis est reconstruit à l'identique depuis ces colonnes, de sorte qu'un renvoi après un accusé
+perdu rend le même signalement côté serveur. Les photos sont retirées de la tablette une fois le
+signalement transmis et leur contrôle demandé. La purge de révocation efface aussi la file ; le
+message de purge indique combien de signalements non transmis ont été effacés.
+
 ## Critère de réexamen
 
 Mesures sur la tablette cible (taille de base, temps d’ouverture d’une fiche < 2 s, mémoire), ou besoin de

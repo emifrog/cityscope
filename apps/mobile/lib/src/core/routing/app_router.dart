@@ -7,6 +7,8 @@ import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
 import 'package:etare_ops/src/features/ops/presentation/plan_screen.dart';
 import 'package:etare_ops/src/features/ops/presentation/section_screen.dart';
 import 'package:etare_ops/src/features/ops/presentation/site_screen.dart';
+import 'package:etare_ops/src/features/reports/presentation/my_reports_screen.dart';
+import 'package:etare_ops/src/features/reports/presentation/report_form_screen.dart';
 import 'package:etare_ops/src/features/startup/presentation/splash_screen.dart';
 import 'package:etare_ops/src/features/sync/presentation/enrollment_screen.dart';
 import 'package:flutter/foundation.dart';
@@ -72,6 +74,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const AccountScreen(),
           ),
           GoRoute(
+            path: 'reports',
+            builder: (context, state) => const MyReportsScreen(),
+          ),
+          GoRoute(
             path: 'site/:siteId',
             builder: (context, state) =>
                 SiteScreen(siteId: state.pathParameters['siteId']!),
@@ -88,6 +94,21 @@ final routerProvider = Provider<GoRouter>((ref) {
                           .firstOrNull ??
                       OpsSection.risks,
                 ),
+              ),
+              GoRoute(
+                path: 'report',
+                builder: (context, state) {
+                  final item = state.uri.queryParameters['item']?.split(':');
+                  final plan = state.uri.queryParameters['plan']?.split(':');
+                  return ReportFormScreen(
+                    siteId: state.pathParameters['siteId']!,
+                    itemType: item?.length == 2 ? item![0] : null,
+                    itemId: item?.length == 2 ? item![1] : null,
+                    planRevisionId: plan?.length == 3 ? plan![0] : null,
+                    planX: plan?.length == 3 ? double.tryParse(plan![1]) : null,
+                    planY: plan?.length == 3 ? double.tryParse(plan![2]) : null,
+                  );
+                },
               ),
               GoRoute(
                 path: 'plan/:planId',

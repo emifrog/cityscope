@@ -3072,6 +3072,2267 @@ class SiteSearchCompanion extends UpdateCompanion<SiteSearchRow> {
   }
 }
 
+class $FieldReportsTable extends FieldReports
+    with TableInfo<$FieldReportsTable, FieldReportRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FieldReportsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _clientReportIdMeta = const VerificationMeta(
+    'clientReportId',
+  );
+  @override
+  late final GeneratedColumn<String> clientReportId = GeneratedColumn<String>(
+    'client_report_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _authorUserIdMeta = const VerificationMeta(
+    'authorUserId',
+  );
+  @override
+  late final GeneratedColumn<String> authorUserId = GeneratedColumn<String>(
+    'author_user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _tenantIdMeta = const VerificationMeta(
+    'tenantId',
+  );
+  @override
+  late final GeneratedColumn<String> tenantId = GeneratedColumn<String>(
+    'tenant_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _siteIdMeta = const VerificationMeta('siteId');
+  @override
+  late final GeneratedColumn<String> siteId = GeneratedColumn<String>(
+    'site_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _siteNameMeta = const VerificationMeta(
+    'siteName',
+  );
+  @override
+  late final GeneratedColumn<String> siteName = GeneratedColumn<String>(
+    'site_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _publicationIdMeta = const VerificationMeta(
+    'publicationId',
+  );
+  @override
+  late final GeneratedColumn<String> publicationId = GeneratedColumn<String>(
+    'publication_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _publicationNumberMeta = const VerificationMeta(
+    'publicationNumber',
+  );
+  @override
+  late final GeneratedColumn<int> publicationNumber = GeneratedColumn<int>(
+    'publication_number',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _categoryMeta = const VerificationMeta(
+    'category',
+  );
+  @override
+  late final GeneratedColumn<String> category = GeneratedColumn<String>(
+    'category',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _severityMeta = const VerificationMeta(
+    'severity',
+  );
+  @override
+  late final GeneratedColumn<String> severity = GeneratedColumn<String>(
+    'severity',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _observedAtMeta = const VerificationMeta(
+    'observedAt',
+  );
+  @override
+  late final GeneratedColumn<String> observedAt = GeneratedColumn<String>(
+    'observed_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _itemTypeMeta = const VerificationMeta(
+    'itemType',
+  );
+  @override
+  late final GeneratedColumn<String> itemType = GeneratedColumn<String>(
+    'item_type',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _itemIdMeta = const VerificationMeta('itemId');
+  @override
+  late final GeneratedColumn<String> itemId = GeneratedColumn<String>(
+    'item_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _itemLabelMeta = const VerificationMeta(
+    'itemLabel',
+  );
+  @override
+  late final GeneratedColumn<String> itemLabel = GeneratedColumn<String>(
+    'item_label',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _planRevisionIdMeta = const VerificationMeta(
+    'planRevisionId',
+  );
+  @override
+  late final GeneratedColumn<String> planRevisionId = GeneratedColumn<String>(
+    'plan_revision_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _planTitleMeta = const VerificationMeta(
+    'planTitle',
+  );
+  @override
+  late final GeneratedColumn<String> planTitle = GeneratedColumn<String>(
+    'plan_title',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _planXMeta = const VerificationMeta('planX');
+  @override
+  late final GeneratedColumn<double> planX = GeneratedColumn<double>(
+    'plan_x',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _planYMeta = const VerificationMeta('planY');
+  @override
+  late final GeneratedColumn<double> planY = GeneratedColumn<double>(
+    'plan_y',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _photoCountMeta = const VerificationMeta(
+    'photoCount',
+  );
+  @override
+  late final GeneratedColumn<int> photoCount = GeneratedColumn<int>(
+    'photo_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _localStateMeta = const VerificationMeta(
+    'localState',
+  );
+  @override
+  late final GeneratedColumn<String> localState = GeneratedColumn<String>(
+    'local_state',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('pending'),
+  );
+  static const VerificationMeta _lastErrorMeta = const VerificationMeta(
+    'lastError',
+  );
+  @override
+  late final GeneratedColumn<String> lastError = GeneratedColumn<String>(
+    'last_error',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _attemptsMeta = const VerificationMeta(
+    'attempts',
+  );
+  @override
+  late final GeneratedColumn<int> attempts = GeneratedColumn<int>(
+    'attempts',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _nextAttemptAtMeta = const VerificationMeta(
+    'nextAttemptAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> nextAttemptAt =
+      GeneratedColumn<DateTime>(
+        'next_attempt_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _serverReportIdMeta = const VerificationMeta(
+    'serverReportId',
+  );
+  @override
+  late final GeneratedColumn<String> serverReportId = GeneratedColumn<String>(
+    'server_report_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _contentHashMeta = const VerificationMeta(
+    'contentHash',
+  );
+  @override
+  late final GeneratedColumn<String> contentHash = GeneratedColumn<String>(
+    'content_hash',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _receivedAtMeta = const VerificationMeta(
+    'receivedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> receivedAt = GeneratedColumn<DateTime>(
+    'received_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _serverStatusMeta = const VerificationMeta(
+    'serverStatus',
+  );
+  @override
+  late final GeneratedColumn<String> serverStatus = GeneratedColumn<String>(
+    'server_status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _decisionCommentMeta = const VerificationMeta(
+    'decisionComment',
+  );
+  @override
+  late final GeneratedColumn<String> decisionComment = GeneratedColumn<String>(
+    'decision_comment',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _decidedAtMeta = const VerificationMeta(
+    'decidedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> decidedAt = GeneratedColumn<DateTime>(
+    'decided_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _resolutionRevisionNoMeta =
+      const VerificationMeta('resolutionRevisionNo');
+  @override
+  late final GeneratedColumn<int> resolutionRevisionNo = GeneratedColumn<int>(
+    'resolution_revision_no',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _resolutionPublicationNumberMeta =
+      const VerificationMeta('resolutionPublicationNumber');
+  @override
+  late final GeneratedColumn<int> resolutionPublicationNumber =
+      GeneratedColumn<int>(
+        'resolution_publication_number',
+        aliasedName,
+        true,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    clientReportId,
+    authorUserId,
+    tenantId,
+    siteId,
+    siteName,
+    publicationId,
+    publicationNumber,
+    category,
+    severity,
+    description,
+    observedAt,
+    itemType,
+    itemId,
+    itemLabel,
+    planRevisionId,
+    planTitle,
+    planX,
+    planY,
+    photoCount,
+    localState,
+    lastError,
+    attempts,
+    nextAttemptAt,
+    serverReportId,
+    contentHash,
+    receivedAt,
+    serverStatus,
+    decisionComment,
+    decidedAt,
+    resolutionRevisionNo,
+    resolutionPublicationNumber,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'field_report';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<FieldReportRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('client_report_id')) {
+      context.handle(
+        _clientReportIdMeta,
+        clientReportId.isAcceptableOrUnknown(
+          data['client_report_id']!,
+          _clientReportIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_clientReportIdMeta);
+    }
+    if (data.containsKey('author_user_id')) {
+      context.handle(
+        _authorUserIdMeta,
+        authorUserId.isAcceptableOrUnknown(
+          data['author_user_id']!,
+          _authorUserIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_authorUserIdMeta);
+    }
+    if (data.containsKey('tenant_id')) {
+      context.handle(
+        _tenantIdMeta,
+        tenantId.isAcceptableOrUnknown(data['tenant_id']!, _tenantIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tenantIdMeta);
+    }
+    if (data.containsKey('site_id')) {
+      context.handle(
+        _siteIdMeta,
+        siteId.isAcceptableOrUnknown(data['site_id']!, _siteIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_siteIdMeta);
+    }
+    if (data.containsKey('site_name')) {
+      context.handle(
+        _siteNameMeta,
+        siteName.isAcceptableOrUnknown(data['site_name']!, _siteNameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_siteNameMeta);
+    }
+    if (data.containsKey('publication_id')) {
+      context.handle(
+        _publicationIdMeta,
+        publicationId.isAcceptableOrUnknown(
+          data['publication_id']!,
+          _publicationIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_publicationIdMeta);
+    }
+    if (data.containsKey('publication_number')) {
+      context.handle(
+        _publicationNumberMeta,
+        publicationNumber.isAcceptableOrUnknown(
+          data['publication_number']!,
+          _publicationNumberMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_publicationNumberMeta);
+    }
+    if (data.containsKey('category')) {
+      context.handle(
+        _categoryMeta,
+        category.isAcceptableOrUnknown(data['category']!, _categoryMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_categoryMeta);
+    }
+    if (data.containsKey('severity')) {
+      context.handle(
+        _severityMeta,
+        severity.isAcceptableOrUnknown(data['severity']!, _severityMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_severityMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_descriptionMeta);
+    }
+    if (data.containsKey('observed_at')) {
+      context.handle(
+        _observedAtMeta,
+        observedAt.isAcceptableOrUnknown(data['observed_at']!, _observedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_observedAtMeta);
+    }
+    if (data.containsKey('item_type')) {
+      context.handle(
+        _itemTypeMeta,
+        itemType.isAcceptableOrUnknown(data['item_type']!, _itemTypeMeta),
+      );
+    }
+    if (data.containsKey('item_id')) {
+      context.handle(
+        _itemIdMeta,
+        itemId.isAcceptableOrUnknown(data['item_id']!, _itemIdMeta),
+      );
+    }
+    if (data.containsKey('item_label')) {
+      context.handle(
+        _itemLabelMeta,
+        itemLabel.isAcceptableOrUnknown(data['item_label']!, _itemLabelMeta),
+      );
+    }
+    if (data.containsKey('plan_revision_id')) {
+      context.handle(
+        _planRevisionIdMeta,
+        planRevisionId.isAcceptableOrUnknown(
+          data['plan_revision_id']!,
+          _planRevisionIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('plan_title')) {
+      context.handle(
+        _planTitleMeta,
+        planTitle.isAcceptableOrUnknown(data['plan_title']!, _planTitleMeta),
+      );
+    }
+    if (data.containsKey('plan_x')) {
+      context.handle(
+        _planXMeta,
+        planX.isAcceptableOrUnknown(data['plan_x']!, _planXMeta),
+      );
+    }
+    if (data.containsKey('plan_y')) {
+      context.handle(
+        _planYMeta,
+        planY.isAcceptableOrUnknown(data['plan_y']!, _planYMeta),
+      );
+    }
+    if (data.containsKey('photo_count')) {
+      context.handle(
+        _photoCountMeta,
+        photoCount.isAcceptableOrUnknown(data['photo_count']!, _photoCountMeta),
+      );
+    }
+    if (data.containsKey('local_state')) {
+      context.handle(
+        _localStateMeta,
+        localState.isAcceptableOrUnknown(data['local_state']!, _localStateMeta),
+      );
+    }
+    if (data.containsKey('last_error')) {
+      context.handle(
+        _lastErrorMeta,
+        lastError.isAcceptableOrUnknown(data['last_error']!, _lastErrorMeta),
+      );
+    }
+    if (data.containsKey('attempts')) {
+      context.handle(
+        _attemptsMeta,
+        attempts.isAcceptableOrUnknown(data['attempts']!, _attemptsMeta),
+      );
+    }
+    if (data.containsKey('next_attempt_at')) {
+      context.handle(
+        _nextAttemptAtMeta,
+        nextAttemptAt.isAcceptableOrUnknown(
+          data['next_attempt_at']!,
+          _nextAttemptAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('server_report_id')) {
+      context.handle(
+        _serverReportIdMeta,
+        serverReportId.isAcceptableOrUnknown(
+          data['server_report_id']!,
+          _serverReportIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('content_hash')) {
+      context.handle(
+        _contentHashMeta,
+        contentHash.isAcceptableOrUnknown(
+          data['content_hash']!,
+          _contentHashMeta,
+        ),
+      );
+    }
+    if (data.containsKey('received_at')) {
+      context.handle(
+        _receivedAtMeta,
+        receivedAt.isAcceptableOrUnknown(data['received_at']!, _receivedAtMeta),
+      );
+    }
+    if (data.containsKey('server_status')) {
+      context.handle(
+        _serverStatusMeta,
+        serverStatus.isAcceptableOrUnknown(
+          data['server_status']!,
+          _serverStatusMeta,
+        ),
+      );
+    }
+    if (data.containsKey('decision_comment')) {
+      context.handle(
+        _decisionCommentMeta,
+        decisionComment.isAcceptableOrUnknown(
+          data['decision_comment']!,
+          _decisionCommentMeta,
+        ),
+      );
+    }
+    if (data.containsKey('decided_at')) {
+      context.handle(
+        _decidedAtMeta,
+        decidedAt.isAcceptableOrUnknown(data['decided_at']!, _decidedAtMeta),
+      );
+    }
+    if (data.containsKey('resolution_revision_no')) {
+      context.handle(
+        _resolutionRevisionNoMeta,
+        resolutionRevisionNo.isAcceptableOrUnknown(
+          data['resolution_revision_no']!,
+          _resolutionRevisionNoMeta,
+        ),
+      );
+    }
+    if (data.containsKey('resolution_publication_number')) {
+      context.handle(
+        _resolutionPublicationNumberMeta,
+        resolutionPublicationNumber.isAcceptableOrUnknown(
+          data['resolution_publication_number']!,
+          _resolutionPublicationNumberMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {clientReportId};
+  @override
+  FieldReportRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FieldReportRow(
+      clientReportId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}client_report_id'],
+      )!,
+      authorUserId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}author_user_id'],
+      )!,
+      tenantId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tenant_id'],
+      )!,
+      siteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}site_id'],
+      )!,
+      siteName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}site_name'],
+      )!,
+      publicationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}publication_id'],
+      )!,
+      publicationNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}publication_number'],
+      )!,
+      category: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category'],
+      )!,
+      severity: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}severity'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      )!,
+      observedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}observed_at'],
+      )!,
+      itemType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}item_type'],
+      ),
+      itemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}item_id'],
+      ),
+      itemLabel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}item_label'],
+      ),
+      planRevisionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}plan_revision_id'],
+      ),
+      planTitle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}plan_title'],
+      ),
+      planX: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}plan_x'],
+      ),
+      planY: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}plan_y'],
+      ),
+      photoCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}photo_count'],
+      )!,
+      localState: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_state'],
+      )!,
+      lastError: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_error'],
+      ),
+      attempts: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}attempts'],
+      )!,
+      nextAttemptAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}next_attempt_at'],
+      ),
+      serverReportId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_report_id'],
+      ),
+      contentHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_hash'],
+      ),
+      receivedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}received_at'],
+      ),
+      serverStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_status'],
+      ),
+      decisionComment: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}decision_comment'],
+      ),
+      decidedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}decided_at'],
+      ),
+      resolutionRevisionNo: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}resolution_revision_no'],
+      ),
+      resolutionPublicationNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}resolution_publication_number'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $FieldReportsTable createAlias(String alias) {
+    return $FieldReportsTable(attachedDatabase, alias);
+  }
+}
+
+class FieldReportRow extends DataClass implements Insertable<FieldReportRow> {
+  /// Identifiant attribué hors ligne : clé d'idempotence côté serveur.
+  final String clientReportId;
+
+  /// Sujet du jeton de l'auteur : seul lui voit et envoie ce signalement.
+  final String authorUserId;
+  final String tenantId;
+  final String siteId;
+  final String siteName;
+
+  /// Version publiée consultée lors du constat.
+  final String publicationId;
+  final int publicationNumber;
+  final String category;
+  final String severity;
+  final String description;
+
+  /// Heure du constat, texte ISO 8601 exact (le corps renvoyé doit être identique).
+  final String observedAt;
+  final String? itemType;
+  final String? itemId;
+  final String? itemLabel;
+  final String? planRevisionId;
+  final String? planTitle;
+  final double? planX;
+  final double? planY;
+  final int photoCount;
+
+  /// `pending` (à transmettre ou photos en cours), `sent` (accusé et photos
+  /// transmises), `error` (refusé : à supprimer ou à corriger).
+  final String localState;
+  final String? lastError;
+  final int attempts;
+  final DateTime? nextAttemptAt;
+  final String? serverReportId;
+  final String? contentHash;
+  final DateTime? receivedAt;
+
+  /// État d'instruction côté serveur (`new`, `triaged`, `resolved`, `rejected`).
+  final String? serverStatus;
+  final String? decisionComment;
+  final DateTime? decidedAt;
+  final int? resolutionRevisionNo;
+  final int? resolutionPublicationNumber;
+  final DateTime createdAt;
+  const FieldReportRow({
+    required this.clientReportId,
+    required this.authorUserId,
+    required this.tenantId,
+    required this.siteId,
+    required this.siteName,
+    required this.publicationId,
+    required this.publicationNumber,
+    required this.category,
+    required this.severity,
+    required this.description,
+    required this.observedAt,
+    this.itemType,
+    this.itemId,
+    this.itemLabel,
+    this.planRevisionId,
+    this.planTitle,
+    this.planX,
+    this.planY,
+    required this.photoCount,
+    required this.localState,
+    this.lastError,
+    required this.attempts,
+    this.nextAttemptAt,
+    this.serverReportId,
+    this.contentHash,
+    this.receivedAt,
+    this.serverStatus,
+    this.decisionComment,
+    this.decidedAt,
+    this.resolutionRevisionNo,
+    this.resolutionPublicationNumber,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['client_report_id'] = Variable<String>(clientReportId);
+    map['author_user_id'] = Variable<String>(authorUserId);
+    map['tenant_id'] = Variable<String>(tenantId);
+    map['site_id'] = Variable<String>(siteId);
+    map['site_name'] = Variable<String>(siteName);
+    map['publication_id'] = Variable<String>(publicationId);
+    map['publication_number'] = Variable<int>(publicationNumber);
+    map['category'] = Variable<String>(category);
+    map['severity'] = Variable<String>(severity);
+    map['description'] = Variable<String>(description);
+    map['observed_at'] = Variable<String>(observedAt);
+    if (!nullToAbsent || itemType != null) {
+      map['item_type'] = Variable<String>(itemType);
+    }
+    if (!nullToAbsent || itemId != null) {
+      map['item_id'] = Variable<String>(itemId);
+    }
+    if (!nullToAbsent || itemLabel != null) {
+      map['item_label'] = Variable<String>(itemLabel);
+    }
+    if (!nullToAbsent || planRevisionId != null) {
+      map['plan_revision_id'] = Variable<String>(planRevisionId);
+    }
+    if (!nullToAbsent || planTitle != null) {
+      map['plan_title'] = Variable<String>(planTitle);
+    }
+    if (!nullToAbsent || planX != null) {
+      map['plan_x'] = Variable<double>(planX);
+    }
+    if (!nullToAbsent || planY != null) {
+      map['plan_y'] = Variable<double>(planY);
+    }
+    map['photo_count'] = Variable<int>(photoCount);
+    map['local_state'] = Variable<String>(localState);
+    if (!nullToAbsent || lastError != null) {
+      map['last_error'] = Variable<String>(lastError);
+    }
+    map['attempts'] = Variable<int>(attempts);
+    if (!nullToAbsent || nextAttemptAt != null) {
+      map['next_attempt_at'] = Variable<DateTime>(nextAttemptAt);
+    }
+    if (!nullToAbsent || serverReportId != null) {
+      map['server_report_id'] = Variable<String>(serverReportId);
+    }
+    if (!nullToAbsent || contentHash != null) {
+      map['content_hash'] = Variable<String>(contentHash);
+    }
+    if (!nullToAbsent || receivedAt != null) {
+      map['received_at'] = Variable<DateTime>(receivedAt);
+    }
+    if (!nullToAbsent || serverStatus != null) {
+      map['server_status'] = Variable<String>(serverStatus);
+    }
+    if (!nullToAbsent || decisionComment != null) {
+      map['decision_comment'] = Variable<String>(decisionComment);
+    }
+    if (!nullToAbsent || decidedAt != null) {
+      map['decided_at'] = Variable<DateTime>(decidedAt);
+    }
+    if (!nullToAbsent || resolutionRevisionNo != null) {
+      map['resolution_revision_no'] = Variable<int>(resolutionRevisionNo);
+    }
+    if (!nullToAbsent || resolutionPublicationNumber != null) {
+      map['resolution_publication_number'] = Variable<int>(
+        resolutionPublicationNumber,
+      );
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  FieldReportsCompanion toCompanion(bool nullToAbsent) {
+    return FieldReportsCompanion(
+      clientReportId: Value(clientReportId),
+      authorUserId: Value(authorUserId),
+      tenantId: Value(tenantId),
+      siteId: Value(siteId),
+      siteName: Value(siteName),
+      publicationId: Value(publicationId),
+      publicationNumber: Value(publicationNumber),
+      category: Value(category),
+      severity: Value(severity),
+      description: Value(description),
+      observedAt: Value(observedAt),
+      itemType: itemType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(itemType),
+      itemId: itemId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(itemId),
+      itemLabel: itemLabel == null && nullToAbsent
+          ? const Value.absent()
+          : Value(itemLabel),
+      planRevisionId: planRevisionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(planRevisionId),
+      planTitle: planTitle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(planTitle),
+      planX: planX == null && nullToAbsent
+          ? const Value.absent()
+          : Value(planX),
+      planY: planY == null && nullToAbsent
+          ? const Value.absent()
+          : Value(planY),
+      photoCount: Value(photoCount),
+      localState: Value(localState),
+      lastError: lastError == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastError),
+      attempts: Value(attempts),
+      nextAttemptAt: nextAttemptAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nextAttemptAt),
+      serverReportId: serverReportId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverReportId),
+      contentHash: contentHash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(contentHash),
+      receivedAt: receivedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(receivedAt),
+      serverStatus: serverStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverStatus),
+      decisionComment: decisionComment == null && nullToAbsent
+          ? const Value.absent()
+          : Value(decisionComment),
+      decidedAt: decidedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(decidedAt),
+      resolutionRevisionNo: resolutionRevisionNo == null && nullToAbsent
+          ? const Value.absent()
+          : Value(resolutionRevisionNo),
+      resolutionPublicationNumber:
+          resolutionPublicationNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(resolutionPublicationNumber),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory FieldReportRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FieldReportRow(
+      clientReportId: serializer.fromJson<String>(json['clientReportId']),
+      authorUserId: serializer.fromJson<String>(json['authorUserId']),
+      tenantId: serializer.fromJson<String>(json['tenantId']),
+      siteId: serializer.fromJson<String>(json['siteId']),
+      siteName: serializer.fromJson<String>(json['siteName']),
+      publicationId: serializer.fromJson<String>(json['publicationId']),
+      publicationNumber: serializer.fromJson<int>(json['publicationNumber']),
+      category: serializer.fromJson<String>(json['category']),
+      severity: serializer.fromJson<String>(json['severity']),
+      description: serializer.fromJson<String>(json['description']),
+      observedAt: serializer.fromJson<String>(json['observedAt']),
+      itemType: serializer.fromJson<String?>(json['itemType']),
+      itemId: serializer.fromJson<String?>(json['itemId']),
+      itemLabel: serializer.fromJson<String?>(json['itemLabel']),
+      planRevisionId: serializer.fromJson<String?>(json['planRevisionId']),
+      planTitle: serializer.fromJson<String?>(json['planTitle']),
+      planX: serializer.fromJson<double?>(json['planX']),
+      planY: serializer.fromJson<double?>(json['planY']),
+      photoCount: serializer.fromJson<int>(json['photoCount']),
+      localState: serializer.fromJson<String>(json['localState']),
+      lastError: serializer.fromJson<String?>(json['lastError']),
+      attempts: serializer.fromJson<int>(json['attempts']),
+      nextAttemptAt: serializer.fromJson<DateTime?>(json['nextAttemptAt']),
+      serverReportId: serializer.fromJson<String?>(json['serverReportId']),
+      contentHash: serializer.fromJson<String?>(json['contentHash']),
+      receivedAt: serializer.fromJson<DateTime?>(json['receivedAt']),
+      serverStatus: serializer.fromJson<String?>(json['serverStatus']),
+      decisionComment: serializer.fromJson<String?>(json['decisionComment']),
+      decidedAt: serializer.fromJson<DateTime?>(json['decidedAt']),
+      resolutionRevisionNo: serializer.fromJson<int?>(
+        json['resolutionRevisionNo'],
+      ),
+      resolutionPublicationNumber: serializer.fromJson<int?>(
+        json['resolutionPublicationNumber'],
+      ),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'clientReportId': serializer.toJson<String>(clientReportId),
+      'authorUserId': serializer.toJson<String>(authorUserId),
+      'tenantId': serializer.toJson<String>(tenantId),
+      'siteId': serializer.toJson<String>(siteId),
+      'siteName': serializer.toJson<String>(siteName),
+      'publicationId': serializer.toJson<String>(publicationId),
+      'publicationNumber': serializer.toJson<int>(publicationNumber),
+      'category': serializer.toJson<String>(category),
+      'severity': serializer.toJson<String>(severity),
+      'description': serializer.toJson<String>(description),
+      'observedAt': serializer.toJson<String>(observedAt),
+      'itemType': serializer.toJson<String?>(itemType),
+      'itemId': serializer.toJson<String?>(itemId),
+      'itemLabel': serializer.toJson<String?>(itemLabel),
+      'planRevisionId': serializer.toJson<String?>(planRevisionId),
+      'planTitle': serializer.toJson<String?>(planTitle),
+      'planX': serializer.toJson<double?>(planX),
+      'planY': serializer.toJson<double?>(planY),
+      'photoCount': serializer.toJson<int>(photoCount),
+      'localState': serializer.toJson<String>(localState),
+      'lastError': serializer.toJson<String?>(lastError),
+      'attempts': serializer.toJson<int>(attempts),
+      'nextAttemptAt': serializer.toJson<DateTime?>(nextAttemptAt),
+      'serverReportId': serializer.toJson<String?>(serverReportId),
+      'contentHash': serializer.toJson<String?>(contentHash),
+      'receivedAt': serializer.toJson<DateTime?>(receivedAt),
+      'serverStatus': serializer.toJson<String?>(serverStatus),
+      'decisionComment': serializer.toJson<String?>(decisionComment),
+      'decidedAt': serializer.toJson<DateTime?>(decidedAt),
+      'resolutionRevisionNo': serializer.toJson<int?>(resolutionRevisionNo),
+      'resolutionPublicationNumber': serializer.toJson<int?>(
+        resolutionPublicationNumber,
+      ),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  FieldReportRow copyWith({
+    String? clientReportId,
+    String? authorUserId,
+    String? tenantId,
+    String? siteId,
+    String? siteName,
+    String? publicationId,
+    int? publicationNumber,
+    String? category,
+    String? severity,
+    String? description,
+    String? observedAt,
+    Value<String?> itemType = const Value.absent(),
+    Value<String?> itemId = const Value.absent(),
+    Value<String?> itemLabel = const Value.absent(),
+    Value<String?> planRevisionId = const Value.absent(),
+    Value<String?> planTitle = const Value.absent(),
+    Value<double?> planX = const Value.absent(),
+    Value<double?> planY = const Value.absent(),
+    int? photoCount,
+    String? localState,
+    Value<String?> lastError = const Value.absent(),
+    int? attempts,
+    Value<DateTime?> nextAttemptAt = const Value.absent(),
+    Value<String?> serverReportId = const Value.absent(),
+    Value<String?> contentHash = const Value.absent(),
+    Value<DateTime?> receivedAt = const Value.absent(),
+    Value<String?> serverStatus = const Value.absent(),
+    Value<String?> decisionComment = const Value.absent(),
+    Value<DateTime?> decidedAt = const Value.absent(),
+    Value<int?> resolutionRevisionNo = const Value.absent(),
+    Value<int?> resolutionPublicationNumber = const Value.absent(),
+    DateTime? createdAt,
+  }) => FieldReportRow(
+    clientReportId: clientReportId ?? this.clientReportId,
+    authorUserId: authorUserId ?? this.authorUserId,
+    tenantId: tenantId ?? this.tenantId,
+    siteId: siteId ?? this.siteId,
+    siteName: siteName ?? this.siteName,
+    publicationId: publicationId ?? this.publicationId,
+    publicationNumber: publicationNumber ?? this.publicationNumber,
+    category: category ?? this.category,
+    severity: severity ?? this.severity,
+    description: description ?? this.description,
+    observedAt: observedAt ?? this.observedAt,
+    itemType: itemType.present ? itemType.value : this.itemType,
+    itemId: itemId.present ? itemId.value : this.itemId,
+    itemLabel: itemLabel.present ? itemLabel.value : this.itemLabel,
+    planRevisionId: planRevisionId.present
+        ? planRevisionId.value
+        : this.planRevisionId,
+    planTitle: planTitle.present ? planTitle.value : this.planTitle,
+    planX: planX.present ? planX.value : this.planX,
+    planY: planY.present ? planY.value : this.planY,
+    photoCount: photoCount ?? this.photoCount,
+    localState: localState ?? this.localState,
+    lastError: lastError.present ? lastError.value : this.lastError,
+    attempts: attempts ?? this.attempts,
+    nextAttemptAt: nextAttemptAt.present
+        ? nextAttemptAt.value
+        : this.nextAttemptAt,
+    serverReportId: serverReportId.present
+        ? serverReportId.value
+        : this.serverReportId,
+    contentHash: contentHash.present ? contentHash.value : this.contentHash,
+    receivedAt: receivedAt.present ? receivedAt.value : this.receivedAt,
+    serverStatus: serverStatus.present ? serverStatus.value : this.serverStatus,
+    decisionComment: decisionComment.present
+        ? decisionComment.value
+        : this.decisionComment,
+    decidedAt: decidedAt.present ? decidedAt.value : this.decidedAt,
+    resolutionRevisionNo: resolutionRevisionNo.present
+        ? resolutionRevisionNo.value
+        : this.resolutionRevisionNo,
+    resolutionPublicationNumber: resolutionPublicationNumber.present
+        ? resolutionPublicationNumber.value
+        : this.resolutionPublicationNumber,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  FieldReportRow copyWithCompanion(FieldReportsCompanion data) {
+    return FieldReportRow(
+      clientReportId: data.clientReportId.present
+          ? data.clientReportId.value
+          : this.clientReportId,
+      authorUserId: data.authorUserId.present
+          ? data.authorUserId.value
+          : this.authorUserId,
+      tenantId: data.tenantId.present ? data.tenantId.value : this.tenantId,
+      siteId: data.siteId.present ? data.siteId.value : this.siteId,
+      siteName: data.siteName.present ? data.siteName.value : this.siteName,
+      publicationId: data.publicationId.present
+          ? data.publicationId.value
+          : this.publicationId,
+      publicationNumber: data.publicationNumber.present
+          ? data.publicationNumber.value
+          : this.publicationNumber,
+      category: data.category.present ? data.category.value : this.category,
+      severity: data.severity.present ? data.severity.value : this.severity,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      observedAt: data.observedAt.present
+          ? data.observedAt.value
+          : this.observedAt,
+      itemType: data.itemType.present ? data.itemType.value : this.itemType,
+      itemId: data.itemId.present ? data.itemId.value : this.itemId,
+      itemLabel: data.itemLabel.present ? data.itemLabel.value : this.itemLabel,
+      planRevisionId: data.planRevisionId.present
+          ? data.planRevisionId.value
+          : this.planRevisionId,
+      planTitle: data.planTitle.present ? data.planTitle.value : this.planTitle,
+      planX: data.planX.present ? data.planX.value : this.planX,
+      planY: data.planY.present ? data.planY.value : this.planY,
+      photoCount: data.photoCount.present
+          ? data.photoCount.value
+          : this.photoCount,
+      localState: data.localState.present
+          ? data.localState.value
+          : this.localState,
+      lastError: data.lastError.present ? data.lastError.value : this.lastError,
+      attempts: data.attempts.present ? data.attempts.value : this.attempts,
+      nextAttemptAt: data.nextAttemptAt.present
+          ? data.nextAttemptAt.value
+          : this.nextAttemptAt,
+      serverReportId: data.serverReportId.present
+          ? data.serverReportId.value
+          : this.serverReportId,
+      contentHash: data.contentHash.present
+          ? data.contentHash.value
+          : this.contentHash,
+      receivedAt: data.receivedAt.present
+          ? data.receivedAt.value
+          : this.receivedAt,
+      serverStatus: data.serverStatus.present
+          ? data.serverStatus.value
+          : this.serverStatus,
+      decisionComment: data.decisionComment.present
+          ? data.decisionComment.value
+          : this.decisionComment,
+      decidedAt: data.decidedAt.present ? data.decidedAt.value : this.decidedAt,
+      resolutionRevisionNo: data.resolutionRevisionNo.present
+          ? data.resolutionRevisionNo.value
+          : this.resolutionRevisionNo,
+      resolutionPublicationNumber: data.resolutionPublicationNumber.present
+          ? data.resolutionPublicationNumber.value
+          : this.resolutionPublicationNumber,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FieldReportRow(')
+          ..write('clientReportId: $clientReportId, ')
+          ..write('authorUserId: $authorUserId, ')
+          ..write('tenantId: $tenantId, ')
+          ..write('siteId: $siteId, ')
+          ..write('siteName: $siteName, ')
+          ..write('publicationId: $publicationId, ')
+          ..write('publicationNumber: $publicationNumber, ')
+          ..write('category: $category, ')
+          ..write('severity: $severity, ')
+          ..write('description: $description, ')
+          ..write('observedAt: $observedAt, ')
+          ..write('itemType: $itemType, ')
+          ..write('itemId: $itemId, ')
+          ..write('itemLabel: $itemLabel, ')
+          ..write('planRevisionId: $planRevisionId, ')
+          ..write('planTitle: $planTitle, ')
+          ..write('planX: $planX, ')
+          ..write('planY: $planY, ')
+          ..write('photoCount: $photoCount, ')
+          ..write('localState: $localState, ')
+          ..write('lastError: $lastError, ')
+          ..write('attempts: $attempts, ')
+          ..write('nextAttemptAt: $nextAttemptAt, ')
+          ..write('serverReportId: $serverReportId, ')
+          ..write('contentHash: $contentHash, ')
+          ..write('receivedAt: $receivedAt, ')
+          ..write('serverStatus: $serverStatus, ')
+          ..write('decisionComment: $decisionComment, ')
+          ..write('decidedAt: $decidedAt, ')
+          ..write('resolutionRevisionNo: $resolutionRevisionNo, ')
+          ..write('resolutionPublicationNumber: $resolutionPublicationNumber, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+    clientReportId,
+    authorUserId,
+    tenantId,
+    siteId,
+    siteName,
+    publicationId,
+    publicationNumber,
+    category,
+    severity,
+    description,
+    observedAt,
+    itemType,
+    itemId,
+    itemLabel,
+    planRevisionId,
+    planTitle,
+    planX,
+    planY,
+    photoCount,
+    localState,
+    lastError,
+    attempts,
+    nextAttemptAt,
+    serverReportId,
+    contentHash,
+    receivedAt,
+    serverStatus,
+    decisionComment,
+    decidedAt,
+    resolutionRevisionNo,
+    resolutionPublicationNumber,
+    createdAt,
+  ]);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FieldReportRow &&
+          other.clientReportId == this.clientReportId &&
+          other.authorUserId == this.authorUserId &&
+          other.tenantId == this.tenantId &&
+          other.siteId == this.siteId &&
+          other.siteName == this.siteName &&
+          other.publicationId == this.publicationId &&
+          other.publicationNumber == this.publicationNumber &&
+          other.category == this.category &&
+          other.severity == this.severity &&
+          other.description == this.description &&
+          other.observedAt == this.observedAt &&
+          other.itemType == this.itemType &&
+          other.itemId == this.itemId &&
+          other.itemLabel == this.itemLabel &&
+          other.planRevisionId == this.planRevisionId &&
+          other.planTitle == this.planTitle &&
+          other.planX == this.planX &&
+          other.planY == this.planY &&
+          other.photoCount == this.photoCount &&
+          other.localState == this.localState &&
+          other.lastError == this.lastError &&
+          other.attempts == this.attempts &&
+          other.nextAttemptAt == this.nextAttemptAt &&
+          other.serverReportId == this.serverReportId &&
+          other.contentHash == this.contentHash &&
+          other.receivedAt == this.receivedAt &&
+          other.serverStatus == this.serverStatus &&
+          other.decisionComment == this.decisionComment &&
+          other.decidedAt == this.decidedAt &&
+          other.resolutionRevisionNo == this.resolutionRevisionNo &&
+          other.resolutionPublicationNumber ==
+              this.resolutionPublicationNumber &&
+          other.createdAt == this.createdAt);
+}
+
+class FieldReportsCompanion extends UpdateCompanion<FieldReportRow> {
+  final Value<String> clientReportId;
+  final Value<String> authorUserId;
+  final Value<String> tenantId;
+  final Value<String> siteId;
+  final Value<String> siteName;
+  final Value<String> publicationId;
+  final Value<int> publicationNumber;
+  final Value<String> category;
+  final Value<String> severity;
+  final Value<String> description;
+  final Value<String> observedAt;
+  final Value<String?> itemType;
+  final Value<String?> itemId;
+  final Value<String?> itemLabel;
+  final Value<String?> planRevisionId;
+  final Value<String?> planTitle;
+  final Value<double?> planX;
+  final Value<double?> planY;
+  final Value<int> photoCount;
+  final Value<String> localState;
+  final Value<String?> lastError;
+  final Value<int> attempts;
+  final Value<DateTime?> nextAttemptAt;
+  final Value<String?> serverReportId;
+  final Value<String?> contentHash;
+  final Value<DateTime?> receivedAt;
+  final Value<String?> serverStatus;
+  final Value<String?> decisionComment;
+  final Value<DateTime?> decidedAt;
+  final Value<int?> resolutionRevisionNo;
+  final Value<int?> resolutionPublicationNumber;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const FieldReportsCompanion({
+    this.clientReportId = const Value.absent(),
+    this.authorUserId = const Value.absent(),
+    this.tenantId = const Value.absent(),
+    this.siteId = const Value.absent(),
+    this.siteName = const Value.absent(),
+    this.publicationId = const Value.absent(),
+    this.publicationNumber = const Value.absent(),
+    this.category = const Value.absent(),
+    this.severity = const Value.absent(),
+    this.description = const Value.absent(),
+    this.observedAt = const Value.absent(),
+    this.itemType = const Value.absent(),
+    this.itemId = const Value.absent(),
+    this.itemLabel = const Value.absent(),
+    this.planRevisionId = const Value.absent(),
+    this.planTitle = const Value.absent(),
+    this.planX = const Value.absent(),
+    this.planY = const Value.absent(),
+    this.photoCount = const Value.absent(),
+    this.localState = const Value.absent(),
+    this.lastError = const Value.absent(),
+    this.attempts = const Value.absent(),
+    this.nextAttemptAt = const Value.absent(),
+    this.serverReportId = const Value.absent(),
+    this.contentHash = const Value.absent(),
+    this.receivedAt = const Value.absent(),
+    this.serverStatus = const Value.absent(),
+    this.decisionComment = const Value.absent(),
+    this.decidedAt = const Value.absent(),
+    this.resolutionRevisionNo = const Value.absent(),
+    this.resolutionPublicationNumber = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  FieldReportsCompanion.insert({
+    required String clientReportId,
+    required String authorUserId,
+    required String tenantId,
+    required String siteId,
+    required String siteName,
+    required String publicationId,
+    required int publicationNumber,
+    required String category,
+    required String severity,
+    required String description,
+    required String observedAt,
+    this.itemType = const Value.absent(),
+    this.itemId = const Value.absent(),
+    this.itemLabel = const Value.absent(),
+    this.planRevisionId = const Value.absent(),
+    this.planTitle = const Value.absent(),
+    this.planX = const Value.absent(),
+    this.planY = const Value.absent(),
+    this.photoCount = const Value.absent(),
+    this.localState = const Value.absent(),
+    this.lastError = const Value.absent(),
+    this.attempts = const Value.absent(),
+    this.nextAttemptAt = const Value.absent(),
+    this.serverReportId = const Value.absent(),
+    this.contentHash = const Value.absent(),
+    this.receivedAt = const Value.absent(),
+    this.serverStatus = const Value.absent(),
+    this.decisionComment = const Value.absent(),
+    this.decidedAt = const Value.absent(),
+    this.resolutionRevisionNo = const Value.absent(),
+    this.resolutionPublicationNumber = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : clientReportId = Value(clientReportId),
+       authorUserId = Value(authorUserId),
+       tenantId = Value(tenantId),
+       siteId = Value(siteId),
+       siteName = Value(siteName),
+       publicationId = Value(publicationId),
+       publicationNumber = Value(publicationNumber),
+       category = Value(category),
+       severity = Value(severity),
+       description = Value(description),
+       observedAt = Value(observedAt),
+       createdAt = Value(createdAt);
+  static Insertable<FieldReportRow> custom({
+    Expression<String>? clientReportId,
+    Expression<String>? authorUserId,
+    Expression<String>? tenantId,
+    Expression<String>? siteId,
+    Expression<String>? siteName,
+    Expression<String>? publicationId,
+    Expression<int>? publicationNumber,
+    Expression<String>? category,
+    Expression<String>? severity,
+    Expression<String>? description,
+    Expression<String>? observedAt,
+    Expression<String>? itemType,
+    Expression<String>? itemId,
+    Expression<String>? itemLabel,
+    Expression<String>? planRevisionId,
+    Expression<String>? planTitle,
+    Expression<double>? planX,
+    Expression<double>? planY,
+    Expression<int>? photoCount,
+    Expression<String>? localState,
+    Expression<String>? lastError,
+    Expression<int>? attempts,
+    Expression<DateTime>? nextAttemptAt,
+    Expression<String>? serverReportId,
+    Expression<String>? contentHash,
+    Expression<DateTime>? receivedAt,
+    Expression<String>? serverStatus,
+    Expression<String>? decisionComment,
+    Expression<DateTime>? decidedAt,
+    Expression<int>? resolutionRevisionNo,
+    Expression<int>? resolutionPublicationNumber,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (clientReportId != null) 'client_report_id': clientReportId,
+      if (authorUserId != null) 'author_user_id': authorUserId,
+      if (tenantId != null) 'tenant_id': tenantId,
+      if (siteId != null) 'site_id': siteId,
+      if (siteName != null) 'site_name': siteName,
+      if (publicationId != null) 'publication_id': publicationId,
+      if (publicationNumber != null) 'publication_number': publicationNumber,
+      if (category != null) 'category': category,
+      if (severity != null) 'severity': severity,
+      if (description != null) 'description': description,
+      if (observedAt != null) 'observed_at': observedAt,
+      if (itemType != null) 'item_type': itemType,
+      if (itemId != null) 'item_id': itemId,
+      if (itemLabel != null) 'item_label': itemLabel,
+      if (planRevisionId != null) 'plan_revision_id': planRevisionId,
+      if (planTitle != null) 'plan_title': planTitle,
+      if (planX != null) 'plan_x': planX,
+      if (planY != null) 'plan_y': planY,
+      if (photoCount != null) 'photo_count': photoCount,
+      if (localState != null) 'local_state': localState,
+      if (lastError != null) 'last_error': lastError,
+      if (attempts != null) 'attempts': attempts,
+      if (nextAttemptAt != null) 'next_attempt_at': nextAttemptAt,
+      if (serverReportId != null) 'server_report_id': serverReportId,
+      if (contentHash != null) 'content_hash': contentHash,
+      if (receivedAt != null) 'received_at': receivedAt,
+      if (serverStatus != null) 'server_status': serverStatus,
+      if (decisionComment != null) 'decision_comment': decisionComment,
+      if (decidedAt != null) 'decided_at': decidedAt,
+      if (resolutionRevisionNo != null)
+        'resolution_revision_no': resolutionRevisionNo,
+      if (resolutionPublicationNumber != null)
+        'resolution_publication_number': resolutionPublicationNumber,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  FieldReportsCompanion copyWith({
+    Value<String>? clientReportId,
+    Value<String>? authorUserId,
+    Value<String>? tenantId,
+    Value<String>? siteId,
+    Value<String>? siteName,
+    Value<String>? publicationId,
+    Value<int>? publicationNumber,
+    Value<String>? category,
+    Value<String>? severity,
+    Value<String>? description,
+    Value<String>? observedAt,
+    Value<String?>? itemType,
+    Value<String?>? itemId,
+    Value<String?>? itemLabel,
+    Value<String?>? planRevisionId,
+    Value<String?>? planTitle,
+    Value<double?>? planX,
+    Value<double?>? planY,
+    Value<int>? photoCount,
+    Value<String>? localState,
+    Value<String?>? lastError,
+    Value<int>? attempts,
+    Value<DateTime?>? nextAttemptAt,
+    Value<String?>? serverReportId,
+    Value<String?>? contentHash,
+    Value<DateTime?>? receivedAt,
+    Value<String?>? serverStatus,
+    Value<String?>? decisionComment,
+    Value<DateTime?>? decidedAt,
+    Value<int?>? resolutionRevisionNo,
+    Value<int?>? resolutionPublicationNumber,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return FieldReportsCompanion(
+      clientReportId: clientReportId ?? this.clientReportId,
+      authorUserId: authorUserId ?? this.authorUserId,
+      tenantId: tenantId ?? this.tenantId,
+      siteId: siteId ?? this.siteId,
+      siteName: siteName ?? this.siteName,
+      publicationId: publicationId ?? this.publicationId,
+      publicationNumber: publicationNumber ?? this.publicationNumber,
+      category: category ?? this.category,
+      severity: severity ?? this.severity,
+      description: description ?? this.description,
+      observedAt: observedAt ?? this.observedAt,
+      itemType: itemType ?? this.itemType,
+      itemId: itemId ?? this.itemId,
+      itemLabel: itemLabel ?? this.itemLabel,
+      planRevisionId: planRevisionId ?? this.planRevisionId,
+      planTitle: planTitle ?? this.planTitle,
+      planX: planX ?? this.planX,
+      planY: planY ?? this.planY,
+      photoCount: photoCount ?? this.photoCount,
+      localState: localState ?? this.localState,
+      lastError: lastError ?? this.lastError,
+      attempts: attempts ?? this.attempts,
+      nextAttemptAt: nextAttemptAt ?? this.nextAttemptAt,
+      serverReportId: serverReportId ?? this.serverReportId,
+      contentHash: contentHash ?? this.contentHash,
+      receivedAt: receivedAt ?? this.receivedAt,
+      serverStatus: serverStatus ?? this.serverStatus,
+      decisionComment: decisionComment ?? this.decisionComment,
+      decidedAt: decidedAt ?? this.decidedAt,
+      resolutionRevisionNo: resolutionRevisionNo ?? this.resolutionRevisionNo,
+      resolutionPublicationNumber:
+          resolutionPublicationNumber ?? this.resolutionPublicationNumber,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (clientReportId.present) {
+      map['client_report_id'] = Variable<String>(clientReportId.value);
+    }
+    if (authorUserId.present) {
+      map['author_user_id'] = Variable<String>(authorUserId.value);
+    }
+    if (tenantId.present) {
+      map['tenant_id'] = Variable<String>(tenantId.value);
+    }
+    if (siteId.present) {
+      map['site_id'] = Variable<String>(siteId.value);
+    }
+    if (siteName.present) {
+      map['site_name'] = Variable<String>(siteName.value);
+    }
+    if (publicationId.present) {
+      map['publication_id'] = Variable<String>(publicationId.value);
+    }
+    if (publicationNumber.present) {
+      map['publication_number'] = Variable<int>(publicationNumber.value);
+    }
+    if (category.present) {
+      map['category'] = Variable<String>(category.value);
+    }
+    if (severity.present) {
+      map['severity'] = Variable<String>(severity.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (observedAt.present) {
+      map['observed_at'] = Variable<String>(observedAt.value);
+    }
+    if (itemType.present) {
+      map['item_type'] = Variable<String>(itemType.value);
+    }
+    if (itemId.present) {
+      map['item_id'] = Variable<String>(itemId.value);
+    }
+    if (itemLabel.present) {
+      map['item_label'] = Variable<String>(itemLabel.value);
+    }
+    if (planRevisionId.present) {
+      map['plan_revision_id'] = Variable<String>(planRevisionId.value);
+    }
+    if (planTitle.present) {
+      map['plan_title'] = Variable<String>(planTitle.value);
+    }
+    if (planX.present) {
+      map['plan_x'] = Variable<double>(planX.value);
+    }
+    if (planY.present) {
+      map['plan_y'] = Variable<double>(planY.value);
+    }
+    if (photoCount.present) {
+      map['photo_count'] = Variable<int>(photoCount.value);
+    }
+    if (localState.present) {
+      map['local_state'] = Variable<String>(localState.value);
+    }
+    if (lastError.present) {
+      map['last_error'] = Variable<String>(lastError.value);
+    }
+    if (attempts.present) {
+      map['attempts'] = Variable<int>(attempts.value);
+    }
+    if (nextAttemptAt.present) {
+      map['next_attempt_at'] = Variable<DateTime>(nextAttemptAt.value);
+    }
+    if (serverReportId.present) {
+      map['server_report_id'] = Variable<String>(serverReportId.value);
+    }
+    if (contentHash.present) {
+      map['content_hash'] = Variable<String>(contentHash.value);
+    }
+    if (receivedAt.present) {
+      map['received_at'] = Variable<DateTime>(receivedAt.value);
+    }
+    if (serverStatus.present) {
+      map['server_status'] = Variable<String>(serverStatus.value);
+    }
+    if (decisionComment.present) {
+      map['decision_comment'] = Variable<String>(decisionComment.value);
+    }
+    if (decidedAt.present) {
+      map['decided_at'] = Variable<DateTime>(decidedAt.value);
+    }
+    if (resolutionRevisionNo.present) {
+      map['resolution_revision_no'] = Variable<int>(resolutionRevisionNo.value);
+    }
+    if (resolutionPublicationNumber.present) {
+      map['resolution_publication_number'] = Variable<int>(
+        resolutionPublicationNumber.value,
+      );
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FieldReportsCompanion(')
+          ..write('clientReportId: $clientReportId, ')
+          ..write('authorUserId: $authorUserId, ')
+          ..write('tenantId: $tenantId, ')
+          ..write('siteId: $siteId, ')
+          ..write('siteName: $siteName, ')
+          ..write('publicationId: $publicationId, ')
+          ..write('publicationNumber: $publicationNumber, ')
+          ..write('category: $category, ')
+          ..write('severity: $severity, ')
+          ..write('description: $description, ')
+          ..write('observedAt: $observedAt, ')
+          ..write('itemType: $itemType, ')
+          ..write('itemId: $itemId, ')
+          ..write('itemLabel: $itemLabel, ')
+          ..write('planRevisionId: $planRevisionId, ')
+          ..write('planTitle: $planTitle, ')
+          ..write('planX: $planX, ')
+          ..write('planY: $planY, ')
+          ..write('photoCount: $photoCount, ')
+          ..write('localState: $localState, ')
+          ..write('lastError: $lastError, ')
+          ..write('attempts: $attempts, ')
+          ..write('nextAttemptAt: $nextAttemptAt, ')
+          ..write('serverReportId: $serverReportId, ')
+          ..write('contentHash: $contentHash, ')
+          ..write('receivedAt: $receivedAt, ')
+          ..write('serverStatus: $serverStatus, ')
+          ..write('decisionComment: $decisionComment, ')
+          ..write('decidedAt: $decidedAt, ')
+          ..write('resolutionRevisionNo: $resolutionRevisionNo, ')
+          ..write('resolutionPublicationNumber: $resolutionPublicationNumber, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $FieldReportPhotosTable extends FieldReportPhotos
+    with TableInfo<$FieldReportPhotosTable, FieldReportPhotoRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FieldReportPhotosTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _clientReportIdMeta = const VerificationMeta(
+    'clientReportId',
+  );
+  @override
+  late final GeneratedColumn<String> clientReportId = GeneratedColumn<String>(
+    'client_report_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES field_report (client_report_id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sha256Meta = const VerificationMeta('sha256');
+  @override
+  late final GeneratedColumn<String> sha256 = GeneratedColumn<String>(
+    'sha256',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _mimeTypeMeta = const VerificationMeta(
+    'mimeType',
+  );
+  @override
+  late final GeneratedColumn<String> mimeType = GeneratedColumn<String>(
+    'mime_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _filenameMeta = const VerificationMeta(
+    'filename',
+  );
+  @override
+  late final GeneratedColumn<String> filename = GeneratedColumn<String>(
+    'filename',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> content = GeneratedColumn<Uint8List>(
+    'content',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _uploadedMeta = const VerificationMeta(
+    'uploaded',
+  );
+  @override
+  late final GeneratedColumn<bool> uploaded = GeneratedColumn<bool>(
+    'uploaded',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("uploaded" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    clientReportId,
+    position,
+    sha256,
+    mimeType,
+    filename,
+    content,
+    uploaded,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'field_report_photo';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<FieldReportPhotoRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('client_report_id')) {
+      context.handle(
+        _clientReportIdMeta,
+        clientReportId.isAcceptableOrUnknown(
+          data['client_report_id']!,
+          _clientReportIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_clientReportIdMeta);
+    }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_positionMeta);
+    }
+    if (data.containsKey('sha256')) {
+      context.handle(
+        _sha256Meta,
+        sha256.isAcceptableOrUnknown(data['sha256']!, _sha256Meta),
+      );
+    } else if (isInserting) {
+      context.missing(_sha256Meta);
+    }
+    if (data.containsKey('mime_type')) {
+      context.handle(
+        _mimeTypeMeta,
+        mimeType.isAcceptableOrUnknown(data['mime_type']!, _mimeTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_mimeTypeMeta);
+    }
+    if (data.containsKey('filename')) {
+      context.handle(
+        _filenameMeta,
+        filename.isAcceptableOrUnknown(data['filename']!, _filenameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_filenameMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    if (data.containsKey('uploaded')) {
+      context.handle(
+        _uploadedMeta,
+        uploaded.isAcceptableOrUnknown(data['uploaded']!, _uploadedMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {clientReportId, position};
+  @override
+  FieldReportPhotoRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FieldReportPhotoRow(
+      clientReportId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}client_report_id'],
+      )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
+      sha256: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sha256'],
+      )!,
+      mimeType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mime_type'],
+      )!,
+      filename: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}filename'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}content'],
+      )!,
+      uploaded: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}uploaded'],
+      )!,
+    );
+  }
+
+  @override
+  $FieldReportPhotosTable createAlias(String alias) {
+    return $FieldReportPhotosTable(attachedDatabase, alias);
+  }
+}
+
+class FieldReportPhotoRow extends DataClass
+    implements Insertable<FieldReportPhotoRow> {
+  final String clientReportId;
+  final int position;
+  final String sha256;
+  final String mimeType;
+  final String filename;
+  final Uint8List content;
+  final bool uploaded;
+  const FieldReportPhotoRow({
+    required this.clientReportId,
+    required this.position,
+    required this.sha256,
+    required this.mimeType,
+    required this.filename,
+    required this.content,
+    required this.uploaded,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['client_report_id'] = Variable<String>(clientReportId);
+    map['position'] = Variable<int>(position);
+    map['sha256'] = Variable<String>(sha256);
+    map['mime_type'] = Variable<String>(mimeType);
+    map['filename'] = Variable<String>(filename);
+    map['content'] = Variable<Uint8List>(content);
+    map['uploaded'] = Variable<bool>(uploaded);
+    return map;
+  }
+
+  FieldReportPhotosCompanion toCompanion(bool nullToAbsent) {
+    return FieldReportPhotosCompanion(
+      clientReportId: Value(clientReportId),
+      position: Value(position),
+      sha256: Value(sha256),
+      mimeType: Value(mimeType),
+      filename: Value(filename),
+      content: Value(content),
+      uploaded: Value(uploaded),
+    );
+  }
+
+  factory FieldReportPhotoRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FieldReportPhotoRow(
+      clientReportId: serializer.fromJson<String>(json['clientReportId']),
+      position: serializer.fromJson<int>(json['position']),
+      sha256: serializer.fromJson<String>(json['sha256']),
+      mimeType: serializer.fromJson<String>(json['mimeType']),
+      filename: serializer.fromJson<String>(json['filename']),
+      content: serializer.fromJson<Uint8List>(json['content']),
+      uploaded: serializer.fromJson<bool>(json['uploaded']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'clientReportId': serializer.toJson<String>(clientReportId),
+      'position': serializer.toJson<int>(position),
+      'sha256': serializer.toJson<String>(sha256),
+      'mimeType': serializer.toJson<String>(mimeType),
+      'filename': serializer.toJson<String>(filename),
+      'content': serializer.toJson<Uint8List>(content),
+      'uploaded': serializer.toJson<bool>(uploaded),
+    };
+  }
+
+  FieldReportPhotoRow copyWith({
+    String? clientReportId,
+    int? position,
+    String? sha256,
+    String? mimeType,
+    String? filename,
+    Uint8List? content,
+    bool? uploaded,
+  }) => FieldReportPhotoRow(
+    clientReportId: clientReportId ?? this.clientReportId,
+    position: position ?? this.position,
+    sha256: sha256 ?? this.sha256,
+    mimeType: mimeType ?? this.mimeType,
+    filename: filename ?? this.filename,
+    content: content ?? this.content,
+    uploaded: uploaded ?? this.uploaded,
+  );
+  FieldReportPhotoRow copyWithCompanion(FieldReportPhotosCompanion data) {
+    return FieldReportPhotoRow(
+      clientReportId: data.clientReportId.present
+          ? data.clientReportId.value
+          : this.clientReportId,
+      position: data.position.present ? data.position.value : this.position,
+      sha256: data.sha256.present ? data.sha256.value : this.sha256,
+      mimeType: data.mimeType.present ? data.mimeType.value : this.mimeType,
+      filename: data.filename.present ? data.filename.value : this.filename,
+      content: data.content.present ? data.content.value : this.content,
+      uploaded: data.uploaded.present ? data.uploaded.value : this.uploaded,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FieldReportPhotoRow(')
+          ..write('clientReportId: $clientReportId, ')
+          ..write('position: $position, ')
+          ..write('sha256: $sha256, ')
+          ..write('mimeType: $mimeType, ')
+          ..write('filename: $filename, ')
+          ..write('content: $content, ')
+          ..write('uploaded: $uploaded')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    clientReportId,
+    position,
+    sha256,
+    mimeType,
+    filename,
+    $driftBlobEquality.hash(content),
+    uploaded,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FieldReportPhotoRow &&
+          other.clientReportId == this.clientReportId &&
+          other.position == this.position &&
+          other.sha256 == this.sha256 &&
+          other.mimeType == this.mimeType &&
+          other.filename == this.filename &&
+          $driftBlobEquality.equals(other.content, this.content) &&
+          other.uploaded == this.uploaded);
+}
+
+class FieldReportPhotosCompanion extends UpdateCompanion<FieldReportPhotoRow> {
+  final Value<String> clientReportId;
+  final Value<int> position;
+  final Value<String> sha256;
+  final Value<String> mimeType;
+  final Value<String> filename;
+  final Value<Uint8List> content;
+  final Value<bool> uploaded;
+  final Value<int> rowid;
+  const FieldReportPhotosCompanion({
+    this.clientReportId = const Value.absent(),
+    this.position = const Value.absent(),
+    this.sha256 = const Value.absent(),
+    this.mimeType = const Value.absent(),
+    this.filename = const Value.absent(),
+    this.content = const Value.absent(),
+    this.uploaded = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  FieldReportPhotosCompanion.insert({
+    required String clientReportId,
+    required int position,
+    required String sha256,
+    required String mimeType,
+    required String filename,
+    required Uint8List content,
+    this.uploaded = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : clientReportId = Value(clientReportId),
+       position = Value(position),
+       sha256 = Value(sha256),
+       mimeType = Value(mimeType),
+       filename = Value(filename),
+       content = Value(content);
+  static Insertable<FieldReportPhotoRow> custom({
+    Expression<String>? clientReportId,
+    Expression<int>? position,
+    Expression<String>? sha256,
+    Expression<String>? mimeType,
+    Expression<String>? filename,
+    Expression<Uint8List>? content,
+    Expression<bool>? uploaded,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (clientReportId != null) 'client_report_id': clientReportId,
+      if (position != null) 'position': position,
+      if (sha256 != null) 'sha256': sha256,
+      if (mimeType != null) 'mime_type': mimeType,
+      if (filename != null) 'filename': filename,
+      if (content != null) 'content': content,
+      if (uploaded != null) 'uploaded': uploaded,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  FieldReportPhotosCompanion copyWith({
+    Value<String>? clientReportId,
+    Value<int>? position,
+    Value<String>? sha256,
+    Value<String>? mimeType,
+    Value<String>? filename,
+    Value<Uint8List>? content,
+    Value<bool>? uploaded,
+    Value<int>? rowid,
+  }) {
+    return FieldReportPhotosCompanion(
+      clientReportId: clientReportId ?? this.clientReportId,
+      position: position ?? this.position,
+      sha256: sha256 ?? this.sha256,
+      mimeType: mimeType ?? this.mimeType,
+      filename: filename ?? this.filename,
+      content: content ?? this.content,
+      uploaded: uploaded ?? this.uploaded,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (clientReportId.present) {
+      map['client_report_id'] = Variable<String>(clientReportId.value);
+    }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (sha256.present) {
+      map['sha256'] = Variable<String>(sha256.value);
+    }
+    if (mimeType.present) {
+      map['mime_type'] = Variable<String>(mimeType.value);
+    }
+    if (filename.present) {
+      map['filename'] = Variable<String>(filename.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<Uint8List>(content.value);
+    }
+    if (uploaded.present) {
+      map['uploaded'] = Variable<bool>(uploaded.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FieldReportPhotosCompanion(')
+          ..write('clientReportId: $clientReportId, ')
+          ..write('position: $position, ')
+          ..write('sha256: $sha256, ')
+          ..write('mimeType: $mimeType, ')
+          ..write('filename: $filename, ')
+          ..write('content: $content, ')
+          ..write('uploaded: $uploaded, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3085,9 +5346,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $FileBlobsTable fileBlobs = $FileBlobsTable(this);
   late final $SiteDataTable siteData = $SiteDataTable(this);
   late final $SiteSearchTable siteSearch = $SiteSearchTable(this);
+  late final $FieldReportsTable fieldReports = $FieldReportsTable(this);
+  late final $FieldReportPhotosTable fieldReportPhotos =
+      $FieldReportPhotosTable(this);
   late final LocalMetaDao localMetaDao = LocalMetaDao(this as AppDatabase);
   late final SyncStateDao syncStateDao = SyncStateDao(this as AppDatabase);
   late final OfflineDao offlineDao = OfflineDao(this as AppDatabase);
+  late final ReportsDao reportsDao = ReportsDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3100,7 +5365,19 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     fileBlobs,
     siteData,
     siteSearch,
+    fieldReports,
+    fieldReportPhotos,
   ];
+  @override
+  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'field_report',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('field_report_photo', kind: UpdateKind.delete)],
+    ),
+  ]);
   @override
   DriftDatabaseOptions get options =>
       const DriftDatabaseOptions(storeDateTimeAsText: true);
@@ -4768,6 +7045,1240 @@ typedef $$SiteSearchTableProcessedTableManager =
       SiteSearchRow,
       PrefetchHooks Function()
     >;
+typedef $$FieldReportsTableCreateCompanionBuilder =
+    FieldReportsCompanion Function({
+      required String clientReportId,
+      required String authorUserId,
+      required String tenantId,
+      required String siteId,
+      required String siteName,
+      required String publicationId,
+      required int publicationNumber,
+      required String category,
+      required String severity,
+      required String description,
+      required String observedAt,
+      Value<String?> itemType,
+      Value<String?> itemId,
+      Value<String?> itemLabel,
+      Value<String?> planRevisionId,
+      Value<String?> planTitle,
+      Value<double?> planX,
+      Value<double?> planY,
+      Value<int> photoCount,
+      Value<String> localState,
+      Value<String?> lastError,
+      Value<int> attempts,
+      Value<DateTime?> nextAttemptAt,
+      Value<String?> serverReportId,
+      Value<String?> contentHash,
+      Value<DateTime?> receivedAt,
+      Value<String?> serverStatus,
+      Value<String?> decisionComment,
+      Value<DateTime?> decidedAt,
+      Value<int?> resolutionRevisionNo,
+      Value<int?> resolutionPublicationNumber,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$FieldReportsTableUpdateCompanionBuilder =
+    FieldReportsCompanion Function({
+      Value<String> clientReportId,
+      Value<String> authorUserId,
+      Value<String> tenantId,
+      Value<String> siteId,
+      Value<String> siteName,
+      Value<String> publicationId,
+      Value<int> publicationNumber,
+      Value<String> category,
+      Value<String> severity,
+      Value<String> description,
+      Value<String> observedAt,
+      Value<String?> itemType,
+      Value<String?> itemId,
+      Value<String?> itemLabel,
+      Value<String?> planRevisionId,
+      Value<String?> planTitle,
+      Value<double?> planX,
+      Value<double?> planY,
+      Value<int> photoCount,
+      Value<String> localState,
+      Value<String?> lastError,
+      Value<int> attempts,
+      Value<DateTime?> nextAttemptAt,
+      Value<String?> serverReportId,
+      Value<String?> contentHash,
+      Value<DateTime?> receivedAt,
+      Value<String?> serverStatus,
+      Value<String?> decisionComment,
+      Value<DateTime?> decidedAt,
+      Value<int?> resolutionRevisionNo,
+      Value<int?> resolutionPublicationNumber,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$FieldReportsTableReferences
+    extends BaseReferences<_$AppDatabase, $FieldReportsTable, FieldReportRow> {
+  $$FieldReportsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$FieldReportPhotosTable, List<FieldReportPhotoRow>>
+  _fieldReportPhotosRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.fieldReportPhotos,
+    aliasName:
+        'field_report__client_report_id__field_report_photo__client_report_id',
+  );
+
+  $$FieldReportPhotosTableProcessedTableManager get fieldReportPhotosRefs {
+    final manager =
+        $$FieldReportPhotosTableTableManager(
+          $_db,
+          $_db.fieldReportPhotos,
+        ).filter(
+          (f) => f.clientReportId.clientReportId.sqlEquals(
+            $_itemColumn<String>('client_report_id')!,
+          ),
+        );
+
+    final cache = $_typedResult.readTableOrNull(
+      _fieldReportPhotosRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$FieldReportsTableFilterComposer
+    extends Composer<_$AppDatabase, $FieldReportsTable> {
+  $$FieldReportsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get clientReportId => $composableBuilder(
+    column: $table.clientReportId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get authorUserId => $composableBuilder(
+    column: $table.authorUserId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tenantId => $composableBuilder(
+    column: $table.tenantId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get siteId => $composableBuilder(
+    column: $table.siteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get siteName => $composableBuilder(
+    column: $table.siteName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get publicationId => $composableBuilder(
+    column: $table.publicationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get publicationNumber => $composableBuilder(
+    column: $table.publicationNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get severity => $composableBuilder(
+    column: $table.severity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get observedAt => $composableBuilder(
+    column: $table.observedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get itemType => $composableBuilder(
+    column: $table.itemType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get itemId => $composableBuilder(
+    column: $table.itemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get itemLabel => $composableBuilder(
+    column: $table.itemLabel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get planRevisionId => $composableBuilder(
+    column: $table.planRevisionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get planTitle => $composableBuilder(
+    column: $table.planTitle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get planX => $composableBuilder(
+    column: $table.planX,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get planY => $composableBuilder(
+    column: $table.planY,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get photoCount => $composableBuilder(
+    column: $table.photoCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localState => $composableBuilder(
+    column: $table.localState,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get attempts => $composableBuilder(
+    column: $table.attempts,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get nextAttemptAt => $composableBuilder(
+    column: $table.nextAttemptAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverReportId => $composableBuilder(
+    column: $table.serverReportId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get receivedAt => $composableBuilder(
+    column: $table.receivedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverStatus => $composableBuilder(
+    column: $table.serverStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get decisionComment => $composableBuilder(
+    column: $table.decisionComment,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get decidedAt => $composableBuilder(
+    column: $table.decidedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get resolutionRevisionNo => $composableBuilder(
+    column: $table.resolutionRevisionNo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get resolutionPublicationNumber => $composableBuilder(
+    column: $table.resolutionPublicationNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> fieldReportPhotosRefs(
+    Expression<bool> Function($$FieldReportPhotosTableFilterComposer f) f,
+  ) {
+    final $$FieldReportPhotosTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.clientReportId,
+      referencedTable: $db.fieldReportPhotos,
+      getReferencedColumn: (t) => t.clientReportId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FieldReportPhotosTableFilterComposer(
+            $db: $db,
+            $table: $db.fieldReportPhotos,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$FieldReportsTableOrderingComposer
+    extends Composer<_$AppDatabase, $FieldReportsTable> {
+  $$FieldReportsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get clientReportId => $composableBuilder(
+    column: $table.clientReportId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get authorUserId => $composableBuilder(
+    column: $table.authorUserId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tenantId => $composableBuilder(
+    column: $table.tenantId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get siteId => $composableBuilder(
+    column: $table.siteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get siteName => $composableBuilder(
+    column: $table.siteName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get publicationId => $composableBuilder(
+    column: $table.publicationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get publicationNumber => $composableBuilder(
+    column: $table.publicationNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get severity => $composableBuilder(
+    column: $table.severity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get observedAt => $composableBuilder(
+    column: $table.observedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get itemType => $composableBuilder(
+    column: $table.itemType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get itemId => $composableBuilder(
+    column: $table.itemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get itemLabel => $composableBuilder(
+    column: $table.itemLabel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get planRevisionId => $composableBuilder(
+    column: $table.planRevisionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get planTitle => $composableBuilder(
+    column: $table.planTitle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get planX => $composableBuilder(
+    column: $table.planX,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get planY => $composableBuilder(
+    column: $table.planY,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get photoCount => $composableBuilder(
+    column: $table.photoCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get localState => $composableBuilder(
+    column: $table.localState,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get attempts => $composableBuilder(
+    column: $table.attempts,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get nextAttemptAt => $composableBuilder(
+    column: $table.nextAttemptAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serverReportId => $composableBuilder(
+    column: $table.serverReportId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get receivedAt => $composableBuilder(
+    column: $table.receivedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serverStatus => $composableBuilder(
+    column: $table.serverStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get decisionComment => $composableBuilder(
+    column: $table.decisionComment,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get decidedAt => $composableBuilder(
+    column: $table.decidedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get resolutionRevisionNo => $composableBuilder(
+    column: $table.resolutionRevisionNo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get resolutionPublicationNumber => $composableBuilder(
+    column: $table.resolutionPublicationNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$FieldReportsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $FieldReportsTable> {
+  $$FieldReportsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get clientReportId => $composableBuilder(
+    column: $table.clientReportId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get authorUserId => $composableBuilder(
+    column: $table.authorUserId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get tenantId =>
+      $composableBuilder(column: $table.tenantId, builder: (column) => column);
+
+  GeneratedColumn<String> get siteId =>
+      $composableBuilder(column: $table.siteId, builder: (column) => column);
+
+  GeneratedColumn<String> get siteName =>
+      $composableBuilder(column: $table.siteName, builder: (column) => column);
+
+  GeneratedColumn<String> get publicationId => $composableBuilder(
+    column: $table.publicationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get publicationNumber => $composableBuilder(
+    column: $table.publicationNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
+
+  GeneratedColumn<String> get severity =>
+      $composableBuilder(column: $table.severity, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get observedAt => $composableBuilder(
+    column: $table.observedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get itemType =>
+      $composableBuilder(column: $table.itemType, builder: (column) => column);
+
+  GeneratedColumn<String> get itemId =>
+      $composableBuilder(column: $table.itemId, builder: (column) => column);
+
+  GeneratedColumn<String> get itemLabel =>
+      $composableBuilder(column: $table.itemLabel, builder: (column) => column);
+
+  GeneratedColumn<String> get planRevisionId => $composableBuilder(
+    column: $table.planRevisionId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get planTitle =>
+      $composableBuilder(column: $table.planTitle, builder: (column) => column);
+
+  GeneratedColumn<double> get planX =>
+      $composableBuilder(column: $table.planX, builder: (column) => column);
+
+  GeneratedColumn<double> get planY =>
+      $composableBuilder(column: $table.planY, builder: (column) => column);
+
+  GeneratedColumn<int> get photoCount => $composableBuilder(
+    column: $table.photoCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get localState => $composableBuilder(
+    column: $table.localState,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastError =>
+      $composableBuilder(column: $table.lastError, builder: (column) => column);
+
+  GeneratedColumn<int> get attempts =>
+      $composableBuilder(column: $table.attempts, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get nextAttemptAt => $composableBuilder(
+    column: $table.nextAttemptAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get serverReportId => $composableBuilder(
+    column: $table.serverReportId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get receivedAt => $composableBuilder(
+    column: $table.receivedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get serverStatus => $composableBuilder(
+    column: $table.serverStatus,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get decisionComment => $composableBuilder(
+    column: $table.decisionComment,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get decidedAt =>
+      $composableBuilder(column: $table.decidedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get resolutionRevisionNo => $composableBuilder(
+    column: $table.resolutionRevisionNo,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get resolutionPublicationNumber => $composableBuilder(
+    column: $table.resolutionPublicationNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  Expression<T> fieldReportPhotosRefs<T extends Object>(
+    Expression<T> Function($$FieldReportPhotosTableAnnotationComposer a) f,
+  ) {
+    final $$FieldReportPhotosTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.clientReportId,
+          referencedTable: $db.fieldReportPhotos,
+          getReferencedColumn: (t) => t.clientReportId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$FieldReportPhotosTableAnnotationComposer(
+                $db: $db,
+                $table: $db.fieldReportPhotos,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$FieldReportsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $FieldReportsTable,
+          FieldReportRow,
+          $$FieldReportsTableFilterComposer,
+          $$FieldReportsTableOrderingComposer,
+          $$FieldReportsTableAnnotationComposer,
+          $$FieldReportsTableCreateCompanionBuilder,
+          $$FieldReportsTableUpdateCompanionBuilder,
+          (FieldReportRow, $$FieldReportsTableReferences),
+          FieldReportRow,
+          PrefetchHooks Function({bool fieldReportPhotosRefs})
+        > {
+  $$FieldReportsTableTableManager(_$AppDatabase db, $FieldReportsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FieldReportsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FieldReportsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FieldReportsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> clientReportId = const Value.absent(),
+                Value<String> authorUserId = const Value.absent(),
+                Value<String> tenantId = const Value.absent(),
+                Value<String> siteId = const Value.absent(),
+                Value<String> siteName = const Value.absent(),
+                Value<String> publicationId = const Value.absent(),
+                Value<int> publicationNumber = const Value.absent(),
+                Value<String> category = const Value.absent(),
+                Value<String> severity = const Value.absent(),
+                Value<String> description = const Value.absent(),
+                Value<String> observedAt = const Value.absent(),
+                Value<String?> itemType = const Value.absent(),
+                Value<String?> itemId = const Value.absent(),
+                Value<String?> itemLabel = const Value.absent(),
+                Value<String?> planRevisionId = const Value.absent(),
+                Value<String?> planTitle = const Value.absent(),
+                Value<double?> planX = const Value.absent(),
+                Value<double?> planY = const Value.absent(),
+                Value<int> photoCount = const Value.absent(),
+                Value<String> localState = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
+                Value<int> attempts = const Value.absent(),
+                Value<DateTime?> nextAttemptAt = const Value.absent(),
+                Value<String?> serverReportId = const Value.absent(),
+                Value<String?> contentHash = const Value.absent(),
+                Value<DateTime?> receivedAt = const Value.absent(),
+                Value<String?> serverStatus = const Value.absent(),
+                Value<String?> decisionComment = const Value.absent(),
+                Value<DateTime?> decidedAt = const Value.absent(),
+                Value<int?> resolutionRevisionNo = const Value.absent(),
+                Value<int?> resolutionPublicationNumber = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => FieldReportsCompanion(
+                clientReportId: clientReportId,
+                authorUserId: authorUserId,
+                tenantId: tenantId,
+                siteId: siteId,
+                siteName: siteName,
+                publicationId: publicationId,
+                publicationNumber: publicationNumber,
+                category: category,
+                severity: severity,
+                description: description,
+                observedAt: observedAt,
+                itemType: itemType,
+                itemId: itemId,
+                itemLabel: itemLabel,
+                planRevisionId: planRevisionId,
+                planTitle: planTitle,
+                planX: planX,
+                planY: planY,
+                photoCount: photoCount,
+                localState: localState,
+                lastError: lastError,
+                attempts: attempts,
+                nextAttemptAt: nextAttemptAt,
+                serverReportId: serverReportId,
+                contentHash: contentHash,
+                receivedAt: receivedAt,
+                serverStatus: serverStatus,
+                decisionComment: decisionComment,
+                decidedAt: decidedAt,
+                resolutionRevisionNo: resolutionRevisionNo,
+                resolutionPublicationNumber: resolutionPublicationNumber,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String clientReportId,
+                required String authorUserId,
+                required String tenantId,
+                required String siteId,
+                required String siteName,
+                required String publicationId,
+                required int publicationNumber,
+                required String category,
+                required String severity,
+                required String description,
+                required String observedAt,
+                Value<String?> itemType = const Value.absent(),
+                Value<String?> itemId = const Value.absent(),
+                Value<String?> itemLabel = const Value.absent(),
+                Value<String?> planRevisionId = const Value.absent(),
+                Value<String?> planTitle = const Value.absent(),
+                Value<double?> planX = const Value.absent(),
+                Value<double?> planY = const Value.absent(),
+                Value<int> photoCount = const Value.absent(),
+                Value<String> localState = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
+                Value<int> attempts = const Value.absent(),
+                Value<DateTime?> nextAttemptAt = const Value.absent(),
+                Value<String?> serverReportId = const Value.absent(),
+                Value<String?> contentHash = const Value.absent(),
+                Value<DateTime?> receivedAt = const Value.absent(),
+                Value<String?> serverStatus = const Value.absent(),
+                Value<String?> decisionComment = const Value.absent(),
+                Value<DateTime?> decidedAt = const Value.absent(),
+                Value<int?> resolutionRevisionNo = const Value.absent(),
+                Value<int?> resolutionPublicationNumber = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => FieldReportsCompanion.insert(
+                clientReportId: clientReportId,
+                authorUserId: authorUserId,
+                tenantId: tenantId,
+                siteId: siteId,
+                siteName: siteName,
+                publicationId: publicationId,
+                publicationNumber: publicationNumber,
+                category: category,
+                severity: severity,
+                description: description,
+                observedAt: observedAt,
+                itemType: itemType,
+                itemId: itemId,
+                itemLabel: itemLabel,
+                planRevisionId: planRevisionId,
+                planTitle: planTitle,
+                planX: planX,
+                planY: planY,
+                photoCount: photoCount,
+                localState: localState,
+                lastError: lastError,
+                attempts: attempts,
+                nextAttemptAt: nextAttemptAt,
+                serverReportId: serverReportId,
+                contentHash: contentHash,
+                receivedAt: receivedAt,
+                serverStatus: serverStatus,
+                decisionComment: decisionComment,
+                decidedAt: decidedAt,
+                resolutionRevisionNo: resolutionRevisionNo,
+                resolutionPublicationNumber: resolutionPublicationNumber,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$FieldReportsTable, FieldReportRow>(table),
+                  $$FieldReportsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({fieldReportPhotosRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (fieldReportPhotosRefs) db.fieldReportPhotos,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (fieldReportPhotosRefs)
+                    await $_getPrefetchedData<
+                      FieldReportRow,
+                      $FieldReportsTable,
+                      FieldReportPhotoRow
+                    >(
+                      currentTable: table,
+                      referencedTable: $$FieldReportsTableReferences
+                          ._fieldReportPhotosRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$FieldReportsTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).fieldReportPhotosRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where(
+                            (e) => e.clientReportId == item.clientReportId,
+                          ),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$FieldReportsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $FieldReportsTable,
+      FieldReportRow,
+      $$FieldReportsTableFilterComposer,
+      $$FieldReportsTableOrderingComposer,
+      $$FieldReportsTableAnnotationComposer,
+      $$FieldReportsTableCreateCompanionBuilder,
+      $$FieldReportsTableUpdateCompanionBuilder,
+      (FieldReportRow, $$FieldReportsTableReferences),
+      FieldReportRow,
+      PrefetchHooks Function({bool fieldReportPhotosRefs})
+    >;
+typedef $$FieldReportPhotosTableCreateCompanionBuilder =
+    FieldReportPhotosCompanion Function({
+      required String clientReportId,
+      required int position,
+      required String sha256,
+      required String mimeType,
+      required String filename,
+      required Uint8List content,
+      Value<bool> uploaded,
+      Value<int> rowid,
+    });
+typedef $$FieldReportPhotosTableUpdateCompanionBuilder =
+    FieldReportPhotosCompanion Function({
+      Value<String> clientReportId,
+      Value<int> position,
+      Value<String> sha256,
+      Value<String> mimeType,
+      Value<String> filename,
+      Value<Uint8List> content,
+      Value<bool> uploaded,
+      Value<int> rowid,
+    });
+
+final class $$FieldReportPhotosTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $FieldReportPhotosTable,
+          FieldReportPhotoRow
+        > {
+  $$FieldReportPhotosTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $FieldReportsTable _clientReportIdTable(_$AppDatabase db) =>
+      db.fieldReports.createAlias(
+        'field_report_photo__client_report_id__field_report__client_report_id',
+      );
+
+  $$FieldReportsTableProcessedTableManager get clientReportId {
+    final $_column = $_itemColumn<String>('client_report_id')!;
+
+    final manager = $$FieldReportsTableTableManager(
+      $_db,
+      $_db.fieldReports,
+    ).filter((f) => f.clientReportId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_clientReportIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$FieldReportPhotosTableFilterComposer
+    extends Composer<_$AppDatabase, $FieldReportPhotosTable> {
+  $$FieldReportPhotosTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sha256 => $composableBuilder(
+    column: $table.sha256,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mimeType => $composableBuilder(
+    column: $table.mimeType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get filename => $composableBuilder(
+    column: $table.filename,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get uploaded => $composableBuilder(
+    column: $table.uploaded,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$FieldReportsTableFilterComposer get clientReportId {
+    final $$FieldReportsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.clientReportId,
+      referencedTable: $db.fieldReports,
+      getReferencedColumn: (t) => t.clientReportId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FieldReportsTableFilterComposer(
+            $db: $db,
+            $table: $db.fieldReports,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FieldReportPhotosTableOrderingComposer
+    extends Composer<_$AppDatabase, $FieldReportPhotosTable> {
+  $$FieldReportPhotosTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sha256 => $composableBuilder(
+    column: $table.sha256,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mimeType => $composableBuilder(
+    column: $table.mimeType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get filename => $composableBuilder(
+    column: $table.filename,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get uploaded => $composableBuilder(
+    column: $table.uploaded,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$FieldReportsTableOrderingComposer get clientReportId {
+    final $$FieldReportsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.clientReportId,
+      referencedTable: $db.fieldReports,
+      getReferencedColumn: (t) => t.clientReportId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FieldReportsTableOrderingComposer(
+            $db: $db,
+            $table: $db.fieldReports,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FieldReportPhotosTableAnnotationComposer
+    extends Composer<_$AppDatabase, $FieldReportPhotosTable> {
+  $$FieldReportPhotosTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<String> get sha256 =>
+      $composableBuilder(column: $table.sha256, builder: (column) => column);
+
+  GeneratedColumn<String> get mimeType =>
+      $composableBuilder(column: $table.mimeType, builder: (column) => column);
+
+  GeneratedColumn<String> get filename =>
+      $composableBuilder(column: $table.filename, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<bool> get uploaded =>
+      $composableBuilder(column: $table.uploaded, builder: (column) => column);
+
+  $$FieldReportsTableAnnotationComposer get clientReportId {
+    final $$FieldReportsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.clientReportId,
+      referencedTable: $db.fieldReports,
+      getReferencedColumn: (t) => t.clientReportId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FieldReportsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fieldReports,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FieldReportPhotosTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $FieldReportPhotosTable,
+          FieldReportPhotoRow,
+          $$FieldReportPhotosTableFilterComposer,
+          $$FieldReportPhotosTableOrderingComposer,
+          $$FieldReportPhotosTableAnnotationComposer,
+          $$FieldReportPhotosTableCreateCompanionBuilder,
+          $$FieldReportPhotosTableUpdateCompanionBuilder,
+          (FieldReportPhotoRow, $$FieldReportPhotosTableReferences),
+          FieldReportPhotoRow,
+          PrefetchHooks Function({bool clientReportId})
+        > {
+  $$FieldReportPhotosTableTableManager(
+    _$AppDatabase db,
+    $FieldReportPhotosTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FieldReportPhotosTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FieldReportPhotosTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FieldReportPhotosTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> clientReportId = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<String> sha256 = const Value.absent(),
+                Value<String> mimeType = const Value.absent(),
+                Value<String> filename = const Value.absent(),
+                Value<Uint8List> content = const Value.absent(),
+                Value<bool> uploaded = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => FieldReportPhotosCompanion(
+                clientReportId: clientReportId,
+                position: position,
+                sha256: sha256,
+                mimeType: mimeType,
+                filename: filename,
+                content: content,
+                uploaded: uploaded,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String clientReportId,
+                required int position,
+                required String sha256,
+                required String mimeType,
+                required String filename,
+                required Uint8List content,
+                Value<bool> uploaded = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => FieldReportPhotosCompanion.insert(
+                clientReportId: clientReportId,
+                position: position,
+                sha256: sha256,
+                mimeType: mimeType,
+                filename: filename,
+                content: content,
+                uploaded: uploaded,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$FieldReportPhotosTable, FieldReportPhotoRow>(
+                    table,
+                  ),
+                  $$FieldReportPhotosTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({clientReportId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (clientReportId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.clientReportId,
+                        referencedTable: $$FieldReportPhotosTableReferences
+                            ._clientReportIdTable(db),
+                        referencedColumn: $$FieldReportPhotosTableReferences
+                            ._clientReportIdTable(db)
+                            .clientReportId,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$FieldReportPhotosTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $FieldReportPhotosTable,
+      FieldReportPhotoRow,
+      $$FieldReportPhotosTableFilterComposer,
+      $$FieldReportPhotosTableOrderingComposer,
+      $$FieldReportPhotosTableAnnotationComposer,
+      $$FieldReportPhotosTableCreateCompanionBuilder,
+      $$FieldReportPhotosTableUpdateCompanionBuilder,
+      (FieldReportPhotoRow, $$FieldReportPhotosTableReferences),
+      FieldReportPhotoRow,
+      PrefetchHooks Function({bool clientReportId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4786,4 +8297,8 @@ class $AppDatabaseManager {
       $$SiteDataTableTableManager(_db, _db.siteData);
   $$SiteSearchTableTableManager get siteSearch =>
       $$SiteSearchTableTableManager(_db, _db.siteSearch);
+  $$FieldReportsTableTableManager get fieldReports =>
+      $$FieldReportsTableTableManager(_db, _db.fieldReports);
+  $$FieldReportPhotosTableTableManager get fieldReportPhotos =>
+      $$FieldReportPhotosTableTableManager(_db, _db.fieldReportPhotos);
 }

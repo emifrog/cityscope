@@ -18,6 +18,7 @@ class SiteScreen extends ConsumerWidget {
   final String siteId;
 
   static Key tileKey(OpsSection section) => Key('site.tile.${section.name}');
+  static const reportButtonKey = Key('site.report');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => OpsScaffold(
@@ -109,6 +110,13 @@ class _Synthesis extends StatelessWidget {
               onTap: () =>
                   context.push(AppRoutes.section(site.siteId, section.name)),
             ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          key: SiteScreen.reportButtonKey,
+          onPressed: () => context.push(AppRoutes.report(site.siteId)),
+          icon: const Icon(Icons.flag_outlined),
+          label: const Text('Signaler un écart sur ce site'),
+        ),
         const Divider(height: 32),
         Text(
           [

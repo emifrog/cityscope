@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Seule permission demandée : accès réseau (API produit + authentification).
-         Pas de localisation, caméra, contacts… tant que les fonctions ne l'exigent pas. -->
+         Pas de localisation ni de contacts. Les photos des signalements passent par
+         l'application appareil photo du système (intention IMAGE_CAPTURE) ou le
+         sélecteur de photos : aucune permission caméra ni stockage. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Sécurité :
@@ -52,6 +54,10 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <!-- Appareil photo du système, pour la photo d'un signalement (Android 11+). -->
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE"/>
+        </intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

@@ -10,6 +10,7 @@ import 'package:etare_ops/src/core/security/trusted_keys.dart';
 import 'package:etare_ops/src/core/text/search_text.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/data/local/daos/offline_dao.dart';
+import 'package:etare_ops/src/data/local/daos/reports_dao.dart';
 import 'package:etare_ops/src/data/local/daos/sync_state_dao.dart';
 import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
 import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
@@ -73,11 +74,15 @@ final class SyncNotEnrolled extends SyncReport {
   const SyncNotEnrolled();
 }
 
-/// Terminal révoqué ou inconnu du serveur : données et identité effacées.
+/// Terminal révoqué ou inconnu du serveur : données et identité effacées,
+/// signalements non transmis compris (ADR-017).
 final class SyncPurged extends SyncReport {
-  const SyncPurged(this.reason);
+  const SyncPurged(this.reason, {this.discardedReports = 0});
 
   final ApiErrorCode reason;
+
+  /// Signalements effacés avant d'avoir été transmis.
+  final int discardedReports;
 }
 
 final class SyncCompleted extends SyncReport {
@@ -110,6 +115,7 @@ final class SyncService {
   SyncService({
     required this._api,
     required this._offline,
+    required this._reports,
     required this._state,
     required this._identities,
     required this._trustedKeys,
@@ -120,6 +126,7 @@ final class SyncService {
 
   final SyncApi _api;
   final OfflineDao _offline;
+  final ReportsDao _reports;
   final SyncStateDao _state;
   final DeviceIdentityStore _identities;
   final TrustedKeys _trustedKeys;
@@ -155,8 +162,9 @@ final class SyncService {
             ApiErrorCode.deviceNotEnrolled ||
             ApiErrorCode.deviceProofInvalid:
           _logger.warning('Terminal refusé (${error.code.wireValue}) : purge.');
+          final discarded = await _reports.pendingCount();
           await purge();
-          return SyncPurged(error.code);
+          return SyncPurged(error.code, discardedReports: discarded);
         case ApiErrorCode.forbidden:
           // L'utilisateur n'a plus le droit : son accès local cesse aussi.
           await _fail(describeError(error), revokeAccess: true);
@@ -187,6 +195,7 @@ final class SyncService {
 
   /// Révocation (OFF-04) : données installées, état et identité effacés.
   Future<void> purge() async {
+    await _reports.purgeAll();
     await _offline.purgeAll();
     await _identities.clear();
   }

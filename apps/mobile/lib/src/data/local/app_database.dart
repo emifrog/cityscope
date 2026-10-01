@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:etare_ops/src/data/local/daos/local_meta_dao.dart';
 import 'package:etare_ops/src/data/local/daos/offline_dao.dart';
+import 'package:etare_ops/src/data/local/daos/reports_dao.dart';
 import 'package:etare_ops/src/data/local/daos/sync_state_dao.dart';
 import 'package:etare_ops/src/data/local/tables.dart';
 
@@ -20,22 +21,24 @@ part 'app_database.g.dart';
     FileBlobs,
     SiteData,
     SiteSearch,
+    FieldReports,
+    FieldReportPhotos,
   ],
-  daos: [LocalMetaDao, SyncStateDao, OfflineDao],
+  daos: [LocalMetaDao, SyncStateDao, OfflineDao, ReportsDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   /// Incrémenter à chaque évolution du schéma, puis :
   /// `dart run drift_dev make-migrations` (instantané + tests générés).
-  static const currentSchemaVersion = 2;
+  static const currentSchemaVersion = 3;
 
   @override
   int get schemaVersion => currentSchemaVersion;
 
   /// Étapes de migration indexées par version CIBLE.
   static const Map<int, Future<void> Function(Migrator m, AppDatabase db)>
-  _migrationSteps = {2: _migrateToV2};
+  _migrationSteps = {2: _migrateToV2, 3: _migrateToV3};
 
   /// v2 (Sprint 4) : contenu hors ligne installé et état de synchronisation
   /// complet (génération acceptée, autorisation locale, dernière erreur).
@@ -56,6 +59,12 @@ class AppDatabase extends _$AppDatabase {
     await m.createTable(db.fileBlobs);
     await m.createTable(db.siteData);
     await m.createTable(db.siteSearch);
+  }
+
+  /// v3 (Sprint 5) : file chiffrée des signalements terrain et de leurs photos.
+  static Future<void> _migrateToV3(Migrator m, AppDatabase db) async {
+    await m.createTable(db.fieldReports);
+    await m.createTable(db.fieldReportPhotos);
   }
 
   @override

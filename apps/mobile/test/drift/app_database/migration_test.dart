@@ -9,6 +9,7 @@ import 'generated/schema.dart';
 
 import 'generated/schema_v1.dart' as v1;
 import 'generated/schema_v2.dart' as v2;
+import 'generated/schema_v3.dart' as v3;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -81,6 +82,51 @@ void main() {
           expectedNewSyncStateData,
           await newDb.select(newDb.syncState).get(),
         );
+      },
+    );
+  });
+
+  // Tablette en v2 : l'état de synchronisation et le SIS actif sont conservés,
+  // la file des signalements démarre vide.
+  test('la migration v2 → v3 conserve les données existantes', () async {
+    const oldSyncStateData = [
+      v2.SyncStateData(
+        id: 1,
+        activeGeneration: 4,
+        lastSyncAt: '2026-10-01T08:00:00.000Z',
+        status: 'idle',
+        catalogGeneration: 4,
+        authorizedUserId: 'user-1',
+        receiptPending: 0,
+      ),
+    ];
+    const expectedNewSyncStateData = [
+      v3.SyncStateData(
+        id: 1,
+        activeGeneration: 4,
+        lastSyncAt: '2026-10-01T08:00:00.000Z',
+        status: 'idle',
+        catalogGeneration: 4,
+        authorizedUserId: 'user-1',
+        receiptPending: 0,
+      ),
+    ];
+
+    await verifier.testWithDataIntegrity(
+      oldVersion: 2,
+      newVersion: 3,
+      createOld: v2.DatabaseAtV2.new,
+      createNew: v3.DatabaseAtV3.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, oldDb) {
+        batch.insertAll(oldDb.syncState, oldSyncStateData);
+      },
+      validateItems: (newDb) async {
+        expect(
+          expectedNewSyncStateData,
+          await newDb.select(newDb.syncState).get(),
+        );
+        expect(await newDb.select(newDb.fieldReport).get(), isEmpty);
       },
     );
   });
