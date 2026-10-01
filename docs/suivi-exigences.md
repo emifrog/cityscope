@@ -1,7 +1,7 @@
 # Suivi des exigences
 
-**État au 1er octobre 2026**, après le Sprint 6 (documents à la demande, synchronisation en
-arrière-plan, version minimale d’application). Ce
+**État au 1er octobre 2026**, après le Sprint 7 (portail exploitant : invitations, consultation,
+propositions, notifications). Ce
 tableau est le point d’entrée courant ; les rapports de sprint restent des photographies datées.
 Priorités et lots : [cahier des charges MVP](reference/01_Cahier_des_charges_MVP_ETARE_numerique.pdf).
 La [roadmap complète](roadmap-developpement.md) affecte chacune des 44 exigences à un lot et à un
@@ -42,7 +42,7 @@ pilote**. Les chemins de tests sont relatifs à la racine du dépôt.
 | OFF-03 — chiffrement local                             | P0    | Implémenté  | tests Flutter (`apps/mobile`), ADR-016                                                                                   | fichiers des paquets dans la base SQLCipher ; ni rotation de la clé ni verrouillage applicatif                                                       |
 | OFF-04 — révocation d’un terminal                      | P0    | Implémenté  | `offline-distribution.test.ts`, pgTAP `120`, `sync_service_test.dart` (purge)                                            | effective au premier contact réseau ; hors réseau, l’autorisation locale expire après 7 jours                                                        |
 | OFF-05 — politique de rétention                        | P1    | À faire     | —                                                                                                                        | MVP+                                                                                                                                                 |
-| PORTAL-01 à 03 — portail exploitant                    | P0    | À faire     | —                                                                                                                        | invitation des membres du SIS existante, pas d’invitation exploitant par site ni de contribution                                                     |
+| PORTAL-01 à 03 — portail exploitant                    | P0    | Implémenté  | `tests/integration/portal-*.test.ts`, pgTAP `150` à `180`                                                                | report manuel des propositions acceptées ; notifications des équipes du SIS et recette exploitant à venir (ADR-019, ADR-020)                         |
 | ADMIN-01 — RBAC et périmètres                          | P0    | Partiel     | `tests/integration/members.test.ts`, `rbac-parity.test.ts`, pgTAP `80`                                                   | rôles, membres, double authentification ; secteurs et politiques de sensibilité non opérationnels                                                    |
 | ADMIN-02 — terminaux                                   | P0    | Implémenté  | `offline-distribution.test.ts`, pgTAP `120`                                                                              | déclaration, code d’enrôlement, inventaire, état, révocation ; limitation de débit des codes à prévoir                                               |
 | ADMIN-03 — catalogues configurables                    | P1    | Partiel     | `plan-items.test.ts`                                                                                                     | risques configurables par le SIS ; objets non                                                                                                        |

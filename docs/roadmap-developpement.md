@@ -67,10 +67,14 @@ Un total de tests ou un nombre de sprints ne donne pas un pourcentage fiable d�
 | Sprint 6 A — version min.  | Version minimale dans le catalogue signé, terminaux à mettre à jour signalés ; tablette trop ancienne : rien de nouveau installé, retraits appliqués, invitation  | Commit `f38e433`, ADR-015 (complément)                                          |
 | Sprint 6 B — documents     | Documents « à la demande » listés avec taille et état, téléchargement explicite signé et vérifié, conservation, retrait, messages exacts hors réseau              | Commit `9f02f43`, ADR-016 (complément)                                          |
 | Sprint 6 C — arrière-plan  | WorkManager horaire sous contraintes, budget 50 Mo puis Wi-Fi, bail entre moteurs, session partagée, reprise au retour ; essai émulateur                          | Commit `c6745d7`, [ADR-018](decisions/ADR-018-background-sync.md)               |
+| Sprint 7 A — accès         | Invitations d’exploitants par site (usage unique, échéance, révocation), rôle par site seulement, second facteur réglable par SIS et exigé par défaut, portail    | Commit `114250c`, [ADR-019](decisions/ADR-019-exploitant-portal.md)             |
+| Sprint 7 B — consultation  | Liste blanche de la version publiée construite en base, documents « visibles exploitant » figés dans l’instantané, téléchargement contrôlé et tracé               | Commit `28b8e77`                                                                |
+| Sprint 7 C — propositions  | Propositions avec valeur publiée figée et pièces contrôlées, échanges, report en brouillon, décision motivée, conflit à résoudre explicitement, suivi exploitant  | Commit `a6292cb` ; report dans les données de travail manuel                    |
+| Sprint 7 D — notifications | Boîte d’envoi transactionnelle (invitation, question, décision), envoi SMTP par le worker, contenu minimal, échecs tracés et rejouables                           | Commit `1238901`, [ADR-020](decisions/ADR-020-notifications.md)                 |
 
-**État technique vérifié :** 267 tests TypeScript, 286 assertions SQL, 82 tests d’intégration (dont
-l’antivirus contre un vrai ClamAV en CI), 158 tests Flutter réussis et 1 test optionnel ignoré ;
-22 migrations, 18 ADR (CI du commit `c6745d7`).
+**État technique vérifié :** 291 tests TypeScript, 392 assertions SQL, 96 tests d’intégration (dont
+l’antivirus contre un vrai ClamAV et les e-mails dans Mailpit en CI), 158 tests Flutter réussis et
+1 test optionnel ignoré ; 26 migrations, 20 ADR (CI du commit `ee1be43`, [rapport du Sprint 7](sprint-7-report.md)).
 Origine de chaque vérification et limites : [bilan du 1er octobre](bilan-depot-2026-10-01.md).
 
 ## 3. Séquence proposée jusqu’au pilote
@@ -184,13 +188,13 @@ Lire le PDF essentiel après redémarrage sans réseau. Tests de contrat, d’in
 
 ### R2 — portail exploitant minimal
 
-- [ ] **POR-01 — Invitation :** invitation limitée à un ou plusieurs sites, durée de validité, usage unique,
+- [x] **POR-01 — Invitation :** invitation limitée à un ou plusieurs sites, durée de validité, usage unique,
       révocation, acceptation et politique MFA configurable ; aucun rôle EXPLOITANT global au SIS.
-- [ ] **POR-02 — Consultation :** liste blanche des champs/documents exposés à l’exploitant ; refus des
+- [x] **POR-02 — Consultation :** liste blanche des champs/documents exposés à l’exploitant ; refus des
       données opérationnelles non destinées à ce public, même par appel direct à l’API.
-- [ ] **POR-03 — Proposition :** modification rattachée au champ/objet/document et à sa version source,
+- [x] **POR-03 — Proposition :** modification rattachée au champ/objet/document et à sa version source,
       commentaire, pièces et suivi. Réutiliser le traitement des contributions de R1.
-- [ ] **POR-04 — Concurrence :** détecter une proposition basée sur une ancienne valeur, demander une
+- [x] **POR-04 — Concurrence :** détecter une proposition basée sur une ancienne valeur, demander une
       résolution explicite et tracer acceptation partielle/refus ; aucune écriture directe dans le publié.
       **Décisions prises par le porteur le 1er octobre 2026 (Sprint 7) :** l'administrateur du SIS et les
       rédacteurs Prévision invitent les exploitants, avec second facteur ; le second facteur des exploitants est
@@ -199,7 +203,7 @@ Lire le PDF essentiel après redémarrage sans réseau. Tests de contrat, d’in
       marqués « visibles par l'exploitant ») et jamais les codes d'accès, les risques détaillés, les PEI ni les
       images des plans.
 
-- [ ] **POR-05 — Notifications utiles :** invitation, demande de précision, décision ; envoi rejouable,
+- [x] **POR-05 — Notifications utiles :** invitation, demande de précision, décision ; envoi rejouable,
       liens à durée limitée et suivi d’erreur. Le workflow doit rester utilisable si la notification échoue.
 
 **Acceptation :** un exploitant de deux sites n’accède à aucun autre ; un lien expiré/révoqué ne fonctionne
@@ -349,9 +353,9 @@ Les exigences transverses hors de cette table sont couvertes par R0/R4 et la sec
 | OFF-03    | P0       | Stockage local chiffré                   | Implémenté  | R4 SEC-05/CAP-02 ; nouveaux PDF/signalements sans fichier en clair                            |
 | OFF-04    | P0       | Révocation et purge au contact           | Implémenté  | DEC-04, R5 : latence et limites hors réseau acceptées                                         |
 | OFF-05    | P1       | Rétention configurable par SIS           | À faire     | R6 ; distinguer conservation serveur et cache local                                           |
-| PORTAL-01 | P0       | Invitation exploitant par site           | À faire     | R2 POR-01/02 : expiration, MFA configurable, périmètre                                        |
-| PORTAL-02 | P0       | Proposition sans publication directe     | À faire     | R2 POR-03/04 : contribution et conflit explicites                                             |
-| PORTAL-03 | P0       | Documents et photos exploitants          | À faire     | R2 : chaîne contrôlée et antivirus déjà disponibles (SEC-01)                                  |
+| PORTAL-01 | P0       | Invitation exploitant par site           | Implémenté  | Sprint 7 (ADR-019) ; R5 : recette avec un exploitant pilote                                   |
+| PORTAL-02 | P0       | Proposition sans publication directe     | Implémenté  | Sprint 7 : conflit explicite, report manuel dans les données de travail                       |
+| PORTAL-03 | P0       | Documents et photos exploitants          | Implémenté  | Sprint 7 : pièces contrôlées (antivirus), documents partagés par le SIS                       |
 | ADMIN-01  | P0       | Rôles et périmètres                      | Partiel     | R3 PER-01/02 : secteurs et règles sensibles                                                   |
 | ADMIN-02  | P0       | Terminaux                                | Implémenté  | R4 SEC-03/05 ; R5 inventaire/enrôlement/révocation                                            |
 | ADMIN-03  | P1       | Catalogues configurables                 | Partiel     | R6 : objets/icônes/champs/valeurs ; risques déjà livrés                                       |

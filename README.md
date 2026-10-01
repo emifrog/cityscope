@@ -7,7 +7,7 @@ consultation hors ligne des plans ETARE numériques. Dépôt technique `etare-pl
 > Identité (nom, logos, couleurs) : [`assets/brand/`](assets/brand/README.md) ; déclinaisons web et
 > mobile générées par `pnpm brand:assets`.
 
-**État : Sprint 6 livré.** Le back-office couvre la préparation d’un ETARE : référentiel des sites,
+**État : Sprint 7 livré.** Le back-office couvre la préparation d’un ETARE : référentiel des sites,
 carte IGN, plans de niveaux, objets (avec photos), zones et risques, contrôle avant validation,
 validation par un validateur indépendant avec double authentification, publication immuable et PDF.
 Les versions publiées sont distribuées, signées, aux tablettes enrôlées par l’administration du SIS
@@ -15,16 +15,18 @@ et consultées **sans réseau** dans l’application OPS (recherche, synthèse, 
 PDF). Les intervenants signalent hors ligne les écarts constatés, avec photo ; la Prévision les
 instruit jusqu’à la version corrigée. Les fichiers déposés passent par l’antivirus ClamAV. La tablette
 se synchronise aussi en arrière-plan, télécharge à la demande les documents non essentiels et invite à
-la mise à jour quand la version de l’application est trop ancienne.
-**Restent à venir** : portail exploitant, carte sur tablette, périmètres de synchronisation, politique des sites sensibles et
+la mise à jour quand la version de l’application est trop ancienne. Les exploitants, invités sur leurs
+sites, consultent sur un portail dédié une liste blanche de la version publiée et proposent des mises à
+jour, instruites par la Prévision avant toute publication ; ils sont prévenus par e-mail.
+**Restent à venir** : carte sur tablette, périmètres de synchronisation, politique des sites sensibles et
 qualification du pilote.
 La CI GitHub (TypeScript et build, base et intégration, Flutter) s’exécute à chaque push sur `main`.
 Voir la **[roadmap complète du développement](docs/roadmap-developpement.md)**,
 le [bilan actuel du dépôt](docs/bilan-depot-2026-10-01.md), le
 [suivi des exigences](docs/suivi-exigences.md) et les rapports des Sprints
 [0](docs/sprint-0-report.md), [1](docs/sprint-1-report.md), [2](docs/sprint-2-report.md),
-[3](docs/sprint-3-report.md), [4](docs/sprint-4-report.md), [5](docs/sprint-5-report.md) et
-[6](docs/sprint-6-report.md).
+[3](docs/sprint-3-report.md), [4](docs/sprint-4-report.md), [5](docs/sprint-5-report.md),
+[6](docs/sprint-6-report.md) et [7](docs/sprint-7-report.md).
 
 ## Démarrage rapide
 
@@ -90,7 +92,7 @@ docs/               architecture, développement, base, sécurité, ADR
 - [Roadmap complète](docs/roadmap-developpement.md) · [Bilan du dépôt au 01/10/2026](docs/bilan-depot-2026-10-01.md)
 - [Suivi des exigences](docs/suivi-exigences.md) · [Bilan historique du 30/09/2026](docs/bilan-alignement-2026-09-30.md)
 - Rapports de sprint : [0](docs/sprint-0-report.md) · [1](docs/sprint-1-report.md) ·
-  [2](docs/sprint-2-report.md) · [3](docs/sprint-3-report.md) · [4](docs/sprint-4-report.md) · [5](docs/sprint-5-report.md) · [6](docs/sprint-6-report.md)
+  [2](docs/sprint-2-report.md) · [3](docs/sprint-3-report.md) · [4](docs/sprint-4-report.md) · [5](docs/sprint-5-report.md) · [6](docs/sprint-6-report.md) · [7](docs/sprint-7-report.md)
 - Documents de cadrage : [`docs/reference/`](docs/reference/)
 
 ## Sécurité en bref
