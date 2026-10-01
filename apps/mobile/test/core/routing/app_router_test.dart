@@ -1,5 +1,6 @@
 import 'package:etare_ops/src/app.dart';
 import 'package:etare_ops/src/core/routing/app_router.dart';
+import 'package:etare_ops/src/features/account/presentation/account_screen.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/auth/presentation/login_screen.dart';
 import 'package:etare_ops/src/features/home/presentation/home_screen.dart';
@@ -94,57 +95,48 @@ void main() {
 
       expect(find.byType(HomeScreen), findsOneWidget);
 
+      // La déconnexion est dans l'écran « Compte et tablette ».
+      await tester.tap(find.byKey(HomeScreen.accountButtonKey));
+      await tester.pumpAndSettle();
       // Liste paresseuse : faire défiler jusqu'au bouton pour qu'il existe.
       await tester.scrollUntilVisible(
-        find.byKey(HomeScreen.signOutButtonKey),
+        find.byKey(AccountScreen.signOutButtonKey),
         200,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.tap(find.byKey(HomeScreen.signOutButtonKey));
+      await tester.tap(find.byKey(AccountScreen.signOutButtonKey));
       await tester.pumpAndSettle();
 
       expect(authRepository.signOutCalls, 1);
       expect(find.byType(LoginScreen), findsOneWidget);
     });
 
-    testWidgets(
-      'session restaurée : accueil avec compte, SIS et état hors ligne',
-      (tester) async {
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: appOverrides(
-              authRepository: ScriptedAuthRepository(),
-              signedIn: true,
-            ),
-            child: const EtareOpsApp(),
+    testWidgets('session restaurée : accueil hors ligne, puis compte et SIS', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: appOverrides(
+            authRepository: ScriptedAuthRepository(),
+            signedIn: true,
           ),
-        );
-        await tester.pumpAndSettle();
+          child: const EtareOpsApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        expect(find.byType(HomeScreen), findsOneWidget);
-        expect(find.text('agent@sdis06.test'), findsOneWidget);
-        expect(find.text('SDIS DEMO 06'), findsOneWidget);
-        expect(find.text('Rédacteur prévision'), findsOneWidget);
-        expect(find.text('Opérationnel'), findsOneWidget);
-        // Tablette pas encore enrôlée : l'accueil le dit et propose le code.
-        expect(find.text('Tablette non enrôlée'), findsOneWidget);
-        expect(find.byKey(OfflineStatusCard.enrollButtonKey), findsOneWidget);
-        for (final label in [
-          'Risques',
-          'Accès',
-          'Plans',
-          'Eau',
-          'Coupures',
-          'Contacts',
-        ]) {
-          await tester.scrollUntilVisible(
-            find.text(label),
-            200,
-            scrollable: find.byType(Scrollable).first,
-          );
-          expect(find.text(label), findsOneWidget);
-        }
-      },
-    );
+      expect(find.byType(HomeScreen), findsOneWidget);
+      // Tablette pas encore enrôlée : l'accueil le dit et propose le code.
+      expect(find.text('Tablette non enrôlée'), findsOneWidget);
+      expect(find.byKey(OfflineStatusCard.enrollButtonKey), findsOneWidget);
+
+      await tester.tap(find.byKey(HomeScreen.accountButtonKey));
+      await tester.pumpAndSettle();
+      expect(find.byType(AccountScreen), findsOneWidget);
+      expect(find.text('agent@sdis06.test'), findsOneWidget);
+      expect(find.text('SDIS DEMO 06'), findsOneWidget);
+      expect(find.text('Rédacteur prévision'), findsOneWidget);
+      expect(find.text('Opérationnel'), findsOneWidget);
+    });
   });
 }

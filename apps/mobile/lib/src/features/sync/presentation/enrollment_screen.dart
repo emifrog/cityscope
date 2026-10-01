@@ -33,13 +33,6 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
   }
 
   Future<void> _submit() async {
-    final tenant = ref.read(activeTenantControllerProvider).value;
-    if (tenant == null) {
-      setState(
-        () => _error = 'Sélectionnez d’abord votre SIS (réseau requis).',
-      );
-      return;
-    }
     if (normalizeEnrollmentCode(_code.text) == null) {
       setState(
         () => _error = 'Le code comporte 12 caractères (lettres et chiffres).',
@@ -51,6 +44,12 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
       _error = null;
     });
     try {
+      // Le SIS actif vient de GET /me : l'enrôlement exige le réseau.
+      final tenant = await ref.read(activeTenantControllerProvider.future);
+      if (tenant == null) {
+        setState(() => _error = 'Aucun SIS n’est associé à votre compte.');
+        return;
+      }
       await ref
           .read(enrollmentServiceProvider)
           .enroll(tenantId: tenant.tenantId, code: _code.text);

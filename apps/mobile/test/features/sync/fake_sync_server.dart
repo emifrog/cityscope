@@ -122,6 +122,9 @@ final class FakeSyncServer {
   int? filesOfflineAfter;
   String catalogUserId = userId;
 
+  /// Tablette sans réseau : aucune réponse de l'API.
+  bool apiOffline = false;
+
   final List<String> packageRequests = [];
   final List<String> downloadedFiles = [];
   final List<Map<String, Object?>> receipts = [];
@@ -150,6 +153,12 @@ final class FakeSyncServer {
   }
 
   Future<ResponseBody> handleApi(RequestOptions options) async {
+    if (apiOffline) {
+      throw DioException.connectionError(
+        requestOptions: options,
+        reason: 'hors ligne (simulé)',
+      );
+    }
     final path = options.uri.path;
     final rawBody = options.data is String ? options.data as String : null;
     if (path.endsWith('/sync/enrollment')) {

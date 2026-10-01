@@ -1,7 +1,12 @@
 import 'package:etare_ops/src/core/routing/app_routes.dart';
+import 'package:etare_ops/src/features/account/presentation/account_screen.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/auth/presentation/login_screen.dart';
 import 'package:etare_ops/src/features/home/presentation/home_screen.dart';
+import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
+import 'package:etare_ops/src/features/ops/presentation/plan_screen.dart';
+import 'package:etare_ops/src/features/ops/presentation/section_screen.dart';
+import 'package:etare_ops/src/features/ops/presentation/site_screen.dart';
 import 'package:etare_ops/src/features/startup/presentation/splash_screen.dart';
 import 'package:etare_ops/src/features/sync/presentation/enrollment_screen.dart';
 import 'package:flutter/foundation.dart';
@@ -61,6 +66,38 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'enroll',
             builder: (context, state) => const EnrollmentScreen(),
+          ),
+          GoRoute(
+            path: 'account',
+            builder: (context, state) => const AccountScreen(),
+          ),
+          GoRoute(
+            path: 'site/:siteId',
+            builder: (context, state) =>
+                SiteScreen(siteId: state.pathParameters['siteId']!),
+            routes: [
+              GoRoute(
+                path: 'section/:section',
+                builder: (context, state) => SectionScreen(
+                  siteId: state.pathParameters['siteId']!,
+                  section:
+                      OpsSection.values
+                          .where(
+                            (s) => s.name == state.pathParameters['section'],
+                          )
+                          .firstOrNull ??
+                      OpsSection.risks,
+                ),
+              ),
+              GoRoute(
+                path: 'plan/:planId',
+                builder: (context, state) => PlanScreen(
+                  siteId: state.pathParameters['siteId']!,
+                  planId: state.pathParameters['planId']!,
+                  focusId: state.uri.queryParameters['focus'],
+                ),
+              ),
+            ],
           ),
         ],
       ),

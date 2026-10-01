@@ -1,22 +1,26 @@
-import 'dart:async';
-
-import 'package:etare_ops/src/core/errors/error_messages.dart';
+import 'package:etare_ops/src/core/formatting/date_formatting.dart';
+import 'package:etare_ops/src/core/routing/app_routes.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
-import 'package:etare_ops/src/features/account/application/account_providers.dart';
-import 'package:etare_ops/src/features/account/domain/role_labels.dart';
-import 'package:etare_ops/src/features/account/domain/user_account.dart';
+import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
+import 'package:etare_ops/src/features/ops/application/ops_providers.dart';
+import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
 import 'package:etare_ops/src/features/sync/application/sync_providers.dart';
+import 'package:etare_ops/src/features/sync/domain/device_identity.dart';
+import 'package:etare_ops/src/features/sync/domain/sync_status.dart';
 import 'package:etare_ops/src/features/sync/presentation/offline_status_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// Accueil TEMPORAIRE (Sprint 0) : compte, SIS actif, état hors ligne et
-/// aperçu des futures fonctions opérationnelles.
+/// Accueil OPS : recherche locale d'un site (OPS-03) et fraîcheur des
+/// données toujours visible (OPS-05). Tout est lu sur la tablette ; le réseau
+/// ne sert qu'à la synchronisation, lancée à l'ouverture.
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
-  static const signOutButtonKey = Key('home.signOut');
+  static const searchFieldKey = Key('home.search');
+  static const accountButtonKey = Key('home.account');
 
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
@@ -37,365 +41,202 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text(Brand.productName)),
-    body: SafeArea(
-      child: RefreshIndicator(
-        onRefresh: () => ref.refresh(currentAccountProvider.future),
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: const [
-            _AccountCard(),
-            SizedBox(height: 16),
-            OfflineStatusCard(),
-            SizedBox(height: 24),
-            _SectionTitle('Fonctions opérationnelles'),
-            SizedBox(height: 12),
-            _UpcomingFeaturesGrid(),
-            SizedBox(height: 24),
-            _SignOutButton(),
-          ],
-        ),
+  Widget build(BuildContext context) {
+    final identity = ref.watch(deviceIdentityProvider);
+    final canConsult = ref.watch(offlineAccessProvider);
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(Brand.productName),
+        actions: [
+          IconButton(
+            key: HomeScreen.accountButtonKey,
+            tooltip: 'Compte et tablette',
+            onPressed: () => context.push(AppRoutes.account),
+            icon: const Icon(Icons.account_circle_outlined),
+          ),
+        ],
       ),
-    ),
-  );
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    header: true,
-    child: Text(text, style: Theme.of(context).textTheme.titleLarge),
-  );
-}
-
-class _AccountCard extends ConsumerWidget {
-  const _AccountCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final textTheme = Theme.of(context).textTheme;
-    final sessionEmail = ref.watch(
-      authControllerProvider.select((s) => s.value?.user.email),
-    );
-    final account = ref.watch(currentAccountProvider);
-    final activeTenant = ref.watch(activeTenantControllerProvider);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Connecté en tant que',
-              style: textTheme.bodyMedium?.copyWith(
-                color: BrandColors.textMuted,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              account.value?.email ?? sessionEmail ?? '—',
-              style: textTheme.titleMedium,
-            ),
-            if (account.value?.displayName case final name?)
-              Text(name, style: textTheme.bodyLarge),
-            const Divider(height: 32),
-            switch (account) {
-              AsyncError(:final error) => _LoadError(
-                message: describeError(error),
-                onRetry: () => ref.invalidate(currentAccountProvider),
-              ),
-              AsyncData(value: final UserAccount data) => _TenantSection(
-                account: data,
-                active: activeTenant.value,
-              ),
-              _ => const _Loading(label: 'Chargement du profil…'),
-            },
-          ],
-        ),
+      body: SafeArea(
+        child: switch (identity) {
+          AsyncData(value: final DeviceIdentity device) =>
+            canConsult
+                ? _SiteSearch(device: device)
+                : const _Message.syncRequired(),
+          AsyncData() => ListView(
+            padding: const EdgeInsets.all(16),
+            children: const [OfflineStatusCard()],
+          ),
+          _ => const Center(child: CircularProgressIndicator()),
+        },
       ),
     );
   }
 }
 
-class _TenantSection extends ConsumerWidget {
-  const _TenantSection({required this.account, required this.active});
-
-  final UserAccount account;
-  final Membership? active;
+/// Fraîcheur compacte, toujours en tête de l'accueil (OPS-05).
+class FreshnessBanner extends ConsumerWidget {
+  const FreshnessBanner({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final textTheme = Theme.of(context).textTheme;
-    final membership = active;
-    if (account.memberships.isEmpty) {
-      return Text(
-        'Aucun SIS n’est associé à votre compte. Contactez votre '
-        'administrateur.',
-        style: textTheme.bodyLarge?.copyWith(color: BrandColors.important),
-      );
-    }
-    if (membership == null) {
-      return const _Loading(label: 'Sélection du SIS…');
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'SIS actif',
-          style: textTheme.bodyMedium?.copyWith(color: BrandColors.textMuted),
-        ),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            Expanded(
-              child: Text(membership.tenantName, style: textTheme.titleLarge),
-            ),
-            if (account.memberships.length > 1)
-              TextButton.icon(
-                onPressed: () => unawaited(
-                  _chooseTenant(context, ref, account.memberships, membership),
-                ),
-                icon: const Icon(Icons.swap_horiz),
-                label: const Text('Changer'),
-              ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'Rôles',
-          style: textTheme.bodyMedium?.copyWith(color: BrandColors.textMuted),
-        ),
-        const SizedBox(height: 8),
-        if (membership.roles.isEmpty)
-          Text('Aucun rôle attribué', style: textTheme.bodyLarge)
-        else
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+    final status = ref.watch(syncStatusProvider).value ?? SyncStatus.initial;
+    final run = ref.watch(syncControllerProvider);
+    final now = ref.watch(clockProvider)();
+    final (label, color, icon) = freshnessStyle(status.freshness(now));
+    final synced = status.lastSyncAt;
+    return Material(
+      color: color.withValues(alpha: 0.08),
+      child: InkWell(
+        onTap: () => context.push(AppRoutes.account),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
             children: [
-              for (final role in membership.roles)
-                Chip(label: Text(roleLabel(role))),
+              Icon(icon, color: color),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  synced == null
+                      ? label
+                      : '$label · synchronisé le ${formatDateTimeFr(synced)}',
+                  style: Theme.of(context).textTheme.bodyLarge
+                      ?.copyWith(color: color, fontWeight: FontWeight.w600),
+                ),
+              ),
+              if (run is SyncRunInProgress)
+                const SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                IconButton(
+                  tooltip: 'Synchroniser',
+                  onPressed: () => ref
+                      .read(syncControllerProvider.notifier)
+                      .synchronizeInBackground(),
+                  icon: const Icon(Icons.sync),
+                ),
             ],
           ),
-      ],
-    );
-  }
-
-  Future<void> _chooseTenant(
-    BuildContext context,
-    WidgetRef ref,
-    List<Membership> memberships,
-    Membership current,
-  ) async {
-    final selected = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Text(
-                'Choisir le SIS actif',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-            for (final m in memberships)
-              ListTile(
-                title: Text(m.tenantName),
-                subtitle: Text(m.roles.map(roleLabel).join(', ')),
-                trailing: m.tenantId == current.tenantId
-                    ? const Icon(Icons.check_circle, color: BrandColors.success)
-                    : null,
-                selected: m.tenantId == current.tenantId,
-                onTap: () => Navigator.of(context).pop(m.tenantId),
-              ),
-          ],
         ),
       ),
     );
-    if (selected == null || selected == current.tenantId) return;
-    await ref.read(activeTenantControllerProvider.notifier).select(selected);
   }
 }
 
-/// Entrées de la maquette produit, non disponibles au Sprint 0.
-class _UpcomingFeaturesGrid extends StatelessWidget {
-  const _UpcomingFeaturesGrid();
+class _SiteSearch extends ConsumerWidget {
+  const _SiteSearch({required this.device});
 
-  static const _features = <(String, IconData)>[
-    ('Risques', Icons.warning_amber_rounded),
-    ('Accès', Icons.directions),
-    ('Plans', Icons.map_outlined),
-    ('Eau', Icons.water_drop_outlined),
-    ('Coupures', Icons.power_off_outlined),
-    ('Contacts', Icons.contact_phone_outlined),
-  ];
+  final DeviceIdentity device;
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) => GridView.count(
-      crossAxisCount: constraints.maxWidth >= 600 ? 3 : 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1.4,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final results = ref.watch(siteResultsProvider);
+    final query = ref.watch(siteQueryProvider);
+    return Column(
       children: [
-        for (final (label, icon) in _features)
-          _DisabledFeatureTile(label: label, icon: icon),
+        const FreshnessBanner(),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: TextField(
+            key: HomeScreen.searchFieldKey,
+            onChanged: ref.read(siteQueryProvider.notifier).set,
+            textInputAction: TextInputAction.search,
+            style: Theme.of(context).textTheme.titleMedium,
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search),
+              hintText: 'Nom, adresse, commune ou n° ETARE',
+              border: const OutlineInputBorder(),
+              helperText: device.tenantName,
+            ),
+          ),
+        ),
+        Expanded(
+          child: switch (results) {
+            AsyncData(value: final List<SiteSearchRow> sites)
+                when sites.isEmpty =>
+              query.isEmpty
+                  ? const _Message.noSite()
+                  : const _Message.noResult(),
+            AsyncData(value: final List<SiteSearchRow> sites) =>
+              ListView.separated(
+                itemCount: sites.length,
+                separatorBuilder: (context, index) => const Divider(height: 1),
+                itemBuilder: (context, index) => _SiteTile(site: sites[index]),
+              ),
+            AsyncError() => const _Message.unreadable(),
+            _ => const Center(child: CircularProgressIndicator()),
+          },
+        ),
       ],
-    ),
-  );
+    );
+  }
 }
 
-class _DisabledFeatureTile extends StatelessWidget {
-  const _DisabledFeatureTile({required this.label, required this.icon});
+class _SiteTile extends StatelessWidget {
+  const _SiteTile({required this.site});
 
-  final String label;
-  final IconData icon;
+  final SiteSearchRow site;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return Semantics(
-      button: true,
-      enabled: false,
-      label: '$label, bientôt disponible',
-      excludeSemantics: true,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: BrandColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: BrandColors.border),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 36, color: BrandColors.textMuted),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: textTheme.titleMedium?.copyWith(
-                  color: BrandColors.textMuted,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: BrandColors.background,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Bientôt',
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: BrandColors.textMuted,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+    final place = addressLine(site.addressLabel, site.city);
+    return ListTile(
+      minVerticalPadding: 12,
+      leading: const Icon(Icons.apartment, size: 32),
+      title: Text(site.name, style: textTheme.titleMedium),
+      subtitle: Text(
+        [
+          if (site.etareNumber != null) 'ETARE ${site.etareNumber}',
+          if (place.isNotEmpty) place,
+        ].join('\n'),
       ),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => context.push(AppRoutes.site(site.siteId)),
     );
   }
 }
 
-class _SignOutButton extends ConsumerStatefulWidget {
-  const _SignOutButton();
+class _Message extends StatelessWidget {
+  const _Message.noSite()
+    : icon = Icons.inbox_outlined,
+      text =
+          'Aucun ETARE publié sur cette tablette. Synchronisez quand le '
+          'réseau est disponible.';
+
+  const _Message.noResult()
+    : icon = Icons.search_off,
+      text = 'Aucun site installé ne correspond à cette recherche.';
+
+  const _Message.unreadable()
+    : icon = Icons.error_outline,
+      text = 'Index local illisible : relancez une synchronisation.';
+
+  const _Message.syncRequired()
+    : icon = Icons.lock_clock,
+      text =
+          'Consultation hors ligne non autorisée pour cette session : '
+          'synchronisez la tablette (autorisation expirée ou autre '
+          'utilisateur).';
+
+  final IconData icon;
+  final String text;
 
   @override
-  ConsumerState<_SignOutButton> createState() => _SignOutButtonState();
-}
-
-class _SignOutButtonState extends ConsumerState<_SignOutButton> {
-  bool _busy = false;
-
-  Future<void> _signOut() async {
-    setState(() => _busy = true);
-    try {
-      await ref.read(authControllerProvider.notifier).signOut();
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => OutlinedButton.icon(
-    key: HomeScreen.signOutButtonKey,
-    onPressed: _busy ? null : _signOut,
-    icon: _busy
-        ? const SizedBox.square(
-            dimension: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          )
-        : const Icon(Icons.logout),
-    label: const Text('Se déconnecter'),
-  );
-}
-
-class _Loading extends StatelessWidget {
-  const _Loading({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Row(
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.all(24),
     children: [
-      const SizedBox.square(
-        dimension: 24,
-        child: CircularProgressIndicator(strokeWidth: 3),
+      Icon(icon, size: 48, color: BrandColors.textMuted),
+      const SizedBox(height: 12),
+      Text(
+        text,
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.bodyLarge,
       ),
-      const SizedBox(width: 12),
-      Expanded(
-        child: Text(label, style: Theme.of(context).textTheme.bodyLarge),
-      ),
-    ],
-  );
-}
-
-class _LoadError extends StatelessWidget {
-  const _LoadError({required this.message, this.onRetry});
-
-  final String message;
-  final VoidCallback? onRetry;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.error_outline, color: BrandColors.critical),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: Theme.of(context).textTheme.bodyLarge
-                  ?.copyWith(color: BrandColors.critical),
-            ),
-          ),
-        ],
-      ),
-      if (onRetry != null) ...[
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          onPressed: onRetry,
-          icon: const Icon(Icons.refresh),
-          label: const Text('Réessayer'),
-        ),
+      if (icon == Icons.lock_clock) ...[
+        const SizedBox(height: 16),
+        const OfflineStatusCard(),
       ],
     ],
   );

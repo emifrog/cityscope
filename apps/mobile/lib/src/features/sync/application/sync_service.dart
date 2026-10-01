@@ -168,6 +168,17 @@ final class SyncService {
     } on SyncIntegrityException catch (error) {
       await _fail(_integrityMessage(error.code));
       rethrow;
+    } on NetworkException catch (error) {
+      // Pas de réseau n'est pas une panne : la fraîcheur dépend seulement de
+      // l'âge de la dernière synchronisation réussie.
+      await _state.write(
+        SyncStateCompanion(
+          status: const Value('idle'),
+          lastError: Value(describeError(error)),
+          lastAttemptAt: Value(_now),
+        ),
+      );
+      rethrow;
     } on Object catch (error) {
       await _fail(describeError(error));
       rethrow;

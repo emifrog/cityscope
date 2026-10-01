@@ -74,6 +74,8 @@ List<Override> appOverrides({
   required ScriptedAuthRepository authRepository,
   bool signedIn = false,
   UserAccount account = testAccount,
+  bool stubSyncStatus = true,
+  bool stubAccount = true,
 }) {
   final store = InMemorySecureStore({
     if (signedIn)
@@ -90,14 +92,16 @@ List<Override> appOverrides({
     tenantSelectionRepositoryProvider.overrideWithValue(
       InMemoryTenantSelection(),
     ),
-    currentAccountProvider.overrideWith((ref) async {
-      final userId = ref.watch(
-        authControllerProvider.select((s) => s.value?.user.id),
-      );
-      return userId == null ? null : account;
-    }),
-    syncStatusProvider.overrideWith(
-      (ref) => Stream<SyncStatus>.value(SyncStatus.initial),
-    ),
+    if (stubAccount)
+      currentAccountProvider.overrideWith((ref) async {
+        final userId = ref.watch(
+          authControllerProvider.select((s) => s.value?.user.id),
+        );
+        return userId == null ? null : account;
+      }),
+    if (stubSyncStatus)
+      syncStatusProvider.overrideWith(
+        (ref) => Stream<SyncStatus>.value(SyncStatus.initial),
+      ),
   ];
 }

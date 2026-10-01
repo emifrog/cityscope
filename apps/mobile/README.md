@@ -69,6 +69,18 @@ n'effectue aucun appel réseau.
 Se connecter avec un compte invité existant (pas d'inscription dans
 l'application : produit sur invitation).
 
+**Fichiers des paquets (émulateur aussi)** : les URL de téléchargement signées
+sont construites avec l'adresse du stockage vue par le serveur
+(`http://127.0.0.1:54321/storage/...`), que la tablette ne joint pas
+directement. En local, rediriger ce port avant de synchroniser :
+
+```bash
+adb reverse tcp:54321 tcp:54321
+```
+
+En préproduction et production, le stockage est servi par une URL HTTPS
+publique : rien à faire.
+
 **Appareil physique** : rediriger les ports puis utiliser `localhost` :
 
 ```bash
@@ -151,7 +163,11 @@ lib/
 Fonctionnalités présentes : `auth` (connexion/déconnexion, session),
 `account` (`/me`, SIS actif), `sites` (repository `/sites`, sans écran),
 `sync` (enrôlement, synchronisation signée, installation hors ligne,
-fraîcheur), `home`, `startup` (attente, erreurs de démarrage).
+fraîcheur), `ops` (synthèse d'un site, listes risques / accès / eau /
+coupures / contacts / documents, plans tactiles avec calques et fiches, lus
+sur la tablette), `home` (recherche locale et fraîcheur), `account` (compte,
+SIS, état de la tablette, déconnexion), `startup` (attente, erreurs de
+démarrage).
 
 Principes :
 

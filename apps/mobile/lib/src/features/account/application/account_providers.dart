@@ -32,10 +32,19 @@ final activeTenantControllerProvider =
     );
 
 /// Identifiant du SIS actif, lu de façon synchrone par la couche HTTP
-/// (`X-Tenant-Id`).
-final activeTenantIdProvider = Provider<String?>(
-  (ref) => ref.watch(activeTenantControllerProvider).value?.tenantId,
+/// (`X-Tenant-Id`). Simple porteur mis à jour par [ActiveTenantController] :
+/// il ne dépend de rien, car l'intercepteur le lit PENDANT `GET /me`, dont
+/// le SIS actif dépend lui-même (sinon : dépendance circulaire).
+final activeTenantIdProvider = NotifierProvider<ActiveTenantId, String?>(
+  ActiveTenantId.new,
 );
+
+class ActiveTenantId extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void set(String? tenantId) => state = tenantId;
+}
 
 class ActiveTenantController extends AsyncNotifier<Membership?> {
   TenantSelectionRepository get _selection =>
@@ -44,12 +53,16 @@ class ActiveTenantController extends AsyncNotifier<Membership?> {
   @override
   Future<Membership?> build() async {
     final account = await ref.watch(currentAccountProvider.future);
-    if (account == null) return null;
+    if (account == null) {
+      ref.read(activeTenantIdProvider.notifier).set(null);
+      return null;
+    }
     final storedId = await _selection.readSelectedTenantId();
     final active = resolveActiveMembership(account.memberships, storedId);
     if (active != null && active.tenantId != storedId) {
       await _selection.saveSelectedTenantId(active.tenantId);
     }
+    ref.read(activeTenantIdProvider.notifier).set(active?.tenantId);
     return active;
   }
 
@@ -63,6 +76,7 @@ class ActiveTenantController extends AsyncNotifier<Membership?> {
       throw ArgumentError.value(tenantId, 'tenantId', 'SIS non autorisé');
     }
     await _selection.saveSelectedTenantId(tenantId);
+    ref.read(activeTenantIdProvider.notifier).set(tenantId);
     state = AsyncData(membership);
   }
 }

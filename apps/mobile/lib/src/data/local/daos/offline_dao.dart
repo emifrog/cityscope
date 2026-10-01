@@ -347,3 +347,17 @@ class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
     await customStatement('VACUUM');
   }
 }
+
+/// Recherche locale (OPS-03) dans l'index des sites installés.
+extension OfflineSearch on OfflineDao {
+  /// Sites dont le texte normalisé contient TOUS les mots de [tokens],
+  /// triés par nom ; tous les sites si [tokens] est vide.
+  Stream<List<SiteSearchRow>> watchSites(List<String> tokens) {
+    final query = select(siteSearch);
+    for (final token in tokens) {
+      query.where((t) => t.searchText.contains(token));
+    }
+    query.orderBy([(t) => OrderingTerm(expression: t.name.lower())]);
+    return query.watch();
+  }
+}

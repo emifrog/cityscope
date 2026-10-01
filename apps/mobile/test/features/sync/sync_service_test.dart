@@ -315,4 +315,23 @@ void main() {
       expect(server.clockSkewRefusals, 1);
     },
   );
+
+  test('sans réseau : rien ne change et ce n’est pas une erreur de '
+      'synchronisation (OPS-05)', () async {
+    server.publish(publicationOf(siteA, 1));
+    await sync();
+    final before = await database.syncStateDao.read();
+    server.apiOffline = true;
+
+    await expectLater(
+      service.run(userId: userId),
+      throwsA(isA<NetworkException>()),
+    );
+
+    final after = await database.syncStateDao.read();
+    expect(after.status, 'idle');
+    expect(after.lastSyncAt, before.lastSyncAt);
+    expect(after.lastError, contains('Réseau indisponible'));
+    expect((await installed())[siteA], publicationId(1));
+  });
 }
