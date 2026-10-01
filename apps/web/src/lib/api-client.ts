@@ -34,6 +34,8 @@ import {
   type ContributionUpdate,
   type ContributionUploaded,
   type PortalContribution,
+  type Notification,
+  type NotificationListQuery,
   type FieldReport,
   type FieldReportList,
   type FieldReportListQuery,
@@ -547,6 +549,15 @@ export const api = {
       method: 'PATCH',
       body: patch,
       ifMatch: version,
+    }),
+
+  // ---------------------------------------------------------------- notifications (POR-05)
+  listNotifications: (options: ApiCallOptions, query: Partial<NotificationListQuery> = {}): Promise<Notification[]> =>
+    itemsOf(call(endpoints.listNotifications.response, endpoints.listNotifications.path, options, { query })),
+
+  retryNotification: (options: ApiCallOptions, id: string): Promise<Notification> =>
+    call(endpoints.retryNotification.response, pathOf(endpoints.retryNotification.path, { id }), options, {
+      method: 'POST',
     }),
 
   listFieldReports: (options: ApiCallOptions, query: Partial<FieldReportListQuery> = {}): Promise<FieldReportList> =>

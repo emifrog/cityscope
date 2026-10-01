@@ -4,6 +4,7 @@ export {
   assetVerificationHandler,
   defineHandler,
   noopHandler,
+  notificationHandler,
   publicationBuildHandler,
   type HandlerDefinition,
   type JobExecution,

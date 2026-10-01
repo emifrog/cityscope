@@ -4,16 +4,24 @@ import { antivirusNotConfigured } from '@etare/application';
 import { ClamAvScanner, parseClamAvUrl } from '@etare/adapters/antivirus';
 import { Ed25519Signer } from '@etare/adapters/crypto';
 import { createLogger } from '@etare/adapters/logging';
+import { SmtpMailer } from '@etare/adapters/mail';
 import { PdfLibEtareRenderer } from '@etare/adapters/pdf';
 import {
   PostgresAssetVerificationStore,
   PostgresJobQueue,
+  PostgresNotificationStore,
   PostgresPublicationBuildStore,
   createPool,
 } from '@etare/adapters/postgres';
 import { SupabaseObjectStorage } from '@etare/adapters/storage';
 import { readWorkerEnv } from '@etare/config';
-import { HandlerRegistry, assetVerificationHandler, noopHandler, publicationBuildHandler } from './handlers';
+import {
+  HandlerRegistry,
+  assetVerificationHandler,
+  noopHandler,
+  notificationHandler,
+  publicationBuildHandler,
+} from './handlers';
 import { createWorker } from './runner';
 
 const env = readWorkerEnv(process.env);
@@ -40,7 +48,18 @@ const registry = new HandlerRegistry([
     // Without storage, publications are built without their PDF (said at startup).
     artifacts: objects ? { renderer: new PdfLibEtareRenderer(), objects, sha256Bytes: sha256 } : null,
   }),
+  // Notifications of the exploitant portal (POR-05); without mail server they fail visibly, replayable.
+  notificationHandler({
+    store: new PostgresNotificationStore(pool),
+    mailer: env.mail ? new SmtpMailer(env.mail.smtpUrl, env.mail.from) : null,
+    appBaseUrl: env.mail?.appBaseUrl ?? null,
+  }),
 ]);
+if (env.mail) {
+  logger.info('notifications sent by e-mail', { links: env.mail.appBaseUrl });
+} else {
+  logger.warn('mail server not configured (SMTP_URL, APP_BASE_URL): notifications are not sent');
+}
 if (objects) {
   registry.register(
     assetVerificationHandler({

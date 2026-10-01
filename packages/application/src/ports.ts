@@ -1,4 +1,6 @@
 import type {
+  Notification,
+  NotificationListQuery,
   Contribution,
   ContributionCreate,
   ContributionListQuery,
@@ -113,6 +115,7 @@ export interface RequestSession {
   readonly fieldReports: FieldReportRepository;
   readonly portal: PortalAccessRepository;
   readonly contributions: ContributionRepository;
+  readonly notifications: NotificationRepository;
   readonly jobs: JobScheduler;
   readonly audit: AuditRecorder;
 }
@@ -394,6 +397,8 @@ export interface PortalAccessRepository {
   settings(): Promise<PortalSettings | null>;
   updateSettings(settings: PortalSettings): Promise<PortalSettings>;
   accessState(): Promise<PortalAccessState>;
+  /** Notifies an invitation to an existing account (once; the e-mail is sent by the worker). */
+  notifyInvitation(id: string): Promise<void>;
   /** Sites open to the caller, with their published version (POR-02). */
   sites(): Promise<PortalSiteSummary[]>;
   /** Whitelist of the published version of a site; null when it is not open to the caller. */
@@ -561,6 +566,14 @@ export interface ContributionRepository {
     patch: Omit<ContributionUpdate, 'message'>,
     message: { body: string; kind: 'message' | 'info_request' } | null,
   ): Promise<Contribution | null>;
+}
+
+/** Notifications of the SIS for its administration (RLS: member:manage). */
+export interface NotificationRepository {
+  list(query: NotificationListQuery): Promise<Notification[]>;
+  get(id: string): Promise<Notification | null>;
+  /** Plans the sending again (failed or sent notification). */
+  retry(id: string): Promise<void>;
 }
 
 export interface DeviceRepository {

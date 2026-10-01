@@ -87,6 +87,9 @@ LOCAL_DATABASE_ADMIN_URL=${dbUrl}
 # Terminals trust the public keys: ${trustedKeys}
 PUBLICATION_SIGNING_KEY=${signingKeys.get('PUBLICATION_SIGNING_KEY') ?? ''}
 CATALOG_SIGNING_KEY=${signingKeys.get('CATALOG_SIGNING_KEY') ?? ''}
+# Notifications of the exploitant portal (POR-05): Mailpit of the local stack, read on http://127.0.0.1:54324.
+SMTP_URL=smtp://127.0.0.1:54325
+APP_BASE_URL=http://localhost:3000
 `;
 
 function targetsRemoteProject(file: string): boolean {

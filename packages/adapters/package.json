@@ -12,7 +12,8 @@
     "./cartography": "./src/cartography/ign.ts",
     "./crypto": "./src/crypto/ed25519.ts",
     "./pdf": "./src/pdf/etare-pdf.ts",
-    "./antivirus": "./src/antivirus/clamav.ts"
+    "./antivirus": "./src/antivirus/clamav.ts",
+    "./mail": "./src/mail/smtp.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"
@@ -25,12 +26,14 @@
     "@etare/schemas": "workspace:*",
     "@supabase/supabase-js": "2.117.2",
     "jose": "6.2.12",
+    "nodemailer": "10.0.13",
     "pdf-lib": "1.17.1",
     "pg": "8.23.0",
     "sharp": "0.35.4",
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@types/nodemailer": "8.0.2",
     "@types/pg": "8.23.1"
   }
 }

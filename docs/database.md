@@ -181,6 +181,16 @@ révision en brouillon pour accepter et une résolution motivée en cas de confl
 valeur vue). La Prévision instruit sous RLS (`contribution:review`, colonnes d'instruction seules) ;
 l'exploitant passe par les fonctions `portal_*contribution*`. Voir le test `170_exploitant_contributions`.
 
+## Notifications
+
+Voir ADR-020. `app.notification` est écrite dans la transaction de l'événement avec son travail
+`notification.send` : question posée ou décision sur une proposition (trigger `contribution_notify`),
+invitation d'un compte existant (`notify_portal_invitation`, une fois). Le worker lit le strict nécessaire
+(`worker_notification`, filtrée par le SIS du travail) et enregistre chaque tentative
+(`worker_record_notification`) ; un travail abandonné passe la notification en échec
+(`job_notification_terminal_failure`). L'administration du SIS la lit sous RLS (`member:manage`) et la
+renvoie (`admin_retry_notification`). Voir le test `180_notifications`.
+
 ## Auteurs des données de travail et séparation des tâches
 
 Chaque écriture d’une donnée de travail (site, bâtiment, niveau, zone, plan, objet, risque, document,

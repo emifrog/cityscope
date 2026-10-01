@@ -164,6 +164,10 @@ export class PostgresPortalAccessRepository implements PortalAccessRepository {
     return rows[0]?.state ?? 'none';
   }
 
+  async notifyInvitation(id: string): Promise<void> {
+    await this.client.query('select app.notify_portal_invitation($1)', [id]);
+  }
+
   async sites(): Promise<PortalSiteSummary[]> {
     const { rows } = await this.client.query<{
       id: string;

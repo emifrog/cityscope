@@ -48,6 +48,7 @@ function setup(roles: Role[], accountExists: boolean, identities: IdentityProvis
     ),
     getInvitation: vi.fn<PortalAccessRepository['getInvitation']>(async () => invitation),
     listInvitations: vi.fn<PortalAccessRepository['listInvitations']>(async () => [invitation]),
+    notifyInvitation: vi.fn<PortalAccessRepository['notifyInvitation']>(async () => undefined),
   };
   const audit = { record: vi.fn(async () => undefined) };
   const sessions: SessionFactory = {
@@ -70,7 +71,7 @@ describe('exploitant invitations', () => {
     expect(endOfDayInParis('2027-07-14').toISOString()).toBe('2027-07-14T21:59:59.999Z');
   });
 
-  it('invites an existing account without sending anything, with the dates resolved', async () => {
+  it('invites an existing account with a notification instead of an account e-mail, dates resolved', async () => {
     const { deps, portal, audit } = setup(['PREVISION_EDITOR'], true);
     const result = await createPortalInvitation(deps, context, { ...request, access_until: '2027-09-30' });
     expect(result).toEqual({ invitation, notice: 'existing_account' });
@@ -80,6 +81,7 @@ describe('exploitant invitations', () => {
     expect(input?.expiresAt.toISOString()).toBe('2026-10-08T10:00:00.000Z');
     expect(input?.accessUntil?.toISOString()).toBe('2027-09-30T21:59:59.999Z');
     expect(audit.record).toHaveBeenCalledWith('portal.invite', 'portal_invitation', INVITATION, { sites: 1 });
+    expect(portal.notifyInvitation).toHaveBeenCalledWith(INVITATION);
   });
 
   it('provisions an identity only for a new address, after the permission check', async () => {
@@ -89,6 +91,8 @@ describe('exploitant invitations', () => {
     expect(result.notice).toBe('sent');
     expect(identities.invite).toHaveBeenCalledWith('direction@ehpad.test', null);
     expect(portal.invite).toHaveBeenLastCalledWith(expect.anything(), 'new-subject');
+    // The account creation e-mail carries the invitation: no second e-mail.
+    expect(portal.notifyInvitation).not.toHaveBeenCalled();
 
     const withoutProvider = setup(['SIS_ADMIN'], false);
     await expect(createPortalInvitation(withoutProvider.deps, context, request)).rejects.toThrow(ServiceUnavailable);

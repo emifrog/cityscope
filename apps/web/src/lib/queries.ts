@@ -41,6 +41,7 @@ export const queryKeys = {
   fieldReports: (tenantId: string) => ['tenant', tenantId, 'field-reports'] as const,
   contributions: (tenantId: string) => ['tenant', tenantId, 'contributions'] as const,
   portalContributions: (tenantId: string) => ['tenant', tenantId, 'portal-contributions'] as const,
+  notifications: (tenantId: string) => ['tenant', tenantId, 'notifications'] as const,
   portalInvitations: (tenantId: string) => ['tenant', tenantId, 'portal-invitations'] as const,
   portalSettings: (tenantId: string) => ['tenant', tenantId, 'portal-settings'] as const,
   portalAccess: (tenantId: string) => ['tenant', tenantId, 'portal-access'] as const,
@@ -392,6 +393,18 @@ export function usePortalContributions(siteId: string) {
     queryKey: [...queryKeys.portalContributions(tenantId ?? 'none'), siteId],
     enabled,
     queryFn: ({ signal }) => api.listPortalContributions({ ...options, signal }, { site_id: siteId }),
+  });
+}
+
+/** Notifications of the portal (administration of the SIS); refreshed while some wait to be sent. */
+export function useNotifications(wanted = true) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.notifications(tenantId ?? 'none'),
+    enabled: enabled && wanted,
+    queryFn: ({ signal }) => api.listNotifications({ ...options, signal }),
+    refetchInterval: (query) =>
+      (query.state.data ?? []).some((notification) => notification.status === 'pending') ? VERDICT_POLL_MS : false,
   });
 }
 

@@ -93,3 +93,21 @@ describe('antivirus (SEC-01)', () => {
     expect(() => readWorkerEnv({ ...worker, ANTIVIRUS_URL: 'http://clamav' })).toThrow(/ANTIVIRUS_URL/);
   });
 });
+
+describe('notifications (POR-05)', () => {
+  const worker = { WORKER_DATABASE_URL: 'postgresql://etare_worker:pw@db:5432/etare' };
+
+  it('are sent only with a mail server and the address of the web application', () => {
+    expect(readWorkerEnv(worker).mail).toBeNull();
+    expect(readWorkerEnv({ ...worker, SMTP_URL: 'smtp://127.0.0.1:54325' }).mail).toBeNull();
+    expect(
+      readWorkerEnv({ ...worker, SMTP_URL: 'smtp://127.0.0.1:54325', APP_BASE_URL: 'https://firescape.example.org' })
+        .mail,
+    ).toEqual({
+      smtpUrl: 'smtp://127.0.0.1:54325',
+      from: 'FireScape <ne-pas-repondre@firescape.invalid>',
+      appBaseUrl: 'https://firescape.example.org',
+    });
+    expect(() => readWorkerEnv({ ...worker, SMTP_URL: 'http://mail' })).toThrow(/SMTP_URL/);
+  });
+});

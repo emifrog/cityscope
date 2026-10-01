@@ -1,11 +1,14 @@
 import {
   ASSET_VERIFICATION_JOB,
+  NOTIFICATION_SEND_JOB,
   PUBLICATION_BUILD_JOB,
   PermanentJobError,
   buildPublication,
+  sendNotification,
   verifyAsset,
   type BuildTools,
   type Job,
+  type NotificationDependencies,
   type PublicationArtifacts,
   type PublicationBuildStore,
   type VerificationDependencies,
@@ -137,6 +140,24 @@ export function publicationBuildHandler(deps: {
         signal,
       );
       logger.info('publication build', { publication_id: payload.publication_id, outcome });
+    },
+  });
+}
+
+/**
+ * Sends a notification of the exploitant portal (POR-05): idempotent, each
+ * attempt and its error recorded; without mail server the notification fails
+ * visibly and can be replayed by the administration of the SIS.
+ */
+export function notificationHandler(deps: NotificationDependencies): JobHandler {
+  return defineHandler({
+    type: NOTIFICATION_SEND_JOB,
+    payloadVersion: 1,
+    payload: z.object({ notification_id: z.uuid() }),
+    async handle(payload, { job, logger }) {
+      if (!job.tenantId) throw new PermanentJobError('TENANT_REQUIRED');
+      const outcome = await sendNotification(deps, payload.notification_id, job.tenantId);
+      logger.info('notification', { notification_id: payload.notification_id, outcome });
     },
   });
 }

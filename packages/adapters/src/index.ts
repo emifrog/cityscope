@@ -5,6 +5,7 @@ export * from './cartography/ign';
 export * from './cartography/ign-geocoder';
 export * from './crypto/ed25519';
 export * from './logging/logger';
+export * from './mail/smtp';
 export * from './pdf/etare-pdf';
 export * from './postgres/index';
 export * from './storage/supabase-object-storage';

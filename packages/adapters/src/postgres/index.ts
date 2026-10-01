@@ -7,6 +7,7 @@ export * from './etare-repository';
 export * from './health';
 export * from './job-queue';
 export * from './member-repository';
+export * from './notification-repository';
 export * from './operational-object-repository';
 export * from './pending-asset';
 export * from './plan-position';

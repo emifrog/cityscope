@@ -12,6 +12,7 @@ export * from './map';
 export * from './members';
 export * from './objects';
 export * from './plans';
+export * from './notifications';
 export * from './portal-access';
 export * from './portal-consultation';
 export * from './publication-build';

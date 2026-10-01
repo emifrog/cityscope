@@ -117,6 +117,15 @@ const workerEnvSchema = z.object({
     .string()
     .regex(/^tcp:\/\/[^/\s]+:\d{1,5}$/, 'ANTIVIRUS_URL must look like tcp://host:3310')
     .optional(),
+  /** Mail server of the notifications, `smtp://host:port` or `smtps://user:password@host:port` (POR-05). */
+  SMTP_URL: z
+    .string()
+    .regex(/^smtps?:\/\/\S+$/, 'SMTP_URL must look like smtp://host:587')
+    .optional(),
+  /** Sender of the notifications. */
+  MAIL_FROM: z.string().min(3).max(200).default('FireScape <ne-pas-repondre@firescape.invalid>'),
+  /** Public address of the web application, for the links of the notifications. */
+  APP_BASE_URL: z.url().optional(),
 });
 
 export interface WorkerEnv {
@@ -132,6 +141,8 @@ export interface WorkerEnv {
   readonly publicationSigningKey: string | null;
   /** Null in development only: files are then checked without antivirus (said at startup). */
   readonly antivirusUrl: string | null;
+  /** Null when no mail server is configured: notifications fail visibly and can be replayed. */
+  readonly mail: { readonly smtpUrl: string; readonly from: string; readonly appBaseUrl: string } | null;
 }
 
 export function readWorkerEnv(env: Env): WorkerEnv {
@@ -152,6 +163,10 @@ export function readWorkerEnv(env: Env): WorkerEnv {
         : null,
     publicationSigningKey: parsed.PUBLICATION_SIGNING_KEY ?? null,
     antivirusUrl: parsed.ANTIVIRUS_URL ?? null,
+    mail:
+      parsed.SMTP_URL && parsed.APP_BASE_URL
+        ? { smtpUrl: parsed.SMTP_URL, from: parsed.MAIL_FROM, appBaseUrl: parsed.APP_BASE_URL }
+        : null,
   };
 }
 

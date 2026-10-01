@@ -9,7 +9,9 @@ import {
   getContribution,
   getPortalContribution,
   listContributions,
+  listNotifications,
   listPortalContributions,
+  retryNotification,
   replyPortalContribution,
   updateContribution,
   withdrawPortalContribution,
@@ -982,6 +984,18 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
       endpoints.updateContribution,
       await updateContribution(deps.sessions, context, idOf(c), version, patch),
     );
+  });
+
+  // ---------------------------------------------------------------- notifications (POR-05)
+  app.get(routerPath(endpoints.listNotifications.path), async (c) => {
+    const context = await requestContext(c, endpoints.listNotifications);
+    const query = endpoints.listNotifications.query.parse(c.req.query());
+    return respond(c, endpoints.listNotifications, await listNotifications(deps.sessions, context, query));
+  });
+
+  app.post(routerPath(endpoints.retryNotification.path), async (c) => {
+    const context = await requestContext(c, endpoints.retryNotification);
+    return respond(c, endpoints.retryNotification, await retryNotification(deps.sessions, context, idOf(c)));
   });
 
   return app;

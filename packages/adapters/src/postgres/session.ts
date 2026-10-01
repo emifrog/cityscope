@@ -20,6 +20,7 @@ import { PostgresDeviceRepository } from './device-repository';
 import { PostgresEtareRepository } from './etare-repository';
 import { PostgresFieldReportRepository } from './field-report-repository';
 import { PostgresContributionRepository } from './contribution-repository';
+import { PostgresNotificationRepository } from './notification-repository';
 import { PostgresPortalAccessRepository } from './portal-repository';
 import { PostgresAssetRepository, PostgresDocumentRepository } from './document-repository';
 import { PostgresIdentityReader } from './identity-reader';
@@ -82,6 +83,7 @@ export class PostgresSessionFactory implements SessionFactory {
         fieldReports: new PostgresFieldReportRepository(client),
         portal: new PostgresPortalAccessRepository(client),
         contributions: new PostgresContributionRepository(client),
+        notifications: new PostgresNotificationRepository(client),
         jobs: new PostgresJobScheduler(client),
         audit: new PostgresAuditRecorder(client),
       });
@@ -254,6 +256,10 @@ export function translateDatabaseError(error: unknown): unknown {
       );
     case 'ETCTN':
       return new NotFound('Proposition introuvable.');
+    case 'ETNTN':
+      return new NotFound('Notification introuvable.');
+    case 'ETNTP':
+      return new Conflict('Cette notification attend déjà son envoi.');
     case 'ETPI2':
       return new PreconditionFailed('Cette invitation a été modifiée entre-temps : rechargez la liste.');
     case '23505':

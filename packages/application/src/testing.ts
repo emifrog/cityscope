@@ -157,6 +157,7 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       sites: unstubbed('portal.sites'),
       site: unstubbed('portal.site'),
       documentFile: unstubbed('portal.documentFile'),
+      notifyInvitation: unstubbed('portal.notifyInvitation'),
       ...overrides.portal,
     },
     contributions: {
@@ -171,6 +172,12 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       get: unstubbed('contributions.get'),
       update: unstubbed('contributions.update'),
       ...overrides.contributions,
+    },
+    notifications: {
+      list: unstubbed('notifications.list'),
+      get: unstubbed('notifications.get'),
+      retry: unstubbed('notifications.retry'),
+      ...overrides.notifications,
     },
     jobs: { enqueue: unstubbed('jobs.enqueue'), ...overrides.jobs },
     audit: { record: unstubbed('audit.record'), ...overrides.audit },

@@ -74,17 +74,23 @@ export async function createPortalInvitation(
       return invitation;
     });
 
-  const existing = await inTenant(deps.sessions, context, 'portal:invite', (session) =>
-    session.portal.invite(request, null),
-  );
+  // An existing account is told by a notification (POR-05), written with the invitation.
+  const existing = await inTenant(deps.sessions, context, 'portal:invite', async (session) => {
+    const invited = await session.portal.invite(request, null);
+    if (invited) await session.portal.notifyInvitation(invited.invitationId);
+    return invited;
+  });
   if (existing) return { invitation: await record(existing.invitationId), notice: 'existing_account' };
 
   if (!deps.identities) throw new ServiceUnavailable('Les invitations ne sont pas configurées sur ce serveur.');
   const identity = await deps.identities.invite(input.email, input.display_name ?? null);
   const created = found(
-    await inTenant(deps.sessions, context, 'portal:invite', (session) =>
-      session.portal.invite(request, identity.subject),
-    ),
+    await inTenant(deps.sessions, context, 'portal:invite', async (session) => {
+      const invited = await session.portal.invite(request, identity.subject);
+      // No account creation e-mail (the identity existed already): notify the invitation instead.
+      if (invited && !identity.invitationSent) await session.portal.notifyInvitation(invited.invitationId);
+      return invited;
+    }),
     'Invitation introuvable.',
   );
   return {

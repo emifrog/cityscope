@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import { notificationListQuerySchema, notificationListSchema, notificationSchema } from './notifications';
 import {
   contributionCreateSchema,
   contributionListQuerySchema,
@@ -1255,6 +1256,28 @@ export const endpoints = {
     concurrency: 'if-match',
     successStatus: 200,
     response: contributionSchema,
+  }),
+
+  // ---------------------------------------------------------------- notifications (POR-05)
+  listNotifications: tenantEndpoint({
+    operationId: 'listNotifications',
+    method: 'get',
+    path: '/notifications',
+    summary: 'E-mails du portail exploitant du SIS actif : envoyés, en attente ou en échec',
+    tags: ['notifications'],
+    query: notificationListQuerySchema,
+    successStatus: 200,
+    response: notificationListSchema,
+  }),
+  retryNotification: tenantEndpoint({
+    operationId: 'retryNotification',
+    method: 'post',
+    path: '/notifications/{id}/retry',
+    summary: 'Renvoyer une notification (en échec ou perdue)',
+    tags: ['notifications'],
+    params: idParamsSchema,
+    successStatus: 200,
+    response: notificationSchema,
   }),
 } as const satisfies Record<string, EndpointContract>;
 

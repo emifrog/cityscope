@@ -37,7 +37,11 @@ clamav/clamav:stable`, puis ajouter `ANTIVIRUS_URL=tcp://127.0.0.1:3311` à `.en
 défini (la CI l’active avec un conteneur de service).
 
 Services locaux : API Supabase `http://127.0.0.1:54321`, PostgreSQL `127.0.0.1:54322`, Studio
-`http://127.0.0.1:54323`, e-mails de test (Mailpit) `http://127.0.0.1:54324`.
+`http://127.0.0.1:54323`, e-mails de test (Mailpit) `http://127.0.0.1:54324` (SMTP `127.0.0.1:54325`).
+
+Notifications du portail exploitant (ADR-020) : `pnpm setup:local` écrit `SMTP_URL` et `APP_BASE_URL`
+dans `.env.local` ; le worker envoie alors invitations, questions et décisions dans Mailpit. Sans ces
+variables, les notifications échouent visiblement (Administration → Notifications) et restent rejouables.
 
 ## Comptes de démonstration
 
@@ -50,7 +54,7 @@ du fichier. Comptes utiles :
 | `validateur06@demo.etare.test`        | PREVISION_VALIDATOR @ 06               | idem ; validation soumise au 2e facteur        |
 | `admin.sis06@demo.etare.test`         | SIS_ADMIN @ 06                         | idem + audit du 06 ; ne publie pas             |
 | `ops06@demo.etare.test`               | OPS_USER @ 06                          | aucune donnée de travail (publications seules) |
-| `exploitant.oliviers@demo.etare.test` | EXPLOITANT limité à EHPAD Les Oliviers | aucune donnée de travail (portail à venir)     |
+| `exploitant.oliviers@demo.etare.test` | EXPLOITANT limité à EHPAD Les Oliviers | portail exploitant seul (second facteur exigé) |
 | `lecteur06@demo.etare.test`           | READER @ 06                            | lecture seule                                  |
 | `redacteur83@demo.etare.test`         | PREVISION_EDITOR @ SDIS DEMO 83        | uniquement les sites du 83                     |
 | `multi.sis@demo.etare.test`           | READER @ 06 + PREVISION_EDITOR @ 83    | sélecteur de SIS dans l’en-tête                |
