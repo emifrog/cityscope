@@ -23,6 +23,9 @@ final class FakePublication {
     required this.siteName,
     required this.files,
     this.address = const {'label': '1 rue des Tests', 'city': 'Nice'},
+    this.optionalFiles = const {},
+    this.manifestVersion = 1,
+    this.minReaderVersion = '1.0.0',
   });
 
   final String siteId;
@@ -33,6 +36,13 @@ final class FakePublication {
 
   /// Fichiers requis (plans, PDF) par chemin.
   final Map<String, List<int>> files;
+
+  /// Documents « à la demande » (non requis), par chemin (DOC-02).
+  final Map<String, List<int>> optionalFiles;
+
+  /// Format et version de lecteur exigés (SYN-02).
+  final int manifestVersion;
+  final String minReaderVersion;
 
   late final String data = jsonEncode({
     'publication': {'id': publicationId, 'publication_number': number},
@@ -47,12 +57,12 @@ final class FakePublication {
   });
 
   late final String manifest = jsonEncode({
-    'manifest_version': 1,
+    'manifest_version': manifestVersion,
     'tenant_id': tenantId,
     'publication_id': publicationId,
     'site_id': siteId,
     'publication_number': number,
-    'min_reader_version': '1.0.0',
+    'min_reader_version': minReaderVersion,
     'data_file': 'data/site.json',
     'files': [
       {
@@ -69,6 +79,14 @@ final class FakePublication {
           'size_bytes': value.length,
           'media_type': 'image/png',
           'required': true,
+        },
+      for (final MapEntry(:key, :value) in optionalFiles.entries)
+        {
+          'path': key,
+          'sha256': sha256Hex(value),
+          'size_bytes': value.length,
+          'media_type': 'application/pdf',
+          'required': false,
         },
     ],
   });
@@ -128,6 +146,10 @@ final class FakeSyncServer {
   int generation = 1;
   final Map<String, FakePublication> catalog = {};
   bool revoked = false;
+
+  /// Version minimale de l'application annoncée (SYN-02) et format du catalogue.
+  String? minAppVersion;
+  int catalogVersion = 1;
 
   /// Altérations simulées.
   bool signCatalogWithPublicationKey = false;
@@ -207,7 +229,7 @@ final class FakeSyncServer {
 
     if (path.endsWith('/sync/catalog')) {
       final text = jsonEncode({
-        'catalog_version': 1,
+        'catalog_version': catalogVersion,
         'tenant_id': tenantId,
         'tenant_name': 'SDIS DEMO 06',
         'device_id': deviceId,
@@ -219,6 +241,7 @@ final class FakeSyncServer {
               .add(const Duration(days: 7))
               .toIso8601String(),
         },
+        'min_app_version': minAppVersion,
         'publications': [
           for (final publication in catalog.values)
             {
@@ -420,7 +443,10 @@ final class FakeSyncServer {
       );
     }
     for (final publication in catalog.values) {
-      for (final bytes in publication.files.values) {
+      for (final bytes in [
+        ...publication.files.values,
+        ...publication.optionalFiles.values,
+      ]) {
         if (sha256Hex(bytes) == hash) {
           downloadedFiles.add(hash);
           // Corruption : un octet modifié, même taille.

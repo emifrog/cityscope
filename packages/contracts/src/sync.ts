@@ -1,4 +1,5 @@
 import {
+  APP_VERSION_PATTERN,
   CATALOG_VERSION,
   DEVICE_PLATFORMS,
   DEVICE_STATES,
@@ -59,6 +60,8 @@ export const deviceListSchema = z
     current_generation: z.number().int().nonnegative(),
     /** Published versions that cannot be distributed (not signed, or sensitive site). */
     undistributed_publications: z.number().int().nonnegative(),
+    /** Minimum OPS application version required by the server (SYN-02); older terminals must be updated. */
+    min_app_version: z.string().nullable(),
   })
   .meta({ id: 'DeviceList' });
 export type DeviceList = z.infer<typeof deviceListSchema>;
@@ -172,6 +175,11 @@ export const syncCatalogSchema = z
     issued_at: isoDateTimeSchema,
     /** Local consultation right: the identity of the user as their token names it (sub), and its end. */
     authorization: z.object({ subject: z.string().min(1).max(255), expires_at: isoDateTimeSchema }),
+    /**
+     * Oldest application allowed to install from this catalogue (SYN-02): an older one keeps what
+     * it has installed, readable, and asks for an update (architecture §10, §12). Null: no minimum.
+     */
+    min_app_version: z.string().regex(APP_VERSION_PATTERN).nullable(),
     publications: z.array(catalogEntrySchema),
   })
   .meta({ id: 'SyncCatalog' });

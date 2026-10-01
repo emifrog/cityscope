@@ -31,14 +31,14 @@ class AppDatabase extends _$AppDatabase {
 
   /// Incrémenter à chaque évolution du schéma, puis :
   /// `dart run drift_dev make-migrations` (instantané + tests générés).
-  static const currentSchemaVersion = 3;
+  static const currentSchemaVersion = 4;
 
   @override
   int get schemaVersion => currentSchemaVersion;
 
   /// Étapes de migration indexées par version CIBLE.
   static const Map<int, Future<void> Function(Migrator m, AppDatabase db)>
-  _migrationSteps = {2: _migrateToV2, 3: _migrateToV3};
+  _migrationSteps = {2: _migrateToV2, 3: _migrateToV3, 4: _migrateToV4};
 
   /// v2 (Sprint 4) : contenu hors ligne installé et état de synchronisation
   /// complet (génération acceptée, autorisation locale, dernière erreur).
@@ -65,6 +65,11 @@ class AppDatabase extends _$AppDatabase {
   static Future<void> _migrateToV3(Migrator m, AppDatabase db) async {
     await m.createTable(db.fieldReports);
     await m.createTable(db.fieldReportPhotos);
+  }
+
+  /// v4 (Sprint 6) : application trop ancienne pour le contenu reçu (SYN-02).
+  static Future<void> _migrateToV4(Migrator m, AppDatabase db) async {
+    await m.addColumn(db.syncState, db.syncState.requiredAppVersion);
   }
 
   @override

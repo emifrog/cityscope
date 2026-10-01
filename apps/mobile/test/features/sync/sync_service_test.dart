@@ -1,4 +1,5 @@
 import 'package:drift/native.dart';
+import 'package:etare_ops/src/core/config/app_info.dart';
 import 'package:etare_ops/src/core/errors/app_exception.dart';
 import 'package:etare_ops/src/core/storage/secure_store.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
@@ -334,5 +335,107 @@ void main() {
     expect(after.lastSyncAt, before.lastSyncAt);
     expect(after.lastError, contains('Réseau indisponible'));
     expect((await installed())[siteA], publicationId(1));
+  });
+
+  group('version minimale de l’application (SYN-02)', () {
+    test('application trop ancienne : le référentiel installé reste lisible, '
+        'les retraits s’appliquent, la mise à jour est demandée', () async {
+      server
+        ..publish(publicationOf(siteA, 1))
+        ..publish(publicationOf(siteB, 1, name: 'Collège'));
+      await sync();
+      final before = await database.syncStateDao.read();
+      server.packageRequests.clear();
+      server.serverClock = server.serverClock.add(const Duration(hours: 1));
+      deviceClock = server.serverClock;
+      server
+        ..minAppVersion = '99.0.0'
+        ..publish(publicationOf(siteA, 2))
+        ..withdraw(siteB);
+
+      final report = await service.run(userId: userId);
+
+      expect(
+        report,
+        isA<SyncUpdateRequired>()
+            .having((r) => r.minVersion, 'minVersion', '99.0.0')
+            .having((r) => r.removed, 'removed', 1),
+      );
+      // Rien de nouveau n'est téléchargé ; le site retiré l'est quand même.
+      expect(server.packageRequests, isEmpty);
+      expect(await installed(), {siteA: publicationId(1)});
+      final state = await database.syncStateDao.read();
+      expect(state.requiredAppVersion, '99.0.0');
+      expect(state.lastSyncAt, before.lastSyncAt);
+      expect(
+        state.authorizationExpiresAt,
+        server.serverClock.add(const Duration(days: 7)),
+      );
+      expect(state.lastError, contains('version 99.0.0 minimum'));
+      expect(
+        server.receipts.last,
+        allOf(
+          containsPair('error_code', 'APP_UPDATE_REQUIRED'),
+          containsPair('status', 'partial'),
+        ),
+      );
+
+      // Application à jour : l'installation reprend et l'alerte disparaît.
+      server.minAppVersion = AppInfo.version;
+      final resumed = await sync();
+      expect(resumed.complete, isTrue);
+      expect(await installed(), {siteA: publicationId(2)});
+      expect((await database.syncStateDao.read()).requiredAppVersion, isNull);
+    });
+
+    test('catalogue d’un format plus récent : rien n’est lu ni installé, '
+        'la mise à jour est demandée', () async {
+      server.publish(publicationOf(siteA, 1));
+      await sync();
+      server.catalogVersion = 2;
+
+      final report = await service.run(userId: userId);
+
+      expect(
+        report,
+        isA<SyncUpdateRequired>().having(
+          (r) => r.minVersion,
+          'minVersion',
+          isNull,
+        ),
+      );
+      expect(await installed(), {siteA: publicationId(1)});
+      final state = await database.syncStateDao.read();
+      expect(state.requiredAppVersion, '');
+      expect(state.status, 'failed');
+      expect(
+        server.receipts.last,
+        containsPair('error_code', 'APP_UPDATE_REQUIRED'),
+      );
+    });
+
+    test('paquet exigeant un lecteur plus récent : l’ancienne version du '
+        'site reste et la mise à jour est demandée', () async {
+      server.publish(publicationOf(siteA, 1));
+      await sync();
+      server.publish(
+        FakePublication(
+          siteId: siteA,
+          publicationId: publicationId(2),
+          number: 2,
+          siteName: 'EHPAD Les Oliviers',
+          files: {'etare.pdf': List.filled(1024, 7)},
+          minReaderVersion: '9.0.0',
+        ),
+      );
+
+      final report = await sync();
+
+      expect(report.failures.single.code, 'READER_TOO_OLD');
+      expect(await installed(), {siteA: publicationId(1)});
+      final state = await database.syncStateDao.read();
+      expect(state.requiredAppVersion, '');
+      expect(state.lastError, contains('Mise à jour de l’application requise'));
+    });
   });
 }

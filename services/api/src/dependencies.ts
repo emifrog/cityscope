@@ -44,6 +44,7 @@ export function createApiDependencies(env: Env): ApiDependencies {
     sha256: async (text) => createHash('sha256').update(text, 'utf8').digest('hex'),
     // Catalogue key: server-side only; terminals trust its public key (ADR-015).
     catalogSigner: config.catalogSigningKey ? Ed25519Signer.fromPkcs8(config.catalogSigningKey) : null,
+    minAppVersion: config.minAppVersion,
     verifier: ed25519Verifier,
     randomBytes: (length) => new Uint8Array(randomBytes(length)),
     now: () => new Date(),

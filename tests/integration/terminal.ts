@@ -40,7 +40,8 @@ export class Terminal {
     };
   }
 
-  async request(method: string, path: string, body?: unknown, options: { signedPath?: string } = {}) {
+  /** A request signed by this terminal; [options.app] sends it to another configuration of the API. */
+  async request(method: string, path: string, body?: unknown, options: { signedPath?: string; app?: TestApi } = {}) {
     const raw = body === undefined ? '' : JSON.stringify(body);
     const timestamp = Date.now();
     const text = deviceRequestText({
@@ -49,7 +50,7 @@ export class Terminal {
       timestamp,
       bodySha256: sha256Hex(raw),
     });
-    return this.app.request(`${API_BASE_PATH}${path}`, {
+    return (options.app ?? this.app).request(`${API_BASE_PATH}${path}`, {
       method,
       headers: {
         authorization: `Bearer ${this.token}`,

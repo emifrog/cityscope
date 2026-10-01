@@ -26,7 +26,7 @@ import {
   syncCatalogSchema,
   type EtareRevision,
 } from '@etare/contracts';
-import { signedText } from '@etare/domain';
+import { isAppVersionBelow, signedText } from '@etare/domain';
 import { HandlerRegistry, assetVerificationHandler, createWorker, publicationBuildHandler } from '@etare/worker';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { TENANT_06, TENANT_83, authApi, requireEnv, signIn, withSecondFactor } from './helpers';
@@ -297,6 +297,28 @@ describe('offline distribution', () => {
       last_user_name: 'Intervenant OPS 06 (démo)',
     });
     expect(list.undistributed_publications).toBeGreaterThanOrEqual(0);
+  });
+
+  it('announces a minimum application version in the signed catalogue and to the administration (SYN-02)', async () => {
+    const strict = createApiApp(createApiDependencies({ ...process.env, MOBILE_MIN_APP_VERSION: '9.0.0' }));
+    const signed = endpoints.getSyncCatalog.response.parse(
+      await (await device.request('GET', '/sync/catalog', undefined, { app: strict })).json(),
+    );
+    expect(
+      verifyEd25519(catalogKey.publicKey, signedText('etare.catalog.v1', signed.catalog), signed.signature.signature),
+    ).toBe(true);
+    expect(syncCatalogSchema.parse(JSON.parse(signed.catalog)).min_app_version).toBe('9.0.0');
+    const listed = await strict.request(`${API_BASE_PATH}/devices`, {
+      headers: {
+        authorization: `Bearer ${adminFactor?.token ?? ''}`,
+        'x-tenant-id': TENANT_06,
+        'x-client-platform': 'web',
+      },
+    });
+    const list = endpoints.listDevices.response.parse(await listed.json());
+    expect(list.min_app_version).toBe('9.0.0');
+    const item = list.items.find((entry) => entry.id === device.deviceId);
+    expect(isAppVersionBelow(item?.app_version ?? null, list.min_app_version)).toBe(true);
   });
 
   it('refuses requests not signed by the terminal for this very path, or from another SIS', async () => {

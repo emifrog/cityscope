@@ -70,6 +70,17 @@
             ],
             "additionalProperties": false
           },
+          "min_app_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{1,4}\\.\\d{1,4}\\.\\d{1,4}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "publications": {
             "type": "array",
             "items": {
@@ -136,6 +147,7 @@
           "generation",
           "issued_at",
           "authorization",
+          "min_app_version",
           "publications"
         ],
         "additionalProperties": false
@@ -8094,12 +8106,19 @@
           "undistributed_publications": {
             "type": "integer",
             "minimum": 0
+          },
+          "min_app_version": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
           "items",
           "current_generation",
-          "undistributed_publications"
+          "undistributed_publications",
+          "min_app_version"
         ]
       },
       "Device": {

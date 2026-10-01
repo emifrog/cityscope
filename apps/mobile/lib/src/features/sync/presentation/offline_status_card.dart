@@ -1,3 +1,4 @@
+import 'package:etare_ops/src/core/config/app_info.dart';
 import 'package:etare_ops/src/core/errors/app_exception.dart';
 import 'package:etare_ops/src/core/formatting/date_formatting.dart';
 import 'package:etare_ops/src/core/routing/app_routes.dart';
@@ -35,6 +36,7 @@ class OfflineStatusCard extends ConsumerWidget {
 
   static const enrollButtonKey = Key('offline.enroll');
   static const syncButtonKey = Key('offline.sync');
+  static const updateRequiredKey = Key('offline.updateRequired');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -152,7 +154,10 @@ class _Enrolled extends ConsumerWidget {
           '${device.deviceName} · ${device.tenantName}',
           style: textTheme.bodyMedium?.copyWith(color: BrandColors.textMuted),
         ),
-        if (status.lastError case final error? when !running) ...[
+        if (status.appUpdateRequired && !running) ...[
+          const SizedBox(height: 12),
+          _UpdateRequired(minVersion: status.requiredAppVersion),
+        ] else if (status.lastError case final error? when !running) ...[
           const SizedBox(height: 8),
           Text(
             error,
@@ -215,6 +220,60 @@ class _Enrolled extends ConsumerWidget {
     return parts.isEmpty
         ? 'Aucun ETARE publié à installer.'
         : '${parts.join(', ')}.';
+  }
+}
+
+/// Application trop ancienne pour le contenu publié (SYN-02) : invitation à la
+/// mise à jour, le référentiel installé restant consultable.
+class _UpdateRequired extends StatelessWidget {
+  const _UpdateRequired({required this.minVersion});
+
+  final String? minVersion;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final version = minVersion;
+    const explanation =
+        'Les ETARE déjà installés restent consultables ; les nouvelles '
+        'versions ne seront installées qu’après la mise à jour de FireScape. '
+        'Demandez-la à votre SIS si elle ne s’installe pas automatiquement.';
+    return Container(
+      key: OfflineStatusCard.updateRequiredKey,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: BrandColors.important, width: 2),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.system_update, color: BrandColors.important),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Mise à jour de l’application requise',
+                  style: textTheme.titleMedium?.copyWith(
+                    color: BrandColors.important,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  version == null || version.isEmpty
+                      ? explanation
+                      : 'Version $version minimum (installée : '
+                            '${AppInfo.version}). $explanation',
+                  style: textTheme.bodyMedium,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

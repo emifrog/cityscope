@@ -59,6 +59,11 @@ const apiEnvSchema = authSchema.extend({
   SUPABASE_SECRET_KEY: z.string().min(1).optional(),
   /** Server-side only: Ed25519 key (PKCS#8 DER, base64) signing the catalogues of the terminals. */
   CATALOG_SIGNING_KEY: z.string().min(1).optional(),
+  /** Oldest OPS application (x.y.z) allowed to install publications (SYN-02); unset: no minimum. */
+  MOBILE_MIN_APP_VERSION: z
+    .string()
+    .regex(/^\d{1,4}\.\d{1,4}\.\d{1,4}$/, 'MOBILE_MIN_APP_VERSION must look like 1.2.0')
+    .optional(),
 });
 
 export interface ApiEnv {
@@ -68,6 +73,8 @@ export interface ApiEnv {
   readonly supabaseSecretKey: string | undefined;
   /** Null when offline distribution is not configured (terminal endpoints answer 503). */
   readonly catalogSigningKey: string | null;
+  /** Minimum OPS application version announced in the signed catalogues (null: none). */
+  readonly minAppVersion: string | null;
   readonly auth: { readonly issuer: string; readonly jwksUrl: string; readonly audience: string };
 }
 
@@ -81,6 +88,7 @@ export function readApiEnv(env: Env): ApiEnv {
     supabaseUrl: parsed.SUPABASE_URL,
     supabaseSecretKey: parsed.SUPABASE_SECRET_KEY,
     catalogSigningKey: parsed.CATALOG_SIGNING_KEY ?? null,
+    minAppVersion: parsed.MOBILE_MIN_APP_VERSION ?? null,
     auth: {
       issuer,
       jwksUrl: parsed.AUTH_JWKS_URL ?? `${issuer}/.well-known/jwks.json`,

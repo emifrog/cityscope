@@ -131,7 +131,7 @@ class SyncController extends Notifier<SyncRunState> {
       if (report is SyncPurged) ref.invalidate(deviceIdentityProvider);
       state = SyncRunFinished(report);
       // Puis la file des signalements, et la suite donnée par la Prévision.
-      if (report is SyncCompleted) {
+      if (report is SyncCompleted || report is SyncUpdateRequired) {
         ref.read(reportOutboxProvider.notifier).sendInBackground();
       }
     } on SyncIntegrityException catch (error) {

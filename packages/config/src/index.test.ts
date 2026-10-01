@@ -57,6 +57,12 @@ describe('signing keys (ADR-015)', () => {
     expect(readWorkerEnv(worker).publicationSigningKey).toBeNull();
   });
 
+  it('announce an optional minimum application version (SYN-02)', () => {
+    expect(readApiEnv(api).minAppVersion).toBeNull();
+    expect(readApiEnv({ ...api, MOBILE_MIN_APP_VERSION: '0.2.0' }).minAppVersion).toBe('0.2.0');
+    expect(() => readApiEnv({ ...api, MOBILE_MIN_APP_VERSION: '0.2' })).toThrow(/MOBILE_MIN_APP_VERSION/);
+  });
+
   it('are mandatory in shared environments', () => {
     for (const appEnv of ['staging', 'production']) {
       expect(() => readApiEnv({ ...api, APP_ENV: appEnv })).toThrow(/CATALOG_SIGNING_KEY/);

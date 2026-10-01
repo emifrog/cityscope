@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  APP_VERSION_PATTERN,
   EMPTY_BODY_SHA256,
   ENROLLMENT_CODE_ALPHABET,
   deviceRequestText,
@@ -8,6 +9,7 @@ import {
   enrollmentText,
   formatEnrollmentCode,
   isEd25519PublicKey,
+  isAppVersionBelow,
   isEd25519Signature,
   isSafePackagePath,
   normalizeEnrollmentCode,
@@ -71,5 +73,24 @@ describe('terminal state', () => {
     expect(state({ lastSyncAt: daysAgo(1), lastSyncStatus: 'installed' })).toBe('up_to_date');
     expect(state({ lastSyncAt: daysAgo(1), lastSyncStatus: 'partial' })).toBe('error');
     expect(state({ lastSyncAt: daysAgo(8), lastSyncStatus: 'installed' })).toBe('late');
+  });
+});
+
+describe('minimum application version (SYN-02)', () => {
+  it('compares x.y.z numerically and ignores a build suffix', () => {
+    expect(isAppVersionBelow('0.1.0', '0.2.0')).toBe(true);
+    expect(isAppVersionBelow('0.9.0', '0.10.0')).toBe(true);
+    expect(isAppVersionBelow('1.0.0', '0.10.3')).toBe(false);
+    expect(isAppVersionBelow('0.2.0', '0.2.0')).toBe(false);
+    expect(isAppVersionBelow('0.2.0+15', '0.2.0')).toBe(false);
+    expect(isAppVersionBelow('0.1.9-rc1', '0.2.0')).toBe(true);
+  });
+
+  it('does not judge an unknown or unreadable version', () => {
+    expect(isAppVersionBelow(null, '0.2.0')).toBe(false);
+    expect(isAppVersionBelow('0.1.0', null)).toBe(false);
+    expect(isAppVersionBelow('dev', '0.2.0')).toBe(false);
+    expect(APP_VERSION_PATTERN.test('0.2.0')).toBe(true);
+    expect(APP_VERSION_PATTERN.test('0.2')).toBe(false);
   });
 });

@@ -10,6 +10,7 @@ import 'generated/schema.dart';
 import 'generated/schema_v1.dart' as v1;
 import 'generated/schema_v2.dart' as v2;
 import 'generated/schema_v3.dart' as v3;
+import 'generated/schema_v4.dart' as v4;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -130,4 +131,51 @@ void main() {
       },
     );
   });
+
+  // Tablette en v3 : rien ne change, l'application est réputée compatible
+  // jusqu'au prochain catalogue (SYN-02).
+  test(
+    'la migration v3 → v4 conserve l’état et part d’une application compatible',
+    () async {
+      const oldSyncStateData = [
+        v3.SyncStateData(
+          id: 1,
+          activeGeneration: 5,
+          lastSyncAt: '2026-10-01T09:00:00.000Z',
+          status: 'idle',
+          catalogGeneration: 5,
+          authorizedUserId: 'user-1',
+          receiptPending: 0,
+        ),
+      ];
+      const expectedNewSyncStateData = [
+        v4.SyncStateData(
+          id: 1,
+          activeGeneration: 5,
+          lastSyncAt: '2026-10-01T09:00:00.000Z',
+          status: 'idle',
+          catalogGeneration: 5,
+          authorizedUserId: 'user-1',
+          receiptPending: 0,
+        ),
+      ];
+
+      await verifier.testWithDataIntegrity(
+        oldVersion: 3,
+        newVersion: 4,
+        createOld: v3.DatabaseAtV3.new,
+        createNew: v4.DatabaseAtV4.new,
+        openTestedDatabase: AppDatabase.new,
+        createItems: (batch, oldDb) {
+          batch.insertAll(oldDb.syncState, oldSyncStateData);
+        },
+        validateItems: (newDb) async {
+          expect(
+            expectedNewSyncStateData,
+            await newDb.select(newDb.syncState).get(),
+          );
+        },
+      );
+    },
+  );
 }

@@ -80,6 +80,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 class FreshnessBanner extends ConsumerWidget {
   const FreshnessBanner({super.key});
 
+  static const updateRequiredKey = Key('home.updateRequired');
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final status = ref.watch(syncStatusProvider).value ?? SyncStatus.initial;
@@ -98,12 +100,30 @@ class FreshnessBanner extends ConsumerWidget {
               Icon(icon, color: color),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  synced == null
-                      ? label
-                      : '$label · synchronisé le ${formatDateTimeFr(synced)}',
-                  style: Theme.of(context).textTheme.bodyLarge
-                      ?.copyWith(color: color, fontWeight: FontWeight.w600),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      synced == null
+                          ? label
+                          : '$label · synchronisé le '
+                                '${formatDateTimeFr(synced)}',
+                      style: Theme.of(context).textTheme.bodyLarge
+                          ?.copyWith(color: color, fontWeight: FontWeight.w600),
+                    ),
+                    // SYN-02 : les données restent lisibles, l'application
+                    // doit être mise à jour pour recevoir les nouvelles.
+                    if (status.appUpdateRequired)
+                      Text(
+                        'Mise à jour de l’application requise : touchez pour '
+                        'le détail.',
+                        key: FreshnessBanner.updateRequiredKey,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: BrandColors.important,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
                 ),
               ),
               if (run is SyncRunInProgress)

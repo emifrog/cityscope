@@ -47,6 +47,7 @@ final class SyncStatus {
     this.authorizedUserId,
     this.authorizationExpiresAt,
     this.installedSites = 0,
+    this.requiredAppVersion,
   });
 
   static const initial = SyncStatus(phase: SyncPhase.never);
@@ -72,6 +73,14 @@ final class SyncStatus {
   final String? authorizedUserId;
   final DateTime? authorizationExpiresAt;
   final int installedSites;
+
+  /// Version minimale exigée par le serveur quand l'application est trop
+  /// ancienne pour le contenu reçu (SYN-02) ; chaîne vide si elle est inconnue.
+  final String? requiredAppVersion;
+
+  /// Les nouvelles versions ne s'installeront qu'après mise à jour de
+  /// l'application ; les données installées restent consultables.
+  bool get appUpdateRequired => requiredAppVersion != null;
 
   bool get hasPublication => activeGeneration != null || installedSites > 0;
 

@@ -22,6 +22,27 @@ export const SIGNATURE_ALGORITHM = 'Ed25519';
 /** Version of the catalogue format read by the terminals. */
 export const CATALOG_VERSION = 1;
 
+/** Version x.y.z of the OPS application, as the server may require it (SYN-02). */
+export const APP_VERSION_PATTERN = /^\d{1,4}\.\d{1,4}\.\d{1,4}$/;
+
+/**
+ * Whether a terminal runs an OPS application older than the minimum required
+ * (SYN-02), comparing x.y.z numerically; a build suffix (`+12`, `-rc1`) is
+ * ignored. An unknown or unreadable version is not judged: the terminal itself
+ * refuses to install from a catalogue that requires a newer application.
+ */
+export function isAppVersionBelow(version: string | null, minimum: string | null): boolean {
+  if (!version || !minimum) return false;
+  const parts = (value: string) => /^(\d+)\.(\d+)\.(\d+)(?:[+-].*)?$/.exec(value)?.slice(1).map(Number) ?? null;
+  const current = parts(version);
+  const required = parts(minimum);
+  if (!current || !required) return false;
+  for (let index = 0; index < 3; index += 1) {
+    if (current[index] !== required[index]) return (current[index] ?? 0) < (required[index] ?? 0);
+  }
+  return false;
+}
+
 /**
  * Local consultation right granted with each catalogue (architecture §19:
  * pilot proposal, to be settled by the RSSI and the operations directorate).

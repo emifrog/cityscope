@@ -126,6 +126,8 @@ export interface ApiDependencies {
   readonly sha256: (text: string) => Promise<string>;
   /** Catalogue key (offline distribution); null when not configured: terminal endpoints answer 503. */
   readonly catalogSigner: ContentSigner | null;
+  /** Minimum OPS application version (SYN-02), announced in the catalogues; null: none. */
+  readonly minAppVersion?: string | null;
   readonly verifier: DeviceSignatureVerifier;
   readonly randomBytes: (length: number) => Uint8Array;
   readonly now: () => Date;
@@ -711,7 +713,7 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
   // ---------------------------------------------------------------- terminals (administration)
   app.get(routerPath(endpoints.listDevices.path), async (c) => {
     const context = await requestContext(c, endpoints.listDevices);
-    return respond(c, endpoints.listDevices, await listDevices(deps.sessions, context));
+    return respond(c, endpoints.listDevices, await listDevices(deps.sessions, context, deps.minAppVersion ?? null));
   });
 
   app.post(routerPath(endpoints.createDevice.path), async (c) => {

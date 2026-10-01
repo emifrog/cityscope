@@ -159,9 +159,19 @@ describe('terminal requests', () => {
       device_id: DEVICE,
       generation: 7,
       authorization: { subject: 'ops', expires_at: '2026-10-08T10:00:00.000Z' },
+      min_app_version: null,
       publications: [entry],
     });
     expect(devices.catalog).toHaveBeenCalledWith(DEVICE, '1.0.0');
+  });
+
+  it('announces the minimum application version inside the signed catalogue (SYN-02)', async () => {
+    const { deps } = setup({ status: 'active', publicKey: device.publicKey });
+    const signed = await getSyncCatalog({ ...deps, minAppVersion: '0.2.0' }, context, device.proof());
+    expect(
+      verifier.verify(CATALOG_KEY, signedText('etare.catalog.v1', signed.catalog), signed.signature.signature),
+    ).toBe(true);
+    expect(syncCatalogSchema.parse(JSON.parse(signed.catalog)).min_app_version).toBe('0.2.0');
   });
 
   it('refuses a request not signed by the terminal key, or signed for another path', async () => {

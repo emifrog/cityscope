@@ -269,6 +269,13 @@ Principes :
    affichée.
 5. Révocation : au premier contact, données, état et identité de la tablette
    sont effacés, signalements non transmis compris (leur nombre est affiché).
+6. Version minimale (SYN-02) : le catalogue signé peut exiger une version de
+   l'application (`MOBILE_MIN_APP_VERSION` côté API). Une application plus
+   ancienne, ou qui reçoit un catalogue ou un paquet d'un format plus récent,
+   n'installe rien de nouveau : les ETARE installés restent consultables, les
+   sites retirés le sont quand même, l'accueil et « Compte et tablette »
+   invitent à la mise à jour (schéma local v4, `required_app_version`).
+   `AppInfo.version` doit suivre la version de `pubspec.yaml` (test).
 
 ## 8 ter. Documents et dossier ETARE en PDF (DOC-01)
 

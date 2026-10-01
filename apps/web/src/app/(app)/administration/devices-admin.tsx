@@ -1,7 +1,7 @@
 'use client';
 
 import type { Device, DeviceEnrollmentCode, DeviceList } from '@etare/contracts';
-import type { DeviceState } from '@etare/domain';
+import { isAppVersionBelow, type DeviceState } from '@etare/domain';
 import {
   Alert,
   Badge,
@@ -137,10 +137,12 @@ function updatesWaiting(device: Device, current: number): string | null {
 function DeviceRow({
   device,
   currentGeneration,
+  minAppVersion,
   onCode,
 }: {
   device: Device;
   currentGeneration: number;
+  minAppVersion: string | null;
   onCode: (result: DeviceEnrollmentCode) => void;
 }) {
   const [revoking, setRevoking] = useState(false);
@@ -150,6 +152,7 @@ function DeviceRow({
   );
   const waiting = updatesWaiting(device, currentGeneration);
   const revoked = device.status === 'revoked';
+  const outdated = !revoked && isAppVersionBelow(device.app_version, minAppVersion);
 
   return (
     <>
@@ -160,6 +163,11 @@ function DeviceRow({
             {device.platform === 'android' ? 'Android' : device.platform === 'ios' ? 'iOS' : 'Plateforme inconnue'}
             {device.app_version ? ` · application ${device.app_version}` : ''}
           </p>
+          {outdated ? (
+            <p className="text-xs font-semibold text-important">
+              Application à mettre à jour (version {minAppVersion} exigée) : aucune nouvelle version n’est installée
+            </p>
+          ) : null}
         </TableCell>
         <TableCell>
           <p className="text-sm">{device.last_user_name ?? device.enrolled_by_name ?? '—'}</p>
@@ -303,6 +311,9 @@ export function DevicesAdmin() {
                 Génération du catalogue du SIS : {devices.data.current_generation}. Un terminal reçoit les nouvelles
                 versions à sa prochaine synchronisation ; « à jour » signifie un accusé d’installation de moins de 7
                 jours.
+                {devices.data.min_app_version
+                  ? ` Version minimale de l’application exigée : ${devices.data.min_app_version}.`
+                  : ''}
               </CardDescription>
             </CardHeader>
             {devices.data.items.length === 0 ? (
@@ -327,6 +338,7 @@ export function DevicesAdmin() {
                       key={`${device.id}-${device.row_version}`}
                       device={device}
                       currentGeneration={devices.data.current_generation}
+                      minAppVersion={devices.data.min_app_version}
                       onCode={setCode}
                     />
                   ))}

@@ -62,5 +62,6 @@ final class SyncStatusRepository {
     authorizedUserId: row.authorizedUserId,
     authorizationExpiresAt: row.authorizationExpiresAt?.toUtc(),
     installedSites: installed,
+    requiredAppVersion: row.requiredAppVersion,
   );
 }

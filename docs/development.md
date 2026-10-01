@@ -26,6 +26,10 @@ pnpm dev           # http://127.0.0.1:3000
 d’une exécution à l’autre et leurs clés publiques sont écrites dans la configuration du mobile
 (`TRUSTED_SIGNING_KEYS`). Les supprimer de `.env.local` oblige à réenrôler les terminaux de test.
 
+Version minimale de l’application OPS (SYN-02, facultative) : `MOBILE_MIN_APP_VERSION=x.y.z` dans
+`.env.local` l’annonce dans les catalogues signés ; une tablette plus ancienne garde ses données et
+demande une mise à jour. Utile pour éprouver ce parcours sur l’émulateur.
+
 Antivirus (facultatif en local, obligatoire en préproduction et production) : un démon ClamAV contrôle
 chaque fichier déposé. Pour l’activer en local, lancer `docker run -d --name etare-clamav -p 3311:3310
 clamav/clamav:stable`, puis ajouter `ANTIVIRUS_URL=tcp://127.0.0.1:3311` à `.env.local` avant

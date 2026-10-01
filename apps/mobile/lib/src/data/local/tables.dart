@@ -56,6 +56,11 @@ class SyncState extends Table {
   BoolColumn get receiptPending =>
       boolean().withDefault(const Constant(false))();
 
+  /// Application trop ancienne pour le dernier contenu reçu (SYN-02) : version
+  /// minimale exigée par le catalogue, ou chaîne vide quand un format plus
+  /// récent ne dit pas laquelle. Null : application compatible.
+  TextColumn get requiredAppVersion => text().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 

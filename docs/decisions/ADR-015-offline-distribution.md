@@ -79,3 +79,22 @@ terminal l’interroge, et un terminal perdu doit pouvoir être refusé.
 ## Critère de réexamen
 
 Arrivée des secteurs et profils de synchronisation, politique des sites sensibles, ou passage à un KMS.
+
+## Complément du Sprint 6 — version minimale d'application (SYN-02)
+
+- L'API peut exiger une version minimale de l'application OPS (`MOBILE_MIN_APP_VERSION`, x.y.z,
+  facultative). Elle est portée par le **catalogue signé** (`min_app_version`, null sans minimum) : un
+  intermédiaire ne peut ni l'ajouter ni la retirer. L'architecture §12 attendait la règle sur le
+  manifeste ; le catalogue, recalculé à chaque contact, permet de l'imposer sans republier les dossiers,
+  et le manifeste garde sa propre exigence de format (`min_reader_version`).
+- Une application plus ancienne ne télécharge ni n'installe aucune nouvelle version ; elle applique
+  quand même les retraits du catalogue et renouvelle l'autorisation de consultation : ce qui est
+  installé reste lisible, rien de ce qui n'est plus autorisé n'est conservé. Elle accuse réception
+  (`partial`, `APP_UPDATE_REQUIRED`). Un catalogue ou un manifeste d'un format plus récent
+  (`catalog_version`, `manifest_version`) produit la même invitation, sans version connue, au lieu d'un
+  refus « données invalides ».
+- L'onglet « Terminaux » affiche la version exigée et signale les terminaux dont la version déclarée
+  (`X-App-Version`) est plus ancienne. La règle de comparaison (x.y.z numérique, suffixe de build ignoré)
+  est partagée par le domaine (`isAppVersionBelow`).
+- Le contrôle reste du côté du terminal : la version déclarée n'est pas une preuve et n'est pas utilisée
+  pour refuser une requête.

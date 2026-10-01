@@ -49,6 +49,8 @@ export interface DistributionDependencies {
   /** Catalogue key of the API; null when not configured (terminal endpoints answer 503). */
   readonly catalogSigner: ContentSigner | null;
   readonly verifier: DeviceSignatureVerifier;
+  /** Minimum OPS application version announced to the terminals (SYN-02); null: none. */
+  readonly minAppVersion?: string | null;
   /** SHA-256 (hex) of the UTF-8 bytes of a text. */
   readonly sha256: (text: string) => Promise<string>;
   /** Cryptographically secure random bytes. */
@@ -70,13 +72,18 @@ export interface DeviceProof {
 }
 
 // ------------------------------------------------------------------ administration (device:manage)
-export async function listDevices(sessions: SessionFactory, context: RequestContext): Promise<DeviceList> {
+export async function listDevices(
+  sessions: SessionFactory,
+  context: RequestContext,
+  minAppVersion: string | null = null,
+): Promise<DeviceList> {
   return inTenant(sessions, context, 'device:manage', async (session) => {
     const { items, currentGeneration, undistributedPublications } = await session.devices.list();
     return {
       items,
       current_generation: currentGeneration,
       undistributed_publications: undistributedPublications,
+      min_app_version: minAppVersion,
     };
   });
 }
@@ -206,6 +213,7 @@ export async function getSyncCatalog(
         subject: context.principal.subject,
         expires_at: new Date(now.getTime() + OFFLINE_AUTHORIZATION_DAYS * 86_400_000).toISOString(),
       },
+      min_app_version: deps.minAppVersion ?? null,
       publications,
     } satisfies SyncCatalog);
     const text = canonicalJson(catalog);

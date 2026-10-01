@@ -2,6 +2,7 @@ import 'package:etare_ops/src/core/json/json_reader.dart';
 import 'package:flutter/foundation.dart';
 
 final _sha256Pattern = RegExp(r'^[0-9a-f]{64}$');
+final _versionPattern = RegExp(r'^\d{1,4}\.\d{1,4}\.\d{1,4}$');
 final _uuidPattern = RegExp(
   r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
 );
@@ -32,6 +33,18 @@ bool isSafePackagePath(String path) {
       .every(
         (segment) => segment.isNotEmpty && segment != '.' && segment != '..',
       );
+}
+
+/// Format de catalogue ou de manifeste plus récent que ce que l'application
+/// sait lire (SYN-02, architecture §10) : elle garde ce qu'elle a installé et
+/// demande une mise à jour, au lieu de déclarer les données invalides.
+final class NewerFormatException implements Exception {
+  const NewerFormatException(this.what);
+
+  final String what;
+
+  @override
+  String toString() => 'NewerFormatException($what)';
 }
 
 /// Compare deux versions `x.y.z` (négatif si [a] < [b]).
@@ -99,11 +112,18 @@ final class SyncCatalog {
     required this.authorizedUserId,
     required this.authorizationExpiresAt,
     required this.publications,
+    this.minAppVersion,
   });
 
   factory SyncCatalog.fromJson(JsonMap json) {
-    if (json.requireInt('catalog_version') != 1) {
+    final version = json.requireInt('catalog_version');
+    if (version > 1) throw const NewerFormatException('catalogue');
+    if (version != 1) {
       throw const FormatException('Version de catalogue non prise en charge');
+    }
+    final minApp = json.optionalString('min_app_version');
+    if (minApp != null && !_versionPattern.hasMatch(minApp)) {
+      throw const FormatException('« min_app_version » invalide');
     }
     final authorization = json.requireObject('authorization');
     return SyncCatalog(
@@ -120,6 +140,7 @@ final class SyncCatalog {
         for (final entry in json.requireObjectList('publications'))
           CatalogEntry.fromJson(entry),
       ],
+      minAppVersion: minApp,
     );
   }
 
@@ -133,6 +154,10 @@ final class SyncCatalog {
   final String authorizedUserId;
   final DateTime authorizationExpiresAt;
   final List<CatalogEntry> publications;
+
+  /// Plus ancienne application autorisée à installer depuis ce catalogue
+  /// (SYN-02) ; null : pas de minimum.
+  final String? minAppVersion;
 }
 
 /// Fichier d'un paquet, identifié par son empreinte.
@@ -181,7 +206,9 @@ final class PublicationManifest {
   });
 
   factory PublicationManifest.fromJson(JsonMap json) {
-    if (json.requireInt('manifest_version') != 1) {
+    final version = json.requireInt('manifest_version');
+    if (version > 1) throw const NewerFormatException('manifeste');
+    if (version != 1) {
       throw const FormatException('Version de manifeste non prise en charge');
     }
     final dataFile = json.requireString('data_file');
@@ -193,7 +220,7 @@ final class PublicationManifest {
       throw const FormatException('Fichier de données absent du manifeste');
     }
     final minReader = json.requireString('min_reader_version');
-    if (!RegExp(r'^\d+\.\d+\.\d+$').hasMatch(minReader)) {
+    if (!_versionPattern.hasMatch(minReader)) {
       throw const FormatException('« min_reader_version » invalide');
     }
     return PublicationManifest(

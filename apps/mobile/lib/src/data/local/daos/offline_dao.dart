@@ -93,6 +93,7 @@ final class ActivationRecord {
     required this.now,
     this.error,
     this.keepBlobs = const {},
+    this.requiredAppVersion,
   });
 
   final List<InstallRecord> install;
@@ -112,6 +113,10 @@ final class ActivationRecord {
   /// Fichiers déjà téléchargés à conserver pour reprendre une installation
   /// interrompue (sinon effacés s'ils ne sont plus référencés).
   final Set<String> keepBlobs;
+
+  /// Application trop ancienne pour une partie du contenu (SYN-02) : version
+  /// exigée, ou chaîne vide si elle est inconnue ; null efface l'alerte.
+  final String? requiredAppVersion;
 }
 
 /// Contenu hors ligne : versions installées, fichiers, données, index de
@@ -279,6 +284,7 @@ class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
         authorizedUserId: Value(activation.authorizedUserId),
         authorizationExpiresAt: Value(activation.authorizationExpiresAt),
         receiptPending: const Value(true),
+        requiredAppVersion: Value(activation.requiredAppVersion),
       ),
     );
     await _removeOrphanBlobs(activation.keepBlobs);
@@ -340,6 +346,7 @@ class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
           authorizedUserId: Value(null),
           authorizationExpiresAt: Value(null),
           receiptPending: Value(false),
+          requiredAppVersion: Value(null),
         ),
       );
     });

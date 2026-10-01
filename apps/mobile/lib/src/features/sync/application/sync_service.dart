@@ -107,6 +107,24 @@ final class SyncCompleted extends SyncReport {
   bool get complete => failures.isEmpty && !interrupted;
 }
 
+/// Application trop ancienne pour le catalogue reçu (SYN-02) : aucune nouvelle
+/// version n'est installée, ce qui est installé reste consultable ; les sites
+/// retirés du catalogue le sont quand même.
+final class SyncUpdateRequired extends SyncReport {
+  const SyncUpdateRequired({required this.minVersion, this.removed = 0});
+
+  /// Version exigée ; null quand le format reçu est trop récent pour la lire.
+  final String? minVersion;
+  final int removed;
+}
+
+/// Message destiné à l'agent quand l'application doit être mise à jour.
+String appUpdateMessage(String? minVersion) =>
+    'Mise à jour de l’application requise'
+    '${minVersion == null || minVersion.isEmpty ? '' : ' (version $minVersion minimum, installée ${AppInfo.version})'}'
+    ' : les ETARE déjà installés restent consultables, les nouvelles versions '
+    'seront installées après la mise à jour de FireScape.';
+
 /// Synchronisation descendante (architecture §11) : catalogue signé, plan,
 /// téléchargement des seuls fichiers manquants, vérification complète, puis
 /// activation en UNE transaction et accusé de réception. Une version qui ne
@@ -174,6 +192,24 @@ final class SyncService {
           rethrow;
       }
     } on SyncIntegrityException catch (error) {
+      if (error.code == _updateRequired) {
+        // Catalogue d'un format plus récent : rien n'est lu ni installé.
+        await _state.write(
+          SyncStateCompanion(
+            status: const Value('failed'),
+            lastError: Value(appUpdateMessage(null)),
+            lastAttemptAt: Value(_now),
+            requiredAppVersion: const Value(''),
+          ),
+        );
+        await _sendReceipt(
+          device,
+          generation: (await _state.read()).catalogGeneration ?? 0,
+          status: 'error',
+          errorCode: _updateRequired,
+        );
+        return const SyncUpdateRequired(minVersion: null);
+      }
       await _fail(_integrityMessage(error.code));
       rethrow;
     } on NetworkException catch (error) {
@@ -216,6 +252,12 @@ final class SyncService {
           manifestHash: row.manifestHash,
         ),
     ], catalog);
+
+    final minVersion = catalog.minAppVersion;
+    if (minVersion != null &&
+        compareVersions(minVersion, AppInfo.version) > 0) {
+      return _holdForUpdate(device, catalog, plan, minVersion);
+    }
 
     final prepared = <InstallRecord>[];
     final failures = <SyncFailure>[];
@@ -284,6 +326,12 @@ final class SyncService {
         now: _now,
         error: complete ? null : _partialMessage(failures, interrupted),
         keepBlobs: keep,
+        // Version de paquet trop récente pour ce lecteur : mise à jour requise
+        // (version exigée inconnue), l'ancienne version du site reste.
+        requiredAppVersion:
+            failures.any((failure) => failure.code == _readerTooOld)
+            ? ''
+            : null,
       ),
     );
 
@@ -308,6 +356,46 @@ final class SyncService {
     );
   }
 
+  /// Application trop ancienne pour ce catalogue (SYN-02, architecture §12) :
+  /// rien de nouveau n'est téléchargé ni installé, mais les sites retirés du
+  /// catalogue sont retirés et l'autorisation de consultation est renouvelée :
+  /// le référentiel installé reste lisible, sans rien garder de ce qui n'est
+  /// plus autorisé.
+  Future<SyncReport> _holdForUpdate(
+    DeviceCredentials device,
+    SyncCatalog catalog,
+    SyncPlan plan,
+    String minVersion,
+  ) async {
+    _logger.warning(
+      'Application ${AppInfo.version} trop ancienne (minimum $minVersion).',
+    );
+    await _offline.activate(
+      ActivationRecord(
+        install: const [],
+        removeSites: plan.toRemove,
+        generation: catalog.generation,
+        serverTime: catalog.issuedAt,
+        authorizedUserId: catalog.authorizedUserId,
+        authorizationExpiresAt: catalog.authorizationExpiresAt,
+        complete: false,
+        now: _now,
+        error: appUpdateMessage(minVersion),
+        requiredAppVersion: minVersion,
+      ),
+    );
+    await _sendReceipt(
+      device,
+      generation: catalog.generation,
+      status: 'partial',
+      errorCode: _updateRequired,
+    );
+    return SyncUpdateRequired(
+      minVersion: minVersion,
+      removed: plan.toRemove.length,
+    );
+  }
+
   /// Catalogue signé par la clé de catalogue, émis pour CE terminal et CET
   /// utilisateur, jamais plus ancien que le dernier accepté (rejeu).
   Future<SyncCatalog> _verifiedCatalog(
@@ -325,6 +413,8 @@ final class SyncService {
     final SyncCatalog catalog;
     try {
       catalog = SyncCatalog.fromJson(asJsonMap(jsonDecode(signed.text)));
+    } on NewerFormatException {
+      throw const SyncIntegrityException(_updateRequired);
     } on FormatException {
       throw const SyncIntegrityException('CATALOG_INVALID');
     }
@@ -367,6 +457,8 @@ final class SyncService {
       manifest = PublicationManifest.fromJson(
         asJsonMap(jsonDecode(package.manifest)),
       );
+    } on NewerFormatException {
+      throw const SyncIntegrityException(_readerTooOld);
     } on FormatException {
       throw const SyncIntegrityException('MANIFEST_INVALID');
     }
@@ -376,7 +468,7 @@ final class SyncService {
       throw const SyncIntegrityException('MANIFEST_MISMATCH');
     }
     if (compareVersions(manifest.minReaderVersion, AppInfo.readerVersion) > 0) {
-      throw const SyncIntegrityException('READER_TOO_OLD');
+      throw const SyncIntegrityException(_readerTooOld);
     }
     final dataBytes = utf8.encode(package.data);
     if (sha256Hex(dataBytes) != manifest.data.sha256 ||
@@ -539,10 +631,23 @@ final class SyncService {
       return 'Réseau interrompu : la synchronisation reprendra au prochain '
           'contact. Les versions déjà installées restent consultables.';
     }
+    final tooNew = [
+      for (final failure in failures)
+        if (failure.code == _readerTooOld) failure.siteName,
+    ];
+    if (tooNew.length == failures.length) {
+      return 'Mise à jour de l’application requise pour installer la nouvelle '
+          'version de : ${tooNew.join(', ')}. La version précédente reste '
+          'consultable.';
+    }
     final sites = failures.map((failure) => failure.siteName).join(', ');
     return 'Mise à jour impossible pour : $sites. La version précédente reste '
         'consultable.';
   }
+
+  /// Codes remontés dans l'accusé quand l'application est trop ancienne.
+  static const _updateRequired = 'APP_UPDATE_REQUIRED';
+  static const _readerTooOld = 'READER_TOO_OLD';
 
   static String _integrityMessage(String code) => switch (code) {
     'TRUSTED_KEYS_MISSING' =>

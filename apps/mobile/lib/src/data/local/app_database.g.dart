@@ -340,6 +340,17 @@ class $SyncStateTable extends SyncState
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _requiredAppVersionMeta =
+      const VerificationMeta('requiredAppVersion');
+  @override
+  late final GeneratedColumn<String> requiredAppVersion =
+      GeneratedColumn<String>(
+        'required_app_version',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -353,6 +364,7 @@ class $SyncStateTable extends SyncState
     authorizedUserId,
     authorizationExpiresAt,
     receiptPending,
+    requiredAppVersion,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -450,6 +462,15 @@ class $SyncStateTable extends SyncState
         ),
       );
     }
+    if (data.containsKey('required_app_version')) {
+      context.handle(
+        _requiredAppVersionMeta,
+        requiredAppVersion.isAcceptableOrUnknown(
+          data['required_app_version']!,
+          _requiredAppVersionMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -503,6 +524,10 @@ class $SyncStateTable extends SyncState
         DriftSqlType.bool,
         data['${effectivePrefix}receipt_pending'],
       )!,
+      requiredAppVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}required_app_version'],
+      ),
     );
   }
 
@@ -536,6 +561,11 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
 
   /// Accusé d'installation à renvoyer au prochain contact.
   final bool receiptPending;
+
+  /// Application trop ancienne pour le dernier contenu reçu (SYN-02) : version
+  /// minimale exigée par le catalogue, ou chaîne vide quand un format plus
+  /// récent ne dit pas laquelle. Null : application compatible.
+  final String? requiredAppVersion;
   const SyncStateRow({
     required this.id,
     this.activeGeneration,
@@ -548,6 +578,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     this.authorizedUserId,
     this.authorizationExpiresAt,
     required this.receiptPending,
+    this.requiredAppVersion,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -581,6 +612,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       );
     }
     map['receipt_pending'] = Variable<bool>(receiptPending);
+    if (!nullToAbsent || requiredAppVersion != null) {
+      map['required_app_version'] = Variable<String>(requiredAppVersion);
+    }
     return map;
   }
 
@@ -613,6 +647,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
           ? const Value.absent()
           : Value(authorizationExpiresAt),
       receiptPending: Value(receiptPending),
+      requiredAppVersion: requiredAppVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(requiredAppVersion),
     );
   }
 
@@ -635,6 +672,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
         json['authorizationExpiresAt'],
       ),
       receiptPending: serializer.fromJson<bool>(json['receiptPending']),
+      requiredAppVersion: serializer.fromJson<String?>(
+        json['requiredAppVersion'],
+      ),
     );
   }
   @override
@@ -654,6 +694,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
         authorizationExpiresAt,
       ),
       'receiptPending': serializer.toJson<bool>(receiptPending),
+      'requiredAppVersion': serializer.toJson<String?>(requiredAppVersion),
     };
   }
 
@@ -669,6 +710,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     Value<String?> authorizedUserId = const Value.absent(),
     Value<DateTime?> authorizationExpiresAt = const Value.absent(),
     bool? receiptPending,
+    Value<String?> requiredAppVersion = const Value.absent(),
   }) => SyncStateRow(
     id: id ?? this.id,
     activeGeneration: activeGeneration.present
@@ -691,6 +733,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
         ? authorizationExpiresAt.value
         : this.authorizationExpiresAt,
     receiptPending: receiptPending ?? this.receiptPending,
+    requiredAppVersion: requiredAppVersion.present
+        ? requiredAppVersion.value
+        : this.requiredAppVersion,
   );
   SyncStateRow copyWithCompanion(SyncStateCompanion data) {
     return SyncStateRow(
@@ -721,6 +766,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       receiptPending: data.receiptPending.present
           ? data.receiptPending.value
           : this.receiptPending,
+      requiredAppVersion: data.requiredAppVersion.present
+          ? data.requiredAppVersion.value
+          : this.requiredAppVersion,
     );
   }
 
@@ -737,7 +785,8 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
           ..write('serverTime: $serverTime, ')
           ..write('authorizedUserId: $authorizedUserId, ')
           ..write('authorizationExpiresAt: $authorizationExpiresAt, ')
-          ..write('receiptPending: $receiptPending')
+          ..write('receiptPending: $receiptPending, ')
+          ..write('requiredAppVersion: $requiredAppVersion')
           ..write(')'))
         .toString();
   }
@@ -755,6 +804,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     authorizedUserId,
     authorizationExpiresAt,
     receiptPending,
+    requiredAppVersion,
   );
   @override
   bool operator ==(Object other) =>
@@ -770,7 +820,8 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
           other.serverTime == this.serverTime &&
           other.authorizedUserId == this.authorizedUserId &&
           other.authorizationExpiresAt == this.authorizationExpiresAt &&
-          other.receiptPending == this.receiptPending);
+          other.receiptPending == this.receiptPending &&
+          other.requiredAppVersion == this.requiredAppVersion);
 }
 
 class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
@@ -785,6 +836,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
   final Value<String?> authorizedUserId;
   final Value<DateTime?> authorizationExpiresAt;
   final Value<bool> receiptPending;
+  final Value<String?> requiredAppVersion;
   const SyncStateCompanion({
     this.id = const Value.absent(),
     this.activeGeneration = const Value.absent(),
@@ -797,6 +849,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     this.authorizedUserId = const Value.absent(),
     this.authorizationExpiresAt = const Value.absent(),
     this.receiptPending = const Value.absent(),
+    this.requiredAppVersion = const Value.absent(),
   });
   SyncStateCompanion.insert({
     this.id = const Value.absent(),
@@ -810,6 +863,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     this.authorizedUserId = const Value.absent(),
     this.authorizationExpiresAt = const Value.absent(),
     this.receiptPending = const Value.absent(),
+    this.requiredAppVersion = const Value.absent(),
   });
   static Insertable<SyncStateRow> custom({
     Expression<int>? id,
@@ -823,6 +877,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     Expression<String>? authorizedUserId,
     Expression<DateTime>? authorizationExpiresAt,
     Expression<bool>? receiptPending,
+    Expression<String>? requiredAppVersion,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -837,6 +892,8 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
       if (authorizationExpiresAt != null)
         'authorization_expires_at': authorizationExpiresAt,
       if (receiptPending != null) 'receipt_pending': receiptPending,
+      if (requiredAppVersion != null)
+        'required_app_version': requiredAppVersion,
     });
   }
 
@@ -852,6 +909,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     Value<String?>? authorizedUserId,
     Value<DateTime?>? authorizationExpiresAt,
     Value<bool>? receiptPending,
+    Value<String?>? requiredAppVersion,
   }) {
     return SyncStateCompanion(
       id: id ?? this.id,
@@ -866,6 +924,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
       authorizationExpiresAt:
           authorizationExpiresAt ?? this.authorizationExpiresAt,
       receiptPending: receiptPending ?? this.receiptPending,
+      requiredAppVersion: requiredAppVersion ?? this.requiredAppVersion,
     );
   }
 
@@ -907,6 +966,9 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     if (receiptPending.present) {
       map['receipt_pending'] = Variable<bool>(receiptPending.value);
     }
+    if (requiredAppVersion.present) {
+      map['required_app_version'] = Variable<String>(requiredAppVersion.value);
+    }
     return map;
   }
 
@@ -923,7 +985,8 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
           ..write('serverTime: $serverTime, ')
           ..write('authorizedUserId: $authorizedUserId, ')
           ..write('authorizationExpiresAt: $authorizationExpiresAt, ')
-          ..write('receiptPending: $receiptPending')
+          ..write('receiptPending: $receiptPending, ')
+          ..write('requiredAppVersion: $requiredAppVersion')
           ..write(')'))
         .toString();
   }
@@ -5535,6 +5598,7 @@ typedef $$SyncStateTableCreateCompanionBuilder = SyncStateCompanion Function({
   Value<String?> authorizedUserId,
   Value<DateTime?> authorizationExpiresAt,
   Value<bool> receiptPending,
+  Value<String?> requiredAppVersion,
 });
 typedef $$SyncStateTableUpdateCompanionBuilder = SyncStateCompanion Function({
   Value<int> id,
@@ -5548,6 +5612,7 @@ typedef $$SyncStateTableUpdateCompanionBuilder = SyncStateCompanion Function({
   Value<String?> authorizedUserId,
   Value<DateTime?> authorizationExpiresAt,
   Value<bool> receiptPending,
+  Value<String?> requiredAppVersion,
 });
 
 class $$SyncStateTableFilterComposer
@@ -5611,6 +5676,11 @@ class $$SyncStateTableFilterComposer
 
   ColumnFilters<bool> get receiptPending => $composableBuilder(
     column: $table.receiptPending,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get requiredAppVersion => $composableBuilder(
+    column: $table.requiredAppVersion,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -5678,6 +5748,11 @@ class $$SyncStateTableOrderingComposer
     column: $table.receiptPending,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get requiredAppVersion => $composableBuilder(
+    column: $table.requiredAppVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SyncStateTableAnnotationComposer
@@ -5737,6 +5812,11 @@ class $$SyncStateTableAnnotationComposer
     column: $table.receiptPending,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get requiredAppVersion => $composableBuilder(
+    column: $table.requiredAppVersion,
+    builder: (column) => column,
+  );
 }
 
 class $$SyncStateTableTableManager
@@ -5781,6 +5861,7 @@ class $$SyncStateTableTableManager
                 Value<String?> authorizedUserId = const Value.absent(),
                 Value<DateTime?> authorizationExpiresAt = const Value.absent(),
                 Value<bool> receiptPending = const Value.absent(),
+                Value<String?> requiredAppVersion = const Value.absent(),
               }) => SyncStateCompanion(
                 id: id,
                 activeGeneration: activeGeneration,
@@ -5793,6 +5874,7 @@ class $$SyncStateTableTableManager
                 authorizedUserId: authorizedUserId,
                 authorizationExpiresAt: authorizationExpiresAt,
                 receiptPending: receiptPending,
+                requiredAppVersion: requiredAppVersion,
               ),
           createCompanionCallback:
               ({
@@ -5807,6 +5889,7 @@ class $$SyncStateTableTableManager
                 Value<String?> authorizedUserId = const Value.absent(),
                 Value<DateTime?> authorizationExpiresAt = const Value.absent(),
                 Value<bool> receiptPending = const Value.absent(),
+                Value<String?> requiredAppVersion = const Value.absent(),
               }) => SyncStateCompanion.insert(
                 id: id,
                 activeGeneration: activeGeneration,
@@ -5819,6 +5902,7 @@ class $$SyncStateTableTableManager
                 authorizedUserId: authorizedUserId,
                 authorizationExpiresAt: authorizationExpiresAt,
                 receiptPending: receiptPending,
+                requiredAppVersion: requiredAppVersion,
               ),
           withReferenceMapper: (p0) => p0
               .map(
