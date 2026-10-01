@@ -1,8 +1,10 @@
 import 'package:etare_ops/src/core/formatting/date_formatting.dart';
 import 'package:etare_ops/src/core/routing/app_routes.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
+import 'package:etare_ops/src/features/ops/application/ops_providers.dart';
 import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
 import 'package:etare_ops/src/features/ops/domain/published_site.dart';
+import 'package:etare_ops/src/features/ops/presentation/document_screen.dart';
 import 'package:etare_ops/src/features/ops/presentation/item_sheet.dart';
 import 'package:etare_ops/src/features/ops/presentation/ops_scaffold.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,6 +21,7 @@ class SiteScreen extends ConsumerWidget {
 
   static Key tileKey(OpsSection section) => Key('site.tile.${section.name}');
   static const reportButtonKey = Key('site.report');
+  static const etarePdfKey = Key('site.etarePdf');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => OpsScaffold(
@@ -100,6 +103,7 @@ class _Synthesis extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
+        _EtarePdfTile(site: site),
         for (final section in const [OpsSection.rescue, OpsSection.documents])
           if (_count(section) > 0)
             ListTile(
@@ -131,6 +135,37 @@ class _Synthesis extends StatelessWidget {
           style: textTheme.bodyMedium?.copyWith(color: BrandColors.textMuted),
         ),
       ],
+    );
+  }
+}
+
+/// Dossier ETARE publié (PDF), installé avec la version.
+class _EtarePdfTile extends ConsumerWidget {
+  const _EtarePdfTile({required this.site});
+
+  final PublishedSite site;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sha256 = ref.watch(etarePdfProvider(site.siteId)).value;
+    if (sha256 == null) return const SizedBox.shrink();
+    return ListTile(
+      key: SiteScreen.etarePdfKey,
+      leading: const Icon(Icons.picture_as_pdf_outlined),
+      title: const Text('Dossier ETARE (PDF)'),
+      subtitle: Text(
+        'Version publiée n° ${site.publicationNumber}, lisible sans réseau',
+      ),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => DocumentScreen(
+            title: 'ETARE · ${site.name}',
+            sha256: sha256,
+            mimeType: 'application/pdf',
+          ),
+        ),
+      ),
     );
   }
 }

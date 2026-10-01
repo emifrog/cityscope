@@ -53,6 +53,19 @@ final publishedSiteProvider = FutureProvider.family<PublishedSite?, String>((
   return text == null ? null : PublishedSite.fromJsonText(text);
 });
 
+/// Empreinte du PDF ETARE de la version installée d'un site (null : absent).
+final etarePdfProvider = FutureProvider.family<String?, String>((
+  ref,
+  siteId,
+) async {
+  ref.watch(syncStatusProvider.select((status) => status.value?.lastSyncAt));
+  final dao = ref.watch(appDatabaseProvider).offlineDao;
+  final installed = await dao.installedSite(siteId);
+  if (installed == null) return null;
+  final files = await dao.files(installed.publicationId);
+  return files.where((file) => file.path == 'etare.pdf').firstOrNull?.sha256;
+});
+
 /// Contenu d'un fichier installé (plan, PDF, photo), par empreinte.
 final installedFileProvider = FutureProvider.family<Uint8List?, String>(
   (ref, sha256) => ref.watch(appDatabaseProvider).offlineDao.blob(sha256),

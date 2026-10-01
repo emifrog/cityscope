@@ -9,8 +9,9 @@ import 'package:etare_ops/src/features/ops/presentation/item_sheet.dart';
 import 'package:etare_ops/src/features/ops/presentation/plan_screen.dart';
 import 'package:etare_ops/src/features/ops/presentation/section_screen.dart';
 import 'package:etare_ops/src/features/ops/presentation/site_screen.dart';
+import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
 import 'package:flutter/widgets.dart'
-    show CustomPaint, InteractiveViewer, Offset;
+    show CustomPaint, InteractiveViewer, Navigator, Offset, Scrollable;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart' show FilterChip, Image;
@@ -87,6 +88,51 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('01 99 00 12 34'), findsOneWidget);
     expect(find.text('Disponibilité : 24/7'), findsOneWidget);
+    await finish(tester, database);
+  });
+
+  testWidgets('PDF lus sans réseau dans l’application : dossier ETARE et '
+      'document essentiel (DOC-01)', (tester) async {
+    final database = await installedDatabase();
+    await pumpApp(tester, database);
+    await tester.tap(find.text('EHPAD Les Oliviers'));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(SiteScreen.etarePdfKey),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(SiteScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.tap(find.byKey(SiteScreen.etarePdfKey));
+    await tester.pumpAndSettle();
+    expect(find.byType(DocumentScreen), findsOneWidget);
+    expect(
+      find.text('PDF ${tinyPdf.length} octets · sha256:${sha256Hex(tinyPdf)}'),
+      findsOneWidget,
+    );
+    Navigator.of(tester.element(find.byType(DocumentScreen))).pop();
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(SiteScreen.tileKey(OpsSection.documents)),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(SiteScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.tap(find.byKey(SiteScreen.tileKey(OpsSection.documents)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Consignes de sécurité'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('PDF ${tinyPdf.length} octets'), findsOneWidget);
     await finish(tester, database);
   });
 

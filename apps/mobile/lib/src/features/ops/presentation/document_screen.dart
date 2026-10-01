@@ -1,11 +1,12 @@
-import 'package:etare_ops/src/core/formatting/date_formatting.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
 import 'package:etare_ops/src/features/ops/application/ops_providers.dart';
+import 'package:etare_ops/src/features/ops/presentation/pdf_reader.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Document installé (essentiel hors ligne), lu depuis la base chiffrée :
-/// jamais écrit en clair sur le stockage de la tablette.
+/// jamais écrit en clair sur le stockage de la tablette. Images zoomables,
+/// PDF lus dans l'application (DOC-01).
 class DocumentScreen extends ConsumerWidget {
   const DocumentScreen({
     required this.title,
@@ -48,12 +49,11 @@ class DocumentScreen extends ConsumerWidget {
                   ),
               ],
             ),
-          AsyncData(value: final bytes?) => _Notice(
-            icon: Icons.picture_as_pdf_outlined,
-            text:
-                'Document PDF installé et vérifié (${formatBytesFr(bytes.length)}). '
-                'Sa lecture intégrée à la tablette arrive avec un prochain lot ; '
-                'consultez-le en attendant depuis le back-office.',
+          AsyncData(value: final bytes?) when mimeType == 'application/pdf' =>
+            ref.watch(pdfViewBuilderProvider)(context, bytes, 'sha256:$sha256'),
+          AsyncData(value: _?) => const _Notice(
+            icon: Icons.description_outlined,
+            text: 'Format de document non lisible sur la tablette.',
           ),
           AsyncData() => const _Notice(
             icon: Icons.cloud_off_outlined,

@@ -4,6 +4,10 @@ import 'package:etare_ops/src/data/local/daos/offline_dao.dart';
 import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
 
 /// PNG 1×1 : fond de plan minimal (le plan déclare ses dimensions).
+/// PDF installé avec la version (dossier ETARE et document essentiel).
+final tinyPdf = utf8.encode('%PDF-1.4\n% ETARE de démonstration\n%%EOF\n');
+const documentVersionId = '0600000b-0000-4000-8000-0000000000d1';
+
 final tinyPng = base64.decode(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
 );
@@ -241,7 +245,27 @@ final payload = {
         'plan_position': null,
       },
     ],
-    'documents': <Object?>[],
+    'documents': [
+      {
+        'id': '0600000a-0000-4000-8000-0000000000d1',
+        'title': 'Consignes de sécurité',
+        'category': 'instruction',
+        'offline_policy': 'always',
+        'version': {
+          'id': documentVersionId,
+          'version_no': 1,
+          'valid_from': null,
+          'expires_at': null,
+          'asset': {
+            'id': '06000005-0000-4000-8000-0000000000d1',
+            'filename': 'consignes.pdf',
+            'mime_type': 'application/pdf',
+            'size_bytes': tinyPdf.length,
+            'sha256': sha256Hex(tinyPdf),
+          },
+        },
+      },
+    ],
     'catalog': {
       'object_types': [
         {
@@ -290,6 +314,20 @@ InstallRecord installRecord() {
         sha256: sha256Hex(tinyPng),
         sizeBytes: tinyPng.length,
         mediaType: 'image/png',
+        required: true,
+      ),
+      FileRecord(
+        path: 'etare.pdf',
+        sha256: sha256Hex(tinyPdf),
+        sizeBytes: tinyPdf.length,
+        mediaType: 'application/pdf',
+        required: true,
+      ),
+      FileRecord(
+        path: 'documents/$documentVersionId.pdf',
+        sha256: sha256Hex(tinyPdf),
+        sizeBytes: tinyPdf.length,
+        mediaType: 'application/pdf',
         required: true,
       ),
       FileRecord(

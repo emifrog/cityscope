@@ -266,6 +266,16 @@ Principes :
 5. Révocation : au premier contact, données, état et identité de la tablette
    sont effacés, signalements non transmis compris (leur nombre est affiché).
 
+## 8 ter. Documents et dossier ETARE en PDF (DOC-01)
+
+Le PDF du dossier ETARE (depuis la synthèse du site) et les documents
+installés sont lus dans l'application avec `pdfrx` (MIT, moteur PDFium) :
+le fichier est ouvert depuis la mémoire, après lecture dans la base
+chiffrée, jamais copié en clair sur la tablette. Zoom au geste, pages
+précédente et suivante, message explicite si le PDF est illisible. Les
+documents « à la demande » ne sont pas encore téléchargeables depuis la
+tablette (DOC-02).
+
 ## 8 bis. Signalements terrain (OPS-04, ADR-017)
 
 1. Depuis la synthèse d'un site, la fiche d'un point, d'un risque ou d'une

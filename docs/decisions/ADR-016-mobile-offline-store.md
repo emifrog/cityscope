@@ -70,6 +70,10 @@ perdu rend le même signalement côté serveur. Les photos sont retirées de la 
 signalement transmis et leur contrôle demandé. La purge de révocation efface aussi la file ; le
 message de purge indique combien de signalements non transmis ont été effacés.
 
+Les PDF (dossier ETARE, documents installés) sont lus par `pdfrx` depuis la mémoire : octets lus dans
+la base chiffrée, ouverture par PDFium en mémoire (`FPDF_LoadMemDocument`, ou lecture par rappels
+au-delà de 1 Mo), sans fichier temporaire.
+
 ## Critère de réexamen
 
 Mesures sur la tablette cible (taille de base, temps d’ouverture d’une fiche < 2 s, mémoire), ou besoin de

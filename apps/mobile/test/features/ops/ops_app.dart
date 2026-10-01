@@ -4,10 +4,11 @@ import 'package:etare_ops/src/core/di/providers.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/data/local/daos/offline_dao.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
+import 'package:etare_ops/src/features/ops/presentation/pdf_reader.dart';
 import 'package:etare_ops/src/features/sync/application/sync_providers.dart';
 import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
 import 'package:etare_ops/src/features/sync/domain/device_identity.dart';
-import 'package:flutter/widgets.dart' show Size, SizedBox;
+import 'package:flutter/widgets.dart' show Size, SizedBox, Text;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -29,6 +30,7 @@ final now = DateTime.utc(2026, 10, 1, 10);
 Future<AppDatabase> installedDatabase({String user = 'user-1'}) async {
   final database = AppDatabase(NativeDatabase.memory());
   await database.offlineDao.storeBlob(sha256Hex(tinyPng), tinyPng, now);
+  await database.offlineDao.storeBlob(sha256Hex(tinyPdf), tinyPdf, now);
   await database.offlineDao.activate(
     ActivationRecord(
       install: [installRecord()],
@@ -75,6 +77,11 @@ Future<void> pumpApp(
           ),
         ),
         syncControllerProvider.overrideWith(IdleSync.new),
+        // PDFium est natif : un lecteur simulé montre ce qui lui est confié.
+        pdfViewBuilderProvider.overrideWithValue(
+          (context, bytes, sourceName) =>
+              Text('PDF ${bytes.length} octets · $sourceName'),
+        ),
         ...overrides,
       ],
       child: const EtareOpsApp(),
