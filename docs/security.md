@@ -140,6 +140,14 @@ Voir ADR-015.
   photos par la chaîne contrôlée et l’antivirus ; constat immuable, instruction réservée à
   `field_report:review`. Sur la tablette, la file chiffrée est liée à son auteur et purgée à la
   révocation. Une photo de signalement n’inscrit pas l’agent parmi les auteurs des données de travail.
+- Documents « à la demande » (DOC-02) : téléchargés par requête signée du terminal (auditée), vérifiés
+  contre la taille et l’empreinte du manifeste signé de la version installée, rangés dans la base
+  chiffrée ; jamais un fichier obligatoire retiré par l’agent.
+- Synchronisation en arrière-plan (ADR-018) : mêmes vérifications que la synchronisation manuelle ; un
+  seul moteur à la fois (bail atomique) ; la session stockée est reprise plutôt qu’un jeton de
+  rafraîchissement rejoué ; aucune donnée en clair hors de la base chiffrée et du stockage sécurisé.
+- Version minimale d’application (SYN-02) : portée par le catalogue signé, non falsifiable en transit ;
+  la version déclarée par le terminal n’est qu’une information d’administration.
 - Le catalogue accorde une consultation locale de 7 jours à l’utilisateur ; une horloge de tablette
   manipulée peut prolonger cette durée hors réseau (limite décrite par l’architecture §19).
 

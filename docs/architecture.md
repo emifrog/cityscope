@@ -165,7 +165,9 @@ terminal. Les versions publiées installées (données, plans, photos, documents
 la base chiffrée et activées en une transaction (ADR-016). Écrans OPS lus sans réseau : recherche
 locale, synthèse, listes par entrée, plans tactiles avec calques, fiches et photos, PDF lus en mémoire
 (pdfrx). Signalements terrain (ADR-017) : saisie hors ligne, file chiffrée liée à l’auteur, envoi signé
-et idempotent, suivi de la suite donnée. Détails dans
+et idempotent, suivi de la suite donnée. Documents « à la demande » téléchargés explicitement et vérifiés
+(DOC-02). Synchronisation en arrière-plan par WorkManager, bail partagé entre moteurs et session
+partagée (ADR-018) ; version minimale d’application portée par le catalogue signé (SYN-02). Détails dans
 `apps/mobile/README.md`.
 
 ## Cartographie

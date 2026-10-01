@@ -49,6 +49,12 @@ sans que deux synchronisations ne se croisent.
 - Une tâche WorkManager dispose d'environ 10 minutes : une installation plus longue est interrompue et
   reprend au passage suivant, sans retélécharger les fichiers déjà vérifiés (ADR-016).
 - Pas de service de premier plan ni de notification : la synchronisation est silencieuse.
+- La tâche périodique est enregistrée une fois pour toutes (`keep`, nom versionné, anciens noms
+  retirés) : la ré-enregistrer à chaque lancement (`update`) changeait la génération du travail, qui
+  continuait alors sans tâche système dans un processus « en cache » gelé par Android 16 (constaté sur
+  émulateur). Un arrêt demandé par l'utilisateur (« forcer l'arrêt ») peut produire le même gel par la
+  replanification de WorkManager au démarrage ; le bail garantit qu'un moteur gelé puis réveillé
+  n'active rien après qu'un autre a repris la main, et l'ouverture de l'application synchronise.
 - Le plugin évolue vite (corrections pour Android 16 en août et septembre 2026) et écrit un marqueur
   sans donnée dans le répertoire temporaire de l'application : à surveiller à chaque mise à jour.
 - La fréquence, le budget de 50 Mo et le recours au Wi-Fi sont des propositions à arbitrer avec le SIS

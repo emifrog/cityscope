@@ -1,6 +1,6 @@
 # Roadmap complète de développement — ETARE numérique
 
-**Mise à jour : 1er octobre 2026. Base : `0233b86` (Sprint 5 livré).**
+**Mise à jour : 1er octobre 2026. Base : `c6745d7` (Sprint 6 livré).**
 
 Ce document est le plan de développement courant : **ce qui est implémenté, ce qui reste à construire,
 dans quel ordre et avec quelle preuve de fin**. Il complète le
@@ -64,10 +64,13 @@ Un total de tests ou un nombre de sprints ne donne pas un pourcentage fiable d�
 | Sprint 5 C — terrain       | Saisie hors ligne (site, fiche, plan), file chiffrée liée à l’auteur, envoi sans doublon, retour « reçu/traité » ; essai émulateur                                | Commit `5773faf` ; tablette physique à qualifier                                |
 | Sprint 5 D — PDF           | Lecteur PDF en mémoire (pdfrx), dossier ETARE et documents essentiels sans réseau                                                                                 | Commit `6c09cbd` ; documents à la demande à venir                               |
 | Sprint 5 E — antivirus     | ClamAV (clamd) obligatoire hors développement, quarantaine conservée si indisponible, CI avec un vrai démon                                                       | Commit `0233b86` ; signatures et supervision à exploiter                        |
+| Sprint 6 A — version min.  | Version minimale dans le catalogue signé, terminaux à mettre à jour signalés ; tablette trop ancienne : rien de nouveau installé, retraits appliqués, invitation  | Commit `f38e433`, ADR-015 (complément)                                          |
+| Sprint 6 B — documents     | Documents « à la demande » listés avec taille et état, téléchargement explicite signé et vérifié, conservation, retrait, messages exacts hors réseau              | Commit `9f02f43`, ADR-016 (complément)                                          |
+| Sprint 6 C — arrière-plan  | WorkManager horaire sous contraintes, budget 50 Mo puis Wi-Fi, bail entre moteurs, session partagée, reprise au retour ; essai émulateur                          | Commit `c6745d7`, [ADR-018](decisions/ADR-018-background-sync.md)               |
 
-**État technique vérifié :** 263 tests TypeScript, 286 assertions SQL, 80 tests d’intégration (dont
-l’antivirus contre un vrai ClamAV), 120 tests Flutter réussis et 1 test optionnel ignoré ; 22 migrations,
-17 ADR (CI du commit `0233b86`).
+**État technique vérifié :** 267 tests TypeScript, 286 assertions SQL, 82 tests d’intégration (dont
+l’antivirus contre un vrai ClamAV en CI), 158 tests Flutter réussis et 1 test optionnel ignoré ;
+22 migrations, 18 ADR (CI du commit `c6745d7`).
 Origine de chaque vérification et limites : [bilan du 1er octobre](bilan-depot-2026-10-01.md).
 
 ## 3. Séquence proposée jusqu’au pilote
@@ -147,18 +150,23 @@ l’ADR-017 au fil du Sprint 5) :
       aucune proposition ne remplace directement une version OPS.
 - [x] **DOC-01 — Lecteur PDF offline :** rendre le fichier déjà vérifié depuis le stockage chiffré,
       zoom/pages et gestion d’erreur, sans export temporaire persistant en clair.
-- [ ] **DOC-02 — Documents à la demande :** téléchargement explicite en ligne, taille/état affichés,
+- [x] **DOC-02 — Documents à la demande :** téléchargement explicite en ligne, taille/état affichés,
       vérification et conservation selon la politique ; message exact si le document manque hors réseau.
-- [ ] **SYN-01 — Exécution Android en arrière-plan :** définir les contraintes réseau/batterie, éviter deux
+- [x] **SYN-01 — Exécution Android en arrière-plan :** définir les contraintes réseau/batterie, éviter deux
       synchronisations concurrentes, reprendre au retour de l’application et garder une commande manuelle.
       Ce lot est distinct de la synchronisation manuelle déjà livrée.
-- [ ] **SYN-02 — Version minimale d’application :** le catalogue ou le manifeste porte la version minimale
+- [x] **SYN-02 — Version minimale d’application :** le catalogue ou le manifeste porte la version minimale
       requise ; une application trop ancienne conserve le référentiel déjà installé, lisible, et invite à
       la mise à jour (architecture §12, « application incompatible »).
 
 **Livré au Sprint 5 (1er octobre 2026) :** TER-01 à TER-05 et DOC-01, avec SEC-01 (R4) en parallèle
 ([rapport](sprint-5-report.md)). Restent dans R1 : DOC-02, SYN-01 et SYN-02, et la localisation GPS
 d’un signalement (DEC-04). Éprouvé sur émulateur seulement : tablette physique à qualifier.
+
+**Livré au Sprint 6 (1er octobre 2026) :** DOC-02, SYN-01 et SYN-02 ([rapport](sprint-6-report.md)) : R1
+est réalisé, hors localisation GPS d’un signalement (DEC-04). Éprouvé sur émulateur seulement : tablette
+physique, réseau dégradé et volumes réels à qualifier (R5) ; fréquence, budget de 50 Mo et Wi-Fi à
+arbitrer (DEC-01).
 
 **Dépendances :** l’antivirus et les contrôles de R4 s’appliquent aux nouvelles photos comme aux documents.
 Définir les règles de déconnexion/révocation avec une file locale non envoyée : ne pas perdre silencieusement
@@ -296,7 +304,7 @@ Les exigences transverses hors de cette table sont couvertes par R0/R4 et la sec
 | SITE-02   | P0       | Bâtiments multiples                      | Implémenté  | R5 : plusieurs bâtiments, ordre/emprises cohérents                                            |
 | SITE-03   | P0       | Classifications                          | Implémenté  | R5 : valeurs multiples, dates et historique                                                   |
 | SITE-04   | P0       | Contacts et astreintes                   | Implémenté  | R5 : confidentialité et usage terrain                                                         |
-| SITE-05   | P0       | Photos et documents versionnés           | Implémenté  | R1 DOC-02 : documents « à la demande » sur tablette ; R5                                      |
+| SITE-05   | P0       | Photos et documents versionnés           | Implémenté  | R5 : documents « à la demande » sur tablette réelle, volumes                                  |
 | SITE-06   | P0       | Recherche texte/commune/catégorie/risque | Partiel     | R3 MET-01 ; mesure < 2 s en R5                                                                |
 | MAP-01    | P0       | Carte des sites et regroupement          | Implémenté  | R4 CAP-01, R5 : fluidité/filtrage sur jeu cible                                               |
 | MAP-02    | P0       | Emprises et points opérationnels         | Implémenté  | R5 : zoom, filtres et ouverture des fiches                                                    |
@@ -325,7 +333,7 @@ Les exigences transverses hors de cette table sont couvertes par R0/R4 et la sec
 | OPS-04    | P0       | Signalement avec photo hors ligne        | À qualifier | Livré (ADR-017) ; R5 : tablette physique, réseau dégradé, DEC-04 (GPS, file à la révocation)  |
 | OPS-05    | P0       | Version et âge de la donnée              | Implémenté  | R5 : compréhension fraîcheur/validité métier                                                  |
 | OFF-01    | P0       | Paquets signés, progression/taille       | Implémenté  | R5 : progression et taille sur tablette ; affectations → ADMIN-01/PER-01, carte → CAR-01 à 03 |
-| OFF-02    | P0       | Synchronisation différentielle           | Implémenté  | DEC-08 : différentiel par fichier (ADR-015) à faire accepter ; R1 SYN-01, R5 panne/reprise    |
+| OFF-02    | P0       | Synchronisation différentielle           | Implémenté  | DEC-08 : différentiel par fichier à faire accepter ; R5 : arrière-plan, panne/reprise         |
 | OFF-03    | P0       | Stockage local chiffré                   | Implémenté  | R4 SEC-05/CAP-02 ; nouveaux PDF/signalements sans fichier en clair                            |
 | OFF-04    | P0       | Révocation et purge au contact           | Implémenté  | DEC-04, R5 : latence et limites hors réseau acceptées                                         |
 | OFF-05    | P1       | Rétention configurable par SIS           | À faire     | R6 ; distinguer conservation serveur et cache local                                           |
@@ -402,9 +410,9 @@ Après chaque lot :
 4. Écrire un rapport daté avec commit, tests, limites et décision de passage.
 5. Réestimer le lot suivant selon les retours ; toute nouvelle demande garde une priorité et un lien au cadrage.
 
-**Prochaine tranche recommandée :** fin de R1 (DOC-02 documents à la demande, SYN-01 synchronisation en
-arrière-plan, SYN-02 version minimale d’application), puis R2 portail exploitant, qui réutilise la chaîne
-d’instruction des signalements ; décisions R0 à engager (DEC-01, DEC-04 en priorité) et premier test sur
+**Prochaine tranche recommandée :** R2 portail exploitant (invitation par site, consultation en liste
+blanche, propositions instruites comme les signalements, concurrence, notifications) ; décisions R0 à
+engager (DEC-01 matériel et règles de synchronisation, DEC-04 accès en priorité) et premier essai sur
 tablette physique.
 
 ## 8. Références
