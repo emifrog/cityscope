@@ -16,6 +16,8 @@ const KIND_LABELS: Readonly<Record<Notification['kind'], string>> = {
   portal_invitation: 'Invitation au portail',
   contribution_info_request: 'Précision demandée',
   contribution_decision: 'Décision sur une proposition',
+  second_factor_recovered: 'Code de secours utilisé',
+  second_factor_reset: 'Double authentification réinitialisée',
 };
 
 const STATUS: Readonly<Record<Notification['status'], { label: string; tone: 'info' | 'success' | 'critical' }>> = {

@@ -16,10 +16,11 @@ export interface Principal {
 
 /**
  * Why a request may run without the second factor of an enrolled account:
- * 'profile' (reading one's own profile) or 'enrollment' (enrolling a terminal
- * with its single-use code). Terminal requests use deviceId instead.
+ * 'profile' (reading one's own profile), 'enrollment' (enrolling a terminal
+ * with its single-use code) or 'recovery' (using a recovery code). Terminal
+ * requests use deviceId instead.
  */
-export type RequestPurpose = 'profile' | 'enrollment';
+export type RequestPurpose = 'profile' | 'enrollment' | 'recovery';
 
 /**
  * Context of a request. The tenant id comes from the client (active SIS) and

@@ -43,6 +43,21 @@ export async function inviteMember(
   return { member, invitation: identity.invitationSent ? 'sent' : 'existing_account' };
 }
 
+/**
+ * Resets the second factor of a member (lost telephone, identity checked by the SIS): the
+ * factor and the sessions are removed, a new factor is required, the member is alerted.
+ */
+export async function resetMemberSecondFactor(
+  sessions: SessionFactory,
+  context: RequestContext,
+  id: string,
+  expectedVersion: number,
+): Promise<Member> {
+  return inTenant(sessions, context, 'member:manage', async (session) =>
+    found(await session.members.resetSecondFactor(id, expectedVersion), 'Membre introuvable.'),
+  );
+}
+
 export async function updateMember(
   sessions: SessionFactory,
   context: RequestContext,

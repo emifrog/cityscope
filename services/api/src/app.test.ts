@@ -56,6 +56,7 @@ function sessions(roles: Role[]): SessionFactory & { contexts: RequestContext[] 
                   email: 'redacteur06@demo.etare.test',
                   display_name: null,
                   second_factor: false,
+                  second_factor_reenrollment: false,
                 },
                 memberships: [
                   {

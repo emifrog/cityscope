@@ -8,6 +8,7 @@ interface UserRow {
   email: string;
   display_name: string | null;
   second_factor: boolean | null;
+  second_factor_reenrollment: boolean | null;
 }
 
 interface MembershipRow {
@@ -23,7 +24,8 @@ export class PostgresIdentityReader implements IdentityReader {
 
   async me(): Promise<MeResponse> {
     const user = await this.client.query<UserRow>(
-      `select id, email::text as email, display_name, app.my_second_factor() as second_factor
+      `select id, email::text as email, display_name, app.my_second_factor() as second_factor,
+              app.my_second_factor_reenrollment() as second_factor_reenrollment
        from app.user_account where id = app.current_user_id()`,
     );
     const row = user.rows[0];
@@ -33,7 +35,13 @@ export class PostgresIdentityReader implements IdentityReader {
       'select tenant_id, tenant_slug, tenant_name, roles, second_factor_required from app.my_memberships()',
     );
     return {
-      user: { id: row.id, email: row.email, display_name: row.display_name, second_factor: row.second_factor === true },
+      user: {
+        id: row.id,
+        email: row.email,
+        display_name: row.display_name,
+        second_factor: row.second_factor === true,
+        second_factor_reenrollment: row.second_factor_reenrollment === true,
+      },
       memberships: memberships.rows.map((m) => ({
         tenant_id: m.tenant_id,
         tenant_slug: m.tenant_slug,

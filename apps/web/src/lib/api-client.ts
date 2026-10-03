@@ -4,6 +4,10 @@ import {
   apiErrorSchema,
   endpoints,
   type AccountSession,
+  type RecoveryCodeUse,
+  type RecoveryCodes,
+  type RecoveryCodesState,
+  type SecondFactorRecovery,
   type SecuritySettings,
   type SessionRevocation,
   type AddressCandidates,
@@ -200,6 +204,26 @@ export const api = {
   revokeMySession: (options: ApiCallOptions, id: string): Promise<SessionRevocation> =>
     call(endpoints.revokeMySession.response, pathOf(endpoints.revokeMySession.path, { id }), options, {
       method: 'POST',
+    }),
+
+  getMyRecoveryCodes: (options: ApiCallOptions): Promise<RecoveryCodesState> =>
+    call(endpoints.getMyRecoveryCodes.response, endpoints.getMyRecoveryCodes.path, options),
+
+  regenerateMyRecoveryCodes: (options: ApiCallOptions): Promise<RecoveryCodes> =>
+    call(endpoints.regenerateMyRecoveryCodes.response, endpoints.regenerateMyRecoveryCodes.path, options, {
+      method: 'POST',
+    }),
+
+  recoverSecondFactor: (options: ApiCallOptions, input: RecoveryCodeUse): Promise<SecondFactorRecovery> =>
+    call(endpoints.recoverSecondFactor.response, endpoints.recoverSecondFactor.path, options, {
+      method: 'POST',
+      body: input,
+    }),
+
+  resetMemberSecondFactor: (options: ApiCallOptions, id: string, version: number): Promise<Member> =>
+    call(endpoints.resetMemberSecondFactor.response, pathOf(endpoints.resetMemberSecondFactor.path, { id }), options, {
+      method: 'POST',
+      ifMatch: version,
     }),
 
   revokeMyOtherSessions: (options: ApiCallOptions): Promise<SessionRevocation> =>

@@ -48,7 +48,9 @@ function SecondFactorReminder() {
     .filter(Boolean);
   if (assurance !== 'aal1' || blocked.length === 0 || pathname === '/compte') return null;
   // The gate below already says it, for every access.
-  if (activeTenant?.second_factor_required && me && !me.user.second_factor) return null;
+  if ((activeTenant?.second_factor_required || me?.user.second_factor_reenrollment) && me && !me.user.second_factor) {
+    return null;
+  }
   return (
     <Alert tone="important" className="mb-4">
       Votre rôle exige la double authentification pour {blocked.join(', ')}.{' '}
@@ -66,11 +68,17 @@ function SecondFactorReminder() {
 function SecondFactorGate({ children }: { children: ReactNode }) {
   const { me, activeTenant } = useTenant();
   const pathname = usePathname();
-  const blocked = Boolean(activeTenant?.second_factor_required) && me !== undefined && !me.user.second_factor;
+  const removed = me?.user.second_factor_reenrollment === true;
+  const blocked =
+    me !== undefined && !me.user.second_factor && (removed || Boolean(activeTenant?.second_factor_required));
   if (!blocked || pathname === '/compte') return children;
   return (
     <Alert tone="important" className="max-w-2xl">
-      <p className="font-semibold">{activeTenant?.tenant_name} exige la double authentification.</p>
+      <p className="font-semibold">
+        {removed
+          ? 'Votre double authentification a été retirée.'
+          : `${activeTenant?.tenant_name ?? 'Votre SIS'} exige la double authentification.`}
+      </p>
       <p className="mt-1">
         Activez-la dans votre compte avant de continuer : un code généré par une application de votre téléphone vous
         sera demandé à chaque connexion.

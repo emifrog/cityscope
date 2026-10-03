@@ -422,13 +422,17 @@
               },
               "second_factor": {
                 "type": "boolean"
+              },
+              "second_factor_reenrollment": {
+                "type": "boolean"
               }
             },
             "required": [
               "id",
               "email",
               "display_name",
-              "second_factor"
+              "second_factor",
+              "second_factor_reenrollment"
             ]
           },
           "memberships": {
@@ -559,6 +563,67 @@
         },
         "required": [
           "revoked"
+        ]
+      },
+      "RecoveryCodesState": {
+        "type": "object",
+        "properties": {
+          "remaining": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "generated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "remaining",
+          "generated_at"
+        ]
+      },
+      "RecoveryCodes": {
+        "type": "object",
+        "properties": {
+          "codes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[0-9A-Z]{5}-[0-9A-Z]{5}$"
+            }
+          }
+        },
+        "required": [
+          "codes"
+        ]
+      },
+      "SecondFactorRecovery": {
+        "type": "object",
+        "properties": {
+          "reenrollment_required": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "reenrollment_required"
+        ]
+      },
+      "RecoveryCodeUse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[0-9A-Za-z]{5}[\\s-]?[0-9A-Za-z]{5}$"
+          }
+        },
+        "required": [
+          "code"
         ]
       },
       "MapCatalog": {
@@ -11346,7 +11411,9 @@
             "enum": [
               "portal_invitation",
               "contribution_info_request",
-              "contribution_decision"
+              "contribution_decision",
+              "second_factor_recovered",
+              "second_factor_reset"
             ]
           },
           "status": {
@@ -11664,6 +11731,222 @@
           },
           "404": {
             "description": "Ressource introuvable ou non autorisée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/recovery-codes": {
+      "get": {
+        "operationId": "getMyRecoveryCodes",
+        "summary": "Codes de secours restants (jamais les codes eux-mêmes)",
+        "tags": [
+          "identity"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCodesState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "regenerateMyRecoveryCodes",
+        "summary": "Générer dix nouveaux codes de secours (second facteur en cours d’usage) ; les anciens ne valent plus",
+        "tags": [
+          "identity"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCodes"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/second-factor/recovery": {
+      "post": {
+        "operationId": "recoverSecondFactor",
+        "summary": "Remplacer un second facteur perdu par un code de secours : facteur retiré, autres sessions fermées, alerte",
+        "tags": [
+          "identity"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecoveryCodeUse"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecondFactorRecovery"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflit avec des données existantes (CONFLICT)",
             "content": {
               "application/json": {
                 "schema": {
@@ -19266,6 +19549,143 @@
           },
           "409": {
             "description": "Conflit avec des données existantes (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Modifiée entre-temps : relire puis réessayer (PRECONDITION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "En-tête If-Match manquant (PRECONDITION_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/members/{id}/second-factor-reset": {
+      "post": {
+        "operationId": "resetMemberSecondFactor",
+        "summary": "Réinitialiser le second facteur d’un membre (jamais soi-même, jamais un membre d’un autre SIS)",
+        "tags": [
+          "members"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Version sur laquelle porte la modification (valeur de l’ETag reçu), ex. \"3\".",
+              "example": "\"3\""
+            },
+            "required": true,
+            "description": "Version sur laquelle porte la modification (valeur de l’ETag reçu), ex. \"3\".",
+            "name": "if-match",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "headers": {
+              "ETag": {
+                "description": "Version de la ressource (row_version)",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Member"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ressource introuvable ou non autorisée",
             "content": {
               "application/json": {
                 "schema": {

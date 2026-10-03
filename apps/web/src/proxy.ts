@@ -2,8 +2,8 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { safeNextPath } from '@/lib/navigation';
 
-/** Reachable without a session: sign-in and activation of an invitation. */
-const PUBLIC_PATHS = new Set(['/login', '/auth/confirm']);
+/** Reachable without a session: sign-in, forgotten password, and the links of e-mails (invitation, reset). */
+const PUBLIC_PATHS = new Set(['/login', '/mot-de-passe-oublie', '/auth/confirm']);
 
 /**
  * Refreshes the Supabase session cookies and keeps unauthenticated visitors

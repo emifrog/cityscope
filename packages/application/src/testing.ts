@@ -26,6 +26,9 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
     account: {
       sessions: unstubbed('account.sessions'),
       revoke: unstubbed('account.revoke'),
+      recoveryCodes: unstubbed('account.recoveryCodes'),
+      regenerateRecoveryCodes: unstubbed('account.regenerateRecoveryCodes'),
+      useRecoveryCode: unstubbed('account.useRecoveryCode'),
       ...overrides.account,
     },
     security: {
@@ -132,6 +135,7 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       list: unstubbed('members.list'),
       add: unstubbed('members.add'),
       update: unstubbed('members.update'),
+      resetSecondFactor: unstubbed('members.resetSecondFactor'),
       ...overrides.members,
     },
     devices: {

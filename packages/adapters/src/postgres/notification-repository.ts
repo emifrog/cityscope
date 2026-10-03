@@ -8,7 +8,8 @@ const iso = (value: unknown) =>
 /** Notifications of the SIS for its administration (RLS: member:manage), newest first. */
 const NOTIFICATION_SELECT = `
   select n.id, n.kind, n.status, n.recipient_id, u.display_name as recipient_name, u.email::text as recipient_email,
-         case when n.invitation_id is not null then
+         case when n.kind in ('second_factor_recovered', 'second_factor_reset') then 'Double authentification'
+              when n.invitation_id is not null then
            coalesce((select string_agg(s.name, ', ' order by lower(s.name))
                      from app.portal_invitation_site pis join app.site s on s.id = pis.site_id
                      where pis.invitation_id = n.invitation_id), 'Invitation')

@@ -255,6 +255,12 @@ otp_expiry = 3600
 subject = "Invitation à FireScape"
 content_path = "./supabase/templates/invite.html"
 
+# Forgotten password (/mot-de-passe-oublie): same click-only verification on /auth/confirm (ADR-022).
+# Hosted projects: same subject and body to set in Authentication > Emails > Reset password.
+[auth.email.template.recovery]
+subject = "Réinitialisation de votre mot de passe FireScape"
+content_path = "./supabase/templates/recovery.html"
+
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
 # enabled = true

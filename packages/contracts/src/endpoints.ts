@@ -1,5 +1,13 @@
 import type { z } from 'zod';
-import { accountSessionListSchema, securitySettingsSchema, sessionRevocationSchema } from './account';
+import {
+  accountSessionListSchema,
+  recoveryCodeUseSchema,
+  recoveryCodesSchema,
+  recoveryCodesStateSchema,
+  secondFactorRecoverySchema,
+  securitySettingsSchema,
+  sessionRevocationSchema,
+} from './account';
 import { notificationListQuerySchema, notificationListSchema, notificationSchema } from './notifications';
 import {
   contributionCreateSchema,
@@ -238,6 +246,41 @@ export const endpoints = {
     params: idParamsSchema,
     successStatus: 200,
     response: sessionRevocationSchema,
+  },
+  getMyRecoveryCodes: {
+    operationId: 'getMyRecoveryCodes',
+    method: 'get',
+    path: '/me/recovery-codes',
+    summary: 'Codes de secours restants (jamais les codes eux-mêmes)',
+    tags: ['identity'],
+    auth: 'user',
+    tenantScoped: false,
+    successStatus: 200,
+    response: recoveryCodesStateSchema,
+  },
+  regenerateMyRecoveryCodes: {
+    operationId: 'regenerateMyRecoveryCodes',
+    method: 'post',
+    path: '/me/recovery-codes',
+    summary: 'Générer dix nouveaux codes de secours (second facteur en cours d’usage) ; les anciens ne valent plus',
+    tags: ['identity'],
+    auth: 'user',
+    tenantScoped: false,
+    successStatus: 201,
+    response: recoveryCodesSchema,
+  },
+  recoverSecondFactor: {
+    operationId: 'recoverSecondFactor',
+    method: 'post',
+    path: '/me/second-factor/recovery',
+    summary:
+      'Remplacer un second facteur perdu par un code de secours : facteur retiré, autres sessions fermées, alerte',
+    tags: ['identity'],
+    auth: 'user',
+    tenantScoped: false,
+    body: recoveryCodeUseSchema,
+    successStatus: 200,
+    response: secondFactorRecoverySchema,
   },
   revokeMyOtherSessions: {
     operationId: 'revokeMyOtherSessions',
@@ -958,6 +1001,17 @@ export const endpoints = {
     response: memberSchema,
   }),
 
+  resetMemberSecondFactor: tenantEndpoint({
+    operationId: 'resetMemberSecondFactor',
+    method: 'post',
+    path: '/members/{id}/second-factor-reset',
+    summary: 'Réinitialiser le second facteur d’un membre (jamais soi-même, jamais un membre d’un autre SIS)',
+    tags: ['members'],
+    params: idParamsSchema,
+    concurrency: 'if-match',
+    successStatus: 200,
+    response: memberSchema,
+  }),
   getSecuritySettings: tenantEndpoint({
     operationId: 'getSecuritySettings',
     method: 'get',

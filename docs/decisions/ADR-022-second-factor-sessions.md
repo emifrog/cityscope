@@ -50,8 +50,27 @@ pour un compte enrôlé.
      encore membre.
 4. **État visible des membres** : invitation en attente (jamais connecté), dernière connexion, second
    facteur. Ces informations ne sont lisibles qu'avec `member:manage`.
-5. **Portabilité (ADR-003).** Seules six fonctions `app.idp_*` lisent le schéma du fournisseur
-   d'identité : facteurs, sessions, dernière connexion, fermeture de sessions. Elles sont écrites en
+5. **Récupération d'un second facteur perdu.**
+   - **Codes de secours** : dix codes à usage unique de dix caractères (base 32 de Crockford, 50 bits).
+     Ils sont générés par la base avec le second facteur en cours d'usage, affichés une seule fois,
+     conservés hachés (SHA-256 du compte et du code) et jamais lisibles par l'API. En générer de
+     nouveaux annule les anciens.
+   - **Usage d'un code**, sans le second facteur (motif `recovery`, sans aucune permission) : le
+     facteur est retiré, les autres sessions et les codes restants sont annulés, et un nouveau facteur
+     est exigé avant tout autre accès (`second_factor_reenrollment`, levé dès qu'une requête arrive
+     avec le nouveau code). La personne est alertée par e-mail ; la notification passe par son SIS le
+     plus ancien.
+   - **Réinitialisation par l'administration du SIS** (`member:manage`, second facteur, identité
+     vérifiée hors ligne) : mêmes effets, membre prévenu, opération tracée. La réinitialisation est
+     refusée pour soi-même, et pour une personne aussi membre d'un autre SIS : le compte étant commun,
+     un SIS ne doit pas affaiblir l'accès d'un autre, qui relève alors du support de la plateforme.
+   - **Mot de passe oublié en libre-service** : lien par e-mail vérifié au clic seulement, comme
+     l'invitation. Les autres sessions sont fermées. Le fournisseur exige le code d'un compte protégé
+     avant d'accepter le nouveau mot de passe ; l'écran le demande donc d'abord. La réponse est la même
+     que l'adresse ait un compte ou non.
+6. **Portabilité (ADR-003).** Seules sept fonctions `app.idp_*` lisent ou modifient le schéma du
+   fournisseur d'identité : facteurs (et leur retrait), sessions, dernière connexion, fermeture de
+   sessions. Elles sont écrites en
    PL/pgSQL avec un garde : la migration s'applique sur un PostgreSQL nu, où aucun facteur n'est connu
    et où les sessions ne sont ni vérifiables ni fermables. Un autre fournisseur réimplémente ces seules
    fonctions. Le produit ne se relie toujours pas aux lignes de `auth.users`.
@@ -62,7 +81,13 @@ pour un compte enrôlé.
   - `Me.user.second_factor`, `Membership.second_factor_required`, `Member.last_sign_in_at` et
     `Member.second_factor` ;
   - `GET /me/sessions`, `POST /me/sessions/{id}/revocation` et `POST /me/sessions/revocation` ;
-  - `GET`/`PUT /settings/security`.
+  - `GET`/`PUT /settings/security` ;
+  - `Me.user.second_factor_reenrollment` ;
+  - `GET`/`POST /me/recovery-codes`, `POST /me/second-factor/recovery` et
+    `POST /members/{id}/second-factor-reset` ;
+  - deux nouvelles notifications (`second_factor_recovered`, `second_factor_reset`).
+- Gabarit `supabase/templates/recovery.html` à reporter sur le projet hébergé (Authentication → Emails
+  → Reset password), comme celui de l'invitation.
 - Mobile : `MFA_REQUIRED` et `RATE_LIMITED` sont reconnus, sans révoquer l'accès local. Un compte
   enrôlé synchronise et signale normalement, mais ne peut pas faire les rares appels non signés.
 - Un jeton d'accès sans code reste refusé même pour lire, ce qui est plus strict qu'avant pour les tests
@@ -70,7 +95,7 @@ pour un compte enrôlé.
 - Les tests de base ouvrent des contextes sans session : `begin_request` n'exige la session que si
   l'API la transmet. L'API, elle, l'exige toujours.
 - Projet hébergé : vérifier que le rôle propriétaire des migrations lit `auth.sessions`,
-  `auth.mfa_factors` et `auth.users` et peut supprimer dans `auth.sessions`. Régler aussi
+  `auth.mfa_factors` et `auth.users` et peut supprimer dans `auth.sessions` et `auth.mfa_factors`. Régler aussi
   `[auth.sessions]` (durée maximale, inactivité) avec la DSI, en tenant compte des tablettes qui se
   synchronisent en arrière-plan.
 

@@ -1,4 +1,12 @@
-import type { AccountSessionList, SecuritySettings, SessionRevocation } from '@etare/contracts';
+import type {
+  AccountSessionList,
+  RecoveryCodeUse,
+  RecoveryCodes,
+  RecoveryCodesState,
+  SecondFactorRecovery,
+  SecuritySettings,
+  SessionRevocation,
+} from '@etare/contracts';
 import { AccessDenied, NotFound, type RequestContext } from '@etare/domain';
 import type { SessionFactory } from './ports';
 import { inTenant } from './use-cases';
@@ -29,6 +37,38 @@ export async function revokeMyOtherSessions(
   return sessions.run({ ...context, tenantId: null }, async (session) => ({
     revoked: await session.account.revoke(null),
   }));
+}
+
+export async function getMyRecoveryCodes(
+  sessions: SessionFactory,
+  context: RequestContext,
+): Promise<RecoveryCodesState> {
+  return sessions.run({ ...context, tenantId: null }, (session) => session.account.recoveryCodes());
+}
+
+/** Ten new codes, shown once; the previous ones stop working (second factor in use: database). */
+export async function regenerateMyRecoveryCodes(
+  sessions: SessionFactory,
+  context: RequestContext,
+): Promise<RecoveryCodes> {
+  return sessions.run({ ...context, tenantId: null }, async (session) => ({
+    codes: await session.account.regenerateRecoveryCodes(),
+  }));
+}
+
+/**
+ * A recovery code replaces a lost second factor once, without it (recovery purpose): the
+ * factor is removed, the other sessions closed, a new factor required, the person alerted.
+ */
+export async function recoverSecondFactor(
+  sessions: SessionFactory,
+  context: RequestContext,
+  input: RecoveryCodeUse,
+): Promise<SecondFactorRecovery> {
+  return sessions.run({ ...context, tenantId: null, purpose: 'recovery' }, async (session) => {
+    await session.account.useRecoveryCode(input.code);
+    return { reenrollment_required: true };
+  });
 }
 
 export async function getSecuritySettings(

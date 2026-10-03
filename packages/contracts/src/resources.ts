@@ -48,6 +48,8 @@ export const meResponseSchema = z
       display_name: z.string().nullable(),
       /** The account has a verified second factor: every request then needs it (aal2). */
       second_factor: z.boolean(),
+      /** The second factor was removed (recovery code, administrator): a new one is awaited. */
+      second_factor_reenrollment: z.boolean(),
     }),
     memberships: z.array(membershipSchema),
   })

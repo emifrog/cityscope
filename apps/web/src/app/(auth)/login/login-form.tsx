@@ -3,6 +3,7 @@
 import { loginSchema, type LoginInput } from '@etare/schemas';
 import { Alert, Button, FieldError, Input, Label } from '@etare/ui';
 import { zodResolver } from '@hookform/resolvers/zod';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -79,6 +80,11 @@ export function LoginForm({ next, notice = null }: { next: string; notice?: stri
       <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
         {isSubmitting ? 'Connexion…' : 'Se connecter'}
       </Button>
+      <p className="text-center text-sm">
+        <Link href="/mot-de-passe-oublie" className="text-info underline">
+          Mot de passe oublié ?
+        </Link>
+      </p>
     </form>
   );
 }

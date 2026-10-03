@@ -12,7 +12,7 @@ export default async function VerificationPage(props: PageProps<'/verification'>
   return (
     <AuthCard
       title="Double authentification"
-      footer="Code perdu ou application indisponible : l’administrateur de votre SIS peut vous aider."
+      footer="Sans téléphone ni code de secours, l’administrateur de votre SIS peut réinitialiser votre double authentification."
     >
       <VerificationForm next={next} />
     </AuthCard>

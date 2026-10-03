@@ -41,6 +41,11 @@ révèlent rien). Tests : `supabase/tests/database/10_tenant_isolation.test.sql`
   lieu de facteur de possession et qui sont limitées à la synchronisation ; l'enrôlement par code à usage
   unique. Politique du SIS (`privileged` par défaut, `all`, `none`), modifiable avec le second facteur
   et tracée : en `all`, un membre sans second facteur doit en activer un avant toute action.
+- **Récupération** (ADR-022) : dix codes de secours à usage unique, conservés hachés et montrés une fois ;
+  en utiliser un retire le facteur, ferme les autres sessions, impose un nouveau facteur avant tout accès
+  et alerte la personne par e-mail. L'administration du SIS peut réinitialiser le second facteur d'un
+  membre, ni le sien ni celui d'une personne membre d'un autre SIS, avec les mêmes effets et une trace.
+  Mot de passe oublié par lien e-mail vérifié au clic ; le code d'un compte protégé reste demandé.
 - **Sessions** (ADR-022) : le jeton d'une session fermée (déconnexion, révocation, suspension) est refusé
   dès la requête suivante. Chacun ferme ses autres sessions ; une suspension ferme toutes celles du
   membre. L'administration voit l'invitation en attente, la dernière connexion et le second facteur.
@@ -199,8 +204,7 @@ jetables (`pnpm setup:local`). Les clés de signature des environnements partag�
   supervision du démon et le choix éventuel d’un service managé restent à organiser avec l’exploitation.
 - Purge des dépôts abandonnés (`pending` jamais envoyés) et des objets orphelins de quarantaine à écrire.
 - Accès aux journaux d’audit refusés (403) non encore tracés dans `audit_event`.
-- Pas de codes de secours ni de réinitialisation du mot de passe en libre-service ; SSO OIDC/SAML non
-  développé.
+- SSO OIDC/SAML non développé ; codes de secours limités en débit par le lot SEC-03.
 - Durée maximale et inactivité des sessions (`[auth.sessions]`) à régler sur le projet hébergé avec la
   DSI, sans couper la synchronisation en arrière-plan des tablettes.
 - Tablette : ni verrouillage applicatif propre (PIN, biométrie), ni attestation d’intégrité du

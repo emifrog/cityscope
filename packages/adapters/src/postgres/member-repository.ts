@@ -82,4 +82,9 @@ export class PostgresMemberRepository implements MemberRepository {
     ]);
     return this.get(id);
   }
+
+  async resetSecondFactor(id: string, expectedVersion: number): Promise<Member | null> {
+    await this.client.query('select app.admin_reset_second_factor($1, $2)', [id, expectedVersion]);
+    return this.get(id);
+  }
 }

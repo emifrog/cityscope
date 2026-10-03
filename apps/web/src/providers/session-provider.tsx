@@ -36,6 +36,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
+  // Bumped when answers must be fetched again with the new token (second factor verified,
+  // token renewed after a refusal). Refetched in an effect: this provider's effects run after
+  // those of its children, whose queries then already hold the new token.
+  const [refetchRound, setRefetchRound] = useState(0);
+  useEffect(() => {
+    if (refetchRound > 0) void queryClient.invalidateQueries();
+  }, [refetchRound, queryClient]);
 
   useEffect(() => {
     const supabase = supabaseBrowser();
@@ -50,7 +57,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const nextAssurance = assuranceOf(next?.access_token);
       if (nextIdentity !== identity) queryClient.clear();
       // Same person, new level (second factor verified): answers such as MFA_REQUIRED are stale.
-      else if (nextAssurance !== assurance) void queryClient.invalidateQueries();
+      else if (nextAssurance !== assurance) setRefetchRound((round) => round + 1);
       identity = nextIdentity;
       assurance = nextAssurance;
       setSession(next);
@@ -82,7 +89,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       void supabase.auth.refreshSession().then(async ({ error: renewal }) => {
         if (!renewal) {
           closing = false;
-          setTimeout(() => void queryClient.invalidateQueries(), 0);
+          setRefetchRound((round) => round + 1);
           return;
         }
         await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);

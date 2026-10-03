@@ -6,6 +6,7 @@ import { LoadingCard } from '@/components/feedback';
 import { PRIVILEGED_ACTION_LABELS, ROLE_LABELS } from '@/components/labels';
 import { PageHeader } from '@/components/page-header';
 import { useTenant } from '@/providers/tenant-provider';
+import { RecoveryCodesSection } from './recovery-codes-section';
 import { SecondFactorSection } from './second-factor-section';
 import { SessionsSection } from './sessions-section';
 
@@ -18,12 +19,19 @@ export function AccountView({ welcome }: { welcome: boolean }) {
 
   if (loading || !me) return <LoadingCard lines={4} />;
   const requiredBySis = activeTenant?.second_factor_required ?? false;
+  // Until a new factor is enrolled, the API answers nothing but the profile.
+  const awaitingNewFactor = me.user.second_factor_reenrollment && !me.user.second_factor;
 
   return (
     <>
       <PageHeader title="Mon compte" description={me.user.email} />
       <div className="space-y-4">
-        {requiredBySis && !me.user.second_factor ? (
+        {awaitingNewFactor ? (
+          <Alert tone="important">
+            Votre double authentification a été retirée (code de secours utilisé ou réinitialisation par votre SIS) :
+            activez-en une nouvelle ci-dessous pour continuer.
+          </Alert>
+        ) : requiredBySis && !me.user.second_factor ? (
           <Alert tone="important">
             {activeTenant?.tenant_name} exige la double authentification pour tout accès au back-office : activez-la
             ci-dessous pour continuer.
@@ -48,18 +56,21 @@ export function AccountView({ welcome }: { welcome: boolean }) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <SecondFactorSection requiredBySis={requiredBySis} />
+            <SecondFactorSection requiredBySis={requiredBySis || me.user.second_factor_reenrollment} />
+            {me.user.second_factor ? <RecoveryCodesSection /> : null}
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Sessions ouvertes</CardTitle>
-            <CardDescription>Navigateurs et applications connectés à votre compte.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SessionsSection />
-          </CardContent>
-        </Card>
+        {awaitingNewFactor ? null : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Sessions ouvertes</CardTitle>
+              <CardDescription>Navigateurs et applications connectés à votre compte.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SessionsSection />
+            </CardContent>
+          </Card>
+        )}
         <Card>
           <CardHeader>
             <CardTitle>Mes habilitations</CardTitle>

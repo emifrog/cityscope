@@ -25,7 +25,7 @@ function fakeSessions(roles: Role[], site: SiteDetail | null = null) {
   const sites = { list: vi.fn(async () => ({ items: [], next_cursor: null })), get: vi.fn(async () => site) };
   const identity = {
     me: vi.fn(async () => ({
-      user: { id: 'u', email: 'e', display_name: null, second_factor: false },
+      user: { id: 'u', email: 'e', display_name: null, second_factor: false, second_factor_reenrollment: false },
       memberships: [],
     })),
   };

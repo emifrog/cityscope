@@ -288,6 +288,14 @@ connexion, fermeture de sessions. Elles sont gardées pour un PostgreSQL nu. Une
 `update_security_settings` lisent et modifient la politique ; une modification exige `aal2` et est
 tracée. Voir ADR-022 et le test `210_second_factor`.
 
+Récupération : `app.recovery_code` (empreintes SHA-256 du compte et du code, jamais lisibles par
+l'API, jamais supprimées : utilisées ou annulées). Fonctions : `regenerate_recovery_codes` (second
+facteur en cours d'usage), `use_recovery_code` (motif `recovery`, `ETRCV` si invalide) et
+`admin_reset_second_factor` (refusée pour soi-même `ETSLF` ou pour un membre d'un autre SIS
+`ETXTN`). Toutes passent par `remove_second_factor` : facteurs retirés, codes annulés, sessions
+fermées, `user_account.second_factor_reenrollment`, que `begin_request` lève à la première requête
+`aal2` (refus `ETMFR` d'ici là). Voir le test `220_account_recovery`.
+
 ## Audit
 
 `app.audit_event` : SIS, acteur, type d’acteur, action (`table.operation`), entité, avant/après,

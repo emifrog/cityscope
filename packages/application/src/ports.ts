@@ -1,5 +1,6 @@
 import type {
   AccountSession,
+  RecoveryCodesState,
   SecuritySettings,
   CatalogWithdrawal,
   PublicationSummary,
@@ -248,6 +249,8 @@ export interface MemberRepository {
    */
   add(input: MemberInvite, identitySubject: string | null): Promise<Member | null>;
   update(id: string, expectedVersion: number, patch: MemberUpdate): Promise<Member | null>;
+  /** Removes the second factor of a member (and their sessions); a new one is then required. */
+  resetSecondFactor(id: string, expectedVersion: number): Promise<Member | null>;
 }
 
 /** Sessions of the caller at the identity provider (Mon compte). */
@@ -255,6 +258,11 @@ export interface AccountRepository {
   sessions(): Promise<AccountSession[]>;
   /** Closes one session of the caller, or every other session when null; returns how many. */
   revoke(sessionId: string | null): Promise<number>;
+  recoveryCodes(): Promise<RecoveryCodesState>;
+  /** Replaces the codes of the caller (second factor in use); the only time they are readable. */
+  regenerateRecoveryCodes(): Promise<string[]>;
+  /** Uses a recovery code: the second factor is removed and a new one required (throws when invalid). */
+  useRecoveryCode(code: string): Promise<void>;
 }
 
 /** Second-factor policy of the current SIS (null: not visible to the caller). */

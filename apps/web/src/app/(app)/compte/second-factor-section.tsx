@@ -171,7 +171,9 @@ export function SecondFactorSection({ requiredBySis = false }: { requiredBySis?:
           onDone={() =>
             void run(async () => {
               setEnrollment(null);
-              setNotice('Double authentification activée : votre code vous sera demandé à chaque connexion.');
+              setNotice(
+                'Double authentification activée : votre code vous sera demandé à chaque connexion. Générez maintenant vos codes de secours.',
+              );
               await load();
             })
           }

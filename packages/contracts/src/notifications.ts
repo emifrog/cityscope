@@ -2,7 +2,15 @@ import { isoDateTimeSchema, uuidSchema } from '@etare/schemas';
 import { z } from 'zod';
 
 // ------------------------------------------------------------------ notifications (POR-05, ADR-020)
-export const NOTIFICATION_KINDS = ['portal_invitation', 'contribution_info_request', 'contribution_decision'] as const;
+export const NOTIFICATION_KINDS = [
+  'portal_invitation',
+  'contribution_info_request',
+  'contribution_decision',
+  // Security alerts of an account (ADR-022): recovery code used, reset by the administration.
+  'second_factor_recovered',
+  'second_factor_reset',
+] as const;
+export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 export const NOTIFICATION_STATUSES = ['pending', 'sent', 'failed'] as const;
 
 export const notificationSchema = z

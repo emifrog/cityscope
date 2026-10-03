@@ -1,4 +1,4 @@
-import type { NotificationList, NotificationListQuery, Notification } from '@etare/contracts';
+import type { NotificationKind, NotificationList, NotificationListQuery, Notification } from '@etare/contracts';
 import type { RequestContext } from '@etare/domain';
 import { PermanentJobError } from './jobs';
 import type { SessionFactory } from './ports';
@@ -16,7 +16,7 @@ const PRODUCT = 'FireScape';
 
 export interface NotificationToSend {
   readonly id: string;
-  readonly kind: 'portal_invitation' | 'contribution_info_request' | 'contribution_decision';
+  readonly kind: NotificationKind;
   readonly status: 'pending' | 'sent' | 'failed';
   readonly recipientEmail: string;
   readonly recipientName: string | null;
@@ -71,7 +71,20 @@ export function renderNotification(notification: NotificationToSend, appBaseUrl:
   let subject: string;
   let lines: string[];
   let link: string;
-  if (notification.kind === 'portal_invitation' && notification.invitation) {
+  let linkLabel = 'Ouvrir le portail exploitant';
+  if (notification.kind === 'second_factor_recovered' || notification.kind === 'second_factor_reset') {
+    // Security alert: what happened, what to do, whom to warn if it was not the person.
+    subject = `Double authentification retirée — ${PRODUCT}`;
+    link = `${base}/compte`;
+    linkLabel = 'Ouvrir mon compte';
+    lines = [
+      notification.kind === 'second_factor_recovered'
+        ? `Un code de secours vient d’être utilisé pour votre compte ${PRODUCT} : votre double authentification a été retirée et vos autres sessions fermées.`
+        : `L’administration de ${notification.tenantName} a réinitialisé votre double authentification sur ${PRODUCT} et fermé vos sessions.`,
+      'À votre prochaine connexion, activez une nouvelle double authentification et générez de nouveaux codes de secours.',
+      `Si vous n’êtes pas à l’origine de cette demande, prévenez sans attendre l’administration de ${notification.tenantName}.`,
+    ];
+  } else if (notification.kind === 'portal_invitation' && notification.invitation) {
     const { invitation } = notification;
     subject = `Invitation au portail exploitant — ${notification.tenantName}`;
     link = `${base}/portail`;
@@ -104,12 +117,12 @@ export function renderNotification(notification: NotificationToSend, appBaseUrl:
     throw new PermanentJobError('NOTIFICATION_INCOMPLETE');
   }
   const footer =
-    'Message automatique : n’y répondez pas. Le lien ouvre le portail après connexion ; il ne donne accès à rien par lui-même.';
+    'Message automatique : n’y répondez pas. Le lien ouvre l’application après connexion ; il ne donne accès à rien par lui-même.';
   const text = [greeting, '', ...lines, '', link, '', '—', footer].join('\n');
   const html = [
     `<p>${escapeHtml(greeting)}</p>`,
     ...lines.map((line) => `<p>${escapeHtml(line)}</p>`),
-    `<p><a href="${escapeHtml(link)}">Ouvrir le portail exploitant</a></p>`,
+    `<p><a href="${escapeHtml(link)}">${escapeHtml(linkLabel)}</a></p>`,
     `<p style="color:#555;font-size:12px">${escapeHtml(footer)}</p>`,
   ].join('\n');
   return { to: notification.recipientEmail, subject, text, html };

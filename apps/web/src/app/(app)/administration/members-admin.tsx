@@ -169,6 +169,11 @@ function MemberRow({ member }: { member: Member }) {
     (options, patch: MemberUpdate) => api.updateMember(options, member.id, member.row_version, patch),
     (tenantId) => [queryKeys.members(tenantId)],
   );
+  const reset = useApiMutation(
+    (options, _: void) => api.resetMemberSecondFactor(options, member.id, member.row_version),
+    (tenantId) => [queryKeys.members(tenantId)],
+  );
+  const [confirmReset, setConfirmReset] = useState(false);
   const suspended = member.status !== 'active';
 
   return (
@@ -222,10 +227,42 @@ function MemberRow({ member }: { member: Member }) {
               >
                 {suspended ? 'Réactiver' : 'Suspendre'}
               </Button>
+              {member.second_factor ? (
+                <Button size="sm" variant="ghost" onClick={() => setConfirmReset((open) => !open)}>
+                  Réinitialiser la double authentification
+                </Button>
+              ) : null}
             </div>
           )}
         </TableCell>
       </TableRow>
+      {confirmReset ? (
+        <TableRow>
+          <TableCell colSpan={5} className="bg-subtle/40">
+            <div className="max-w-2xl space-y-3">
+              {reset.error ? <ApiErrorAlert error={reset.error} /> : null}
+              <p className="text-sm">
+                Vérifiez d’abord l’identité de {member.display_name ?? member.email} (téléphone perdu, appel de vive
+                voix). Sa double authentification et ses sessions seront supprimées ; elle devra en activer une nouvelle
+                à sa prochaine connexion et sera prévenue par e-mail. L’opération est tracée.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="danger"
+                  disabled={reset.isPending}
+                  onClick={() => reset.mutate(undefined, { onSuccess: () => setConfirmReset(false) })}
+                >
+                  {reset.isPending ? 'Réinitialisation…' : 'Réinitialiser'}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirmReset(false)}>
+                  Annuler
+                </Button>
+              </div>
+            </div>
+          </TableCell>
+        </TableRow>
+      ) : null}
       {update.error && !editing ? (
         <TableRow>
           <TableCell colSpan={5}>

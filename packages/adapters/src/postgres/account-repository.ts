@@ -2,6 +2,7 @@ import type { AccountRepository, SecuritySettingsRepository } from '@etare/appli
 import {
   accountSessionSchema,
   type AccountSession,
+  type RecoveryCodesState,
   type SecondFactorPolicy,
   type SecuritySettings,
 } from '@etare/contracts';
@@ -41,6 +42,26 @@ export class PostgresAccountRepository implements AccountRepository {
       sessionId,
     ]);
     return rows[0]?.revoked ?? 0;
+  }
+
+  async recoveryCodes(): Promise<RecoveryCodesState> {
+    const { rows } = await this.client.query<{ remaining: number; generated_at: Date | null }>(
+      'select remaining, generated_at from app.recovery_codes_state()',
+    );
+    const row = rows[0];
+    return {
+      remaining: row?.remaining ?? 0,
+      generated_at: row?.generated_at ? toIso(row.generated_at) : null,
+    };
+  }
+
+  async regenerateRecoveryCodes(): Promise<string[]> {
+    const { rows } = await this.client.query<{ code: string }>('select app.regenerate_recovery_codes() as code');
+    return rows.map((row) => row.code);
+  }
+
+  async useRecoveryCode(code: string): Promise<void> {
+    await this.client.query('select app.use_recovery_code($1)', [code]);
   }
 }
 

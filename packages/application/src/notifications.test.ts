@@ -58,6 +58,24 @@ describe('notification e-mails', () => {
     expect(mail.html).not.toContain('<EHPAD>');
   });
 
+  it('alert a person whose second factor was removed, without any secret', () => {
+    const recovered = renderNotification(
+      { ...invitation, id: 'n3', kind: 'second_factor_recovered', invitation: null },
+      'https://firescape.test',
+    );
+    expect(recovered.subject).toBe('Double authentification retirée — FireScape');
+    expect(recovered.text).toContain('Un code de secours vient d’être utilisé');
+    expect(recovered.text).toContain('prévenez sans attendre l’administration de SDIS DEMO 06');
+    expect(recovered.text).toContain('https://firescape.test/compte');
+    expect(recovered.html).toContain('Ouvrir mon compte');
+
+    const reset = renderNotification(
+      { ...invitation, id: 'n4', kind: 'second_factor_reset', invitation: null },
+      'https://firescape.test',
+    );
+    expect(reset.text).toContain('L’administration de SDIS DEMO 06 a réinitialisé votre double authentification');
+  });
+
   it('tell a decision without its motive, which stays behind sign-in', () => {
     const mail = renderNotification(decision, 'https://firescape.test');
     expect(mail.subject).toBe('Réponse à votre proposition — EHPAD Les Oliviers');

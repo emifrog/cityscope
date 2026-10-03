@@ -1,5 +1,9 @@
 import type { AccessTokenVerifier, Logger } from '@etare/adapters';
 import {
+  getMyRecoveryCodes,
+  recoverSecondFactor,
+  regenerateMyRecoveryCodes,
+  resetMemberSecondFactor,
   getSecuritySettings,
   listMySessions,
   revokeMyOtherSessions,
@@ -346,6 +350,22 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
   app.get(routerPath(endpoints.listMySessions.path), async (c) => {
     const context = await requestContext(c, endpoints.listMySessions);
     return respond(c, endpoints.listMySessions, await listMySessions(deps.sessions, context));
+  });
+
+  app.get(routerPath(endpoints.getMyRecoveryCodes.path), async (c) => {
+    const context = await requestContext(c, endpoints.getMyRecoveryCodes);
+    return respond(c, endpoints.getMyRecoveryCodes, await getMyRecoveryCodes(deps.sessions, context));
+  });
+
+  app.post(routerPath(endpoints.regenerateMyRecoveryCodes.path), async (c) => {
+    const context = await requestContext(c, endpoints.regenerateMyRecoveryCodes);
+    return respond(c, endpoints.regenerateMyRecoveryCodes, await regenerateMyRecoveryCodes(deps.sessions, context));
+  });
+
+  app.post(routerPath(endpoints.recoverSecondFactor.path), async (c) => {
+    const context = await requestContext(c, endpoints.recoverSecondFactor);
+    const input = await readBody(c, endpoints.recoverSecondFactor.body);
+    return respond(c, endpoints.recoverSecondFactor, await recoverSecondFactor(deps.sessions, context, input));
   });
 
   app.post(routerPath(endpoints.revokeMyOtherSessions.path), async (c) => {
@@ -812,6 +832,15 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
   app.post(routerPath(endpoints.acceptPortalInvitation.path), async (c) => {
     const context = await requestContext(c, endpoints.acceptPortalInvitation);
     return respond(c, endpoints.acceptPortalInvitation, await acceptPortalInvitation(deps.sessions, context, idOf(c)));
+  });
+
+  app.post(routerPath(endpoints.resetMemberSecondFactor.path), async (c) => {
+    const context = await requestContext(c, endpoints.resetMemberSecondFactor);
+    return respond(
+      c,
+      endpoints.resetMemberSecondFactor,
+      await resetMemberSecondFactor(deps.sessions, context, idOf(c), expectedVersion(c)),
+    );
   });
 
   app.get(routerPath(endpoints.getSecuritySettings.path), async (c) => {

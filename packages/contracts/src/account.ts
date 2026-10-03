@@ -29,6 +29,40 @@ export const sessionRevocationSchema = z
   .meta({ id: 'SessionRevocation' });
 export type SessionRevocation = z.infer<typeof sessionRevocationSchema>;
 
+// ------------------------------------------------------------------ recovery of a lost second factor
+export const recoveryCodesStateSchema = z
+  .object({
+    /** Unused codes of the current set. */
+    remaining: z.number().int().nonnegative(),
+    generated_at: isoDateTimeSchema.nullable(),
+  })
+  .meta({ id: 'RecoveryCodesState' });
+export type RecoveryCodesState = z.infer<typeof recoveryCodesStateSchema>;
+
+/** Ten single-use codes, returned once: the server keeps only their hashes. */
+export const recoveryCodesSchema = z
+  .object({ codes: z.array(z.string().regex(/^[0-9A-Z]{5}-[0-9A-Z]{5}$/)).length(10) })
+  .meta({ id: 'RecoveryCodes' });
+export type RecoveryCodes = z.infer<typeof recoveryCodesSchema>;
+
+export const recoveryCodeUseSchema = z
+  .object({
+    code: z
+      .string()
+      .trim()
+      .regex(/^[0-9A-Za-z]{5}[\s-]?[0-9A-Za-z]{5}$/, 'Code de secours attendu : deux groupes de cinq caractères.'),
+  })
+  .meta({ id: 'RecoveryCodeUse' });
+export type RecoveryCodeUse = z.infer<typeof recoveryCodeUseSchema>;
+
+export const secondFactorRecoverySchema = z
+  .object({
+    /** The lost factor is removed: a new one must be enrolled before any other access. */
+    reenrollment_required: z.literal(true),
+  })
+  .meta({ id: 'SecondFactorRecovery' });
+export type SecondFactorRecovery = z.infer<typeof secondFactorRecoverySchema>;
+
 // ------------------------------------------------------------------ second-factor policy of the SIS
 /**
  * 'privileged': sensitive actions (validate, publish, administer) need the second factor (default);

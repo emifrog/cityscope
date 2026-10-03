@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="fr">
+  <body style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.5">
+    <h2 style="color: #012b5c">Réinitialisation de votre mot de passe</h2>
+    <p>Une réinitialisation du mot de passe de votre compte FireScape a été demandée.</p>
+    <p>
+      <a
+        href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery"
+        style="display: inline-block; padding: 10px 18px; background: #c84300; color: #ffffff; text-decoration: none; border-radius: 6px"
+        >Choisir un nouveau mot de passe</a
+      >
+    </p>
+    <p>
+      Ce lien est personnel, utilisable une seule fois et valable une heure. Si votre compte est protégé par la double
+      authentification, votre code vous sera toujours demandé.
+    </p>
+    <p style="font-size: 12px; color: #6b7280">
+      Si vous n’êtes pas à l’origine de cette demande, ignorez ce message : votre mot de passe ne change pas sans ce
+      lien.
+    </p>
+  </body>
+</html>

@@ -50,6 +50,7 @@ export const queryKeys = {
   portalSite: (tenantId: string, siteId: string) => ['tenant', tenantId, 'portal-sites', siteId] as const,
   myPortalInvitations: (userId: string) => ['me', userId, 'portal-invitations'] as const,
   mySessions: (userId: string) => ['me', userId, 'sessions'] as const,
+  myRecoveryCodes: (userId: string) => ['me', userId, 'recovery-codes'] as const,
   securitySettings: (tenantId: string) => ['tenant', tenantId, 'security-settings'] as const,
   riskTypes: (tenantId: string, includeDeprecated?: boolean) =>
     includeDeprecated === undefined
@@ -308,6 +309,17 @@ export function useMySessions() {
     queryKey: queryKeys.mySessions(session?.user.id ?? 'none'),
     enabled: Boolean(token),
     queryFn: ({ signal }) => api.listMySessions({ token: token ?? '', signal }),
+  });
+}
+
+/** How many recovery codes remain (never the codes themselves). */
+export function useMyRecoveryCodes(wanted = true) {
+  const { session } = useSession();
+  const token = session?.access_token;
+  return useQuery({
+    queryKey: queryKeys.myRecoveryCodes(session?.user.id ?? 'none'),
+    enabled: Boolean(token) && wanted,
+    queryFn: ({ signal }) => api.getMyRecoveryCodes({ token: token ?? '', signal }),
   });
 }
 

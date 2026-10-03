@@ -225,6 +225,20 @@ export function translateDatabaseError(error: unknown): unknown {
       return new StrongAuthenticationRequired(
         'Votre SIS exige la double authentification : activez-la dans « Mon compte ».',
       );
+    case 'ETMFR':
+      return new StrongAuthenticationRequired(
+        'Votre double authentification a été retirée : activez-en une nouvelle dans « Mon compte ».',
+      );
+    case 'ETRCV':
+      return new InvalidInput('Code de secours invalide ou déjà utilisé.', [
+        { path: 'code', message: 'Code de secours invalide ou déjà utilisé.' },
+      ]);
+    case 'ETRCF':
+      return new Conflict('Aucune double authentification active pour ce compte.');
+    case 'ETXTN':
+      return new Conflict(
+        'Cette personne est aussi membre d’un autre SIS : la réinitialisation relève du support de la plateforme.',
+      );
     case '42501':
       if (messageOf(error).includes('SELF_APPROVAL_FORBIDDEN')) return new SelfApprovalForbidden();
       if (messageOf(error).includes('PORTAL_MEMBERSHIP_INACTIVE')) {
