@@ -100,6 +100,12 @@ export const siteDetailSchema = siteSummarySchema
   .meta({ id: 'SiteDetail', description: 'Site (données de travail), vue détaillée.' });
 export type SiteDetail = z.infer<typeof siteDetailSchema>;
 
+/** Sites holding an active risk of this type and/or at least this severity (MET-01). */
+export const riskFilterShape = {
+  risk_type_id: uuidSchema.optional(),
+  min_severity: z.coerce.number().int().min(1).max(5).optional(),
+};
+
 export const siteListQuerySchema = z.object({
   limit: pageLimitSchema,
   cursor: cursorSchema.optional(),
@@ -108,6 +114,7 @@ export const siteListQuerySchema = z.object({
   site_type: siteTypeSchema.optional(),
   status: siteStatusSchema.optional(),
   city: z.string().trim().min(1).max(120).optional(),
+  ...riskFilterShape,
 });
 export type SiteListQuery = z.infer<typeof siteListQuerySchema>;
 

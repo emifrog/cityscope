@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/page-header';
 import { SitesTable } from '@/components/sites-table';
 import {
   useContributions,
-  useEtareDossiers,
+  useEtareCounts,
   useFieldReports,
   usePermissions,
   useSites,
@@ -38,7 +38,7 @@ export function Dashboard() {
   const { me, activeTenant, loading, error } = useTenant();
   const sites = useSites({}, 10);
   const readsEtare = usePermissions().has('etare:read');
-  const dossiers = useEtareDossiers(readsEtare);
+  const counts = useEtareCounts(readsEtare);
   const queue = useValidations(readsEtare);
   const reviewsReports = usePermissions().has('field_report:review');
   const reports = useFieldReports({ view: 'open', limit: 1 }, reviewsReports);
@@ -72,9 +72,13 @@ export function Dashboard() {
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
         <Card>
           <CardContent>
-            <p className="text-sm text-muted">Sites visibles</p>
+            <p className="text-sm text-muted">Sites (hors archives)</p>
             <p className="mt-1 text-3xl font-bold">
-              {firstPage ? `${firstPage.items.length}${firstPage.next_cursor ? '+' : ''}` : '—'}
+              {readsEtare && counts.data
+                ? String(counts.data.sites)
+                : firstPage
+                  ? `${firstPage.items.length}${firstPage.next_cursor ? '+' : ''}`
+                  : '—'}
             </p>
             <Badge tone="info" className="mt-2">
               {activeTenant.tenant_name}
@@ -83,12 +87,8 @@ export function Dashboard() {
         </Card>
         <Indicator
           label="ETARE publiés"
-          value={
-            readsEtare && dossiers.data
-              ? String(dossiers.data.filter((dossier) => dossier.active_publication).length)
-              : '—'
-          }
-          note={readsEtare && dossiers.data ? `sur ${dossiers.data.length} site(s)` : 'Dossiers ETARE'}
+          value={readsEtare && counts.data ? String(counts.data.published) : '—'}
+          note={readsEtare && counts.data ? `sur ${counts.data.sites} site(s)` : 'Dossiers ETARE'}
           href="/etare"
         />
         <Indicator

@@ -75,6 +75,7 @@ import {
   zoneUpdateSchema,
 } from './plans';
 import {
+  etareDossierListQuerySchema,
   etareDossierListSchema,
   etareOverviewSchema,
   etarePreviewSchema,
@@ -685,8 +686,9 @@ export const endpoints = {
     operationId: 'listEtareDossiers',
     method: 'get',
     path: '/etare',
-    summary: 'Dossiers ETARE du SIS : version publiée et révision en cours de chaque site',
+    summary: 'Dossiers ETARE du SIS : version publiée et révision en cours de chaque site, avec compteurs exacts',
     tags: ['etare'],
+    query: etareDossierListQuerySchema,
     successStatus: 200,
     response: etareDossierListSchema,
   }),

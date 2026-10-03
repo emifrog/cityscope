@@ -1,5 +1,6 @@
 import { bboxParamSchema, pointSchema, siteStatusSchema, siteTypeSchema, uuidSchema } from '@etare/schemas';
 import { z } from 'zod';
+import { riskFilterShape } from './resources';
 
 const rightSchema = z.enum(['unverified', 'approved', 'forbidden']);
 
@@ -43,6 +44,8 @@ export const mapSitesQuerySchema = z.object({
   q: z.string().trim().min(2).max(100).optional(),
   site_type: siteTypeSchema.optional(),
   status: siteStatusSchema.optional(),
+  city: z.string().trim().min(1).max(120).optional(),
+  ...riskFilterShape,
   limit: z.coerce.number().int().min(1).max(5000).default(2000),
 });
 export type MapSitesQuery = z.infer<typeof mapSitesQuerySchema>;

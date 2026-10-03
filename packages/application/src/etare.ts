@@ -1,7 +1,8 @@
 import {
   etareSnapshotSchema,
   type AssetDownload,
-  type EtareDossier,
+  type EtareDossierList,
+  type EtareDossierListQuery,
   type EtareOverview,
   type EtarePreview,
   type EtareRevision,
@@ -72,8 +73,12 @@ async function workingData(session: RequestSession, siteId: string): Promise<Wor
   };
 }
 
-export function listEtareDossiers(sessions: SessionFactory, context: RequestContext): Promise<EtareDossier[]> {
-  return inTenant(sessions, context, 'etare:read', (session) => session.etare.dossiers());
+export function listEtareDossiers(
+  sessions: SessionFactory,
+  context: RequestContext,
+  query: EtareDossierListQuery,
+): Promise<EtareDossierList> {
+  return inTenant(sessions, context, 'etare:read', (session) => session.etare.dossiers(query));
 }
 
 export function getSiteEtare(

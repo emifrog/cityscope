@@ -9,6 +9,7 @@ import { type FormEvent } from 'react';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { SITE_STATUS_LABELS, SITE_TYPE_LABELS } from '@/components/labels';
 import { PageHeader } from '@/components/page-header';
+import { RiskFilterFields, riskFiltersFromParams } from '@/components/risk-filter-fields';
 import { SitesTable } from '@/components/sites-table';
 import { usePermissions, useSites, type SiteFilters } from '@/lib/queries';
 import { useTenant } from '@/providers/tenant-provider';
@@ -30,6 +31,7 @@ function useFiltersFromUrl(): SiteFilters {
     ...(isSiteType(siteType) ? { site_type: siteType } : {}),
     ...(isSiteStatus(status) ? { status } : {}),
     ...(city ? { city } : {}),
+    ...riskFiltersFromParams(params),
   };
 }
 
@@ -47,7 +49,7 @@ export function SitesList() {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const next = new URLSearchParams();
-    for (const key of ['q', 'type', 'statut', 'commune']) {
+    for (const key of ['q', 'type', 'statut', 'commune', 'risque', 'gravite']) {
       const value = String(data.get(key) ?? '').trim();
       if (value) next.set(key, value);
     }
@@ -75,7 +77,7 @@ export function SitesList() {
         key={searchKey}
         role="search"
         onSubmit={applyFilters}
-        className="mb-4 grid gap-3 md:grid-cols-[2fr_1fr_1fr_1fr_auto] md:items-end"
+        className="mb-4 grid gap-3 md:grid-cols-3 md:items-end xl:grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr_auto]"
       >
         <div>
           <Label htmlFor="filter-q">Recherche</Label>
@@ -113,6 +115,7 @@ export function SitesList() {
           <Label htmlFor="filter-city">Commune</Label>
           <Input id="filter-city" name="commune" defaultValue={filters.city ?? ''} className="mt-1" />
         </div>
+        <RiskFilterFields prefix="filter" riskTypeId={filters.risk_type_id} minSeverity={filters.min_severity} />
         <Button type="submit" variant="secondary">
           Filtrer
         </Button>

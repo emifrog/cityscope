@@ -56,13 +56,23 @@ const SITE_JOINS = `
   left join app.address a on a.tenant_id = s.tenant_id and a.id = s.address_id`;
 
 /** Escapes LIKE wildcards so that user text is matched literally. */
-const likeLiteral = (value: string) => `%${value.replace(/[\\%_]/g, '\\$&')}%`;
+export const likeLiteral = (value: string) => `%${value.replace(/[\\%_]/g, '\\$&')}%`;
 
-/** Filters shared by the map ($1 status, $2 text, $3 type); same semantics as the site list. */
+/** Sites holding an active risk of a type and/or a minimal severity (MET-01), RLS of the risks applied. */
+const riskFilter = (type: string, severity: string) =>
+  `(${type}::uuid is null and ${severity}::int is null or exists (
+     select 1 from app.risk_occurrence ro
+     where ro.site_id = s.id and ro.status = 'active'
+       and (${type}::uuid is null or ro.risk_type_id = ${type}::uuid)
+       and (${severity}::int is null or ro.severity >= ${severity}::int)))`;
+
+/** Filters shared by the map ($1 status, $2 text, $3 type, $4 city, $5 risk type, $6 severity), as in the list. */
 const MAP_FILTERS = `s.tenant_id = app.current_tenant_id()
   and ($1::text is null and s.status <> 'archived' or s.status = $1::text)
   and ($2::text is null or s.name ilike $2 or a.label ilike $2 or s.etare_number ilike $2)
-  and ($3::text is null or s.site_type = $3::text)`;
+  and ($3::text is null or s.site_type = $3::text)
+  and ($4::text is null or lower(a.city) = lower($4::text))
+  and ${riskFilter('$5', '$6')}`;
 
 interface MapRow {
   id: string;
@@ -103,6 +113,7 @@ export class PostgresSiteRepository implements SiteRepository {
          and ($5::text is null or s.name ilike $5 or a.label ilike $5 or s.etare_number ilike $5)
          and ($6::text is null or s.site_type = $6::text)
          and ($7::text is null or lower(a.city) = lower($7::text))
+         and ${riskFilter('$8', '$9')}
          and ($1::text is null or (s.name, s.id) > ($1::text, $2::uuid))
        order by s.name, s.id
        limit $3`,
@@ -114,6 +125,8 @@ export class PostgresSiteRepository implements SiteRepository {
         query.q ? likeLiteral(query.q) : null,
         query.site_type ?? null,
         query.city ?? null,
+        query.risk_type_id ?? null,
+        query.min_severity ?? null,
       ],
     );
     const rows = result.rows.slice(0, query.limit);
@@ -125,7 +138,14 @@ export class PostgresSiteRepository implements SiteRepository {
   }
 
   async mapFeatures(query: MapSitesQuery): Promise<MapSitesResponse> {
-    const filters = [query.status ?? null, query.q ? likeLiteral(query.q) : null, query.site_type ?? null];
+    const filters = [
+      query.status ?? null,
+      query.q ? likeLiteral(query.q) : null,
+      query.site_type ?? null,
+      query.city ?? null,
+      query.risk_type_id ?? null,
+      query.min_severity ?? null,
+    ];
     const bbox = query.bbox ? parseBbox(query.bbox) : null;
     const features = await this.client.query<MapRow>(
       `select s.id, s.name, s.site_type, s.status, s.etare_number, a.city,
@@ -136,10 +156,10 @@ export class PostgresSiteRepository implements SiteRepository {
        left join app.publication p on p.tenant_id = s.tenant_id and p.id = s.active_publication_id
        where ${MAP_FILTERS}
          and s.geom is not null
-         and ($4::float8 is null
-              or extensions.st_intersects(s.geom, extensions.st_makeenvelope($4, $5, $6, $7, 4326)))
+         and ($7::float8 is null
+              or extensions.st_intersects(s.geom, extensions.st_makeenvelope($7, $8, $9, $10, 4326)))
        order by s.name, s.id
-       limit $8`,
+       limit $11`,
       [...filters, ...(bbox ?? [null, null, null, null]), query.limit + 1],
     );
     const totals = await this.client.query<MapTotalsRow>(

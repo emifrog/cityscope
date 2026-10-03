@@ -1,4 +1,6 @@
 import type {
+  EtareDossierList,
+  EtareDossierListQuery,
   Notification,
   NotificationListQuery,
   Contribution,
@@ -17,7 +19,6 @@ import type {
   DocumentCreate,
   DocumentUpdate,
   DocumentVersionCreate,
-  EtareDossier,
   EtareOverview,
   EtareRevision,
   EtareSnapshot,
@@ -275,7 +276,8 @@ export interface PublicationRecord {
  */
 export interface EtareRepository {
   /** Sites of the SIS (not archived) with their active publication and latest revision. */
-  dossiers(): Promise<EtareDossier[]>;
+  /** Dossiers of the SIS (archived sites excepted), by name, with counts over the whole SIS. */
+  dossiers(query: EtareDossierListQuery): Promise<EtareDossierList>;
   /** Null when the site is not visible. */
   overview(siteId: string): Promise<EtareOverview | null>;
   /** Opens a draft revision (and the dossier on first use). Null when the site is not visible. */

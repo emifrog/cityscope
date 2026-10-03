@@ -244,6 +244,14 @@ non exposés, pas de notification des équipes du SIS ; recette avec un exploita
 - [ ] **CAR-03 — Distribution des fonds :** versions, taille/progression, contrôle d’intégrité, renouvellement,
       reprise et nettoyage ; vérifier la consommation RAM/disque et les limites de stockage autorisées.
 
+**Décisions prises par le porteur le 3 octobre 2026 (Sprint 8) :** une publication en vigueur est
+retirée par un validateur (permission de publication, second facteur), avec un motif obligatoire ; un site
+et son dossier ne s'archivent qu'une fois la version en vigueur retirée, par l'administration du SIS ou la
+Prévision, avec un motif, brouillons clos et site exclu des tablettes ; une zone déplacée ou archivée
+entraîne le recalcul automatique des rattachements des éléments placés sur le plan (tracé dans l'audit),
+une référence encore incohérente bloquant la soumission ; la recherche par risque filtre sur le type du
+catalogue et une gravité minimale.
+
 **Acceptation :** toute exigence P0 partielle a un scénario démontré ; site sensible jamais exposé par
 un contournement API/pack ; terminal limité à son périmètre ; retrait appliqué au prochain contact ;
 carte, fiches et plans utilisables après démarrage à froid en mode avion sur la tablette choisie.

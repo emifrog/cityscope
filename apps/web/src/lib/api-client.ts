@@ -20,7 +20,8 @@ import {
   type DocumentUpdate,
   type DocumentUploadResponse,
   type DocumentVersionCreate,
-  type EtareDossier,
+  type EtareDossierList,
+  type EtareDossierListQuery,
   type EtareOverview,
   type EtarePreview,
   type EtareRevision,
@@ -409,8 +410,8 @@ export const api = {
     }),
 
   // ---------------------------------------------------------------- ETARE workflow
-  listEtareDossiers: (options: ApiCallOptions): Promise<EtareDossier[]> =>
-    itemsOf(call(endpoints.listEtareDossiers.response, endpoints.listEtareDossiers.path, options)),
+  listEtareDossiers: (options: ApiCallOptions, query: Partial<EtareDossierListQuery> = {}): Promise<EtareDossierList> =>
+    call(endpoints.listEtareDossiers.response, endpoints.listEtareDossiers.path, options, { query }),
 
   getSiteEtare: (options: ApiCallOptions, siteId: string): Promise<EtareOverview> =>
     call(endpoints.getSiteEtare.response, pathOf(endpoints.getSiteEtare.path, { id: siteId }), options),

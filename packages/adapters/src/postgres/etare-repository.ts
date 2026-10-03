@@ -5,12 +5,17 @@ import {
   publicationSummarySchema,
   validationQueueItemSchema,
   type EtareDossier,
+  type EtareDossierCounts,
+  type EtareDossierList,
+  type EtareDossierListQuery,
   type EtareOverview,
   type EtareRevision,
   type EtareSnapshot,
   type ValidationQueueItem,
 } from '@etare/contracts';
+import { decodeCursor, encodeCursor } from './cursor';
 import type { PoolClient } from './pool';
+import { likeLiteral } from './site-repository';
 import { lockVersion, toIso } from './versioned';
 
 /** A member of the SIS named for the workflow (identity tables stay closed: app.member_name). */
@@ -67,56 +72,87 @@ interface PublicationRow {
   has_pdf: boolean;
 }
 
+/** Sites of the SIS (archived ones excepted), their version in force and their latest revision. */
+const DOSSIER_FROM = `from app.site s
+  left join app.publication ap on ap.tenant_id = s.tenant_id and ap.id = s.active_publication_id
+  left join lateral (
+    select r.id, r.revision_no, r.status, r.updated_at
+    from app.etare e join app.etare_revision r on r.etare_id = e.id
+    where e.site_id = s.id and e.status = 'active'
+    order by r.revision_no desc limit 1
+  ) lr on true
+  where s.tenant_id = app.current_tenant_id() and s.status <> 'archived'`;
+
+interface DossierRow {
+  site_id: string;
+  site_name: string;
+  etare_number: string | null;
+  publication_number: number | null;
+  published_at: Date | null;
+  revision_id: string | null;
+  revision_no: number | null;
+  revision_status: string | null;
+  revision_updated_at: Date | null;
+}
+
+const toDossier = (row: DossierRow): EtareDossier =>
+  etareDossierSchema.parse({
+    site_id: row.site_id,
+    site_name: row.site_name,
+    etare_number: row.etare_number,
+    active_publication:
+      row.publication_number && row.published_at
+        ? { publication_number: row.publication_number, published_at: toIso(row.published_at) }
+        : null,
+    latest_revision:
+      row.revision_id && row.revision_no && row.revision_status && row.revision_updated_at
+        ? {
+            id: row.revision_id,
+            revision_no: row.revision_no,
+            status: row.revision_status,
+            updated_at: toIso(row.revision_updated_at),
+          }
+        : null,
+  });
+
 export class PostgresEtareRepository implements EtareRepository {
   constructor(private readonly client: PoolClient) {}
 
-  async dossiers(): Promise<EtareDossier[]> {
-    const { rows } = await this.client.query<{
-      site_id: string;
-      site_name: string;
-      etare_number: string | null;
-      publication_number: number | null;
-      published_at: Date | null;
-      revision_id: string | null;
-      revision_no: number | null;
-      revision_status: string | null;
-      revision_updated_at: Date | null;
-    }>(
+  async dossiers(query: EtareDossierListQuery): Promise<EtareDossierList> {
+    const after = query.cursor ? decodeCursor(query.cursor) : null;
+    const { rows } = await this.client.query<DossierRow>(
       `select s.id as site_id, s.name as site_name, s.etare_number,
               ap.publication_number, ap.published_at,
               lr.id as revision_id, lr.revision_no, lr.status as revision_status, lr.updated_at as revision_updated_at
-       from app.site s
-       left join app.publication ap on ap.tenant_id = s.tenant_id and ap.id = s.active_publication_id
-       left join lateral (
-         select r.id, r.revision_no, r.status, r.updated_at
-         from app.etare e join app.etare_revision r on r.etare_id = e.id
-         where e.site_id = s.id and e.status = 'active'
-         order by r.revision_no desc limit 1
-       ) lr on true
-       where s.tenant_id = app.current_tenant_id() and s.status <> 'archived'
-       order by coalesce(lr.status = 'submitted', false) desc, coalesce(lr.status = 'draft', false) desc, s.name, s.id
-       limit 1000`,
+       ${DOSSIER_FROM}
+         and ($1::text is null or s.name ilike $1 or s.etare_number ilike $1)
+         and case $2::text
+               when 'published' then ap.id is not null
+               when 'unpublished' then ap.id is null
+               when 'to_validate' then coalesce(lr.status = 'submitted', false)
+               when 'in_progress' then coalesce(lr.status in ('draft', 'changes_requested'), false)
+               else true
+             end
+         and ($3::text is null or (s.name, s.id) > ($3::text, $4::uuid))
+       order by s.name, s.id
+       limit $5`,
+      [query.q ? likeLiteral(query.q) : null, query.state, after?.name ?? null, after?.id ?? null, query.limit + 1],
     );
-    return rows.map((row) =>
-      etareDossierSchema.parse({
-        site_id: row.site_id,
-        site_name: row.site_name,
-        etare_number: row.etare_number,
-        active_publication:
-          row.publication_number && row.published_at
-            ? { publication_number: row.publication_number, published_at: toIso(row.published_at) }
-            : null,
-        latest_revision:
-          row.revision_id && row.revision_no && row.revision_status && row.revision_updated_at
-            ? {
-                id: row.revision_id,
-                revision_no: row.revision_no,
-                status: row.revision_status,
-                updated_at: toIso(row.revision_updated_at),
-              }
-            : null,
-      }),
+    const counted = await this.client.query<EtareDossierCounts>(
+      `select count(*)::int as sites,
+              count(ap.id)::int as published,
+              (count(*) - count(ap.id))::int as unpublished,
+              count(*) filter (where lr.status = 'submitted')::int as to_validate,
+              count(*) filter (where lr.status in ('draft', 'changes_requested'))::int as in_progress
+       ${DOSSIER_FROM}`,
     );
+    const page = rows.slice(0, query.limit);
+    const last = page.at(-1);
+    return {
+      items: page.map(toDossier),
+      next_cursor: rows.length > query.limit && last ? encodeCursor(last.site_name, last.site_id) : null,
+      counts: counted.rows[0] ?? { sites: 0, published: 0, unpublished: 0, to_validate: 0, in_progress: 0 },
+    };
   }
 
   async overview(siteId: string): Promise<EtareOverview | null> {

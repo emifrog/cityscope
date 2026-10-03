@@ -7,7 +7,7 @@ import {
   REVISION_STATUSES,
   ZONE_TYPES,
 } from '@etare/domain';
-import { isoDateTimeSchema, localGeometrySchema, uuidSchema } from '@etare/schemas';
+import { cursorSchema, isoDateTimeSchema, localGeometrySchema, pageLimitSchema, uuidSchema } from '@etare/schemas';
 import { z } from 'zod';
 import { assetSchema, documentSchema, documentVersionSchema } from './documents';
 import { exteriorGeometrySchema } from './objects';
@@ -290,7 +290,38 @@ export const etareDossierSchema = z
   .meta({ id: 'EtareDossier' });
 export type EtareDossier = z.infer<typeof etareDossierSchema>;
 
-export const etareDossierListSchema = z.object({ items: z.array(etareDossierSchema) }).meta({ id: 'EtareDossierList' });
+/** `published`: a version in force; `to_validate`: last revision submitted; `in_progress`: draft or changes requested. */
+export const ETARE_DOSSIER_STATES = ['all', 'published', 'unpublished', 'to_validate', 'in_progress'] as const;
+
+export const etareDossierListQuerySchema = z.object({
+  limit: pageLimitSchema,
+  cursor: cursorSchema.optional(),
+  /** Name or ETARE number. */
+  q: z.string().trim().min(2).max(100).optional(),
+  state: z.enum(ETARE_DOSSIER_STATES).default('all'),
+});
+export type EtareDossierListQuery = z.infer<typeof etareDossierListQuerySchema>;
+
+export const etareDossierCountsSchema = z
+  .object({
+    /** Sites of the SIS, archived ones excepted, whatever the filters. */
+    sites: z.number().int().min(0),
+    published: z.number().int().min(0),
+    unpublished: z.number().int().min(0),
+    to_validate: z.number().int().min(0),
+    in_progress: z.number().int().min(0),
+  })
+  .meta({ id: 'EtareDossierCounts' });
+export type EtareDossierCounts = z.infer<typeof etareDossierCountsSchema>;
+
+export const etareDossierListSchema = z
+  .object({
+    items: z.array(etareDossierSchema),
+    next_cursor: cursorSchema.nullable(),
+    counts: etareDossierCountsSchema,
+  })
+  .meta({ id: 'EtareDossierList' });
+export type EtareDossierList = z.infer<typeof etareDossierListSchema>;
 
 export const revisionCreateSchema = z
   .object({ change_summary: z.string().trim().min(1).max(2000).nullable().optional() })

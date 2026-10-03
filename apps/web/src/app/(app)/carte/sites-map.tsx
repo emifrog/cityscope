@@ -29,6 +29,7 @@ import {
 import { describeWaterPoint, nearestWaterPoint } from '@/components/map/nearest-water';
 import { useBaseMap, useMapLibre } from '@/components/map/use-map';
 import { PageHeader } from '@/components/page-header';
+import { RiskFilterFields, riskFiltersFromParams } from '@/components/risk-filter-fields';
 import { useMapCatalog, useMapFeatures, useMapSites, useSiteObjects, type MapSiteFilters } from '@/lib/queries';
 
 const isSiteType = (value: string | null): value is (typeof SITE_TYPES)[number] =>
@@ -42,10 +43,13 @@ function useFiltersFromUrl(): MapSiteFilters {
   const q = params.get('q')?.trim();
   const siteType = params.get('type');
   const status = params.get('statut');
+  const city = params.get('commune')?.trim();
   return {
     ...(q && q.length >= 2 ? { q } : {}),
     ...(isSiteType(siteType) ? { site_type: siteType } : {}),
     ...(isSiteStatus(status) ? { status } : {}),
+    ...(city ? { city } : {}),
+    ...riskFiltersFromParams(params),
   };
 }
 
@@ -206,7 +210,7 @@ export function SitesMapView() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const next = new URLSearchParams();
-    for (const key of ['q', 'type', 'statut']) {
+    for (const key of ['q', 'type', 'statut', 'commune', 'risque', 'gravite']) {
       const value = String(form.get(key) ?? '').trim();
       if (value) next.set(key, value);
     }
@@ -262,6 +266,11 @@ export function SitesMapView() {
             ))}
           </Select>
         </div>
+        <div>
+          <Label htmlFor="map-city">Commune</Label>
+          <Input id="map-city" name="commune" defaultValue={filters.city ?? ''} />
+        </div>
+        <RiskFilterFields prefix="map" riskTypeId={filters.risk_type_id} minSeverity={filters.min_severity} />
         <Button type="submit">Filtrer</Button>
       </form>
 

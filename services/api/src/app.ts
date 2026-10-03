@@ -621,7 +621,8 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
   // ---------------------------------------------------------------- ETARE workflow
   app.get(routerPath(endpoints.listEtareDossiers.path), async (c) => {
     const context = await requestContext(c, endpoints.listEtareDossiers);
-    return respond(c, endpoints.listEtareDossiers, { items: await listEtareDossiers(deps.sessions, context) });
+    const query = endpoints.listEtareDossiers.query.parse(c.req.query());
+    return respond(c, endpoints.listEtareDossiers, await listEtareDossiers(deps.sessions, context, query));
   });
 
   app.get(routerPath(endpoints.getSiteEtare.path), async (c) => {

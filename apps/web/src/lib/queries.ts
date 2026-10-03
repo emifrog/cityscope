@@ -5,6 +5,7 @@ import type {
   ContributionListQuery,
   Document,
   DocumentUploadResponse,
+  EtareDossierListQuery,
   FieldReport,
   FieldReportListQuery,
   FileDeclaration,
@@ -54,7 +55,7 @@ export const queryKeys = {
       : (['tenant', tenantId, 'risk-types', includeDeprecated] as const),
 };
 
-export type SiteFilters = Pick<SiteListQuery, 'q' | 'site_type' | 'status' | 'city'>;
+export type SiteFilters = Pick<SiteListQuery, 'q' | 'site_type' | 'status' | 'city' | 'risk_type_id' | 'min_severity'>;
 
 function useApiContext() {
   const { session } = useSession();
@@ -97,7 +98,10 @@ export function useMapCatalog() {
   });
 }
 
-export type MapSiteFilters = Pick<MapSitesQuery, 'q' | 'site_type' | 'status'>;
+export type MapSiteFilters = Pick<
+  MapSitesQuery,
+  'q' | 'site_type' | 'status' | 'city' | 'risk_type_id' | 'min_severity'
+>;
 
 /**
  * Positioned sites for the map. Keyed under the site list, so any site change
@@ -193,12 +197,30 @@ export function useRiskTypes(includeDeprecated = false) {
 const BUILD_POLL_MS = 3000;
 const building = (status: string | undefined) => status === 'queued' || status === 'building';
 
-export function useEtareDossiers(wanted = true) {
+/** Pages of ETARE dossiers (by site name), filtered by text and state, with exact counts (MET-01). */
+export function useEtareDossierPages(filters: Pick<EtareDossierListQuery, 'q' | 'state'>, pageSize = 50) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useInfiniteQuery({
+    queryKey: [...queryKeys.etare(tenantId ?? 'none'), 'dossiers', filters, pageSize],
+    enabled,
+    placeholderData: keepPreviousData,
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam, signal }) =>
+      api.listEtareDossiers(
+        { ...options, signal },
+        { ...filters, limit: pageSize, ...(pageParam ? { cursor: pageParam } : {}) },
+      ),
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
+  });
+}
+
+/** Exact counts of the ETARE dossiers of the SIS (dashboard). */
+export function useEtareCounts(wanted = true) {
   const { tenantId, options, enabled } = useApiContext();
   return useQuery({
-    queryKey: [...queryKeys.etare(tenantId ?? 'none'), 'dossiers'],
+    queryKey: [...queryKeys.etare(tenantId ?? 'none'), 'counts'],
     enabled: enabled && wanted,
-    queryFn: ({ signal }) => api.listEtareDossiers({ ...options, signal }),
+    queryFn: async ({ signal }) => (await api.listEtareDossiers({ ...options, signal }, { limit: 1 })).counts,
   });
 }
 
