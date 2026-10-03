@@ -1,6 +1,6 @@
 # Roadmap complète de développement — ETARE numérique
 
-**Mise à jour : 1er octobre 2026. Base : `c6745d7` (Sprint 6 livré).**
+**Mise à jour : 3 octobre 2026. Base : `ebb8e1c` (Sprint 7 livré).**
 
 Ce document est le plan de développement courant : **ce qui est implémenté, ce qui reste à construire,
 dans quel ordre et avec quelle preuve de fin**. Il complète le
@@ -17,12 +17,15 @@ ligne. Le SIS garde l’autorité de publication ; les exploitants et les interv
 corrections qui passent par la Prévision et une nouvelle validation.
 
 **Aujourd’hui :** création → préparation des plans et objets → validation → publication/PDF →
-distribution signée → installation chiffrée → consultation OPS hors ligne sont implémentées.
+distribution signée → installation chiffrée → consultation OPS hors ligne sont implémentées, ainsi que
+la boucle terrain (signaler hors ligne → transmettre sans doublon → instruire → corriger le brouillon →
+faire valider → republier → constater la correction sur tablette, Sprints 5 et 6), le lecteur PDF hors
+ligne et le portail exploitant minimal (Sprint 7). Le tout est éprouvé sur émulateur et navigateur.
 
-**Boucle encore incomplète :** signaler hors ligne → transmettre sans doublon → instruire → corriger
-le brouillon → faire valider → republier → constater la correction sur tablette.
-Le portail exploitant minimal est également à construire. Les documents PDF et la carte de contexte
-ne sont pas encore consultables dans l’application terrain.
+**Reste à construire :** compléter les parcours P0 (recherche par risque, risques extérieurs, cohérence
+des zones, cycle de vie des dossiers, sections, secteurs et sites sensibles), la carte de contexte dans
+l’application terrain, les prérequis de sécurité et d’exploitation (R4), puis la qualification sur la
+tablette de référence et la recette (R5).
 
 **Fin du MVP :** cette boucle doit fonctionner sur une tablette de référence en mode avion,
 avec traçabilité, puis réussir une recette métier et technique. Le périmètre P0 du cahier des charges,
@@ -79,20 +82,21 @@ Origine de chaque vérification et limites : [bilan du 1er octobre](bilan-depot-
 
 ## 3. Séquence proposée jusqu’au pilote
 
-| Lot                                    | Objectif et contenu                                                                                                                 | Dépendances                                                 | Responsable à désigner                | Sortie attendue                                                            |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------- |
-| R0 — décisions et matériel             | Tablette cible, produits/droits IGN, hébergement, secteurs, sites sensibles, durée offline, ambiguïtés de périmètre                 | Référents SIS disponibles                                   | Porteur, Prévision/OPS, SIG, DSI/RSSI | Décisions tracées et protocole de recette                                  |
-| R1 — boucle terrain, candidat Sprint 5 | Signalement hors ligne avec photo, transmission/reprise, instruction Prévision, nouvelle publication ; lecteur PDF                  | Socle Sprint 4 ; sécurité des fichiers pour données réelles | Mobile + API/web + référent Prévision | Un écart créé sans réseau devient une correction publiée et resynchronisée |
-| R2 — portail exploitant                | Invitation par site, consultation filtrée, propositions, documents, validation SIS                                                  | Chaîne de contributions R1 ; antivirus R4                   | Web/API + référent Prévision          | Aucun accès transversal, aucune publication directe exploitant             |
-| R3 — compléter le périmètre MVP        | Recherche par risque, risques extérieurs, archivage/retrait, sections minimales, secteurs/listes, politique sensible, carte offline | Arbitrages R0 ; R1/R2 selon parcours                        | Web/API/mobile + SIG/RSSI             | Tous les P0 ont une preuve ou un écart explicitement accepté               |
-| R4 — sécuriser et exploiter            | Antivirus, sessions/MFA, limitation de débit, CSP, clés, stockage, charge, sauvegardes, déploiement, version Android distribuable   | Commence dès maintenant ; choix R0                          | API/mobile + exploitation + RSSI      | Préproduction et dossier de sécurité prêts pour recette                    |
-| R5 — recette et pilote SIS             | Tablette physique, réseau dégradé, charge, intrusion, restauration, formation, pilote mesuré                                        | R1–R4 et décisions bloquantes levées                        | Métier, SIG, DSI/RSSI, exploitation   | Procès-verbal de recette et décision d’ouverture                           |
-| R6 — MVP+ / V1.5                       | Les neuf exigences P1, imports avancés, personnalisation, comparaison, rétention, exports                                           | Retours du pilote ; mesure de valeur                        | Produit + équipe de développement     | Extensions génériques, sans fork par SIS                                   |
-| R7 — industrialisation / V2–V3         | SSO étendu, MDM, connecteurs, RRF, assistance IA, partage contrôlé et écosystème                                                    | MVP exploité, accords/qualifications disponibles            | Produit + partenaires SIS             | Lots autonomes justifiés par usage et capacité                             |
+| Lot                                | Objectif et contenu                                                                                                                 | Dépendances                                                 | Responsable à désigner                | Sortie attendue                                                            |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------- |
+| R0 — décisions et matériel         | Tablette cible, produits/droits IGN, hébergement, secteurs, sites sensibles, durée offline, ambiguïtés de périmètre                 | Référents SIS disponibles                                   | Porteur, Prévision/OPS, SIG, DSI/RSSI | Décisions tracées et protocole de recette                                  |
+| R1 — boucle terrain (Sprints 5–6)  | **Réalisé** : signalement hors ligne avec photo, transmission/reprise, instruction Prévision, nouvelle publication ; lecteur PDF    | Socle Sprint 4 ; sécurité des fichiers pour données réelles | Mobile + API/web + référent Prévision | Un écart créé sans réseau devient une correction publiée et resynchronisée |
+| R2 — portail exploitant (Sprint 7) | **Réalisé** : invitation par site, consultation filtrée, propositions, documents, validation SIS, notifications                     | Chaîne de contributions R1 ; antivirus R4                   | Web/API + référent Prévision          | Aucun accès transversal, aucune publication directe exploitant             |
+| R3 — compléter le périmètre MVP    | Recherche par risque, risques extérieurs, archivage/retrait, sections minimales, secteurs/listes, politique sensible, carte offline | Arbitrages R0 ; R1/R2 selon parcours                        | Web/API/mobile + SIG/RSSI             | Tous les P0 ont une preuve ou un écart explicitement accepté               |
+| R4 — sécuriser et exploiter        | Antivirus, sessions/MFA, limitation de débit, CSP, clés, stockage, charge, sauvegardes, déploiement, version Android distribuable   | Commence dès maintenant ; choix R0                          | API/mobile + exploitation + RSSI      | Préproduction et dossier de sécurité prêts pour recette                    |
+| R5 — recette et pilote SIS         | Tablette physique, réseau dégradé, charge, intrusion, restauration, formation, pilote mesuré                                        | R1–R4 et décisions bloquantes levées                        | Métier, SIG, DSI/RSSI, exploitation   | Procès-verbal de recette et décision d’ouverture                           |
+| R6 — MVP+ / V1.5                   | Les neuf exigences P1, imports avancés, personnalisation, comparaison, rétention, exports                                           | Retours du pilote ; mesure de valeur                        | Produit + équipe de développement     | Extensions génériques, sans fork par SIS                                   |
+| R7 — industrialisation / V2–V3     | SSO étendu, MDM, connecteurs, RRF, assistance IA, partage contrôlé et écosystème                                                    | MVP exploité, accords/qualifications disponibles            | Produit + partenaires SIS             | Lots autonomes justifiés par usage et capacité                             |
 
-**Dès maintenant :** engager R0 et les prérequis de R4, puis développer R1. La qualification du matériel
-et des droits IGN doit démarrer pendant les prochains lots, pas attendre la fin du développement.
-R4 est transversal : il ne faut pas attendre R3 pour raccorder l’antivirus ou préparer les sauvegardes.
+**Dès maintenant :** R1 et R2 sont réalisés ; développer R3 en commençant par les lots qui ne dépendent
+d’aucun arbitrage (MET-01 à MET-04), obtenir les décisions R0 qui bloquent le reste de R3 (DEC-02 pour la
+carte, DEC-04 pour les secteurs et sites sensibles, DEC-05 pour les sections) et poursuivre R4, transversal.
+La qualification sur la tablette de référence (Alldocube iPlay 40H) commence dès sa livraison.
 
 Les estimations de l’architecture §32 décrivent le projet initial avec une équipe de trois à quatre
 personnes ; elles ne sont pas une estimation du reste à faire aujourd’hui. Chiffrer chaque lot après
@@ -145,7 +149,7 @@ l’ADR-017 au fil du Sprint 5) :
   auparavant des envois en attente. Ce choix de sécurité prime sur la conservation jusqu’à l’accusé
   demandée par l’architecture §11 ; il fait partie de DEC-04.
 
-### R1 — signalement terrain et documents, candidat Sprint 5
+### R1 — signalement terrain et documents (réalisé, Sprints 5 et 6)
 
 - [x] **TER-01 — Saisie OPS :** depuis un site ou un objet, commentaire, type d’écart, horodatage, photo
       et localisation uniquement si autorisée ; référence à la publication consultée.
@@ -186,7 +190,7 @@ l’envoi, rejouer la demande, instruire par un autre agent, valider, publier et
 la tablette. Un seul signalement serveur, pièces contrôlées, ancienne publication intacte, chaîne d’audit complète.
 Lire le PDF essentiel après redémarrage sans réseau. Tests de contrat, d’intégration et parcours Flutter associés.
 
-### R2 — portail exploitant minimal
+### R2 — portail exploitant minimal (réalisé, Sprint 7)
 
 - [x] **POR-01 — Invitation :** invitation limitée à un ou plusieurs sites, durée de validité, usage unique,
       révocation, acceptation et politique MFA configurable ; aucun rôle EXPLOITANT global au SIS.
@@ -209,6 +213,11 @@ Lire le PDF essentiel après redémarrage sans réseau. Tests de contrat, d’in
 **Acceptation :** un exploitant de deux sites n’accède à aucun autre ; un lien expiré/révoqué ne fonctionne
 plus ; fichier infecté ou non contrôlé non diffusé ; acceptation crée une modification de travail qui
 exige ensuite une validation SIS indépendante. Tester utilisateur sans droit, autre site, autre SIS et API directe.
+
+**Livré au Sprint 7 (1er octobre 2026) :** POR-01 à POR-05 ([rapport](sprint-7-report.md), ADR-019 et
+ADR-020) : R2 est réalisé, critères d’acceptation couverts par les tests d’intégration et pgTAP. Réserves :
+report manuel d’une proposition acceptée dans les données de travail, contacts à visibilité « exploitant »
+non exposés, pas de notification des équipes du SIS ; recette avec un exploitant pilote (R5).
 
 ### R3 — compléter les parcours P0 et la carte terrain
 
@@ -426,10 +435,10 @@ Après chaque lot :
 4. Écrire un rapport daté avec commit, tests, limites et décision de passage.
 5. Réestimer le lot suivant selon les retours ; toute nouvelle demande garde une priorité et un lien au cadrage.
 
-**Prochaine tranche recommandée :** R2 portail exploitant (invitation par site, consultation en liste
-blanche, propositions instruites comme les signalements, concurrence, notifications) ; décisions R0 à
-engager (DEC-01 matériel et règles de synchronisation, DEC-04 accès en priorité) et premier essai sur
-tablette physique.
+**Prochaine tranche recommandée :** R3, lots sans arbitrage préalable — MET-01 (recherche par risque,
+pagination et compteurs exacts), MET-02 (risques extérieurs sur la carte), MET-03 (cohérence des zones),
+MET-04 (archivage du dossier et retrait motivé d’une publication jusqu’au terminal) ; décisions R0 à
+engager pour la suite de R3 (DEC-02, DEC-04, DEC-05) et premier essai sur la tablette de référence.
 
 ## 8. Références
 
