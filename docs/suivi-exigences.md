@@ -1,7 +1,7 @@
 # Suivi des exigences
 
-**État au 3 octobre 2026**, après le Sprint 8 (recherche par risque, risques extérieurs, cohérence des
-zones, retrait et archivage des dossiers). Ce
+**État au 3 octobre 2026**, après le Sprint 9 (second facteur imposé par la base, sessions révocables,
+codes de secours, limitation de débit, CSP, cycle des fichiers). Ce
 tableau est le point d’entrée courant ; les rapports de sprint restent des photographies datées.
 Priorités et lots : [cahier des charges MVP](reference/01_Cahier_des_charges_MVP_ETARE_numerique.pdf).
 La [roadmap complète](roadmap-developpement.md) affecte chacune des 44 exigences à un lot et à un
@@ -24,7 +24,7 @@ pilote**. Les chemins de tests sont relatifs à la racine du dépôt.
 | MAP-04 — mesure de distances                           | P1    | À faire     | —                                                                                                                        | MVP+                                                                                                                                                 |
 | PLAN-01, PLAN-06 — fonds de plans versionnés           | P0    | Implémenté  | `tests/integration/plans.test.ts`                                                                                        | pas de calibration ni d’orientation (aucune mesure en mètres)                                                                                        |
 | PLAN-02 à 04 — placement, objets typés, calques        | P0    | Implémenté  | `tests/integration/plan-items.test.ts`, pgTAP `100_plan_placement`, `190_zone_consistency`                               | glisser-déposer vérifié à la main ; rattachement recalculé quand une zone est tracée, déplacée ou archivée                                           |
-| PLAN-05 — photos attachées aux objets                  | P0    | Implémenté  | `tests/integration/object-photos.test.ts`, pgTAP `130_object_photos`, tests Flutter `ops`                                | photos absentes du PDF ETARE ; pas de miniatures calculées côté serveur                                                                              |
+| PLAN-05 — photos attachées aux objets                  | P0    | Implémenté  | `tests/integration/object-photos.test.ts`, pgTAP `130_object_photos`, tests Flutter `ops`                                | photos absentes du PDF ETARE ; miniatures calculées par le worker (Sprint 9)                                                                         |
 | RISK-01 — catalogue de risques du SIS                  | P0    | Implémenté  | `tests/integration/plan-items.test.ts`, pgTAP `100_plan_placement`                                                       | catalogue d’objets non configurable (ADMIN-03)                                                                                                       |
 | RISK-02 — localisation des risques                     | P0    | Implémenté  | `tests/integration/exterior-risks.test.ts`, `plan-items.test.ts`, pgTAP `190_zone_consistency`                           | sur plan, sur la carte et par portée, zones cohérentes ; pas de carte sur la tablette (CAR-02)                                                       |
 | RISK-03 — matières dangereuses et FDS                  | P1    | À faire     | —                                                                                                                        | un document classé FDS ne remplace pas cette fonction                                                                                                |
@@ -43,8 +43,8 @@ pilote**. Les chemins de tests sont relatifs à la racine du dépôt.
 | OFF-04 — révocation d’un terminal                      | P0    | Implémenté  | `offline-distribution.test.ts`, pgTAP `120`, `sync_service_test.dart` (purge)                                            | effective au premier contact réseau ; hors réseau, l’autorisation locale expire après 7 jours                                                        |
 | OFF-05 — politique de rétention                        | P1    | À faire     | —                                                                                                                        | MVP+                                                                                                                                                 |
 | PORTAL-01 à 03 — portail exploitant                    | P0    | Implémenté  | `tests/integration/portal-*.test.ts`, pgTAP `150` à `180`                                                                | report manuel des propositions acceptées ; notifications des équipes du SIS et recette exploitant à venir (ADR-019, ADR-020)                         |
-| ADMIN-01 — RBAC et périmètres                          | P0    | Partiel     | `tests/integration/members.test.ts`, `rbac-parity.test.ts`, pgTAP `80`                                                   | rôles, membres, double authentification ; secteurs et politiques de sensibilité non opérationnels                                                    |
-| ADMIN-02 — terminaux                                   | P0    | Implémenté  | `offline-distribution.test.ts`, pgTAP `120`                                                                              | déclaration, code d’enrôlement, inventaire, état, révocation ; limitation de débit des codes à prévoir                                               |
+| ADMIN-01 — RBAC et périmètres                          | P0    | Partiel     | `tests/integration/members.test.ts`, `rbac-parity.test.ts`, pgTAP `80`                                                   | rôles, membres, second facteur imposé, sessions, codes de secours ; secteurs et sensibilité non opérationnels                                        |
+| ADMIN-02 — terminaux                                   | P0    | Implémenté  | `offline-distribution.test.ts`, pgTAP `120`                                                                              | déclaration, code d’enrôlement (limité en débit), inventaire, état, révocation                                                                       |
 | ADMIN-03 — catalogues configurables                    | P1    | Partiel     | `plan-items.test.ts`                                                                                                     | risques configurables par le SIS ; objets non                                                                                                        |
 | ADMIN-04 — exports et rapports                         | P1    | Partiel     | —                                                                                                                        | PDF ETARE ; pas d’export CSV                                                                                                                         |
 
@@ -65,11 +65,11 @@ Défauts relevés par le [bilan d’alignement](bilan-alignement-2026-09-30.md),
   démon et limite de taille (`StreamMaxLength` ≥ 50 Mo) à organiser avec l’exploitation.
 - Sites sensibles : politique d’accès renforcée, journalisation des consultations ; exclus de la
   distribution hors ligne tant que cette politique n’est pas définie.
-- Double authentification : les appels API ordinaires d’un compte enrôlé peuvent encore utiliser `aal1`.
-- Limitation de débit, CSP, purge des objets non référencés (dépôts abandonnés, PDF des tentatives
-  perdantes), sauvegarde et restauration, supervision.
-- Volumétrie (10 000 sites) non éprouvée ; la liste des dossiers ETARE est plafonnée à 1 000 sans
-  pagination.
+- Projet hébergé : droits du rôle des migrations sur le schéma `auth` (sessions, facteurs), gabarit
+  « mot de passe oublié », plafonds d’authentification et durée des sessions à reporter (ADR-022, ADR-023).
+- Sauvegarde et restauration, supervision (travaux en échec, maintenance des fichiers, refus tracés).
+- Volumétrie (10 000 sites) non éprouvée, y compris le coût du compteur de débit et du rendu dynamique
+  des pages.
 - Essais sur tablette physique : le Sprint 4 a été éprouvé sur émulateur Android (enrôlement,
   synchronisation signée, mode avion, redémarrage à froid) et par tests (coupure pendant le
   téléchargement, reprise) ; restent le réseau dégradé réel, la volumétrie d’un SIS et l’usage terrain.
