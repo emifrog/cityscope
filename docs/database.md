@@ -244,6 +244,12 @@ risques (point ou surface) portent un libellé et les champs propres à leur typ
 (`risk_type.properties_schema`). Un type propre au SIS (`catalog:manage`) ne peut pas reprendre un code
 national (`catalog_code_guard`). Voir le test `100_plan_placement`.
 
+Cohérence des zones (MET-03) : `zone_for_position` donne la plus petite zone active d'un fond couvrant une
+position ; le trigger `zone_reattach` (création, déplacement, archivage ou réactivation d'une zone)
+rattache de nouveau les objets et risques placés sur ce fond et retire une zone archivée aux risques sans
+position. Un élément placé tire toujours sa zone de sa position. Un risque peut aussi être situé sur la carte
+(`risk_occurrence.geom`, point ou polygone, MET-02). Voir le test `190_zone_consistency`.
+
 ## Habilitations des membres
 
 Les tables d’identité restent en lecture seule pour `etare_api` (RLS : un membre voit sa propre

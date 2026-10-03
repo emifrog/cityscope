@@ -332,6 +332,14 @@ describe('checks before submission', () => {
   const levelOf = (checks: ReturnType<typeof preSubmissionChecks>, code: string) =>
     checks.find((check) => check.code === code)?.level;
 
+  it('blocks a reference to a zone that is no longer active (MET-03)', () => {
+    const now = new Date('2026-10-03T10:00:00Z');
+    expect(levelOf(preSubmissionChecks(data(), now), 'zone_references')).toBe('ok');
+    const orphan = { ...risk('r1'), zone_id: 'zone-archived' };
+    const checks = preSubmissionChecks(data({ risks: [orphan] }), now);
+    expect(levelOf(checks, 'zone_references')).toBe('error');
+  });
+
   it('passes a complete dossier, with warnings to read', () => {
     const checks = preSubmissionChecks(data(), NOW);
     expect(checks.filter((check) => check.level === 'error')).toEqual([]);

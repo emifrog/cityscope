@@ -41,7 +41,11 @@ au catalogue national.
 
 - Les calques du plan (PLAN-04) regroupent les catégories d’objets : risques, eau, accès, énergie, secours
   (sécurité, désenfumage, refuges, circulations verticales, communication), annotations, et les zones.
-- La zone d’un objet est recalculée quand il bouge ; déplacer ou archiver une zone ne met pas à jour les
-  objets qu’elle contenait (dette notée, à traiter avec la vérification avant soumission du lot C).
-- Les risques placés sur la carte (hors plan) restent à faire : l’API les porte déjà par leur portée.
+- La zone d’un objet est recalculée quand il bouge. **Complément du Sprint 8 (MET-03) :** elle l’est aussi
+  quand une zone est tracée, déplacée, archivée ou réactivée, pour les éléments placés sur le même fond
+  (mise à jour ordinaire, auditée, au nom de la personne qui modifie la zone) ; un élément placé tire sa zone
+  de sa position, une demande contraire est recalculée ; un risque sans position garde la zone choisie, sauf
+  si elle est archivée. Une référence à une zone qui n’est plus active bloque la soumission.
+- Les risques placés sur la carte (hors plan) : réalisés au Sprint 8 (MET-02), point ou zone de danger,
+  avec leur portée, figés dans l’instantané.
 - L’annulation porte sur les actions de la session d’édition ; l’historique complet reste celui de l’audit.

@@ -321,6 +321,22 @@ export function preSubmissionChecks(data: WorkingData, now: Date): EtareCheck[] 
       : 'Aucun élément à replacer.',
   );
 
+  // Zones moved or archived re-attach the items in the database (MET-03); a reference to a zone that is
+  // no longer active (data from before, or an archived level) would leave the field without location.
+  const activeZones = new Set(data.zones.filter((zone) => zone.status === 'active').map((zone) => zone.id));
+  const orphans = [
+    ...data.objects.filter((object) => object.status !== 'archived'),
+    ...data.risks.filter((risk) => risk.status === 'active'),
+  ].filter((item) => item.zone_id !== null && !activeZones.has(item.zone_id));
+  add(
+    'zone_references',
+    orphans.length > 0 ? 'error' : 'ok',
+    'Rattachement aux zones',
+    orphans.length > 0
+      ? `${plural(orphans.length, 'élément est rattaché', 'éléments sont rattachés')} à une zone archivée : replacez-les ou choisissez une autre zone (onglet Plans).`
+      : 'Chaque élément rattaché à une zone l’est à une zone active.',
+  );
+
   const opsContacts = data.contacts.filter((contact) => contact.status === 'active' && contact.visibility === 'ops');
   const oldest = now.getTime() - CONTACT_CHECK_DAYS * 86_400_000;
   const unverified = opsContacts.filter(
