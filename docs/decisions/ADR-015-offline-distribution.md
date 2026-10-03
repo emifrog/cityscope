@@ -98,3 +98,9 @@ Arrivée des secteurs et profils de synchronisation, politique des sites sensibl
   est partagée par le domaine (`isAppVersionBelow`).
 - Le contrôle reste du côté du terminal : la version déclarée n'est pas une preuve et n'est pas utilisée
   pour refuser une requête.
+
+## Suite
+
+Périmètres et sites sensibles décidés par l’ADR-025 (DEC-04, 3 octobre 2026) : secteurs affectés aux
+tablettes et aux membres, sites « restreints » distribués à la demande avec code et 24 h, « élevés » en
+ligne seulement ; les 7 jours de consultation hors ligne sont confirmés comme valeur du porteur.

@@ -46,6 +46,12 @@ travail.
 - La signature du manifeste (Ed25519) couvrira le PDF comme les autres fichiers.
 - `sharp` 0.35 (Apache-2.0) embarque des binaires libvips sous LGPL-3.0-or-later, liés dynamiquement et
   non modifiés ; il n’est chargé par le worker que pour convertir un fond WebP.
-- Les PDF des tentatives perdantes restent dans le stockage sans être référencés : purge à prévoir.
+- Les PDF des tentatives perdantes restent dans le stockage sans être référencés : purgés par la
+  maintenance horaire depuis le Sprint 9 (ADR-009, complément).
 - Le test du rendu vérifie le contenu visuel de la page du plan : fond identique au pixel près (PNG,
   WebP) ou à l’octet près (JPEG), puis zones, objets, risques et libellés dessinés par-dessus.
+
+## Suite
+
+Sections et photos décidées par l’ADR-026 (DEC-05, 3 octobre 2026) : registre unique dans l’ordre de la
+maquette, sections non obligatoires masquables par le SIS et figées dans la version soumise, annexe photos.

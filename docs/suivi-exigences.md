@@ -28,7 +28,7 @@ pilote**. Les chemins de tests sont relatifs à la racine du dépôt.
 | RISK-01 — catalogue de risques du SIS                  | P0    | Implémenté  | `tests/integration/plan-items.test.ts`, pgTAP `100_plan_placement`                                                       | catalogue d’objets non configurable (ADMIN-03)                                                                                                       |
 | RISK-02 — localisation des risques                     | P0    | Implémenté  | `tests/integration/exterior-risks.test.ts`, `plan-items.test.ts`, pgTAP `190_zone_consistency`                           | sur plan, sur la carte et par portée, zones cohérentes ; pas de carte sur la tablette (CAR-02)                                                       |
 | RISK-03 — matières dangereuses et FDS                  | P1    | À faire     | —                                                                                                                        | un document classé FDS ne remplace pas cette fonction                                                                                                |
-| ETARE-01 — assemblage et aperçu                        | P0    | Partiel     | `tests/integration/etare-workflow.test.ts`, `snapshot-consistency.test.ts`                                               | sections dans l’ordre fixe de la maquette (voir ambiguïtés)                                                                                          |
+| ETARE-01 — assemblage et aperçu                        | P0    | Partiel     | `tests/integration/etare-workflow.test.ts`, `snapshot-consistency.test.ts`                                               | ordre fixe ; masquage par SIS et annexe photos décidés (ADR-026, MET-05)                                                                             |
 | ETARE-02 — PDF standardisé                             | P0    | Implémenté  | `packages/adapters/src/pdf/etare-pdf.test.ts`, `etare-workflow.test.ts`                                                  | polices standard (caractères hors WinAnsi remplacés)                                                                                                 |
 | ETARE-03, ETARE-04 — modèle par SIS, scénarios         | P1    | À faire     | —                                                                                                                        | MVP+                                                                                                                                                 |
 | WF-01 — statuts du dossier                             | P0    | Implémenté  | `tests/integration/lifecycle.test.ts`, pgTAP `200_lifecycle`, `20_rbac_workflow`, `30_publication`                       | retrait motivé, archivage et restauration (ADR-021) ; recette du retrait d’urgence                                                                   |
@@ -63,8 +63,9 @@ Défauts relevés par le [bilan d’alignement](bilan-alignement-2026-09-30.md),
 
 - Antivirus : ClamAV raccordé et exigé hors développement ; mise à jour des signatures, supervision du
   démon et limite de taille (`StreamMaxLength` ≥ 50 Mo) à organiser avec l’exploitation.
-- Sites sensibles : politique d’accès renforcée, journalisation des consultations ; exclus de la
-  distribution hors ligne tant que cette politique n’est pas définie.
+- Sites sensibles : politique décidée le 3 octobre 2026 (ADR-025 : « restreint » sur tablette à la demande
+  avec code et 24 h, « élevé » en ligne seulement, consultations tracées), à implémenter (PER-02) et à
+  confirmer par le RSSI ; exclus de la distribution hors ligne d’ici là.
 - Projet hébergé : droits du rôle des migrations sur le schéma `auth` (sessions, facteurs), gabarit
   « mot de passe oublié », plafonds d’authentification et durée des sessions à reporter (ADR-022, ADR-023).
 - Sauvegarde et restauration, supervision (travaux en échec, maintenance des fichiers, refus tracés).
@@ -75,9 +76,10 @@ Défauts relevés par le [bilan d’alignement](bilan-alignement-2026-09-30.md),
   téléchargement, reprise) ; restent le réseau dégradé réel, la volumétrie d’un SIS et l’usage terrain.
 - Clés de signature de la distribution lues dans l’environnement : gestionnaire de secrets ou KMS à
   brancher.
-- Secteurs : la portée des habilitations par secteur n’est pas encore opérationnelle, ni pour le
-  back-office ni pour la distribution.
-- Consultation terrain : carte de contexte absente et droits IGN offline non qualifiés ; PDF et
+- Secteurs : modèle décidé le 3 octobre 2026 (ADR-025 : groupes de sites affectés aux tablettes et aux
+  membres), pas encore opérationnel, ni pour le back-office ni pour la distribution (PER-01).
+- Consultation terrain : carte de contexte absente ; fond retenu le 3 octobre 2026 (ADR-024 : Plan IGN
+  vectoriel par secteur), fiche de droits à valider par le référent SIG (CAR-01 à CAR-03) ; PDF et
   documents « à la demande » lus dans l’application (DOC-01, DOC-02).
 - Synchronisation en arrière-plan : éprouvée sur émulateur (Android 16) ; fréquence, budget de 50 Mo
   et recours au Wi-Fi à arbitrer, comportement à mesurer sur la tablette de référence (ADR-018).
@@ -89,7 +91,9 @@ Défauts relevés par le [bilan d’alignement](bilan-alignement-2026-09-30.md),
 
 ## Ambiguïtés du cahier des charges à trancher
 
-- ETARE-01 (P0) demande des « sections configurables » alors qu’ETARE-03 (P1) couvre le modèle par SIS.
+- ETARE-01 (P0) demande des « sections configurables » alors qu’ETARE-03 (P1) couvre le modèle par SIS :
+  **tranché le 3 octobre 2026** (ADR-026) — registre national, sections non obligatoires masquables par le
+  SIS, ordre libre et identité visuelle en P1.
 - L’import/export CSV figure dans le périmètre général mais en P1 dans la table des exigences.
 - OFF-02 demande que « seuls les objets modifiés » soient retransmis ; le différentiel livré est par
   fichier (ADR-015) : le fichier de données d’un site modifié est renvoyé en entier (DEC-08).

@@ -102,8 +102,8 @@ Origine de chaque vérification et limites : [bilan du 1er octobre](bilan-depot-
 | R7 — industrialisation / V2–V3     | SSO étendu, MDM, connecteurs, RRF, assistance IA, partage contrôlé et écosystème                                                                                                                                      | MVP exploité, accords/qualifications disponibles            | Produit + partenaires SIS             | Lots autonomes justifiés par usage et capacité                             |
 
 **Dès maintenant :** R1, R2, les lots MET-01 à MET-04 de R3 et les lots SEC-01 à SEC-03 et CAP-03 de R4 sont
-réalisés ; obtenir les décisions R0 qui bloquent le reste de R3 (DEC-02 pour la carte, DEC-04 pour les
-secteurs et sites sensibles, DEC-05 pour les sections) et poursuivre R4 (secrets, volumétrie, supervision).
+réalisés, et les décisions DEC-02, DEC-04 et DEC-05 sont prises (3 octobre 2026) : terminer R3 (MET-05,
+PER-01, PER-02, puis CAR-01 à CAR-03 sur la tablette) et poursuivre R4 (secrets, volumétrie, supervision).
 La qualification sur la tablette de référence (Alldocube iPlay 40H) commence dès sa livraison.
 
 Les estimations de l’architecture §32 décrivent le projet initial avec une équipe de trois à quatre
@@ -122,15 +122,26 @@ n’est engagée par ce document.
       confirmer sur le modèle livré. Restent ouverts : mode de distribution (MDM ou installation
       manuelle), iOS au pilote, règles de synchronisation (fréquence, budget de 50 Mo, Wi-Fi) et gestion
       de l'énergie du constructeur, qui peut retarder les tâches de fond (ADR-018).
-- [ ] **DEC-02 — IGN :** qualifier par produit les droits de stockage/redistribution offline, attributions,
+- [x] **DEC-02 — IGN :** qualifier par produit les droits de stockage/redistribution offline, attributions,
       emprises, niveaux de zoom, volume et renouvellement ; conserver la preuve avec le dossier SIG.
+      **Décidé le 3 octobre 2026 ([ADR-024](decisions/ADR-024-offline-base-maps.md))** : Plan IGN vectoriel
+      (Licence Ouverte Etalab 2.0) par secteur, zoom 14 en général et 18 autour des sites, renouvellement
+      semestriel, orthophotos exclues ; fiche de droits à valider par le référent SIG avant le pilote.
 - [ ] **DEC-03 — Hébergement :** région, responsabilités d’exploitation, séparation des environnements,
       sauvegardes et accès support ; décisions DSI/RSSI avant données réelles.
-- [ ] **DEC-04 — Accès :** secteurs, listes de sites, utilisateurs/terminaux partagés, sites sensibles,
+- [x] **DEC-04 — Accès :** secteurs, listes de sites, utilisateurs/terminaux partagés, sites sensibles,
       durée de consultation offline et comportement à expiration. La valeur actuelle de sept jours est une
       proposition, pas une garantie de révocation immédiate sans réseau.
-- [ ] **DEC-05 — ETARE :** contenu minimal des sections configurables P0 ; réserver logo, palette et
+      **Décidé le 3 octobre 2026 ([ADR-025](decisions/ADR-025-perimeters-sensitive-sites.md))** : secteurs
+      en groupes de sites affectés aux tablettes et aux membres ; sites « restreints » sur tablette à la
+      demande (24 h, code), « élevés » en ligne seulement, consultations tracées ; 7 jours puis verrouillage
+      sans effacement ; code après 15 min d'inactivité ; position affichée, jamais transmise. À confirmer
+      par le RSSI et la direction opérationnelle avant la recette OPS.
+- [x] **DEC-05 — ETARE :** contenu minimal des sections configurables P0 ; réserver logo, palette et
       modèle complet par SIS à ETARE-03/P1 sauf décision contraire.
+      **Décidé le 3 octobre 2026 ([ADR-026](decisions/ADR-026-etare-sections-photos.md))** : registre
+      unique dans l'ordre de la maquette, sections non obligatoires masquables par le SIS et réglage figé
+      dans la version soumise ; annexe photos dans le PDF ; ordre libre et identité visuelle en P1.
 - [ ] **DEC-06 — Imports/exports :** arbitrer la contradiction entre CSV dans le périmètre général et
       MAP-03/ADMIN-04 classés P1 ; prévoir au minimum une méthode contrôlée de reprise pour le pilote.
 - [ ] **DEC-08 — Différentiel :** faire accepter par le SIS l’interprétation d’OFF-02 retenue par l’ADR-015
@@ -264,6 +275,31 @@ catalogue et une gravité minimale.
 dans R3 : MET-05 (après DEC-05), PER-01 et PER-02 (après DEC-04), CAR-01 à CAR-03 (après DEC-02). Réserves :
 tracé des risques sur la carte non éprouvé visuellement dans le navigateur intégré, mesure de la recherche
 sur jeu pilote (R5).
+
+**Décisions prises par le porteur le 3 octobre 2026 pour terminer R3** (ADR-024, ADR-025, ADR-026 ; à
+confirmer par le référent SIG, le RSSI et la direction opérationnelle) :
+
+- **MET-05** : registre unique de sections (Synthèse, Accès, Risques, Eau, Énergies, Moyens de secours,
+  Plans, Contacts, Annexes, Photos). Synthèse, Accès, Risques, Eau et Contacts sont obligatoires ; les
+  autres sont masquables par le SIS. Le réglage est figé dans la version soumise. Les écarts actuels sont
+  corrigés (ordre, objets à risque, tablette). Les photos figurent en annexe du PDF, réduites depuis
+  l'original contrôlé, avec plafond.
+- **PER-01** : secteurs = groupes de sites, affectés aux tablettes (ou tout le SIS) et aux membres. Le
+  catalogue signé est l'intersection des deux ; ce qui sort du périmètre est retiré au contact suivant,
+  avec un motif.
+- **PER-02** :
+  - sites « restreints » réservés à une habilitation nominative, ouverts à la demande (jamais en masse),
+    consultables 24 h, avec un code avant chaque ouverture ;
+  - sites « élevés » en ligne seulement ;
+  - consultations et exports tracés ;
+  - côté tablette : 7 jours de consultation puis verrouillage sans effacement, verrouillage par code
+    après 15 min d'inactivité, purge à la révocation inchangée.
+- **CAR-01 à CAR-03** :
+  - Plan IGN vectoriel en un fichier PMTiles par secteur (zoom 14 en général, 18 autour des sites) avec
+    style, polices et pictogrammes ;
+  - lecture locale par MapLibre après qualification sur la tablette ;
+  - téléchargement en Wi-Fi, renouvellement semestriel, attribution visible ;
+  - position de l'agent affichée, jamais transmise.
 
 **Acceptation :** toute exigence P0 partielle a un scénario démontré ; site sensible jamais exposé par
 un contournement API/pack ; terminal limité à son périmètre ; retrait appliqué au prochain contact ;
@@ -461,10 +497,10 @@ Après chaque lot :
 4. Écrire un rapport daté avec commit, tests, limites et décision de passage.
 5. Réestimer le lot suivant selon les retours ; toute nouvelle demande garde une priorité et un lien au cadrage.
 
-**Prochaine tranche recommandée :** suite de R4 — SEC-04 (clés de signature dans un gestionnaire de secrets,
-rotation avec chevauchement, procédure de compromission), CAP-01 (volumétrie de 10 000 sites, coût du compteur
-de débit et du rendu dynamique) et EXP-03 (supervision des travaux en échec, de la maintenance et des refus) ;
-en parallèle, décisions DEC-02, DEC-04 et DEC-05 pour terminer R3, et premier essai sur la tablette de référence.
+**Prochaine tranche recommandée :** Sprint 10 — MET-05 (sections et annexe photos), PER-01 (secteurs) et
+PER-02 (sites sensibles, code local), décisions du 3 octobre 2026 ; puis Sprint 11 — CAR-01 à CAR-03 (fonds
+IGN par secteur et carte locale), dès la fiche de droits validée et la tablette de référence livrée. R4 se
+poursuit en parallèle (SEC-04, CAP-01, EXP-03).
 
 ## 8. Références
 

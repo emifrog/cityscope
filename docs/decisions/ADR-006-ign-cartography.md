@@ -54,3 +54,8 @@ quatre choix distincts. Mapbox est exclu comme fournisseur principal.
 
 Échec du prototype carte en mode avion sur la tablette cible, ou conditions de licence IGN incompatibles
 avec la redistribution aux SIS clients.
+
+## Suite
+
+Les fonds hors ligne de la tablette sont décidés par l’ADR-024 (DEC-02, 3 octobre 2026) : Plan IGN
+vectoriel par secteur, fiche de droits à valider par le référent SIG avant le pilote.
