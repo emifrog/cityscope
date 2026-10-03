@@ -28,6 +28,14 @@ interface StartRow {
 export class PostgresPublicationBuildStore implements PublicationBuildStore {
   constructor(private readonly pool: Pool) {}
 
+  async recordOutput(publicationId: string, tenantId: string, storageKey: string): Promise<void> {
+    await this.pool.query('select app.worker_record_publication_output($1, $2, $3)', [
+      publicationId,
+      tenantId,
+      storageKey,
+    ]);
+  }
+
   async start(
     publicationId: string,
     tenantId: string,

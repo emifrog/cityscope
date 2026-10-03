@@ -7,6 +7,7 @@ export * from './documents';
 export * from './etare';
 export * from './etare-snapshot';
 export * from './field-reports';
+export * from './file-lifecycle';
 export * from './geocoding';
 export * from './jobs';
 export * from './map';

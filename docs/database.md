@@ -225,8 +225,21 @@ Un `asset` naît `pending` avec sa `quarantine_key` (préfixée par son SIS, `CH
 le verdict, par `app.worker_complete_asset_verification()` (`SECURITY DEFINER`, réservée à
 `etare_worker`) : `clean` ou `rejected`, avec `scan_detail` et `verified_at`, et la clé de quarantaine
 effacée. Le verdict est définitif (trigger, propriétaire compris). `etare_api` ne peut modifier que le nom,
-la classification, l’autorisation hors ligne et la miniature (privilèges par colonne). Voir ADR-009 et le
-test `70_document_uploads`.
+la classification et l’autorisation hors ligne (privilèges par colonne). Voir ADR-009 et le test
+`70_document_uploads`.
+
+Cycle des fichiers (Sprint 9) :
+
+- Une image déclarée `clean` planifie `asset.thumbnail` (trigger). Le worker enregistre `thumbnail_key`
+  et `preview_key` (`worker_record_asset_variants`, réservées à une image `clean`).
+- Un `asset.verify` mort rejette l’asset (`VERIFICATION_FAILED`).
+- `publication_output` note chaque PDF écrit par une fabrication.
+- La maintenance (`worker_schedule_maintenance`, `worker_quarantine_to_release`,
+  `worker_release_quarantine`, `worker_publication_outputs_to_purge`,
+  `worker_mark_publication_output_removed`) n’a pour candidats que des objets qu’aucune ligne ne
+  conserve, et audite chaque retrait.
+
+Voir le test `240_file_lifecycle`.
 
 ## Points opérationnels
 

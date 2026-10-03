@@ -554,15 +554,15 @@ export function useSitePlans(siteId: string) {
  * Short-lived URL of a verified file (the access is audited server-side).
  * Kept a little less than its lifetime, then requested again.
  */
-export function useAssetUrl(assetId: string | null) {
+export function useAssetUrl(assetId: string | null, variant: 'original' | 'preview' | 'thumbnail' = 'original') {
   const { tenantId, options, enabled } = useApiContext();
   return useQuery({
-    queryKey: ['tenant', tenantId ?? 'none', 'asset-url', assetId],
+    queryKey: ['tenant', tenantId ?? 'none', 'asset-url', assetId, variant],
     enabled: enabled && assetId !== null,
     staleTime: 45_000,
     gcTime: 50_000,
     retry: false,
-    queryFn: ({ signal }) => api.getAssetDownload({ ...options, signal }, assetId ?? ''),
+    queryFn: ({ signal }) => api.getAssetDownload({ ...options, signal }, assetId ?? '', variant),
   });
 }
 

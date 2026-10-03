@@ -39,7 +39,15 @@ export async function verifyAsset(
   if (asset.scanStatus !== 'pending' || !asset.quarantineKey) return { status: 'already_verified' };
 
   const content = await deps.objects.download(asset.quarantineKey);
-  if (!content) throw new UploadNotReceived();
+  if (!content) {
+    // A previous attempt may have promoted the checked file, then stopped before recording it.
+    const promoted = await deps.objects.download(asset.storageKey);
+    if (promoted && promoted.byteLength === asset.sizeBytes && (await deps.sha256(promoted)) === asset.sha256) {
+      await deps.store.complete(assetId, 'clean', { recovered: true });
+      return { status: 'clean' };
+    }
+    throw new UploadNotReceived();
+  }
 
   const reject = async (reason: string, detail: Record<string, unknown> = {}): Promise<VerificationOutcome> => {
     await deps.objects.remove(asset.quarantineKey ?? '');
@@ -57,7 +65,13 @@ export async function verifyAsset(
   if (scan.verdict === 'unscannable')
     return reject('UNSCANNABLE', { engine: scan.engine, detail: scan.signature ?? null });
 
-  await deps.objects.copy(asset.quarantineKey, asset.storageKey);
+  try {
+    await deps.objects.copy(asset.quarantineKey, asset.storageKey);
+  } catch (error) {
+    // Already promoted by an interrupted attempt: the same bytes are there, nothing to copy.
+    const promoted = await deps.objects.download(asset.storageKey);
+    if (!promoted || (await deps.sha256(promoted)) !== asset.sha256) throw error;
+  }
   await deps.objects.remove(asset.quarantineKey);
   await deps.store.complete(assetId, 'clean', {
     detected_type: detected,

@@ -173,6 +173,7 @@ describe('publication job', () => {
       start: vi.fn().mockResolvedValueOnce(altered).mockResolvedValueOnce(null),
       complete: vi.fn(),
       fail: vi.fn().mockResolvedValue(true),
+      recordOutput: vi.fn().mockResolvedValue(undefined),
       assetFiles: vi.fn(),
     };
     await expect(buildPublication(store, tools, altered.id, altered.tenantId, lease)).rejects.toThrow(
@@ -195,6 +196,7 @@ describe('ETARE PDF', () => {
       start: vi.fn(),
       complete: vi.fn(),
       fail: vi.fn(),
+      recordOutput: vi.fn().mockResolvedValue(undefined),
       assetFiles: vi
         .fn()
         .mockResolvedValue([
@@ -283,6 +285,7 @@ describe('ETARE PDF', () => {
       start: async () => publication,
       assetFiles: async () => [],
       fail: vi.fn(),
+      recordOutput: vi.fn().mockResolvedValue(undefined),
       complete: async (_id, built, token) => {
         if (token.attempt !== currentAttempt || winner) return null;
         winner = built;

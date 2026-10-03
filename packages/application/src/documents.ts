@@ -1,5 +1,6 @@
 import type {
   AssetDownload,
+  AssetVariant,
   Document,
   DocumentCreate,
   DocumentUpdate,
@@ -93,15 +94,26 @@ export async function getAssetDownload(
   deps: DocumentDependencies,
   context: RequestContext,
   assetId: string,
+  requested: AssetVariant = 'original',
 ): Promise<AssetDownload> {
   const storage = requireStorage(deps);
-  const asset = await inTenant(deps.sessions, context, 'site:read', async (session) => {
+  const { asset, variant, key } = await inTenant(deps.sessions, context, 'site:read', async (session) => {
     const visible = found(await session.assets.get(assetId), 'Fichier introuvable.');
     if (visible.scanStatus === 'pending') throw new Conflict('Ce fichier est en cours de contrôle.');
     if (visible.scanStatus === 'rejected') throw new Conflict('Ce fichier a été rejeté au contrôle.');
-    await session.audit.record('asset.download', 'asset', visible.id, { filename: visible.filename });
-    return visible;
+    // A reduced image not computed yet (or not an image) is replaced by the original.
+    const reduced =
+      requested === 'thumbnail' ? visible.thumbnailKey : requested === 'preview' ? visible.previewKey : null;
+    const served: AssetVariant = reduced ? requested : 'original';
+    await session.audit.record('asset.download', 'asset', visible.id, { filename: visible.filename, variant: served });
+    return { asset: visible, variant: served, key: reduced ?? visible.storageKey };
   });
-  const { url, expiresAt } = await storage.createDownloadUrl(asset.storageKey, DOWNLOAD_URL_SECONDS);
-  return { url, expires_at: expiresAt.toISOString(), filename: asset.filename, mime_type: asset.mimeType };
+  const { url, expiresAt } = await storage.createDownloadUrl(key, DOWNLOAD_URL_SECONDS);
+  return {
+    url,
+    expires_at: expiresAt.toISOString(),
+    filename: asset.filename,
+    mime_type: variant === 'original' ? asset.mimeType : 'image/webp',
+    variant,
+  };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assetStorageKey, isStorageKeyOfTenant } from './storage';
+import { assetStorageKey, isStorageKeyOfTenant, variantStorageKey } from './storage';
 
 const tenant06 = '06000000-0000-4000-8000-000000000000';
 const tenant83 = '83000000-0000-4000-8000-000000000000';
@@ -21,5 +21,20 @@ describe('asset storage keys', () => {
     expect(isStorageKeyOfTenant(key, tenant06)).toBe(true);
     expect(isStorageKeyOfTenant(key, tenant83)).toBe(false);
     expect(isStorageKeyOfTenant(`${key}/../../other`, tenant06)).toBe(false);
+  });
+});
+
+describe('variants of an image', () => {
+  it('are stored next to the asset, by size', () => {
+    const key = assetStorageKey(
+      '06000000-0000-4000-8000-000000000000',
+      '0600000b-0000-4000-8000-000000000001',
+      '0600000c-0000-4000-8000-000000000001',
+    );
+    expect(variantStorageKey(key, 'thumbnail')).toBe(
+      'tenants/06000000-0000-4000-8000-000000000000/thumbnails/0600000b-0000-4000-8000-000000000001/0600000c-0000-4000-8000-000000000001-320.webp',
+    );
+    expect(variantStorageKey(key, 'preview')).toMatch(/-1280.webp$/);
+    expect(() => variantStorageKey(key.replace('/assets/', '/quarantine/'), 'thumbnail')).toThrow();
   });
 });

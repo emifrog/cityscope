@@ -5,6 +5,7 @@ export * from './cursor';
 export * from './device-repository';
 export * from './document-repository';
 export * from './etare-repository';
+export * from './file-lifecycle-store';
 export * from './health';
 export * from './job-queue';
 export * from './member-repository';

@@ -248,6 +248,9 @@ export interface StoredAsset {
   readonly filename: string;
   readonly mimeType: string;
   readonly scanStatus: ScanStatus;
+  /** Reduced images (320 and 1 280 px, WebP) of a clean image, once computed by the worker. */
+  readonly thumbnailKey?: string | null;
+  readonly previewKey?: string | null;
 }
 
 export interface AssetRepository {

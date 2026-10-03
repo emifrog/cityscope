@@ -43,9 +43,9 @@ foi de ce que le navigateur annonce (extension, type MIME). Les fichiers ne tran
   démon (`StreamMaxLength`) doit couvrir la taille maximale des dépôts (50 Mo).
 - La clé secrète Supabase est désormais utilisée **côté serveur uniquement** (API pour signer les URL,
   worker pour lire, copier et supprimer les objets). Elle n’est jamais exposée au navigateur.
-- Un dépôt déclaré mais jamais envoyé reste `pending` : le web cesse de l’attendre après 10 minutes ; une
-  purge planifiée des dépôts abandonnés et des objets orphelins de quarantaine reste à écrire.
-- Miniatures, conversion et extraction de texte s’ajouteront comme handlers en aval du verdict `clean`.
+- Un dépôt déclaré mais jamais envoyé reste `pending` : le web cesse de l’attendre après 10 minutes ; la
+  maintenance du Sprint 9 le rejette au bout de 24 h (complément ci-dessous).
+- Miniatures, conversion et extraction de texte s’ajoutent comme handlers en aval du verdict `clean`.
 
 ## Complément du Sprint 4 — photos des objets (PLAN-05)
 
@@ -55,6 +55,33 @@ dépôt, puis le worker rend son verdict. Elle est distincte des documents du si
 ordonnée, légendée, archivée plutôt que supprimée (`PATCH /object-photos/{id}`). Une photo contrôlée
 entre dans l’instantané ETARE et dans le paquet hors ligne (`photos/{id}.{ext}`, fichier obligatoire) ;
 la tablette l’affiche depuis sa base chiffrée, dans la fiche de l’objet.
+
+## Complément du Sprint 9 — cycle des fichiers (CAP-03)
+
+- **Versions réduites des images.** Le verdict `clean` d’une image (PNG, JPEG, WebP) planifie
+  `asset.thumbnail`. Le worker en tire deux images WebP de 320 px et 1 280 px au plus avec sharp :
+  orientation appliquée, jamais agrandies, métadonnées retirées (position GPS comprise), décodage
+  borné à 100 Mpx. Elles sont rangées à côté de l’asset (`tenants/{t}/thumbnails/…`) et seul le worker
+  les enregistre.
+  - Le back-office les affiche dans les listes (photos des objets, signalements, propositions) et
+    n’ouvre la version 1 280 px qu’à la demande.
+  - `GET /assets/{id}/download?variant=thumbnail|preview` sert l’original tant que la version réduite
+    n’existe pas ; chaque accès reste tracé, avec sa variante.
+  - Les paquets des tablettes et le PDF gardent les originaux, avec leurs empreintes signées.
+- **Vérification fiable.** Une vérification abandonnée par la file (tentatives épuisées) rejette son
+  asset (`VERIFICATION_FAILED`), qui ne reste plus `pending`. Une tentative interrompue après la copie
+  est reprise : le fichier déjà promu est reconnu à son empreinte.
+- **Maintenance horaire** (`maintenance.files`, un seul travail par heure quel que soit le nombre de
+  workers) :
+  - retrait des objets de quarantaine des dépôts rejetés, et des dépôts jamais confirmés ni vérifiés
+    après 24 h, ensuite rejetés `ABANDONED` ;
+  - retrait des PDF des tentatives de fabrication perdantes, notés avant leur écriture
+    (`publication_output`) et retirés une heure après la fin de la fabrication ;
+  - purge des fenêtres de limitation de débit.
+
+  La base désigne seule les candidats et n’en propose jamais un qu’un asset ou une publication
+  conserve. Le stockage refuse de supprimer un asset vérifié ou une version réduite. Chaque retrait est
+  audité au nom du worker ; un élément en erreur est repris au passage suivant.
 
 ## Critère de réexamen
 

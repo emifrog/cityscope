@@ -13,6 +13,7 @@ import { useRef, useState } from 'react';
 import { ApiErrorAlert } from '@/components/feedback';
 import { REJECTION_REASON_LABELS, SCAN_STATUS_LABELS } from '@/components/labels';
 import { ApiRequestError, api, type ApiCallOptions } from '@/lib/api-client';
+import { openInNewTab } from '@/lib/open-link';
 import { queryKeys, useApiMutation, useAssetUrl, useSiteFileUpload, useSiteObjects } from '@/lib/queries';
 
 const STEP_LABELS = {
@@ -33,7 +34,12 @@ export function photoRefusal(file: Pick<FileDeclaration, 'mime_type' | 'size_byt
 
 function PhotoTile({ siteId, photo }: { siteId: string; photo: ObjectPhoto }) {
   const clean = photo.asset.scan_status === 'clean';
-  const image = useAssetUrl(clean ? photo.asset.id : null);
+  // Reduced image in the grid (CAP-03); the larger preview is fetched only when opened.
+  const image = useAssetUrl(clean ? photo.asset.id : null, 'thumbnail');
+  const open = useApiMutation(
+    (options, id: string) => api.getAssetDownload(options, id, 'preview'),
+    () => [],
+  );
   const [caption, setCaption] = useState(photo.caption ?? '');
   const [confirming, setConfirming] = useState(false);
   const update = useApiMutation(
@@ -50,9 +56,17 @@ function PhotoTile({ siteId, photo }: { siteId: string; photo: ObjectPhoto }) {
     <li className="space-y-2 rounded-md border border-border p-2">
       <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded bg-subtle">
         {clean && image.data ? (
-          // Short-lived signed URL of a checked file: next/image cannot optimize it.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image.data.url} alt={photo.caption ?? photo.asset.filename} className="size-full object-cover" />
+          <button
+            type="button"
+            className="size-full"
+            title="Ouvrir la photo"
+            disabled={open.isPending}
+            onClick={() => open.mutate(photo.asset.id, { onSuccess: (ticket) => openInNewTab(ticket.url) })}
+          >
+            {/* Short-lived signed URL of a checked file: next/image cannot optimize it. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={image.data.url} alt={photo.caption ?? photo.asset.filename} className="size-full object-cover" />
+          </button>
         ) : (
           <Badge tone={photo.asset.scan_status === 'rejected' ? 'critical' : 'info'}>
             {SCAN_STATUS_LABELS[photo.asset.scan_status]}

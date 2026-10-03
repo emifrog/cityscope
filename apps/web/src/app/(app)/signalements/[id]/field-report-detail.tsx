@@ -30,6 +30,7 @@ import {
 } from '@/components/labels';
 import { PageHeader } from '@/components/page-header';
 import { api } from '@/lib/api-client';
+import { openInNewTab } from '@/lib/open-link';
 import { queryKeys, useApiMutation, useAssetUrl, useFieldReport, usePermissions, useSiteEtare } from '@/lib/queries';
 import { useTenant } from '@/providers/tenant-provider';
 import { SEVERITY_TONES, STATUS_TONES } from '../field-reports-list';
@@ -53,16 +54,27 @@ function itemState(status: string | null): string {
 
 function Photo({ asset }: { asset: Asset }) {
   const clean = asset.scan_status === 'clean';
-  const image = useAssetUrl(clean ? asset.id : null);
+  // Reduced image in the list (CAP-03); the larger preview is fetched only when opened.
+  const image = useAssetUrl(clean ? asset.id : null, 'thumbnail');
+  const open = useApiMutation(
+    (options, id: string) => api.getAssetDownload(options, id, 'preview'),
+    () => [],
+  );
   return (
     <li className="overflow-hidden rounded-md border border-border">
       <div className="flex aspect-[4/3] items-center justify-center bg-subtle">
         {clean && image.data ? (
-          <a href={image.data.url} target="_blank" rel="noopener noreferrer" title="Ouvrir la photo">
+          <button
+            type="button"
+            className="size-full"
+            title="Ouvrir la photo"
+            disabled={open.isPending}
+            onClick={() => open.mutate(asset.id, { onSuccess: (ticket) => openInNewTab(ticket.url) })}
+          >
             {/* Short-lived signed URL of a checked file: next/image cannot optimize it. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={image.data.url} alt={asset.filename} className="size-full object-cover" />
-          </a>
+          </button>
         ) : (
           <Badge tone={asset.scan_status === 'rejected' ? 'critical' : 'info'}>
             {SCAN_STATUS_LABELS[asset.scan_status]}

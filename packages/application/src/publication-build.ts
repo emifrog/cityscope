@@ -62,6 +62,8 @@ export interface PublicationBuildStore {
     lease: PublicationBuildLease,
   ): Promise<'published' | 'superseded' | null>;
   fail(publicationId: string, failureCode: string, lease: PublicationBuildLease): Promise<boolean>;
+  /** Records a file about to be written by this attempt: if the attempt loses, the maintenance removes it. */
+  recordOutput(publicationId: string, tenantId: string, storageKey: string): Promise<void>;
   /** Checked files of the SIS referenced by the snapshot (plan backgrounds), with their storage keys. */
   assetFiles(
     tenantId: string,
@@ -296,6 +298,7 @@ export async function generateEtarePdf(
   });
   const sha256 = await artifacts.sha256Bytes(pdf);
   const storageKey = publicationPdfKey(publication.tenantId, publication.id, sha256);
+  await store.recordOutput(publication.id, publication.tenantId, storageKey);
   try {
     // Never overwrite: another attempt may already have published a different PDF.
     await artifacts.objects.upload(storageKey, pdf, 'application/pdf', { upsert: false });

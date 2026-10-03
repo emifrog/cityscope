@@ -16,8 +16,16 @@ export interface StorageBucketApi {
 const KEY_PATTERN = /^tenants\/[0-9a-f-]{36}\/(assets|quarantine)\/[0-9a-f-]{36}\/[0-9a-f-]{36}$/;
 /** Files produced by the worker for a publication (the ETARE PDF). */
 const PUBLICATION_KEY_PATTERN = /^tenants\/[0-9a-f-]{36}\/publications\/[0-9a-f-]{36}\/[a-z0-9-]+\.pdf$/;
-/** Readable objects: verified assets and publication files, never the quarantine. */
-const isReadable = (key: string) => key.includes('/assets/') || PUBLICATION_KEY_PATTERN.test(key);
+/** Reduced images of a clean image, computed by the worker (CAP-03). */
+const VARIANT_KEY_PATTERN = /^tenants\/[0-9a-f-]{36}\/thumbnails\/[0-9a-f-]{36}\/[0-9a-f-]{36}-\d{2,4}\.webp$/;
+/** Readable objects: verified assets, their reduced images and publication files, never the quarantine. */
+const isReadable = (key: string) =>
+  key.includes('/assets/') || VARIANT_KEY_PATTERN.test(key) || PUBLICATION_KEY_PATTERN.test(key);
+/**
+ * Removable objects: the quarantine and the files of publication builds (losing attempts),
+ * which the database designates. A verified asset or a reduced image is never deleted here.
+ */
+const isRemovable = (key: string) => key.includes('/quarantine/') || PUBLICATION_KEY_PATTERN.test(key);
 const MAX_DOWNLOAD_TTL_SECONDS = 300;
 /** Lifetime of Supabase signed upload URLs (fixed by the provider). */
 const UPLOAD_URL_LIFETIME_MS = 2 * 60 * 60 * 1000;
@@ -100,13 +108,16 @@ export class SupabaseObjectStorage implements ObjectStorage, ObjectStoreAdmin {
 
   async remove(key: string): Promise<void> {
     assertKey(key);
+    if (!isRemovable(key)) throw new Error('Only quarantined uploads and publication build files can be removed.');
     const { error } = await this.bucket.remove([key]);
     if (error) throw new Error('STORAGE_UNAVAILABLE');
   }
 }
 
 function assertKey(key: string): void {
-  if (!KEY_PATTERN.test(key) && !PUBLICATION_KEY_PATTERN.test(key)) throw new Error('Invalid storage key.');
+  if (!KEY_PATTERN.test(key) && !PUBLICATION_KEY_PATTERN.test(key) && !VARIANT_KEY_PATTERN.test(key)) {
+    throw new Error('Invalid storage key.');
+  }
 }
 
 function isNotFound(error: unknown): boolean {

@@ -28,7 +28,7 @@ function setup(
   };
   const store = { get: vi.fn(async () => asset), complete: vi.fn(async () => true) };
   const objects = {
-    download: vi.fn(async () => content),
+    download: vi.fn(async (_key: string) => content),
     copy: vi.fn(async () => undefined),
     remove: vi.fn(async () => undefined),
     upload: vi.fn(async () => undefined),
@@ -116,5 +116,25 @@ describe('asset verification', () => {
     const { deps, store } = setup({}, null);
     await expect(verifyAsset(deps, 'asset')).rejects.toBeInstanceOf(UploadNotReceived);
     expect(store.complete).not.toHaveBeenCalled();
+  });
+
+  it('records a file promoted by an attempt interrupted before its verdict (CAP-03)', async () => {
+    const { deps, store, objects } = setup();
+    objects.download.mockImplementation(async (key: string) => (key.includes('/quarantine/') ? null : PDF));
+    await expect(verifyAsset(deps, 'asset')).resolves.toEqual({ status: 'clean' });
+    expect(store.complete).toHaveBeenCalledWith('asset', 'clean', { recovered: true });
+    expect(objects.copy).not.toHaveBeenCalled();
+  });
+
+  it('goes on when the copy finds the same bytes already promoted', async () => {
+    const { deps, store, objects } = setup();
+    objects.copy.mockRejectedValue(new Error('STORAGE_UNAVAILABLE'));
+    await expect(verifyAsset(deps, 'asset')).resolves.toEqual({ status: 'clean' });
+    expect(objects.remove).toHaveBeenCalledWith('tenants/t/quarantine/a/v');
+    expect(store.complete).toHaveBeenCalledWith(
+      'asset',
+      'clean',
+      expect.objectContaining({ antivirus: 'not_scanned' }),
+    );
   });
 });

@@ -1,5 +1,13 @@
 import {
+  ASSET_VARIANTS_JOB,
   ASSET_VERIFICATION_JOB,
+  FILE_MAINTENANCE_JOB,
+  createAssetVariants,
+  maintenanceSlot,
+  runFileMaintenance,
+  type AssetVariantDependencies,
+  type FileMaintenanceStore,
+  type ObjectStoreAdmin,
   NOTIFICATION_SEND_JOB,
   PUBLICATION_BUILD_JOB,
   PermanentJobError,
@@ -142,6 +150,52 @@ export function publicationBuildHandler(deps: {
       logger.info('publication build', { publication_id: payload.publication_id, outcome });
     },
   });
+}
+
+/** Reduced images of a clean image (CAP-03), planned by the database with the verdict. */
+export function assetVariantsHandler(deps: AssetVariantDependencies): JobHandler {
+  return defineHandler({
+    type: ASSET_VARIANTS_JOB,
+    payloadVersion: 1,
+    payload: z.object({ asset_id: z.uuid() }),
+    async handle(payload, { job, logger }) {
+      const outcome = await createAssetVariants(deps, payload.asset_id, job.tenantId);
+      logger.info('asset variants', { asset_id: payload.asset_id, outcome });
+    },
+  });
+}
+
+/** Planned maintenance of the files (CAP-03): a platform job, without SIS. */
+export function fileMaintenanceHandler(deps: { store: FileMaintenanceStore; objects: ObjectStoreAdmin }): JobHandler {
+  return defineHandler({
+    type: FILE_MAINTENANCE_JOB,
+    payloadVersion: 1,
+    payload: z.object({ slot: z.string().max(20) }),
+    async handle(payload, { logger }) {
+      const report = await runFileMaintenance(deps.store, deps.objects);
+      logger.info('file maintenance', { slot: payload.slot, ...report });
+    },
+  });
+}
+
+/**
+ * Asks for the maintenance every few minutes: one job per hour slot whatever the number of
+ * workers (idempotency key in the database). Returns the function stopping the timer.
+ */
+export function startMaintenanceScheduler(
+  store: Pick<FileMaintenanceStore, 'schedule'>,
+  logger: Logger,
+  options: { intervalMs?: number; now?: () => Date } = {},
+): () => void {
+  const now = options.now ?? (() => new Date());
+  const tick = () =>
+    store.schedule(maintenanceSlot(now())).catch((error: unknown) => {
+      logger.warn('maintenance not scheduled', { error: error instanceof Error ? error.message : String(error) });
+    });
+  void tick();
+  const timer = setInterval(() => void tick(), options.intervalMs ?? 5 * 60_000);
+  timer.unref();
+  return () => clearInterval(timer);
 }
 
 /**

@@ -13,7 +13,8 @@
     "./crypto": "./src/crypto/ed25519.ts",
     "./pdf": "./src/pdf/etare-pdf.ts",
     "./antivirus": "./src/antivirus/clamav.ts",
-    "./mail": "./src/mail/smtp.ts"
+    "./mail": "./src/mail/smtp.ts",
+    "./images": "./src/images/sharp-resizer.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"

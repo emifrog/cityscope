@@ -127,6 +127,15 @@ vérifié ou refusé n’est jamais servi (409) ; chaque téléchargement est tr
 par une URL de 60 s. Le web refuse dès le navigateur un contenu dont le type réel n’est pas admis. Les
 journaux ne contiennent ni nom de fichier ni URL signée, seulement des identifiants.
 
+Cycle des fichiers (ADR-009, complément du Sprint 9) :
+
+- Les versions réduites des images (320 et 1 280 px) sont calculées par le worker après le verdict,
+  sans métadonnées ni position GPS, et servies avec la même autorisation et la même trace que
+  l’original.
+- Une maintenance horaire retire la quarantaine des dépôts rejetés ou abandonnés et les PDF des
+  tentatives de fabrication perdantes. La base désigne seule ces candidats, jamais un fichier conservé ;
+  le stockage refuse de supprimer un asset vérifié ou une version réduite. Chaque retrait est audité.
+
 ## API et web
 
 - Pas de CORS, explicitement (ADR-023) : une requête de navigateur d’une autre origine, ou de pré-vol,
@@ -214,7 +223,6 @@ jetables (`pnpm setup:local`). Les clés de signature des environnements partag�
   production.
 - Antivirus : ClamAV (clamd) obligatoire hors développement ; la fraîcheur des signatures, la
   supervision du démon et le choix éventuel d’un service managé restent à organiser avec l’exploitation.
-- Purge des dépôts abandonnés (`pending` jamais envoyés) et des objets orphelins de quarantaine à écrire.
 - SSO OIDC/SAML non développé ; plafonds de connexion du fournisseur d’identité à reporter sur le projet
   hébergé ; pas de rapport des violations CSP (`report-to`).
 - Durée maximale et inactivité des sessions (`[auth.sessions]`) à régler sur le projet hébergé avec la

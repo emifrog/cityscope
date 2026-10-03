@@ -3,11 +3,14 @@ import { hostname } from 'node:os';
 import { antivirusNotConfigured } from '@etare/application';
 import { ClamAvScanner, parseClamAvUrl } from '@etare/adapters/antivirus';
 import { Ed25519Signer } from '@etare/adapters/crypto';
+import { SharpImageResizer } from '@etare/adapters/images';
 import { createLogger } from '@etare/adapters/logging';
 import { SmtpMailer } from '@etare/adapters/mail';
 import { PdfLibEtareRenderer } from '@etare/adapters/pdf';
 import {
+  PostgresAssetVariantStore,
   PostgresAssetVerificationStore,
+  PostgresFileMaintenanceStore,
   PostgresJobQueue,
   PostgresNotificationStore,
   PostgresPublicationBuildStore,
@@ -17,7 +20,10 @@ import { SupabaseObjectStorage } from '@etare/adapters/storage';
 import { readWorkerEnv } from '@etare/config';
 import {
   HandlerRegistry,
+  assetVariantsHandler,
   assetVerificationHandler,
+  fileMaintenanceHandler,
+  startMaintenanceScheduler,
   noopHandler,
   notificationHandler,
   publicationBuildHandler,
@@ -69,6 +75,11 @@ if (objects) {
       sha256,
     }),
   );
+  // CAP-03: reduced images of clean images, and the hourly maintenance of the files.
+  registry.register(
+    assetVariantsHandler({ store: new PostgresAssetVariantStore(pool), objects, images: new SharpImageResizer() }),
+  );
+  registry.register(fileMaintenanceHandler({ store: new PostgresFileMaintenanceStore(pool), objects }));
   if (antivirus) {
     logger.info('uploaded files checked by ClamAV', { antivirus: env.antivirusUrl });
   } else {
@@ -93,11 +104,14 @@ const worker = createWorker({
   pollIntervalMs: env.pollIntervalMs,
 });
 
+const stopScheduler = objects ? startMaintenanceScheduler(new PostgresFileMaintenanceStore(pool), logger) : () => {};
+
 let stopping = false;
 async function shutdown(signal: string): Promise<void> {
   if (stopping) return;
   stopping = true;
   logger.info('shutdown requested', { signal });
+  stopScheduler();
   await worker.stop();
   await pool.end();
   process.exit(0);

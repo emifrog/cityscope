@@ -44,7 +44,8 @@ const when = (iso: string | null) => (iso ? dateTime.format(new Date(iso)) : 'â€
 function Attachment({ asset }: { asset: Asset }) {
   const clean = asset.scan_status === 'clean';
   const image = asset.mime_type.startsWith('image/');
-  const preview = useAssetUrl(clean && image ? asset.id : null);
+  // Reduced image in the tile (CAP-03); "Ouvrir" fetches the original on demand.
+  const preview = useAssetUrl(clean && image ? asset.id : null, 'thumbnail');
   const download = useApiMutation(
     (options, id: string) => api.getAssetDownload(options, id),
     () => [],

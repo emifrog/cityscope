@@ -23,6 +23,7 @@ import {
   portalContributionSchema,
 } from './contributions';
 import {
+  assetDownloadQuerySchema,
   assetDownloadSchema,
   documentCreateSchema,
   documentListResponseSchema,
@@ -961,9 +962,10 @@ export const endpoints = {
     operationId: 'getAssetDownload',
     method: 'get',
     path: '/assets/{id}/download',
-    summary: 'URL de téléchargement de courte durée d’un fichier contrôlé (accès tracé)',
+    summary: 'URL de téléchargement de courte durée d’un fichier contrôlé ou de sa version réduite (accès tracé)',
     tags: ['documents'],
     params: idParamsSchema,
+    query: assetDownloadQuerySchema,
     successStatus: 200,
     response: assetDownloadSchema,
   }),

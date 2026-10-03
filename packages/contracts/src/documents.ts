@@ -132,12 +132,21 @@ export const uploadConfirmationSchema = z
   .meta({ id: 'UploadConfirmation' });
 export type UploadConfirmation = z.infer<typeof uploadConfirmationSchema>;
 
+/** Reduced images of a clean image (CAP-03); 'original' is the checked file itself. */
+export const ASSET_VARIANTS = ['original', 'preview', 'thumbnail'] as const;
+export type AssetVariant = (typeof ASSET_VARIANTS)[number];
+
+export const assetDownloadQuerySchema = z.object({ variant: z.enum(ASSET_VARIANTS).default('original') });
+export type AssetDownloadQuery = z.infer<typeof assetDownloadQuerySchema>;
+
 export const assetDownloadSchema = z
   .object({
     url: z.url(),
     expires_at: isoDateTimeSchema,
     filename: z.string(),
     mime_type: z.string(),
+    /** The file served: a reduced image not computed yet is replaced by the original. */
+    variant: z.enum(ASSET_VARIANTS).optional(),
   })
   .meta({ id: 'AssetDownload' });
 export type AssetDownload = z.infer<typeof assetDownloadSchema>;

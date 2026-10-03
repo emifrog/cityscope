@@ -864,7 +864,8 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
 
   app.get(routerPath(endpoints.getAssetDownload.path), async (c) => {
     const context = await requestContext(c, endpoints.getAssetDownload);
-    return respond(c, endpoints.getAssetDownload, await getAssetDownload(documents, context, idOf(c)));
+    const query = endpoints.getAssetDownload.query.parse(c.req.query());
+    return respond(c, endpoints.getAssetDownload, await getAssetDownload(documents, context, idOf(c), query.variant));
   });
 
   // ---------------------------------------------------------------- members of the SIS

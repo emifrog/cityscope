@@ -8114,6 +8114,14 @@
           },
           "mime_type": {
             "type": "string"
+          },
+          "variant": {
+            "type": "string",
+            "enum": [
+              "original",
+              "preview",
+              "thumbnail"
+            ]
           }
         },
         "required": [
@@ -19162,7 +19170,7 @@
     "/assets/{id}/download": {
       "get": {
         "operationId": "getAssetDownload",
-        "summary": "URL de téléchargement de courte durée d’un fichier contrôlé (accès tracé)",
+        "summary": "URL de téléchargement de courte durée d’un fichier contrôlé ou de sa version réduite (accès tracé)",
         "tags": [
           "documents"
         ],
@@ -19180,6 +19188,20 @@
             "required": true,
             "name": "id",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "original",
+                "preview",
+                "thumbnail"
+              ],
+              "default": "original"
+            },
+            "required": false,
+            "name": "variant",
+            "in": "query"
           },
           {
             "schema": {

@@ -22,6 +22,24 @@ export function isStorageKeyOfTenant(key: string, tenantId: string): boolean {
   );
 }
 
+/** Sizes of the reduced images of a clean image (CAP-03): lists and previews. */
+export const IMAGE_VARIANTS = { thumbnail: 320, preview: 1280 } as const;
+export type ImageVariant = keyof typeof IMAGE_VARIANTS;
+
+/** Key of a reduced image, next to its asset: tenants/{t}/thumbnails/{asset}/{version}-{size}.webp. */
+export function variantStorageKey(assetKey: string, variant: ImageVariant): string {
+  const parts = assetKey.split('/');
+  if (
+    parts.length !== 5 ||
+    parts[0] !== 'tenants' ||
+    parts[2] !== 'assets' ||
+    !parts.every((p, i) => i === 0 || i === 2 || UUID.test(p))
+  ) {
+    throw new Error('Not an asset storage key.');
+  }
+  return `tenants/${parts[1]}/thumbnails/${parts[3]}/${parts[4]}-${IMAGE_VARIANTS[variant]}.webp`;
+}
+
 /** Uploads land here first; the worker promotes verified files to the asset key. */
 export function quarantineStorageKey(tenantId: string, assetId: string, versionId: string): string {
   return assetStorageKey(tenantId, assetId, versionId).replace('/assets/', '/quarantine/');

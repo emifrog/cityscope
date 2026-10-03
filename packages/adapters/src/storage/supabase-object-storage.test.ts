@@ -25,6 +25,16 @@ function fakeBucket(overrides: Partial<StorageBucketApi> = {}): StorageBucketApi
 }
 
 describe('SupabaseObjectStorage (API side)', () => {
+  it('serves the reduced images of an asset, never removes a verified file (CAP-03)', async () => {
+    const bucket = fakeBucket();
+    const storage = new SupabaseObjectStorage(bucket, now);
+    const thumbnail = key.replace('/assets/', '/thumbnails/') + '-320.webp';
+    await expect(storage.createDownloadUrl(thumbnail, 60)).resolves.toMatchObject({ url: expect.any(String) });
+    await expect(storage.remove(key)).rejects.toThrow('can be removed');
+    await expect(storage.remove(thumbnail)).rejects.toThrow('can be removed');
+    expect(bucket.remove).not.toHaveBeenCalled();
+  });
+
   it('signs short-lived download URLs for verified assets only', async () => {
     const storage = new SupabaseObjectStorage(fakeBucket(), now);
     await expect(storage.createDownloadUrl(key, 60)).resolves.toEqual({

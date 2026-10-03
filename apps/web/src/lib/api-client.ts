@@ -749,8 +749,14 @@ export const api = {
     }),
 
   /** Short-lived URL of a verified file (the download is audited server-side). */
-  getAssetDownload: (options: ApiCallOptions, assetId: string): Promise<AssetDownload> =>
-    call(endpoints.getAssetDownload.response, pathOf(endpoints.getAssetDownload.path, { id: assetId }), options),
+  getAssetDownload: (
+    options: ApiCallOptions,
+    assetId: string,
+    variant: 'original' | 'preview' | 'thumbnail' = 'original',
+  ): Promise<AssetDownload> =>
+    call(endpoints.getAssetDownload.response, pathOf(endpoints.getAssetDownload.path, { id: assetId }), options, {
+      query: variant === 'original' ? {} : { variant },
+    }),
 
   // ---------------------------------------------------------------- members of the SIS
   listMembers: (options: ApiCallOptions): Promise<Member[]> =>
