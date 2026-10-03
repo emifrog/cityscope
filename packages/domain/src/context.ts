@@ -10,7 +10,16 @@ export interface Principal {
   readonly subject: string;
   readonly email: string | null;
   readonly assurance: AssuranceLevel;
+  /** Session of the identity provider the token belongs to: a closed session is refused at once. */
+  readonly sessionId?: string | null;
 }
+
+/**
+ * Why a request may run without the second factor of an enrolled account:
+ * 'profile' (reading one's own profile) or 'enrollment' (enrolling a terminal
+ * with its single-use code). Terminal requests use deviceId instead.
+ */
+export type RequestPurpose = 'profile' | 'enrollment';
 
 /**
  * Context of a request. The tenant id comes from the client (active SIS) and
@@ -22,6 +31,12 @@ export interface RequestContext {
   readonly tenantId: string | null;
   readonly traceId: string;
   readonly origin: RequestOrigin;
+  /**
+   * Terminal named by a signed request. Its key stands for the second factor of an
+   * enrolled account; the session refuses to commit unless the signature was verified.
+   */
+  readonly deviceId?: string;
+  readonly purpose?: RequestPurpose;
 }
 
 export interface TenantRequestContext extends RequestContext {

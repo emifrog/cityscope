@@ -272,6 +272,22 @@ l’échelle du SIS (`22023`), la perte du dernier administrateur actif (`ETADM`
 (`ET412`). Un rôle retiré est révoqué (`revoked_at`) : seules les liaisons actives sont uniques, ce qui
 permet de le réattribuer en gardant l’historique. Voir ADR-010 et le test `80_member_administration`.
 
+## Second facteur et sessions
+
+`app.begin_request` reçoit aussi la session du jeton, le terminal d'une requête signée et le motif
+(`profile`, `enrollment`). Le jeton d'une session fermée est refusé (`ETSES`). Un compte qui a un second
+facteur vérifié est refusé sans code (`ETMFA`) ; quand la politique du SIS est `all`
+(`tenant.settings.mfa_required_for_all`), il en va de même pour un membre sans second facteur (`ETMFE`).
+Les exploitants restent hors de cette règle. Exceptions : le profil, une tablette active du SIS et
+l'enrôlement. La portée de la requête (`app.factor_scope`) restreint alors `has_permission` aux
+permissions de synchronisation, à `offline:download`, ou à rien.
+
+Les fonctions `app.idp_*` sont les seules à lire le schéma `auth` : facteurs, sessions, dernière
+connexion, fermeture de sessions. Elles sont gardées pour un PostgreSQL nu. Une suspension
+(`admin_update_member`) ferme toutes les sessions de la personne. `security_settings` et
+`update_security_settings` lisent et modifient la politique ; une modification exige `aal2` et est
+tracée. Voir ADR-022 et le test `210_second_factor`.
+
 ## Audit
 
 `app.audit_event` : SIS, acteur, type d’acteur, action (`table.operation`), entité, avant/après,

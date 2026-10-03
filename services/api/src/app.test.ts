@@ -55,8 +55,17 @@ function sessions(roles: Role[]): SessionFactory & { contexts: RequestContext[] 
                   id: '00000000-0000-4000-b000-000000000002',
                   email: 'redacteur06@demo.etare.test',
                   display_name: null,
+                  second_factor: false,
                 },
-                memberships: [{ tenant_id: tenant06, tenant_slug: 'sdis-demo-06', tenant_name: 'SDIS DEMO 06', roles }],
+                memberships: [
+                  {
+                    tenant_id: tenant06,
+                    tenant_slug: 'sdis-demo-06',
+                    tenant_name: 'SDIS DEMO 06',
+                    roles,
+                    second_factor_required: false,
+                  },
+                ],
               }),
             },
             sites: {

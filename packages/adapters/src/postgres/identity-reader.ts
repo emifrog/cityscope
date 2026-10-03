@@ -7,6 +7,7 @@ interface UserRow {
   id: string;
   email: string;
   display_name: string | null;
+  second_factor: boolean | null;
 }
 
 interface MembershipRow {
@@ -14,6 +15,7 @@ interface MembershipRow {
   tenant_slug: string;
   tenant_name: string;
   roles: string[];
+  second_factor_required: boolean;
 }
 
 export class PostgresIdentityReader implements IdentityReader {
@@ -21,21 +23,23 @@ export class PostgresIdentityReader implements IdentityReader {
 
   async me(): Promise<MeResponse> {
     const user = await this.client.query<UserRow>(
-      'select id, email::text as email, display_name from app.user_account where id = app.current_user_id()',
+      `select id, email::text as email, display_name, app.my_second_factor() as second_factor
+       from app.user_account where id = app.current_user_id()`,
     );
     const row = user.rows[0];
     if (!row) throw new Unauthenticated('Compte inconnu ou désactivé.');
 
     const memberships = await this.client.query<MembershipRow>(
-      'select tenant_id, tenant_slug, tenant_name, roles from app.my_memberships()',
+      'select tenant_id, tenant_slug, tenant_name, roles, second_factor_required from app.my_memberships()',
     );
     return {
-      user: { id: row.id, email: row.email, display_name: row.display_name },
+      user: { id: row.id, email: row.email, display_name: row.display_name, second_factor: row.second_factor === true },
       memberships: memberships.rows.map((m) => ({
         tenant_id: m.tenant_id,
         tenant_slug: m.tenant_slug,
         tenant_name: m.tenant_name,
         roles: m.roles.filter(isRole),
+        second_factor_required: m.second_factor_required,
       })),
     };
   }

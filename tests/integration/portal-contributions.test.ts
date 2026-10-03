@@ -191,7 +191,10 @@ describe('proposals of an exploitant', () => {
         },
       ],
     };
-    expect(await codeOf(await exploitantAal1('POST', `/portal/sites/${siteId}/contributions`, body))).toBe('FORBIDDEN');
+    // Without its code, the enrolled exploitant is refused outright (ADR-022).
+    expect(await codeOf(await exploitantAal1('POST', `/portal/sites/${siteId}/contributions`, body))).toBe(
+      'MFA_REQUIRED',
+    );
     expect(await codeOf(await exploitant('POST', `/portal/sites/${WAREHOUSE}/contributions`, body))).toBe('FORBIDDEN');
     expect(
       await codeOf(

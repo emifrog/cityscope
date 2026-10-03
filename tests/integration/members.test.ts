@@ -80,6 +80,8 @@ describe('member administration', () => {
     const { member, invitation } = endpoints.inviteMember.response.parse(await invited.json());
     expect(invitation).toBe('sent');
     expect(member).toMatchObject({ email, roles: ['READER'], status: 'active', row_version: 1 });
+    // Shown as an invitation not accepted yet, without second factor (ADR-022).
+    expect(member).toMatchObject({ last_sign_in_at: null, second_factor: false });
 
     // The e-mail opens the web application, which verifies the token only when the person clicks.
     const mail = await latestEmailTo(email);
@@ -106,15 +108,18 @@ describe('member administration', () => {
     expect((await admin('PATCH', `/members/${member.id}`, { roles: ['READER'] }, 1)).status).toBe(412);
     expect((await admin('PATCH', `/members/${member.id}`, { roles: ['READER'] })).status).toBe(428);
 
-    // Suspension takes effect immediately, reactivation too.
+    // Suspension takes effect immediately: every session of the person is closed (ADR-022);
+    // signing in again gives no access until the reactivation.
     expect((await admin('PATCH', `/members/${member.id}`, { status: 'suspended' }, 2)).status).toBe(200);
-    expect((await invitee('GET', '/sites')).status).toBe(403);
+    expect((await invitee('GET', '/sites')).status).toBe(401);
+    const again = as(await signInWithPassword(email, password));
+    expect((await again('GET', '/sites')).status).toBe(403);
     expect((await admin('PATCH', `/members/${member.id}`, { status: 'active' }, 3)).status).toBe(200);
-    expect((await invitee('GET', '/sites')).status).toBe(200);
+    expect((await again('GET', '/sites')).status).toBe(200);
 
     // The same person cannot be added twice.
-    const again = await admin('POST', '/members', { email, roles: ['READER'] });
-    expect(again.status).toBe(409);
+    const twice = await admin('POST', '/members', { email, roles: ['READER'] });
+    expect(twice.status).toBe(409);
   });
 
   it('refuses self-escalation and roles that cannot be granted to a whole SIS', async () => {

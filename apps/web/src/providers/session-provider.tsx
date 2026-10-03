@@ -4,6 +4,7 @@ import type { Session } from '@supabase/supabase-js';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { ApiRequestError } from '@/lib/api-client';
 import { supabaseBrowser } from '@/lib/supabase-browser';
 
 export type AssuranceLevel = 'aal1' | 'aal2';
@@ -68,6 +69,39 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       data.subscription.unsubscribe();
     };
   }, [queryClient]);
+
+  // The API refuses the token of a closed session at once (sign-out elsewhere, revocation, suspension):
+  // the local session is dropped instead of waiting for the next token renewal to fail.
+  useEffect(() => {
+    let closing = false;
+    const closed = (error: unknown) => {
+      if (closing || !(error instanceof ApiRequestError) || error.status !== 401) return;
+      closing = true;
+      const supabase = supabaseBrowser();
+      // A token that merely expired (tab asleep) is renewed; a closed session cannot be.
+      void supabase.auth.refreshSession().then(async ({ error: renewal }) => {
+        if (!renewal) {
+          closing = false;
+          setTimeout(() => void queryClient.invalidateQueries(), 0);
+          return;
+        }
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+        queryClient.clear();
+        router.replace('/login?reason=session');
+        router.refresh();
+      });
+    };
+    const queries = queryClient.getQueryCache().subscribe((event) => {
+      if (event.type === 'updated' && event.action.type === 'error') closed(event.action.error);
+    });
+    const mutations = queryClient.getMutationCache().subscribe((event) => {
+      if (event.type === 'updated' && event.action.type === 'error') closed(event.action.error);
+    });
+    return () => {
+      queries();
+      mutations();
+    };
+  }, [queryClient, router]);
 
   const signOut = useCallback(async () => {
     await supabaseBrowser().auth.signOut();

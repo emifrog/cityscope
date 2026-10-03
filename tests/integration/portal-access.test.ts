@@ -140,10 +140,6 @@ describe('exploitant access', () => {
     const state = async (call: Call) =>
       endpoints.getPortalAccess.response.parse(await (await call('GET', '/portal/access')).json()).state;
     expect(await state(exploitant)).toBe('mfa_required');
-    exploitantStrong = await strong(token);
-    expect(await state(as(exploitantStrong, TENANT_06))).toBe('granted');
-    // No working data of the site, ever.
-    expect((await exploitant('GET', `/sites/${EHPAD_ID}`)).status).toBe(403);
 
     // The SIS administration may turn the requirement off, then back on.
     expect(endpoints.getPortalSettings.response.parse(await (await admin('GET', '/settings/portal')).json())).toEqual({
@@ -154,6 +150,15 @@ describe('exploitant access', () => {
     expect(await state(exploitant)).toBe('granted');
     expect((await admin('PUT', '/settings/portal', { mfa_required: true })).status).toBe(200);
     expect(await state(exploitant)).toBe('mfa_required');
+
+    exploitantStrong = await strong(token);
+    expect(await state(as(exploitantStrong, TENANT_06))).toBe('granted');
+    // Once enrolled, the exploitant always uses the code (ADR-022), whatever the portal setting.
+    const withoutCode = await exploitant('GET', '/portal/access');
+    expect(withoutCode.status).toBe(403);
+    expect(((await withoutCode.json()) as { error: { code: string } }).error.code).toBe('MFA_REQUIRED');
+    // No working data of the site, ever, even with the code.
+    expect((await as(exploitantStrong, TENANT_06)('GET', `/sites/${EHPAD_ID}`)).status).toBe(403);
   });
 
   it('ends the access at once when the invitation is revoked', async () => {

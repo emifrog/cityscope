@@ -1,5 +1,10 @@
 import type { AccessTokenVerifier, Logger } from '@etare/adapters';
 import {
+  getSecuritySettings,
+  listMySessions,
+  revokeMyOtherSessions,
+  revokeMySession,
+  updateSecuritySettings,
   addDocumentVersion,
   addPlanRevision,
   confirmFieldReportUploads,
@@ -336,6 +341,21 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
   app.get(routerPath(endpoints.getMe.path), async (c) => {
     const context = await requestContext(c, endpoints.getMe);
     return respond(c, endpoints.getMe, await getMe(deps.sessions, context));
+  });
+
+  app.get(routerPath(endpoints.listMySessions.path), async (c) => {
+    const context = await requestContext(c, endpoints.listMySessions);
+    return respond(c, endpoints.listMySessions, await listMySessions(deps.sessions, context));
+  });
+
+  app.post(routerPath(endpoints.revokeMyOtherSessions.path), async (c) => {
+    const context = await requestContext(c, endpoints.revokeMyOtherSessions);
+    return respond(c, endpoints.revokeMyOtherSessions, await revokeMyOtherSessions(deps.sessions, context));
+  });
+
+  app.post(routerPath(endpoints.revokeMySession.path), async (c) => {
+    const context = await requestContext(c, endpoints.revokeMySession);
+    return respond(c, endpoints.revokeMySession, await revokeMySession(deps.sessions, context, idOf(c)));
   });
 
   app.get(routerPath(endpoints.getMapCatalog.path), async (c) => {
@@ -792,6 +812,17 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
   app.post(routerPath(endpoints.acceptPortalInvitation.path), async (c) => {
     const context = await requestContext(c, endpoints.acceptPortalInvitation);
     return respond(c, endpoints.acceptPortalInvitation, await acceptPortalInvitation(deps.sessions, context, idOf(c)));
+  });
+
+  app.get(routerPath(endpoints.getSecuritySettings.path), async (c) => {
+    const context = await requestContext(c, endpoints.getSecuritySettings);
+    return respond(c, endpoints.getSecuritySettings, await getSecuritySettings(deps.sessions, context));
+  });
+
+  app.put(routerPath(endpoints.updateSecuritySettings.path), async (c) => {
+    const context = await requestContext(c, endpoints.updateSecuritySettings);
+    const input = await readBody(c, endpoints.updateSecuritySettings.body);
+    return respond(c, endpoints.updateSecuritySettings, await updateSecuritySettings(deps.sessions, context, input));
   });
 
   app.get(routerPath(endpoints.getPortalSettings.path), async (c) => {

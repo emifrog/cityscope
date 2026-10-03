@@ -1,7 +1,7 @@
 import type { ResolvedAccess } from '@etare/domain';
 import type { RequestSession } from './ports';
 
-type Repositories = Omit<RequestSession, 'access'>;
+type Repositories = Omit<RequestSession, 'access' | 'confirmDeviceProof'>;
 export type SessionOverrides = { [K in keyof Repositories]?: Partial<Repositories[K]> };
 
 function unstubbed(name: string) {
@@ -17,10 +17,21 @@ function unstubbed(name: string) {
 export function stubSession(access: ResolvedAccess, overrides: SessionOverrides = {}): RequestSession {
   return {
     access,
+    confirmDeviceProof: () => undefined,
     identity: {
       me: unstubbed('identity.me'),
       holdsWithSecondFactor: unstubbed('identity.holdsWithSecondFactor'),
       ...overrides.identity,
+    },
+    account: {
+      sessions: unstubbed('account.sessions'),
+      revoke: unstubbed('account.revoke'),
+      ...overrides.account,
+    },
+    security: {
+      get: unstubbed('security.get'),
+      update: unstubbed('security.update'),
+      ...overrides.security,
     },
     sites: {
       list: unstubbed('sites.list'),

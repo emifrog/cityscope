@@ -156,7 +156,8 @@ export async function enrollDevice(
   );
   if (!proven) throw new DeviceProofInvalid();
   const codeHash = await deps.sha256(code);
-  return inTenant(deps.sessions, context, 'offline:download', (session) =>
+  // The single-use code handed over by an administrator stands for the second factor of an enrolled account.
+  return inTenant(deps.sessions, { ...context, purpose: 'enrollment' }, 'offline:download', (session) =>
     session.devices.enroll({
       codeHash,
       publicKey: input.public_key,
@@ -179,7 +180,9 @@ export async function asDevice<T>(
 ): Promise<T> {
   const signer = deps.catalogSigner;
   if (!signer) throw new ServiceUnavailable('La distribution hors ligne n’est pas configurée sur ce serveur.');
-  return inTenant(deps.sessions, context, 'offline:download', async (session) => {
+  // The key of the terminal stands for the second factor of an enrolled account (database:
+  // terminal scope); the session commits only once the signature below is verified.
+  return inTenant(deps.sessions, { ...context, deviceId: proof.deviceId }, 'offline:download', async (session) => {
     const device = await session.devices.syncDevice(proof.deviceId);
     if (!device?.publicKey) throw new DeviceNotEnrolled();
     if (!deps.verifier.verify(device.publicKey, deviceRequestText(proof), proof.signature)) {
@@ -188,6 +191,7 @@ export async function asDevice<T>(
     if (Math.abs(deps.now().getTime() - proof.timestamp) > DEVICE_PROOF_MAX_SKEW_MS) throw new DeviceClockSkew();
     if (device.status === 'revoked') throw new DeviceRevoked();
     if (device.status !== 'active') throw new DeviceNotEnrolled();
+    session.confirmDeviceProof();
     return work(session, signer);
   });
 }

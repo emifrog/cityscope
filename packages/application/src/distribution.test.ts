@@ -124,14 +124,17 @@ function setup(device: { status: DeviceStatus; publicKey: string | null } | null
     packageFiles: vi.fn<DeviceRepository['packageFiles']>(async () => []),
   };
   const audit = { record: vi.fn(async () => undefined) };
+  const contexts: RequestContext[] = [];
+  const proven: (string | undefined)[] = [];
   const sessions: SessionFactory = {
-    run: async <T>(ctx: RequestContext, work: (session: RequestSession) => Promise<T>) =>
-      work(
-        stubSession(
-          { userId: USER, tenantId: ctx.tenantId, permissions: permissionsForRoles(roles) },
-          { devices, audit },
-        ),
-      ),
+    run: async <T>(ctx: RequestContext, work: (session: RequestSession) => Promise<T>) => {
+      contexts.push(ctx);
+      const session = stubSession(
+        { userId: USER, tenantId: ctx.tenantId, permissions: permissionsForRoles(roles) },
+        { devices, audit },
+      );
+      return work({ ...session, confirmDeviceProof: () => proven.push(ctx.deviceId) });
+    },
   };
   const deps: DistributionDependencies = {
     sessions,
@@ -142,7 +145,7 @@ function setup(device: { status: DeviceStatus; publicKey: string | null } | null
     randomBytes: (length) => new Uint8Array(length).fill(1),
     now: () => NOW,
   };
-  return { deps, devices, audit };
+  return { deps, devices, audit, contexts, proven };
 }
 
 describe('terminal requests', () => {
@@ -173,6 +176,30 @@ describe('terminal requests', () => {
       verifier.verify(CATALOG_KEY, signedText('etare.catalog.v1', signed.catalog), signed.signature.signature),
     ).toBe(true);
     expect(syncCatalogSchema.parse(JSON.parse(signed.catalog)).min_app_version).toBe('0.2.0');
+  });
+
+  it('names the terminal to the session and confirms its signature before any work (second factor)', async () => {
+    const { deps, contexts, proven } = setup({ status: 'active', publicKey: device.publicKey });
+    await getSyncCatalog(deps, context, device.proof());
+    expect(contexts[0]?.deviceId).toBe(DEVICE);
+    expect(proven).toEqual([DEVICE]);
+
+    const forged = setup({ status: 'active', publicKey: device.publicKey });
+    await expect(getSyncCatalog(forged.deps, context, terminal().proof())).rejects.toThrow(DeviceProofInvalid);
+    expect(forged.proven).toEqual([]);
+  });
+
+  it('enrolls with the enrollment purpose: the single-use code stands for the second factor', async () => {
+    const { deps, contexts } = setup(null);
+    const key = terminal();
+    await enrollDevice(deps, context, {
+      code: 'ABCD-EFGH-JKLM',
+      public_key: key.publicKey,
+      platform: 'android',
+      app_version: '1.0.0',
+      proof: key.signText(enrollmentText({ tenantId: TENANT, code: 'ABCDEFGHJKLM', publicKey: key.publicKey })),
+    });
+    expect(contexts[0]?.purpose).toBe('enrollment');
   });
 
   it('refuses a request not signed by the terminal key, or signed for another path', async () => {

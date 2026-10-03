@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import { accountSessionListSchema, securitySettingsSchema, sessionRevocationSchema } from './account';
 import { notificationListQuerySchema, notificationListSchema, notificationSchema } from './notifications';
 import {
   contributionCreateSchema,
@@ -214,6 +215,40 @@ export const endpoints = {
     tenantScoped: false,
     successStatus: 200,
     response: meResponseSchema,
+  },
+  listMySessions: {
+    operationId: 'listMySessions',
+    method: 'get',
+    path: '/me/sessions',
+    summary: 'Sessions ouvertes du compte (navigateurs, applications)',
+    tags: ['identity'],
+    auth: 'user',
+    tenantScoped: false,
+    successStatus: 200,
+    response: accountSessionListSchema,
+  },
+  revokeMySession: {
+    operationId: 'revokeMySession',
+    method: 'post',
+    path: '/me/sessions/{id}/revocation',
+    summary: 'Fermer une session du compte (effet à la requête suivante)',
+    tags: ['identity'],
+    auth: 'user',
+    tenantScoped: false,
+    params: idParamsSchema,
+    successStatus: 200,
+    response: sessionRevocationSchema,
+  },
+  revokeMyOtherSessions: {
+    operationId: 'revokeMyOtherSessions',
+    method: 'post',
+    path: '/me/sessions/revocation',
+    summary: 'Fermer toutes les autres sessions du compte',
+    tags: ['identity'],
+    auth: 'user',
+    tenantScoped: false,
+    successStatus: 200,
+    response: sessionRevocationSchema,
   },
 
   // ---------------------------------------------------------------- map
@@ -921,6 +956,26 @@ export const endpoints = {
     concurrency: 'if-match',
     successStatus: 200,
     response: memberSchema,
+  }),
+
+  getSecuritySettings: tenantEndpoint({
+    operationId: 'getSecuritySettings',
+    method: 'get',
+    path: '/settings/security',
+    summary: 'Politique de second facteur du SIS (administration)',
+    tags: ['members'],
+    successStatus: 200,
+    response: securitySettingsSchema,
+  }),
+  updateSecuritySettings: tenantEndpoint({
+    operationId: 'updateSecuritySettings',
+    method: 'put',
+    path: '/settings/security',
+    summary: 'Modifier la politique de second facteur du SIS (second facteur exigé, audité)',
+    tags: ['members'],
+    body: securitySettingsSchema,
+    successStatus: 200,
+    response: securitySettingsSchema,
   }),
 
   // ---------------------------------------------------------------- terminals and offline distribution

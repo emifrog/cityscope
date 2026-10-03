@@ -32,10 +32,18 @@ révèlent rien). Tests : `supabase/tests/database/10_tenant_isolation.test.sql`
 - **Séparation des tâches** : `PREVISION_EDITOR ≠ PREVISION_VALIDATOR`, et en base le validateur ne
   peut pas être l’auteur, le soumetteur ni un contributeur de la révision (même en cumulant les rôles).
 - **MFA** : les permissions privilégiées (`etare:approve`, `publication:publish`, `member:manage`,
-  `device:manage`) exigent `aal2` (TOTP, Supabase Auth). Paramètre SIS `mfa_required_for_privileged`
-  (défaut : vrai). Enrôlement et retrait dans « Mon compte » ; un compte enrôlé passe par l’étape de code
-  à chaque connexion (proxy web). `MFA_REQUIRED` n’est répondu qu’aux personnes dont les rôles
-  accorderaient la permission avec le second facteur ; les autres reçoivent `FORBIDDEN` (ADR-010).
+  `device:manage`, `portal:invite`) exigent `aal2` (TOTP, Supabase Auth). Enrôlement et retrait dans
+  « Mon compte » ; un compte enrôlé passe par l’étape de code à chaque connexion. `MFA_REQUIRED` n’est
+  répondu qu’aux personnes dont les rôles accorderaient la permission avec le second facteur ; les
+  autres reçoivent `FORBIDDEN` (ADR-010).
+- **Second facteur imposé par la base** (ADR-022) : un compte enrôlé est refusé sans son code pour toute
+  requête. Exceptions : son profil ; les requêtes signées d'une tablette enrôlée du SIS, dont la clé tient
+  lieu de facteur de possession et qui sont limitées à la synchronisation ; l'enrôlement par code à usage
+  unique. Politique du SIS (`privileged` par défaut, `all`, `none`), modifiable avec le second facteur
+  et tracée : en `all`, un membre sans second facteur doit en activer un avant toute action.
+- **Sessions** (ADR-022) : le jeton d'une session fermée (déconnexion, révocation, suspension) est refusé
+  dès la requête suivante. Chacun ferme ses autres sessions ; une suspension ferme toutes celles du
+  membre. L'administration voit l'invitation en attente, la dernière connexion et le second facteur.
 - **Administration des membres** (ADR-010) : invitations, rôles et suspensions par fonctions
   `SECURITY DEFINER` qui revérifient `member:manage` en `aal2` ; ni auto-attribution ni auto-retrait,
   jamais `SUPER_ADMIN` ni `EXPLOITANT` à l’échelle du SIS, au moins un administrateur actif conservé,
@@ -191,10 +199,10 @@ jetables (`pnpm setup:local`). Les clés de signature des environnements partag�
   supervision du démon et le choix éventuel d’un service managé restent à organiser avec l’exploitation.
 - Purge des dépôts abandonnés (`pending` jamais envoyés) et des objets orphelins de quarantaine à écrire.
 - Accès aux journaux d’audit refusés (403) non encore tracés dans `audit_event`.
-- Second facteur exigé par le web mais pas encore par l’API pour les permissions ordinaires d’un compte
-  enrôlé ; pas de codes de secours ni de réinitialisation du mot de passe en libre-service.
-- Révocation des sessions à la suspension (la base refuse déjà chaque requête), SSO OIDC/SAML : non
-  développés.
+- Pas de codes de secours ni de réinitialisation du mot de passe en libre-service ; SSO OIDC/SAML non
+  développé.
+- Durée maximale et inactivité des sessions (`[auth.sessions]`) à régler sur le projet hébergé avec la
+  DSI, sans couper la synchronisation en arrière-plan des tablettes.
 - Tablette : ni verrouillage applicatif propre (PIN, biométrie), ni attestation d’intégrité du
   terminal, ni rotation de la clé de la base locale.
 - Chaînage d’empreintes / export externe du journal d’audit : à décider.

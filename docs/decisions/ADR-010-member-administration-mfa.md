@@ -44,9 +44,9 @@ terminaux) exigeaient déjà une authentification forte (`aal2`) dans `app.has_p
 - Une adresse déjà connue d’un autre SIS est rattachée sans nouvel e-mail : un administrateur peut en
   déduire qu’elle possède un compte sur la plateforme (information jugée acceptable pour un rôle
   d’administration protégé par le second facteur).
-- L’obligation du second facteur pour **toutes** les requêtes d’un compte enrôlé est appliquée par le
-  web (proxy), pas encore par l’API : un jeton `aal1` d’un compte enrôlé reste accepté pour les
-  permissions non sensibles. À traiter avec un claim personnalisé ou un miroir de l’enrôlement.
+- L’obligation du second facteur pour **toutes** les requêtes d’un compte enrôlé était appliquée par le
+  web (proxy) seulement : la base l’impose depuis le Sprint 9, avec la révocation des sessions
+  (ADR-022).
 - Non couverts : récupération d’un second facteur perdu (procédure support), codes de secours,
   réinitialisation du mot de passe en libre-service, révocation des sessions à la suspension (le jeton
   reste valide jusqu’à expiration mais la base refuse chaque requête).

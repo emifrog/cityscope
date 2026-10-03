@@ -23,7 +23,12 @@ const context: RequestContext = {
 
 function fakeSessions(roles: Role[], site: SiteDetail | null = null) {
   const sites = { list: vi.fn(async () => ({ items: [], next_cursor: null })), get: vi.fn(async () => site) };
-  const identity = { me: vi.fn(async () => ({ user: { id: 'u', email: 'e', display_name: null }, memberships: [] })) };
+  const identity = {
+    me: vi.fn(async () => ({
+      user: { id: 'u', email: 'e', display_name: null, second_factor: false },
+      memberships: [],
+    })),
+  };
   const calls: RequestContext[] = [];
   const sessions: SessionFactory = {
     run: async <T>(ctx: RequestContext, work: (session: RequestSession) => Promise<T>) => {
@@ -73,6 +78,12 @@ describe('getMe', () => {
     const { sessions, calls } = fakeSessions([]);
     await getMe(sessions, context);
     expect(calls[0]?.tenantId).toBeNull();
+  });
+
+  it('is the one request an enrolled account may make without its code (profile purpose)', async () => {
+    const { sessions, calls } = fakeSessions([]);
+    await getMe(sessions, context);
+    expect(calls[0]?.purpose).toBe('profile');
   });
 });
 

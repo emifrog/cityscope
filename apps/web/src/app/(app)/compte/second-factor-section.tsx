@@ -84,7 +84,8 @@ function EnrollmentForm({ enrollment, onDone }: { enrollment: TotpEnrollment; on
   );
 }
 
-export function SecondFactorSection() {
+/** `requiredBySis`: the active SIS requires it for every access (a new one must follow a removal). */
+export function SecondFactorSection({ requiredBySis = false }: { requiredBySis?: boolean }) {
   // Identity-level data: cleared with the rest of the cache when the person changes.
   const factorsQuery = useQuery({ queryKey: ['auth', 'totp-factors'], queryFn: listTotpFactors, retry: false });
   const factors = factorsQuery.data ?? null;
@@ -132,7 +133,11 @@ export function SecondFactorSection() {
               </div>
               {confirmRemoval === factor.id ? (
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm">Les actions sensibles vous seront refusées. Confirmer ?</span>
+                  <span className="text-sm">
+                    {requiredBySis
+                      ? 'Votre SIS l’exige : vous devrez en activer une nouvelle avant de continuer. Confirmer ?'
+                      : 'Les actions sensibles vous seront refusées. Confirmer ?'}
+                  </span>
                   <Button
                     size="sm"
                     variant="danger"

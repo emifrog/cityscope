@@ -3,18 +3,21 @@ import {
   AccessDenied,
   Conflict,
   DeviceNotEnrolled,
+  DeviceProofInvalid,
   DeviceRevoked,
   InvalidInput,
   NotFound,
   PreconditionFailed,
   SelfApprovalForbidden,
   SerializationConflict,
+  StrongAuthenticationRequired,
   Unauthenticated,
   isPermission,
   type RequestContext,
   type ResolvedAccess,
 } from '@etare/domain';
 import { z } from 'zod';
+import { PostgresAccountRepository, PostgresSecuritySettingsRepository } from './account-repository';
 import { PostgresBuildingRepository } from './building-repository';
 import { PostgresDeviceRepository } from './device-repository';
 import { PostgresEtareRepository } from './etare-repository';
@@ -63,8 +66,14 @@ export class PostgresSessionFactory implements SessionFactory {
     try {
       await client.query(options?.isolation === 'repeatable_read' ? 'begin isolation level repeatable read' : 'begin');
       const access = await openRequest(client, context);
+      let deviceProven = false;
       const result = await work({
         access,
+        confirmDeviceProof: () => {
+          deviceProven = true;
+        },
+        account: new PostgresAccountRepository(client),
+        security: new PostgresSecuritySettingsRepository(client),
         identity: new PostgresIdentityReader(client),
         sites: new PostgresSiteRepository(client),
         buildings: new PostgresBuildingRepository(client),
@@ -87,6 +96,9 @@ export class PostgresSessionFactory implements SessionFactory {
         jobs: new PostgresJobScheduler(client),
         audit: new PostgresAuditRecorder(client),
       });
+      // The terminal named by the request may have stood for the second factor of the
+      // account: nothing commits nor answers unless its signature was verified.
+      if (context.deviceId && !deviceProven) throw new DeviceProofInvalid();
       await client.query('commit');
       return result;
     } catch (error) {
@@ -102,7 +114,7 @@ export class PostgresSessionFactory implements SessionFactory {
 
 async function openRequest(client: PoolClient, context: RequestContext): Promise<ResolvedAccess> {
   const result = await client.query(
-    'select user_id, tenant_id, permissions from app.begin_request($1, $2, $3, $4, $5, $6)',
+    'select user_id, tenant_id, permissions from app.begin_request($1, $2, $3, $4, $5, $6, $7, $8, $9)',
     [
       context.principal.provider,
       context.principal.subject,
@@ -110,6 +122,9 @@ async function openRequest(client: PoolClient, context: RequestContext): Promise
       context.principal.assurance,
       isUuid(context.traceId) ? context.traceId : null,
       context.origin,
+      context.principal.sessionId ?? null,
+      context.deviceId ?? null,
+      context.purpose ?? null,
     ],
   );
   const row = beginRequestRowSchema.parse(result.rows[0]);
@@ -200,6 +215,16 @@ export function translateDatabaseError(error: unknown): unknown {
       return new Unauthenticated('Compte inconnu ou désactivé.');
     case 'ET403':
       return new AccessDenied('Vous n’êtes pas membre de ce SIS.');
+    case 'ETSES':
+      return new Unauthenticated('Session fermée : reconnectez-vous.');
+    case 'ETMFA':
+      return new StrongAuthenticationRequired(
+        'Votre compte est protégé par la double authentification : saisissez le code de votre application.',
+      );
+    case 'ETMFE':
+      return new StrongAuthenticationRequired(
+        'Votre SIS exige la double authentification : activez-la dans « Mon compte ».',
+      );
     case '42501':
       if (messageOf(error).includes('SELF_APPROVAL_FORBIDDEN')) return new SelfApprovalForbidden();
       if (messageOf(error).includes('PORTAL_MEMBERSHIP_INACTIVE')) {

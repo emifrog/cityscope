@@ -17,6 +17,8 @@ const claimsSchema = z.object({
   // Only end-user tokens: never anon or service_role tokens.
   role: z.literal('authenticated'),
   aal: z.enum(['aal1', 'aal2']).default('aal1'),
+  // Session of the token: the database refuses tokens of closed sessions (sign-out, revocation).
+  session_id: z.uuid(),
   email: z.string().optional(),
   is_anonymous: z.literal(false).optional(),
 });
@@ -43,6 +45,7 @@ export function createTokenVerifier(options: TokenVerifierOptions): AccessTokenV
           subject: claims.sub,
           email: claims.email ?? null,
           assurance: claims.aal,
+          sessionId: claims.session_id,
         };
       } catch {
         throw new Unauthenticated('Jeton d’accès invalide ou expiré.');

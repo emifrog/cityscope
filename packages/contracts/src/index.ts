@@ -1,3 +1,4 @@
+export * from './account';
 export * from './contributions';
 export * from './documents';
 export * from './endpoints';

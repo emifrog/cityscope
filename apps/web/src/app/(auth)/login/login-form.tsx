@@ -9,7 +9,7 @@ import { useForm } from 'react-hook-form';
 import { needsSecondFactor } from '@/lib/mfa';
 import { supabaseBrowser } from '@/lib/supabase-browser';
 
-export function LoginForm({ next }: { next: string }) {
+export function LoginForm({ next, notice = null }: { next: string; notice?: string | null }) {
   const router = useRouter();
   const [failure, setFailure] = useState<string | null>(null);
   const {
@@ -24,7 +24,11 @@ export function LoginForm({ next }: { next: string }) {
       const { error } = await supabaseBrowser().auth.signInWithPassword(values);
       if (error) {
         setFailure(
-          error.status === 400 ? 'Identifiant ou mot de passe incorrect.' : 'Connexion impossible pour le moment.',
+          error.status === 400
+            ? 'Identifiant ou mot de passe incorrect.'
+            : error.status === 429
+              ? 'Trop de tentatives de connexion : réessayez dans quelques minutes.'
+              : 'Connexion impossible pour le moment.',
         );
         return;
       }
@@ -45,6 +49,7 @@ export function LoginForm({ next }: { next: string }) {
       className="space-y-4"
     >
       {failure ? <Alert tone="critical">{failure}</Alert> : null}
+      {notice && !failure ? <Alert tone="info">{notice}</Alert> : null}
       <div>
         <Label htmlFor="email">Adresse e-mail professionnelle</Label>
         <Input

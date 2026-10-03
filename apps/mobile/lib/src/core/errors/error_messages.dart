@@ -26,6 +26,11 @@ String describeError(Object error) => switch (error) {
     'L’identité de la tablette n’a pas pu être prouvée : réenrôlez-la.',
   ApiException(code: ApiErrorCode.deviceClockSkew) =>
     'L’heure de la tablette est incorrecte : corrigez-la puis réessayez.',
+  ApiException(code: ApiErrorCode.mfaRequired) =>
+    'Ce compte est protégé par la double authentification : cette action '
+        'se fait depuis le back-office.',
+  ApiException(code: ApiErrorCode.rateLimited) =>
+    'Trop de requêtes en peu de temps : réessayez dans quelques minutes.',
   ApiException(code: ApiErrorCode.serviceUnavailable) =>
     'Service momentanément indisponible. Réessayez plus tard.',
   // Les refus de validation de l'API sont rédigés pour l'utilisateur (ex. code

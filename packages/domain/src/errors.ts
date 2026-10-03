@@ -56,8 +56,8 @@ export class SelfApprovalForbidden extends DomainError {
 
 export class StrongAuthenticationRequired extends DomainError {
   readonly code = 'MFA_REQUIRED';
-  constructor() {
-    super('Cette action exige une authentification à deux facteurs.');
+  constructor(message = 'Cette action exige une authentification à deux facteurs.') {
+    super(message);
     this.name = 'StrongAuthenticationRequired';
   }
 }

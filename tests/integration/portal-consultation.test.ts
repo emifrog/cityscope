@@ -187,7 +187,10 @@ describe('exploitant consultation', () => {
   it('lists the sites of the exploitant with their published version, with the second factor only', async () => {
     const list = async (call: Call) =>
       endpoints.listPortalSites.response.parse(await (await call('GET', '/portal/sites')).json()).items;
-    expect(await list(exploitantAal1)).toEqual([]);
+    // Without its code, the enrolled exploitant is refused outright (ADR-022).
+    const withoutCode = await exploitantAal1('GET', '/portal/sites');
+    expect(withoutCode.status).toBe(403);
+    expect(((await withoutCode.json()) as { error: { code: string } }).error.code).toBe('MFA_REQUIRED');
     const sites = await list(exploitant);
     expect(sites.map((site) => site.id)).toEqual(expect.arrayContaining([EHPAD_ID, siteId]));
     expect(sites.find((site) => site.id === siteId)).toMatchObject({ publication_number: 1 });
@@ -206,7 +209,7 @@ describe('exploitant consultation', () => {
     expect(site.documents.map((document) => document.id)).toEqual([sharedId]);
     expect(text).not.toContain('SECRET');
     expect(text).not.toContain(internalId);
-    expect((await exploitantAal1('GET', `/portal/sites/${siteId}`)).status).toBe(404);
+    expect((await exploitantAal1('GET', `/portal/sites/${siteId}`)).status).toBe(403);
   });
 
   it('downloads the shared document only', async () => {

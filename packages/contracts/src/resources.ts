@@ -34,6 +34,8 @@ export const membershipSchema = z
     tenant_slug: z.string(),
     tenant_name: z.string(),
     roles: z.array(roleSchema),
+    /** The SIS requires the second factor of this member for every access outside a terminal. */
+    second_factor_required: z.boolean(),
   })
   .meta({ id: 'Membership' });
 export type Membership = z.infer<typeof membershipSchema>;
@@ -44,6 +46,8 @@ export const meResponseSchema = z
       id: uuidSchema,
       email: z.string(),
       display_name: z.string().nullable(),
+      /** The account has a verified second factor: every request then needs it (aal2). */
+      second_factor: z.boolean(),
     }),
     memberships: z.array(membershipSchema),
   })

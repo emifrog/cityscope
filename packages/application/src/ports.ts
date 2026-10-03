@@ -1,4 +1,6 @@
 import type {
+  AccountSession,
+  SecuritySettings,
   CatalogWithdrawal,
   PublicationSummary,
   EtareDossierList,
@@ -100,7 +102,14 @@ import type {
  */
 export interface RequestSession {
   readonly access: ResolvedAccess;
+  /**
+   * Records that the signature of the terminal named by the request was verified.
+   * A session opened for a terminal request refuses to commit without it.
+   */
+  confirmDeviceProof(): void;
   readonly identity: IdentityReader;
+  readonly account: AccountRepository;
+  readonly security: SecuritySettingsRepository;
   readonly sites: SiteRepository;
   readonly buildings: BuildingRepository;
   readonly classifications: ClassificationRepository;
@@ -239,6 +248,19 @@ export interface MemberRepository {
    */
   add(input: MemberInvite, identitySubject: string | null): Promise<Member | null>;
   update(id: string, expectedVersion: number, patch: MemberUpdate): Promise<Member | null>;
+}
+
+/** Sessions of the caller at the identity provider (Mon compte). */
+export interface AccountRepository {
+  sessions(): Promise<AccountSession[]>;
+  /** Closes one session of the caller, or every other session when null; returns how many. */
+  revoke(sessionId: string | null): Promise<number>;
+}
+
+/** Second-factor policy of the current SIS (null: not visible to the caller). */
+export interface SecuritySettingsRepository {
+  get(): Promise<SecuritySettings | null>;
+  update(settings: SecuritySettings): Promise<SecuritySettings>;
 }
 
 /** Plans of the sites and their background revisions. */

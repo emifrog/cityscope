@@ -155,10 +155,12 @@ describe('ETARE workflow', () => {
     expect(submitted.status).toBe('submitted');
     expect(submitted.content_hash).toMatch(/^[0-9a-f]{64}$/);
 
-    const queue = endpoints.listValidations.response.parse(await (await validator06('GET', '/validations')).json());
+    const queue = endpoints.listValidations.response.parse(
+      await (await validatorWithMfa('GET', '/validations')).json(),
+    );
     expect(queue.items.map((item) => item.revision_id)).toContain(draft.id);
     const detail = endpoints.getRevision.response.parse(
-      await (await validator06('GET', `/etare-revisions/${draft.id}`)).json(),
+      await (await validatorWithMfa('GET', `/etare-revisions/${draft.id}`)).json(),
     );
     expect(detail.snapshot?.site.id).toBe(siteId);
     expect(detail.changes).toBeNull();
@@ -248,7 +250,7 @@ describe('ETARE workflow', () => {
       publication: null,
     });
     const detail = endpoints.getRevision.response.parse(
-      await (await validator06('GET', `/etare-revisions/${draft.id}`)).json(),
+      await (await validatorWithMfa('GET', `/etare-revisions/${draft.id}`)).json(),
     );
     // Compared with publication 1: same content.
     expect(detail.changes).toEqual([]);

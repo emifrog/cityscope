@@ -70,6 +70,13 @@ enum ApiErrorCode {
   /// Horloge du terminal trop éloignée de celle du serveur.
   deviceClockSkew('DEVICE_CLOCK_SKEW'),
 
+  /// Compte protégé par la double authentification : seules les requêtes
+  /// signées par une tablette enrôlée s'en passent (ADR-022).
+  mfaRequired('MFA_REQUIRED'),
+
+  /// Trop de requêtes en peu de temps : réessayer plus tard (SEC-03).
+  rateLimited('RATE_LIMITED'),
+
   /// Code absent ou inconnu de cette version de l'application.
   unknown('UNKNOWN');
 
@@ -87,6 +94,7 @@ enum ApiErrorCode {
     401 => unauthenticated,
     403 => forbidden,
     404 => notFound,
+    429 => rateLimited,
     400 || 422 => validationFailed,
     final int s when s >= 500 => internal,
     _ => unknown,

@@ -21,6 +21,8 @@ propriétaires.
 - Stockage derrière le port `ObjectStorage` ; l’autorisation est faite en base avant d’émettre une URL
   signée, ce qui reste valable avec S3.
 - Une seule migration spécifique Supabase (bucket), gardée pour s’appliquer aussi sur un PostgreSQL nu.
+  Depuis le Sprint 9, six fonctions `app.idp_*` (facteurs, sessions, dernière connexion) lisent aussi
+  le schéma `auth`, également gardées ; un autre fournisseur les réimplémente (ADR-022).
 
 ## Alternatives écartées
 

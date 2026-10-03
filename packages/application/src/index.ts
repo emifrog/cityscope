@@ -1,3 +1,4 @@
+export * from './account';
 export * from './asset-verification';
 export * from './cartography';
 export * from './contributions';

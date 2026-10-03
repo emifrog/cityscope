@@ -1,13 +1,102 @@
 'use client';
 
+import type { SecondFactorPolicy } from '@etare/contracts';
 import { Alert, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@etare/ui';
 import { useState } from 'react';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { api } from '@/lib/api-client';
-import { queryKeys, useApiMutation, usePortalSettings } from '@/lib/queries';
+import { queryKeys, useApiMutation, usePortalSettings, useSecuritySettings } from '@/lib/queries';
 
-/** Settings of the SIS: second factor of the exploitants (ADR-019). */
+const POLICIES: readonly { value: SecondFactorPolicy; label: string; help: string }[] = [
+  {
+    value: 'privileged',
+    label: 'Pour les actions sensibles',
+    help: 'Valider, publier, administrer les membres et les terminaux. Réglage par défaut.',
+  },
+  {
+    value: 'all',
+    label: 'Pour tout accès au back-office',
+    help: 'Chaque membre active la double authentification avant tout accès ; les tablettes enrôlées s’identifient par leur propre clé.',
+  },
+  {
+    value: 'none',
+    label: 'Jamais (déconseillé)',
+    help: 'Les actions sensibles sont possibles avec le seul mot de passe. À réserver à un environnement de démonstration.',
+  },
+];
+
+/** Second-factor policy of the SIS (ADR-022). Whatever the policy, an enrolled account always uses its code. */
+function SecurityPolicyCard() {
+  const settings = useSecuritySettings();
+  const [policy, setPolicy] = useState<SecondFactorPolicy | null>(null);
+  const save = useApiMutation(
+    (options, input: { second_factor_policy: SecondFactorPolicy }) => api.updateSecuritySettings(options, input),
+    (tenantId) => [queryKeys.securitySettings(tenantId), ['me']],
+  );
+
+  if (settings.isPending) return <LoadingCard lines={3} />;
+  if (settings.error) return <ApiErrorAlert error={settings.error} />;
+  const current = policy ?? settings.data.second_factor_policy;
+  const changed = current !== settings.data.second_factor_policy;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Double authentification des membres</CardTitle>
+        <CardDescription>
+          Un compte qui a activé la double authentification saisit toujours son code, quel que soit ce réglage.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {save.error ? <ApiErrorAlert error={save.error} /> : null}
+        {save.isSuccess && !changed ? <Alert tone="info">Politique enregistrée et tracée.</Alert> : null}
+        <fieldset className="space-y-3">
+          <legend className="sr-only">Double authentification exigée</legend>
+          {POLICIES.map((option) => (
+            <label key={option.value} className="flex items-start gap-3">
+              <input
+                type="radio"
+                name="second-factor-policy"
+                className="mt-1 size-4 accent-brand-accent"
+                checked={current === option.value}
+                onChange={() => setPolicy(option.value)}
+              />
+              <span>
+                <span className="font-semibold">{option.label}</span>
+                <span className="block text-sm text-muted">{option.help}</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+        {current === 'all' && changed ? (
+          <Alert tone="important">
+            Les membres sans double authentification ne pourront plus rien faire avant de l’avoir activée dans « Mon
+            compte ».
+          </Alert>
+        ) : null}
+        <Button
+          size="sm"
+          disabled={!changed || save.isPending}
+          onClick={() => save.mutate({ second_factor_policy: current }, { onSuccess: () => setPolicy(null) })}
+        >
+          {save.isPending ? 'Enregistrement…' : 'Enregistrer'}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Settings of the SIS: second-factor policy (ADR-022) and second factor of the exploitants (ADR-019). */
 export function SettingsAdmin() {
+  return (
+    <div className="space-y-4">
+      <SecurityPolicyCard />
+      <PortalSettingsCard />
+    </div>
+  );
+}
+
+function PortalSettingsCard() {
   const settings = usePortalSettings();
   const [mfaRequired, setMfaRequired] = useState<boolean | null>(null);
   const save = useApiMutation(

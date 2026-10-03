@@ -49,6 +49,8 @@ export const queryKeys = {
   portalSites: (tenantId: string) => ['tenant', tenantId, 'portal-sites'] as const,
   portalSite: (tenantId: string, siteId: string) => ['tenant', tenantId, 'portal-sites', siteId] as const,
   myPortalInvitations: (userId: string) => ['me', userId, 'portal-invitations'] as const,
+  mySessions: (userId: string) => ['me', userId, 'sessions'] as const,
+  securitySettings: (tenantId: string) => ['tenant', tenantId, 'security-settings'] as const,
   riskTypes: (tenantId: string, includeDeprecated?: boolean) =>
     includeDeprecated === undefined
       ? (['tenant', tenantId, 'risk-types'] as const)
@@ -285,6 +287,27 @@ export function usePortalSettings(wanted = true) {
     queryKey: queryKeys.portalSettings(tenantId ?? 'none'),
     enabled: enabled && wanted,
     queryFn: ({ signal }) => api.getPortalSettings({ ...options, signal }),
+  });
+}
+
+/** Second-factor policy of the SIS (administration). */
+export function useSecuritySettings(wanted = true) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.securitySettings(tenantId ?? 'none'),
+    enabled: enabled && wanted,
+    queryFn: ({ signal }) => api.getSecuritySettings({ ...options, signal }),
+  });
+}
+
+/** Open sessions of the signed-in person (Mon compte). */
+export function useMySessions() {
+  const { session } = useSession();
+  const token = session?.access_token;
+  return useQuery({
+    queryKey: queryKeys.mySessions(session?.user.id ?? 'none'),
+    enabled: Boolean(token),
+    queryFn: ({ signal }) => api.listMySessions({ token: token ?? '', signal }),
   });
 }
 

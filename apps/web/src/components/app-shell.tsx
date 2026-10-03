@@ -40,18 +40,43 @@ export function TenantSwitcher() {
 /** Privileged roles without the second factor: say what is blocked and where to enable it. */
 function SecondFactorReminder() {
   const { assurance } = useSession();
-  const { activeTenant } = useTenant();
+  const { me, activeTenant } = useTenant();
   const pathname = usePathname();
   const blocked = [...permissionsForRoles(activeTenant?.roles ?? [])]
     .filter((permission) => PRIVILEGED_PERMISSIONS.has(permission))
     .map((permission) => PRIVILEGED_ACTION_LABELS[permission])
     .filter(Boolean);
   if (assurance !== 'aal1' || blocked.length === 0 || pathname === '/compte') return null;
+  // The gate below already says it, for every access.
+  if (activeTenant?.second_factor_required && me && !me.user.second_factor) return null;
   return (
     <Alert tone="important" className="mb-4">
       Votre rôle exige la double authentification pour {blocked.join(', ')}.{' '}
       <Link href="/compte" className="font-semibold underline">
         L’activer maintenant
+      </Link>
+    </Alert>
+  );
+}
+
+/**
+ * The SIS requires the second factor for every access and the person has none yet: the API refuses
+ * everything but the profile, so the back-office is replaced by the way to enable it.
+ */
+function SecondFactorGate({ children }: { children: ReactNode }) {
+  const { me, activeTenant } = useTenant();
+  const pathname = usePathname();
+  const blocked = Boolean(activeTenant?.second_factor_required) && me !== undefined && !me.user.second_factor;
+  if (!blocked || pathname === '/compte') return children;
+  return (
+    <Alert tone="important" className="max-w-2xl">
+      <p className="font-semibold">{activeTenant?.tenant_name} exige la double authentification.</p>
+      <p className="mt-1">
+        Activez-la dans votre compte avant de continuer : un code généré par une application de votre téléphone vous
+        sera demandé à chaque connexion.
+      </p>
+      <Link href="/compte" className="mt-2 inline-block font-semibold underline">
+        Activer la double authentification
       </Link>
     </Alert>
   );
@@ -152,7 +177,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
         <main className="min-w-0 flex-1 p-4 md:p-6">
           <SecondFactorReminder />
-          {children}
+          <SecondFactorGate>{children}</SecondFactorGate>
         </main>
       </div>
     </div>

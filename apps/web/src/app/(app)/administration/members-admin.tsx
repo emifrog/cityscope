@@ -28,6 +28,28 @@ import { MEMBERSHIP_STATUS_LABELS, ROLE_DESCRIPTIONS, ROLE_LABELS } from '@/comp
 import { api } from '@/lib/api-client';
 import { queryKeys, useApiMutation, useMembers } from '@/lib/queries';
 
+const signInFormat = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeZone: 'Europe/Paris' });
+
+/** Invitation accepted or not, last sign-in and second factor (ADR-022). */
+function AccessCell({ member }: { member: Member }) {
+  return (
+    <div className="flex flex-col items-start gap-1">
+      {member.last_sign_in_at === null ? (
+        <Badge tone="important">Invitation en attente</Badge>
+      ) : (
+        <span className="text-xs text-muted">
+          Dernière connexion le {signInFormat.format(new Date(member.last_sign_in_at))}
+        </span>
+      )}
+      {member.second_factor ? (
+        <Badge tone="success">Double authentification</Badge>
+      ) : (
+        <Badge tone="neutral">Sans double authentification</Badge>
+      )}
+    </div>
+  );
+}
+
 const inviteForm = z.object({
   email: z.email('Adresse e-mail invalide.').max(254),
   display_name: z.string().trim().max(200),
@@ -179,6 +201,9 @@ function MemberRow({ member }: { member: Member }) {
           </div>
         </TableCell>
         <TableCell>
+          <AccessCell member={member} />
+        </TableCell>
+        <TableCell>
           <Badge tone={suspended ? 'important' : 'success'}>{MEMBERSHIP_STATUS_LABELS[member.status]}</Badge>
         </TableCell>
         <TableCell className="text-right whitespace-nowrap">
@@ -203,14 +228,14 @@ function MemberRow({ member }: { member: Member }) {
       </TableRow>
       {update.error && !editing ? (
         <TableRow>
-          <TableCell colSpan={4}>
+          <TableCell colSpan={5}>
             <ApiErrorAlert error={update.error} />
           </TableCell>
         </TableRow>
       ) : null}
       {editing ? (
         <TableRow>
-          <TableCell colSpan={4} className="bg-subtle/40">
+          <TableCell colSpan={5} className="bg-subtle/40">
             <div className="max-w-2xl space-y-3">
               {update.error ? <ApiErrorAlert error={update.error} /> : null}
               <RoleChoices name={`roles-${member.id}`} selected={roles} onChange={setRoles} />
@@ -299,6 +324,7 @@ export function MembersAdmin() {
               <CardTitle>Membres ({members.data.length})</CardTitle>
               <CardDescription>
                 Personne ne modifie ses propres habilitations ; un SIS garde toujours au moins un administrateur actif.
+                Suspendre un membre ferme aussitôt toutes ses sessions.
               </CardDescription>
             </CardHeader>
             <Table>
@@ -306,6 +332,7 @@ export function MembersAdmin() {
                 <TableRow>
                   <TableHeaderCell>Personne</TableHeaderCell>
                   <TableHeaderCell>Rôles</TableHeaderCell>
+                  <TableHeaderCell>Accès</TableHeaderCell>
                   <TableHeaderCell>Statut</TableHeaderCell>
                   <TableHeaderCell className="text-right">Actions</TableHeaderCell>
                 </TableRow>

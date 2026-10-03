@@ -3,6 +3,9 @@ import {
   TENANT_HEADER,
   apiErrorSchema,
   endpoints,
+  type AccountSession,
+  type SecuritySettings,
+  type SessionRevocation,
   type AddressCandidates,
   type ApiErrorCode,
   type Building,
@@ -190,6 +193,26 @@ const itemsOf = async <T>(promise: Promise<{ items: T[] }>) => (await promise).i
 export const api = {
   getMe: (options: ApiCallOptions): Promise<MeResponse> =>
     call(endpoints.getMe.response, endpoints.getMe.path, options),
+
+  listMySessions: (options: ApiCallOptions): Promise<AccountSession[]> =>
+    itemsOf(call(endpoints.listMySessions.response, endpoints.listMySessions.path, options)),
+
+  revokeMySession: (options: ApiCallOptions, id: string): Promise<SessionRevocation> =>
+    call(endpoints.revokeMySession.response, pathOf(endpoints.revokeMySession.path, { id }), options, {
+      method: 'POST',
+    }),
+
+  revokeMyOtherSessions: (options: ApiCallOptions): Promise<SessionRevocation> =>
+    call(endpoints.revokeMyOtherSessions.response, endpoints.revokeMyOtherSessions.path, options, { method: 'POST' }),
+
+  getSecuritySettings: (options: ApiCallOptions): Promise<SecuritySettings> =>
+    call(endpoints.getSecuritySettings.response, endpoints.getSecuritySettings.path, options),
+
+  updateSecuritySettings: (options: ApiCallOptions, input: SecuritySettings): Promise<SecuritySettings> =>
+    call(endpoints.updateSecuritySettings.response, endpoints.updateSecuritySettings.path, options, {
+      method: 'PUT',
+      body: input,
+    }),
 
   // ---------------------------------------------------------------- map
   getMapCatalog: (options: ApiCallOptions): Promise<MapCatalog> =>

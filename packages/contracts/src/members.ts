@@ -22,6 +22,10 @@ export const memberSchema = z
     site_roles: z.array(z.object({ role: roleSchema, site_id: uuidSchema, site_name: z.string().nullable() })),
     /** The member is the caller: their own roles and status cannot be changed here. */
     is_self: z.boolean(),
+    /** Null: the person never signed in (invitation not accepted yet). */
+    last_sign_in_at: isoDateTimeSchema.nullable(),
+    /** The person has a verified second factor. */
+    second_factor: z.boolean(),
     row_version: z.number().int().positive(),
     created_at: isoDateTimeSchema,
   })

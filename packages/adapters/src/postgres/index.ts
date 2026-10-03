@@ -1,3 +1,4 @@
+export * from './account-repository';
 export * from './asset-verification-store';
 export * from './building-repository';
 export * from './cursor';

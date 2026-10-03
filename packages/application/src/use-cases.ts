@@ -78,7 +78,8 @@ export function found<T>(value: T | null | undefined, message: string): T {
 }
 
 export async function getMe(sessions: SessionFactory, context: RequestContext): Promise<MeResponse> {
-  return sessions.run({ ...context, tenantId: null }, (session) => session.identity.me());
+  // Readable without the second factor of an enrolled account: the client learns what it must ask for.
+  return sessions.run({ ...context, tenantId: null, purpose: 'profile' }, (session) => session.identity.me());
 }
 
 export async function listSites(
