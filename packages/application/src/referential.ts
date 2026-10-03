@@ -14,10 +14,11 @@ import type {
   LevelCreate,
   LevelUpdate,
   SiteCreate,
+  SiteArchive,
   SiteDetail,
   SiteUpdate,
 } from '@etare/contracts';
-import type { RequestContext } from '@etare/domain';
+import { Conflict, type RequestContext } from '@etare/domain';
 import type { RequestSession, SessionFactory } from './ports';
 import { found, inTenant } from './use-cases';
 
@@ -49,6 +50,38 @@ export function updateSite(
   return inTenant(sessions, context, 'site:write', async (session) =>
     found(await session.sites.update(id, expectedVersion, patch), SITE_NOT_FOUND),
   );
+}
+
+/**
+ * Archives a site and its dossier (MET-04): refused while a version is in
+ * force (a validator withdraws it first), a build runs or a revision waits for
+ * a decision. Open drafts are closed; the history stays in the audit.
+ */
+export function archiveSite(
+  sessions: SessionFactory,
+  context: Ctx,
+  id: string,
+  expectedVersion: number,
+  input: SiteArchive,
+): Promise<SiteDetail> {
+  return inTenant(sessions, context, 'site:write', async (session) => {
+    const current = await visibleSite(session, id);
+    if (current.status === 'archived') throw new Conflict('Ce site est déjà archivé.');
+    return found(await session.sites.archive(id, expectedVersion, input.reason), SITE_NOT_FOUND);
+  });
+}
+
+export function restoreSite(
+  sessions: SessionFactory,
+  context: Ctx,
+  id: string,
+  expectedVersion: number,
+): Promise<SiteDetail> {
+  return inTenant(sessions, context, 'site:write', async (session) => {
+    const current = await visibleSite(session, id);
+    if (current.status !== 'archived') throw new Conflict('Ce site n’est pas archivé.');
+    return found(await session.sites.restore(id, expectedVersion), SITE_NOT_FOUND);
+  });
 }
 
 // ------------------------------------------------------------------ buildings and levels

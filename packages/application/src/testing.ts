@@ -28,6 +28,8 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       mapFeatures: unstubbed('sites.mapFeatures'),
       create: unstubbed('sites.create'),
       update: unstubbed('sites.update'),
+      archive: unstubbed('sites.archive'),
+      restore: unstubbed('sites.restore'),
       ...overrides.sites,
     },
     buildings: {
@@ -112,6 +114,7 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       publication: unstubbed('etare.publication'),
       approvalOf: unstubbed('etare.approvalOf'),
       requestPublication: unstubbed('etare.requestPublication'),
+      withdraw: unstubbed('etare.withdraw'),
       ...overrides.etare,
     },
     members: {

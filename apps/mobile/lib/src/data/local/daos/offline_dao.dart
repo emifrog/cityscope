@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/data/local/tables.dart';
+import 'package:etare_ops/src/features/sync/domain/removal_notice.dart';
 import 'package:flutter/foundation.dart';
 
 part 'offline_dao.g.dart';
@@ -94,6 +95,7 @@ final class ActivationRecord {
     this.error,
     this.keepBlobs = const {},
     this.requiredAppVersion,
+    this.notices = const [],
   });
 
   final List<InstallRecord> install;
@@ -117,7 +119,13 @@ final class ActivationRecord {
   /// Application trop ancienne pour une partie du contenu (SYN-02) : version
   /// exigée, ou chaîne vide si elle est inconnue ; null efface l'alerte.
   final String? requiredAppVersion;
+
+  /// Raisons des retraits de ce jeu (MET-04), conservées pour l'agent.
+  final List<RemovalNotice> notices;
 }
+
+/// Clé `local_meta` des avis de retrait conservés (MET-04).
+const removalNoticesKey = 'removal_notices';
 
 /// Contenu hors ligne : versions installées, fichiers, données, index de
 /// recherche. L'activation d'un nouveau jeu se fait dans UNE transaction :
@@ -272,6 +280,27 @@ class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
     for (final siteId in activation.removeSites) {
       await _removeSite(siteId);
     }
+    // Raisons des retraits, dans la même transaction : un site réinstallé
+    // n'a plus d'avis.
+    final meta = attachedDatabase.localMetaDao;
+    final reinstalled = {
+      for (final record in activation.install) record.siteId,
+    };
+    if (activation.notices.isNotEmpty || reinstalled.isNotEmpty) {
+      final current = decodeRemovalNotices(
+        await meta.readValue(removalNoticesKey),
+      );
+      final merged = mergeRemovalNotices(
+        current,
+        activation.notices,
+        reinstalled: reinstalled,
+      );
+      if (merged.isEmpty) {
+        await meta.removeValue(removalNoticesKey);
+      } else {
+        await meta.writeValue(removalNoticesKey, encodeRemovalNotices(merged));
+      }
+    }
     for (final record in activation.install) {
       await _removeSite(record.siteId);
       await into(installedPublications).insert(
@@ -379,9 +408,16 @@ class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
     }
   }
 
+  /// Avis de retrait conservés, les plus récents d'abord (MET-04).
+  Stream<List<RemovalNotice>> watchRemovalNotices() => attachedDatabase
+      .localMetaDao
+      .watchValue(removalNoticesKey)
+      .map(decodeRemovalNotices);
+
   /// Revocation (OFF-04) : efface tout le contenu hors ligne et l'état.
   Future<void> purgeAll() async {
     await transaction(() async {
+      await attachedDatabase.localMetaDao.removeValue(removalNoticesKey);
       await delete(publicationFiles).go();
       await delete(installedPublications).go();
       await delete(siteData).go();

@@ -111,6 +111,7 @@ function setup(device: { status: DeviceStatus; publicKey: string | null } | null
       generation: 7,
       tenantName: 'SDIS DEMO 06',
       publications: [entry],
+      withdrawals: [],
     })),
     enroll: vi.fn<DeviceRepository['enroll']>(async () => ({
       device_id: DEVICE,

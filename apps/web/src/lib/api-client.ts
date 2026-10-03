@@ -23,6 +23,9 @@ import {
   type EtareDossierList,
   type EtareDossierListQuery,
   type EtareOverview,
+  type PublicationSummary,
+  type PublicationWithdraw,
+  type SiteArchive,
   type EtarePreview,
   type EtareRevision,
   type ExternalId,
@@ -412,6 +415,31 @@ export const api = {
   // ---------------------------------------------------------------- ETARE workflow
   listEtareDossiers: (options: ApiCallOptions, query: Partial<EtareDossierListQuery> = {}): Promise<EtareDossierList> =>
     call(endpoints.listEtareDossiers.response, endpoints.listEtareDossiers.path, options, { query }),
+
+  withdrawPublication: (
+    options: ApiCallOptions,
+    id: string,
+    version: number,
+    input: PublicationWithdraw,
+  ): Promise<PublicationSummary> =>
+    call(endpoints.withdrawPublication.response, pathOf(endpoints.withdrawPublication.path, { id }), options, {
+      method: 'POST',
+      body: input,
+      ifMatch: version,
+    }),
+
+  archiveSite: (options: ApiCallOptions, id: string, version: number, input: SiteArchive): Promise<SiteDetail> =>
+    call(endpoints.archiveSite.response, pathOf(endpoints.archiveSite.path, { id }), options, {
+      method: 'POST',
+      body: input,
+      ifMatch: version,
+    }),
+
+  restoreSite: (options: ApiCallOptions, id: string, version: number): Promise<SiteDetail> =>
+    call(endpoints.restoreSite.response, pathOf(endpoints.restoreSite.path, { id }), options, {
+      method: 'POST',
+      ifMatch: version,
+    }),
 
   getSiteEtare: (options: ApiCallOptions, siteId: string): Promise<EtareOverview> =>
     call(endpoints.getSiteEtare.response, pathOf(endpoints.getSiteEtare.path, { id: siteId }), options),

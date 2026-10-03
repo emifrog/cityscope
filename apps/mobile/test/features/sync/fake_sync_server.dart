@@ -186,10 +186,22 @@ final class FakeSyncServer {
     generation++;
   }
 
-  void withdraw(String siteId) {
-    catalog.remove(siteId);
+  void withdraw(String siteId, {String? reason, String kind = 'withdrawn'}) {
+    final removed = catalog.remove(siteId);
+    if (reason != null && removed != null) {
+      withdrawals.add({
+        'site_id': siteId,
+        'site_name': removed.siteName,
+        'kind': kind,
+        'at': serverClock.toIso8601String(),
+        'reason': reason,
+      });
+    }
     generation++;
   }
+
+  /// Sites retirés annoncés avec leur motif (MET-04).
+  final List<Map<String, Object?>> withdrawals = [];
 
   FakePublication _byPublicationId(String id) => catalog.values.firstWhere(
     (publication) => publication.publicationId == id,
@@ -242,6 +254,7 @@ final class FakeSyncServer {
               .toIso8601String(),
         },
         'min_app_version': minAppVersion,
+        'withdrawals': withdrawals,
         'publications': [
           for (final publication in catalog.values)
             {

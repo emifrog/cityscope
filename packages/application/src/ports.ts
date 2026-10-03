@@ -1,4 +1,6 @@
 import type {
+  CatalogWithdrawal,
+  PublicationSummary,
   EtareDossierList,
   EtareDossierListQuery,
   Notification,
@@ -150,6 +152,9 @@ export interface SiteRepository extends SiteReader {
   mapFeatures(query: MapSitesQuery): Promise<MapSitesResponse>;
   create(input: SiteCreate): Promise<SiteDetail>;
   update(id: string, expectedVersion: number, patch: SiteUpdate): Promise<SiteDetail | null>;
+  /** Archives the site and its dossier (MET-04); the database refuses while a version is in force or pending. */
+  archive(id: string, expectedVersion: number, reason: string): Promise<SiteDetail | null>;
+  restore(id: string, expectedVersion: number): Promise<SiteDetail | null>;
 }
 
 export interface BuildingRepository {
@@ -306,6 +311,8 @@ export interface EtareRepository {
   approvalOf(revisionId: string): Promise<string | null>;
   /** Queues the publication of an approved revision; returns its id. */
   requestPublication(revisionId: string, approvalId: string): Promise<string>;
+  /** Withdraws the version in force (MET-04); Conflict when it is not the one in force. */
+  withdraw(id: string, expectedVersion: number, reason: string): Promise<PublicationSummary | null>;
 }
 
 /** Zones of the levels, drawn on level plans. */
@@ -598,7 +605,12 @@ export interface DeviceRepository {
   catalog(
     deviceId: string,
     appVersion: string | null,
-  ): Promise<{ generation: number; tenantName: string; publications: CatalogEntry[] }>;
+  ): Promise<{
+    generation: number;
+    tenantName: string;
+    publications: CatalogEntry[];
+    withdrawals: CatalogWithdrawal[];
+  }>;
   /** Null when the publication is not (or no longer) distributable. */
   package(deviceId: string, publicationId: string): Promise<DistributedPackage | null>;
   /** Storage keys of the requested files of a distributable publication, by hash. */

@@ -95,6 +95,14 @@ export const siteDetailSchema = siteSummarySchema
     last_verified_at: isoDateTimeSchema.nullable(),
     building_count: z.number().int().nonnegative(),
     active_publication: activePublicationSchema.nullable(),
+    /** Archiving of the site and its dossier (MET-04); null when not archived. */
+    archive: z
+      .object({
+        archived_at: isoDateTimeSchema.nullable(),
+        archived_by: z.string().nullable(),
+        reason: z.string().nullable(),
+      })
+      .nullable(),
     row_version: z.number().int().positive(),
   })
   .meta({ id: 'SiteDetail', description: 'Site (données de travail), vue détaillée.' });

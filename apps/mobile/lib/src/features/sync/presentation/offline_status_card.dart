@@ -166,6 +166,20 @@ class _Enrolled extends ConsumerWidget {
           '${device.deviceName} · ${device.tenantName}',
           style: textTheme.bodyMedium?.copyWith(color: BrandColors.textMuted),
         ),
+        if (ref.watch(removalNoticesProvider).value case final notices?
+            when notices.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text('Retirés par le SIS', style: textTheme.titleSmall),
+          for (final notice in notices.take(3))
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '${notice.siteName} — ${notice.label.toLowerCase()} le '
+                '${formatDateTimeFr(notice.at)} : « ${notice.reason} »',
+                style: textTheme.bodyMedium,
+              ),
+            ),
+        ],
         if (status.appUpdateRequired && !running) ...[
           const SizedBox(height: 12),
           _UpdateRequired(minVersion: status.requiredAppVersion),

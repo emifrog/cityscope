@@ -1,4 +1,5 @@
 import 'package:etare_ops/src/core/json/json_reader.dart';
+import 'package:etare_ops/src/features/sync/domain/removal_notice.dart';
 import 'package:flutter/foundation.dart';
 
 final _sha256Pattern = RegExp(r'^[0-9a-f]{64}$');
@@ -113,6 +114,7 @@ final class SyncCatalog {
     required this.authorizationExpiresAt,
     required this.publications,
     this.minAppVersion,
+    this.withdrawals = const [],
   });
 
   factory SyncCatalog.fromJson(JsonMap json) {
@@ -141,6 +143,13 @@ final class SyncCatalog {
           CatalogEntry.fromJson(entry),
       ],
       minAppVersion: minApp,
+      // Absent des catalogues antérieurs au Sprint 8 (MET-04).
+      withdrawals: json['withdrawals'] == null
+          ? const []
+          : [
+              for (final entry in json.requireObjectList('withdrawals'))
+                RemovalNotice.fromJson(entry),
+            ],
     );
   }
 
@@ -158,6 +167,10 @@ final class SyncCatalog {
   /// Plus ancienne application autorisée à installer depuis ce catalogue
   /// (SYN-02) ; null : pas de minimum.
   final String? minAppVersion;
+
+  /// Sites détenus par la tablette dont la version a été retirée ou qui ont
+  /// été archivés, avec le motif (MET-04).
+  final List<RemovalNotice> withdrawals;
 }
 
 /// Fichier d'un paquet, identifié par son empreinte.

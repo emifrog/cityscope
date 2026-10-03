@@ -199,7 +199,10 @@ export async function getSyncCatalog(
   proof: DeviceProof,
 ): Promise<SignedCatalog> {
   return asDevice(deps, context, proof, async (session, signer) => {
-    const { generation, tenantName, publications } = await session.devices.catalog(proof.deviceId, proof.appVersion);
+    const { generation, tenantName, publications, withdrawals } = await session.devices.catalog(
+      proof.deviceId,
+      proof.appVersion,
+    );
     const now = deps.now();
     const catalog: SyncCatalog = syncCatalogSchema.parse({
       catalog_version: CATALOG_VERSION,
@@ -215,6 +218,7 @@ export async function getSyncCatalog(
       },
       min_app_version: deps.minAppVersion ?? null,
       publications,
+      withdrawals,
     } satisfies SyncCatalog);
     const text = canonicalJson(catalog);
     return { catalog: text, signature: signer.sign(SIGNATURE_CONTEXTS.catalog, text) };

@@ -6,7 +6,6 @@ import {
   pointSchema,
   sensitivitySchema,
   siteNameSchema,
-  siteStatusSchema,
   siteTypeSchema,
   surfaceSchema,
   uuidSchema,
@@ -66,7 +65,10 @@ export const siteUpdateSchema = nonEmptyPatch(
     name: siteNameSchema.optional(),
     short_name: optionalText(80),
     site_type: siteTypeSchema.optional(),
-    status: siteStatusSchema.optional(),
+    /** Archiving goes through POST /sites/{id}/archive (reason, nothing in force). */
+    status: z
+      .enum(['draft', 'active', 'inactive'], { message: 'Archivez le site depuis son dossier ETARE.' })
+      .optional(),
     sensitivity: sensitivitySchema.optional(),
     etare_number: etareNumberSchema.nullable().optional(),
     address: addressInputSchema.nullable().optional(),
@@ -78,6 +80,12 @@ export const siteUpdateSchema = nonEmptyPatch(
   }),
 ).meta({ id: 'SiteUpdate' });
 export type SiteUpdate = z.infer<typeof siteUpdateSchema>;
+
+/** Why a site and its dossier are archived (MET-04), read in the history and by the terminals. */
+export const siteArchiveSchema = z
+  .object({ reason: z.string().trim().min(3, 'Motivez l’archivage.').max(1000) })
+  .meta({ id: 'SiteArchive' });
+export type SiteArchive = z.infer<typeof siteArchiveSchema>;
 
 // ------------------------------------------------------------------ buildings and levels
 export const levelSchema = z

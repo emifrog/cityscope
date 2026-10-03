@@ -17,6 +17,7 @@ import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
 import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
 import 'package:etare_ops/src/features/sync/data/sync_api.dart';
 import 'package:etare_ops/src/features/sync/domain/package_models.dart';
+import 'package:etare_ops/src/features/sync/domain/removal_notice.dart';
 import 'package:etare_ops/src/features/sync/domain/signed_content.dart';
 import 'package:etare_ops/src/features/sync/domain/sync_plan.dart';
 import 'package:flutter/foundation.dart';
@@ -381,6 +382,7 @@ final class SyncService {
       ActivationRecord(
         install: prepared,
         removeSites: plan.toRemove,
+        notices: _noticesOf(catalog, plan),
         generation: catalog.generation,
         serverTime: catalog.issuedAt,
         authorizedUserId: catalog.authorizedUserId,
@@ -441,6 +443,7 @@ final class SyncService {
       ActivationRecord(
         install: const [],
         removeSites: plan.toRemove,
+        notices: _noticesOf(catalog, plan),
         generation: catalog.generation,
         serverTime: catalog.issuedAt,
         authorizedUserId: catalog.authorizedUserId,
@@ -461,6 +464,16 @@ final class SyncService {
       minVersion: minVersion,
       removed: plan.toRemove.length,
     );
+  }
+
+  /// Raisons des sites retirés par ce passage (MET-04), lues dans le
+  /// catalogue signé.
+  static List<RemovalNotice> _noticesOf(SyncCatalog catalog, SyncPlan plan) {
+    final removed = plan.toRemove.toSet();
+    return [
+      for (final notice in catalog.withdrawals)
+        if (removed.contains(notice.siteId)) notice,
+    ];
   }
 
   /// Catalogue signé par la clé de catalogue, émis pour CE terminal et CET

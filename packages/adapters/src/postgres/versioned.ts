@@ -17,7 +17,8 @@ export type VersionedTable =
   | 'app.risk_type'
   | 'app.etare_revision'
   | 'app.field_report'
-  | 'app.contribution';
+  | 'app.contribution'
+  | 'app.publication';
 
 /**
  * Locks the row (SELECT … FOR UPDATE, under RLS) and checks the version the

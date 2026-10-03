@@ -6,6 +6,8 @@ import {
   type EtareOverview,
   type EtarePreview,
   type EtareRevision,
+  type PublicationSummary,
+  type PublicationWithdraw,
   type RevisionCreate,
   type RevisionDecision,
   type RevisionDetail,
@@ -263,6 +265,23 @@ export function publishRevision(
     });
     return found(await session.etare.revision(revisionId), 'Révision introuvable.').revision;
   });
+}
+
+/**
+ * Withdraws the version in force of a site (MET-04): a validator with the
+ * second factor, with a reason. Terminals remove it at their next contact and
+ * are told why; the publication stays in the history.
+ */
+export function withdrawPublication(
+  sessions: SessionFactory,
+  context: RequestContext,
+  id: string,
+  expectedVersion: number,
+  input: PublicationWithdraw,
+): Promise<PublicationSummary> {
+  return inTenant(sessions, context, 'publication:publish', async (session) =>
+    found(await session.etare.withdraw(id, expectedVersion, input.reason), 'Publication introuvable.'),
+  );
 }
 
 const PDF_URL_SECONDS = 60;

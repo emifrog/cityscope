@@ -1,6 +1,6 @@
 'use client';
 
-import { Badge } from '@etare/ui';
+import { Badge, Alert } from '@etare/ui';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
@@ -54,13 +54,21 @@ export function SiteDetailView({ id }: { id: string }) {
         title={data.name}
         description={data.address?.label ?? undefined}
         actions={
-          data.active_publication ? (
+          data.archive ? (
+            <Badge>Site archivé</Badge>
+          ) : data.active_publication ? (
             <Badge tone="success">Version publiée n° {data.active_publication.publication_number}</Badge>
           ) : (
             <Badge tone="important">Aucune version publiée</Badge>
           )
         }
       />
+      {data.archive ? (
+        <Alert tone="info" className="mb-4">
+          Site archivé{data.archive.reason ? <> : « {data.archive.reason} »</> : null}. Son dossier ETARE n’est plus
+          diffusé ; l’historique reste consultable (onglet ETARE).
+        </Alert>
+      ) : null}
       <TabLinks tabs={TABS} active={tab} param="onglet" basePath={`/sites/${id}`} />
       {tab === 'synthese' ? <SummaryPanel site={data} /> : null}
       {tab === 'localisation' ? <LocationPanel site={data} /> : null}
@@ -69,7 +77,7 @@ export function SiteDetailView({ id }: { id: string }) {
       {tab === 'classifications' ? <ClassificationsPanel siteId={id} /> : null}
       {tab === 'contacts' ? <ContactsPanel siteId={id} /> : null}
       {tab === 'documents' ? <DocumentsPanel siteId={id} /> : null}
-      {tab === 'etare' ? <EtarePanel siteId={id} /> : null}
+      {tab === 'etare' ? <EtarePanel site={data} /> : null}
     </>
   );
 }

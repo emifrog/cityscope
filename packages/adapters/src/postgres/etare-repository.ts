@@ -11,8 +11,10 @@ import {
   type EtareOverview,
   type EtareRevision,
   type EtareSnapshot,
+  type PublicationSummary,
   type ValidationQueueItem,
 } from '@etare/contracts';
+import { Conflict } from '@etare/domain';
 import { decodeCursor, encodeCursor } from './cursor';
 import type { PoolClient } from './pool';
 import { likeLiteral } from './site-repository';
@@ -26,8 +28,13 @@ const person = (column: string) =>
 /** The PDF is listed in the manifest by the worker (ETARE-02). */
 const HAS_PDF = `coalesce(p.manifest -> 'files' @> '[{"path": "etare.pdf"}]'::jsonb, false)`;
 
+/** Withdrawal of a version (MET-04): when, by whom (member name), why. */
+const WITHDRAWAL = `case when p.status = 'withdrawn' and p.withdrawn_at is not null then
+    json_build_object('withdrawn_at', p.withdrawn_at, 'withdrawn_by', app.member_name(p.withdrawn_by),
+                      'reason', p.withdrawal_reason) end`;
+
 const PUBLICATION_COLUMNS = `p.id, p.publication_number, p.status, p.requested_at, p.published_at, p.failure_code, p.manifest_hash,
-  ${HAS_PDF} as has_pdf`;
+  ${HAS_PDF} as has_pdf, ${WITHDRAWAL} as withdrawal, p.row_version`;
 
 const REVISION_SELECT = `
   select r.id, r.site_id, r.revision_no, r.status, r.change_summary, r.content_hash,
@@ -40,7 +47,8 @@ const REVISION_SELECT = `
          (select json_build_object('id', p.id, 'publication_number', p.publication_number, 'status', p.status,
                                    'requested_at', p.requested_at, 'published_at', p.published_at,
                                    'failure_code', p.failure_code, 'manifest_hash', p.manifest_hash,
-                                   'has_pdf', ${HAS_PDF})
+                                   'has_pdf', ${HAS_PDF}, 'withdrawal', ${WITHDRAWAL},
+                                   'row_version', p.row_version)
             from app.publication p where p.revision_id = r.id order by p.publication_number desc limit 1) as publication,
          r.row_version
   from app.etare_revision r
@@ -70,7 +78,19 @@ interface PublicationRow {
   failure_code: string | null;
   manifest_hash: string | null;
   has_pdf: boolean;
+  withdrawal: { withdrawn_at: string; withdrawn_by: string | null; reason: string } | null;
+  row_version: number;
 }
+
+const toPublicationSummary = (row: PublicationRow): PublicationSummary =>
+  publicationSummarySchema.parse({
+    ...row,
+    requested_at: toIso(row.requested_at),
+    published_at: toIso(row.published_at),
+    withdrawal: row.withdrawal
+      ? { ...row.withdrawal, withdrawn_at: new Date(row.withdrawal.withdrawn_at).toISOString() }
+      : null,
+  });
 
 /** Sites of the SIS (archived ones excepted), their version in force and their latest revision. */
 const DOSSIER_FROM = `from app.site s
@@ -157,8 +177,10 @@ export class PostgresEtareRepository implements EtareRepository {
 
   async overview(siteId: string): Promise<EtareOverview | null> {
     if (!(await this.siteVisible(siteId))) return null;
+    // The active dossier, or the latest one of an archived site (its history stays readable).
     const etare = await this.client.query<{ id: string }>(
-      `select id from app.etare where site_id = $1 and tenant_id = app.current_tenant_id() and status = 'active'`,
+      `select id from app.etare where site_id = $1 and tenant_id = app.current_tenant_id()
+       order by status = 'active' desc, created_at desc limit 1`,
       [siteId],
     );
     const etareId = etare.rows[0]?.id ?? null;
@@ -176,14 +198,30 @@ export class PostgresEtareRepository implements EtareRepository {
     return {
       etare_id: etareId,
       revisions: revisions.rows.map(toRevision),
-      publications: publications.rows.map((row) =>
-        publicationSummarySchema.parse({
-          ...row,
-          requested_at: toIso(row.requested_at),
-          published_at: toIso(row.published_at),
-        }),
-      ),
+      publications: publications.rows.map(toPublicationSummary),
     };
+  }
+
+  async withdraw(id: string, expectedVersion: number, reason: string): Promise<PublicationSummary | null> {
+    const locked = await lockVersion<{ row_version: number; status: string }>(
+      this.client,
+      'app.publication',
+      id,
+      expectedVersion,
+      'row_version, status',
+    );
+    if (!locked) return null;
+    if (locked.status !== 'published') throw new Conflict('Seule la version en vigueur peut être retirée.');
+    const updated = await this.client.query(
+      `update app.publication set status = 'withdrawn', withdrawal_reason = $2 where id = $1`,
+      [id, reason],
+    );
+    if (updated.rowCount !== 1) return null;
+    const { rows } = await this.client.query<PublicationRow>(
+      `select ${PUBLICATION_COLUMNS} from app.publication p where p.id = $1`,
+      [id],
+    );
+    return rows[0] ? toPublicationSummary(rows[0]) : null;
   }
 
   async createRevision(siteId: string, changeSummary: string | null): Promise<EtareRevision | null> {

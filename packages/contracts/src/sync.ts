@@ -160,6 +160,19 @@ export const catalogEntrySchema = z
   .meta({ id: 'CatalogEntry' });
 export type CatalogEntry = z.infer<typeof catalogEntrySchema>;
 
+/** A site the terminal holds that disappears from the catalogue, and why (MET-04). */
+export const catalogWithdrawalSchema = z
+  .object({
+    site_id: uuidSchema,
+    site_name: z.string(),
+    /** `withdrawn`: the version in force was withdrawn; `archived`: the site and its dossier were archived. */
+    kind: z.enum(['withdrawn', 'archived']),
+    at: isoDateTimeSchema,
+    reason: z.string(),
+  })
+  .meta({ id: 'CatalogWithdrawal' });
+export type CatalogWithdrawal = z.infer<typeof catalogWithdrawalSchema>;
+
 /**
  * Distribution catalogue of a terminal: the complete list of the publications
  * it may hold (a site missing from it must be removed), at a monotonic
@@ -181,6 +194,8 @@ export const syncCatalogSchema = z
      */
     min_app_version: z.string().regex(APP_VERSION_PATTERN).nullable(),
     publications: z.array(catalogEntrySchema),
+    /** Sites held by the terminal whose version was withdrawn or which were archived (MET-04). */
+    withdrawals: z.array(catalogWithdrawalSchema),
   })
   .meta({ id: 'SyncCatalog' });
 export type SyncCatalog = z.infer<typeof syncCatalogSchema>;

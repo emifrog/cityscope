@@ -76,6 +76,8 @@ import {
 } from './plans';
 import {
   etareDossierListQuerySchema,
+  publicationSummarySchema,
+  publicationWithdrawSchema,
   etareDossierListSchema,
   etareOverviewSchema,
   etarePreviewSchema,
@@ -125,6 +127,7 @@ import {
   levelSchema,
   levelUpdateSchema,
   siteCreateSchema,
+  siteArchiveSchema,
   siteUpdateSchema,
 } from './referential';
 import {
@@ -774,6 +777,41 @@ export const endpoints = {
     params: idParamsSchema,
     successStatus: 200,
     response: assetDownloadSchema,
+  }),
+  withdrawPublication: tenantEndpoint({
+    operationId: 'withdrawPublication',
+    method: 'post',
+    path: '/publications/{id}/withdrawal',
+    summary: 'Retirer la version en vigueur d’un site (validateur, second facteur, motif) : retirée des tablettes',
+    tags: ['etare'],
+    params: idParamsSchema,
+    body: publicationWithdrawSchema,
+    concurrency: 'if-match',
+    successStatus: 200,
+    response: publicationSummarySchema,
+  }),
+  archiveSite: tenantEndpoint({
+    operationId: 'archiveSite',
+    method: 'post',
+    path: '/sites/{id}/archive',
+    summary: 'Archiver un site et son dossier (motif ; aucune version en vigueur ni décision en attente)',
+    tags: ['sites'],
+    params: idParamsSchema,
+    body: siteArchiveSchema,
+    concurrency: 'if-match',
+    successStatus: 200,
+    response: siteDetailSchema,
+  }),
+  restoreSite: tenantEndpoint({
+    operationId: 'restoreSite',
+    method: 'post',
+    path: '/sites/{id}/restore',
+    summary: 'Restaurer un site archivé et son dossier',
+    tags: ['sites'],
+    params: idParamsSchema,
+    concurrency: 'if-match',
+    successStatus: 200,
+    response: siteDetailSchema,
   }),
   publishRevision: tenantEndpoint({
     operationId: 'publishRevision',

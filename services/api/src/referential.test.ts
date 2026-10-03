@@ -25,6 +25,7 @@ const site: SiteDetail = {
   last_verified_at: null,
   building_count: 0,
   active_publication: null,
+  archive: null,
   row_version: 4,
 };
 

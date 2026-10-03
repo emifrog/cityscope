@@ -1,14 +1,7 @@
 'use client';
 
 import type { AddressCandidate, SiteDetail, SiteUpdate } from '@etare/contracts';
-import {
-  SENSITIVITY_LEVELS,
-  SITE_STATUSES,
-  SITE_TYPES,
-  type Sensitivity,
-  type SiteStatus,
-  type SiteType,
-} from '@etare/domain';
+import { SENSITIVITY_LEVELS, SITE_STATUSES, SITE_TYPES, type Sensitivity, type SiteType } from '@etare/domain';
 import { Button, Field, Input, Select } from '@etare/ui';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { ReactNode } from 'react';
@@ -72,7 +65,6 @@ export function siteFormDefaults(site?: SiteDetail): SiteFormValues {
 export interface SitePayload extends SiteUpdate {
   name: string;
   site_type: SiteType;
-  status: SiteStatus;
   sensitivity: Sensitivity;
 }
 
@@ -84,7 +76,8 @@ export function toSitePayload(values: SiteFormValues): SitePayload {
     name: values.name.trim(),
     short_name: blankToNull(values.short_name),
     site_type: values.site_type,
-    status: values.status,
+    // Archiving and restoring go through the dossier (MET-04): the form never changes them.
+    ...(values.status === 'archived' ? {} : { status: values.status }),
     sensitivity: values.sensitivity,
     etare_number: blankToNull(values.etare_number),
     address: values.city.trim()
@@ -151,7 +144,10 @@ export function SiteForm({
     setValue('longitude', String(longitude), options);
   };
 
-  const statuses = mode === 'create' ? (['draft', 'active'] as const) : SITE_STATUSES;
+  const statuses =
+    mode === 'create'
+      ? (['draft', 'active'] as const)
+      : SITE_STATUSES.filter((status) => status !== 'archived' || initial?.status === 'archived');
   const invalid = (name: keyof SiteFormValues) => (errors[name] ? true : undefined);
 
   return (

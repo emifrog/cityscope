@@ -14,6 +14,11 @@ class LocalMetaDao extends DatabaseAccessor<AppDatabase>
     localMeta,
   )..where((t) => t.key.equals(key))).map((row) => row.value).getSingleOrNull();
 
+  Stream<String?> watchValue(String key) =>
+      (select(localMeta)..where((t) => t.key.equals(key)))
+          .map((row) => row.value)
+          .watchSingleOrNull();
+
   Future<void> writeValue(String key, String value) => into(
     localMeta,
   ).insertOnConflictUpdate(LocalMetaCompanion.insert(key: key, value: value));

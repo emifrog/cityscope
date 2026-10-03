@@ -44,6 +44,9 @@ interface SiteDetailRow extends SiteRow {
   publication_id: string | null;
   publication_number: number | null;
   published_at: Date | null;
+  archived_at: Date | null;
+  archived_by_name: string | null;
+  archive_reason: string | null;
 }
 
 const SITE_COLUMNS = `
@@ -200,6 +203,19 @@ export class PostgresSiteRepository implements SiteRepository {
     });
   }
 
+  /** Archives the site and its dossier (MET-04): the database checks nothing is in force nor pending. */
+  async archive(id: string, expectedVersion: number, reason: string): Promise<SiteDetail | null> {
+    if (!(await lockVersion(this.client, 'app.site', id, expectedVersion))) return null;
+    await this.client.query(`update app.site set status = 'archived', archive_reason = $2 where id = $1`, [id, reason]);
+    return this.get(id);
+  }
+
+  async restore(id: string, expectedVersion: number): Promise<SiteDetail | null> {
+    if (!(await lockVersion(this.client, 'app.site', id, expectedVersion))) return null;
+    await this.client.query(`update app.site set status = 'active' where id = $1 and status = 'archived'`, [id]);
+    return this.get(id);
+  }
+
   async get(id: string): Promise<SiteDetail | null> {
     const result = await this.client.query<SiteDetailRow>(
       `select ${SITE_COLUMNS},
@@ -207,7 +223,9 @@ export class PostgresSiteRepository implements SiteRepository {
          extensions.st_asgeojson(s.footprint, 7)::json as footprint,
          s.last_verified_at, s.row_version,
          (select count(*)::int from app.building b where b.site_id = s.id and b.status = 'active') as building_count,
-         p.id as publication_id, p.publication_number, p.published_at
+         p.id as publication_id, p.publication_number, p.published_at,
+         s.archived_at, case when s.archived_by is not null then app.member_name(s.archived_by) end as archived_by_name,
+         s.archive_reason
        ${SITE_JOINS}
        left join app.publication p on p.tenant_id = s.tenant_id and p.id = s.active_publication_id
        where s.tenant_id = app.current_tenant_id()
@@ -226,6 +244,14 @@ export class PostgresSiteRepository implements SiteRepository {
       last_verified_at: row.last_verified_at?.toISOString() ?? null,
       building_count: row.building_count,
       row_version: row.row_version,
+      archive:
+        row.status === 'archived'
+          ? {
+              archived_at: row.archived_at?.toISOString() ?? null,
+              archived_by: row.archived_by_name,
+              reason: row.archive_reason,
+            }
+          : null,
       active_publication:
         row.publication_id && row.publication_number && row.published_at
           ? {

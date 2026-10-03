@@ -1,10 +1,12 @@
 import type { DeviceRepository, DistributedPackage } from '@etare/application';
 import {
   catalogEntrySchema,
+  catalogWithdrawalSchema,
   deviceEnrollmentSchema,
   deviceSchema,
   signatureSchema,
   type CatalogEntry,
+  type CatalogWithdrawal,
   type Device,
   type DeviceEnrollment,
   type SyncReceipt,
@@ -176,9 +178,19 @@ export class PostgresDeviceRepository implements DeviceRepository {
   async catalog(
     deviceId: string,
     appVersion: string | null,
-  ): Promise<{ generation: number; tenantName: string; publications: CatalogEntry[] }> {
+  ): Promise<{
+    generation: number;
+    tenantName: string;
+    publications: CatalogEntry[];
+    withdrawals: CatalogWithdrawal[];
+  }> {
     const { rows } = await this.client.query<{
-      catalog: { generation: number; tenant_name: string; publications: CatalogRow[] };
+      catalog: {
+        generation: number;
+        tenant_name: string;
+        publications: CatalogRow[];
+        withdrawals?: (Omit<CatalogWithdrawal, 'at'> & { at: string })[];
+      };
     }>('select app.sync_catalog($1, $2) as catalog', [deviceId, appVersion]);
     const catalog = rows[0]?.catalog;
     if (!catalog) throw new Error('Empty catalogue.');
@@ -187,6 +199,9 @@ export class PostgresDeviceRepository implements DeviceRepository {
       tenantName: catalog.tenant_name,
       publications: catalog.publications.map((entry) =>
         catalogEntrySchema.parse({ ...entry, published_at: new Date(entry.published_at).toISOString() }),
+      ),
+      withdrawals: (catalog.withdrawals ?? []).map((entry) =>
+        catalogWithdrawalSchema.parse({ ...entry, at: new Date(entry.at).toISOString() }),
       ),
     };
   }

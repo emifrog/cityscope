@@ -28,7 +28,12 @@ function makeApp() {
       status: 'active',
       publicKey: terminalKey.publicKey,
     })),
-    catalog: vi.fn<DeviceRepository['catalog']>(async () => ({ generation: 3, tenantName: 'SDIS', publications: [] })),
+    catalog: vi.fn<DeviceRepository['catalog']>(async () => ({
+      generation: 3,
+      tenantName: 'SDIS',
+      publications: [],
+      withdrawals: [],
+    })),
     receipt: vi.fn<DeviceRepository['receipt']>(async (_device, receipt) => receipt.installed.length),
   };
   const sessions: SessionFactory = {

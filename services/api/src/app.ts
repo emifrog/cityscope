@@ -98,6 +98,9 @@ import {
   updateSiteRisk,
   updateZone,
   updateSite,
+  archiveSite,
+  restoreSite,
+  withdrawPublication,
   type CartographyCatalog,
   type ContentSigner,
   type DeviceProof,
@@ -392,6 +395,30 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     const version = expectedVersion(c);
     const patch = await readBody(c, endpoints.updateSite.body);
     return respond(c, endpoints.updateSite, await updateSite(deps.sessions, context, idOf(c), version, patch));
+  });
+
+  app.post(routerPath(endpoints.archiveSite.path), async (c) => {
+    const context = await requestContext(c, endpoints.archiveSite);
+    const version = expectedVersion(c);
+    const input = await readBody(c, endpoints.archiveSite.body);
+    return respond(c, endpoints.archiveSite, await archiveSite(deps.sessions, context, idOf(c), version, input));
+  });
+
+  app.post(routerPath(endpoints.restoreSite.path), async (c) => {
+    const context = await requestContext(c, endpoints.restoreSite);
+    const version = expectedVersion(c);
+    return respond(c, endpoints.restoreSite, await restoreSite(deps.sessions, context, idOf(c), version));
+  });
+
+  app.post(routerPath(endpoints.withdrawPublication.path), async (c) => {
+    const context = await requestContext(c, endpoints.withdrawPublication);
+    const version = expectedVersion(c);
+    const input = await readBody(c, endpoints.withdrawPublication.body);
+    return respond(
+      c,
+      endpoints.withdrawPublication,
+      await withdrawPublication(deps.sessions, context, idOf(c), version, input),
+    );
   });
 
   // ---------------------------------------------------------------- buildings and levels

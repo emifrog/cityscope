@@ -50,6 +50,10 @@ révèlent rien). Tests : `supabase/tests/database/10_tenant_isolation.test.sql`
   propositions ne modifient jamais les données : la Prévision les instruit, les reporte dans une révision
   validée par un tiers ; une valeur changée entre-temps exige une résolution motivée ; ses fichiers suivent la
   chaîne contrôlée et ne font pas de lui un auteur du dossier.
+- **Cycle de vie** (ADR-021) : retrait d'une version en vigueur réservé aux validateurs avec second facteur
+  et motivé ; archivage refusé tant qu'une version est en vigueur ou qu'une décision est en attente ; rien
+  ne démarre sur un site archivé ; tout reste audité. Les tablettes reçoivent la raison d'un retrait dans le
+  catalogue signé.
 - **Notifications** (ADR-020) : écrites avec leur événement, envoyées par le worker ; contenu minimal (ni
   échanges, ni motif, ni code, ni document) et liens sans secret, qui ouvrent le portail après connexion.
   Une panne d'envoi ne bloque rien : elle est tracée et rejouable par l'administration du SIS.

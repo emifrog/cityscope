@@ -1,6 +1,6 @@
 'use client';
 
-import type { EtareCheck, EtareRevision } from '@etare/contracts';
+import type { EtareCheck, EtareRevision, SiteDetail } from '@etare/contracts';
 import {
   Alert,
   Badge,
@@ -22,6 +22,7 @@ import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { PUBLICATION_STATUS_LABELS, REVISION_STATUS_LABELS } from '@/components/labels';
 import { api } from '@/lib/api-client';
 import { queryKeys, useApiMutation, useEtarePreview, usePermissions, useSiteEtare } from '@/lib/queries';
+import { ArchiveCard, WithdrawalSection, WithdrawnNotice } from './lifecycle-cards';
 
 const dateTime = new Intl.DateTimeFormat('fr-FR', {
   dateStyle: 'medium',
@@ -70,7 +71,8 @@ function Checks({ checks }: { checks: readonly EtareCheck[] }) {
  * progress with its checks and a faithful preview, submission to validation,
  * and the history of revisions and publications.
  */
-export function EtarePanel({ siteId }: { siteId: string }) {
+export function EtarePanel({ site }: { site: SiteDetail }) {
+  const siteId = site.id;
   const permissions = usePermissions();
   const etare = useSiteEtare(siteId);
   const open = etare.data?.revisions.find((revision) => revision.status === 'draft' || revision.status === 'submitted');
@@ -96,6 +98,10 @@ export function EtarePanel({ siteId }: { siteId: string }) {
   if (etare.error) return <ApiErrorAlert error={etare.error} />;
   const { revisions, publications } = etare.data;
   const active = publications.find((publication) => publication.status === 'published');
+  const lastPublication = publications.find((publication) =>
+    ['published', 'superseded', 'withdrawn'].includes(publication.status),
+  );
+  const archived = site.status === 'archived';
   const latest = revisions[0];
   const blocking = preview.data?.checks.some((check) => check.level === 'error') ?? true;
   const summaryText = summary ?? open?.change_summary ?? '';
@@ -151,7 +157,10 @@ export function EtarePanel({ siteId }: { siteId: string }) {
                 {latest.decision.comment} »
               </Alert>
             ) : null}
-            {!open ? (
+            {archived ? (
+              <Alert tone="info">Site archivé : restaurez-le pour préparer une nouvelle version.</Alert>
+            ) : null}
+            {!open && !archived ? (
               permissions.has('etare:edit') ? (
                 <Button disabled={create.isPending} onClick={() => create.mutate(undefined)}>
                   Préparer une nouvelle version
@@ -233,6 +242,8 @@ export function EtarePanel({ siteId }: { siteId: string }) {
                   Manifeste {active.manifest_hash ? `${active.manifest_hash.slice(0, 12)}…` : '—'}
                 </span>
               </p>
+            ) : lastPublication?.status === 'withdrawn' ? (
+              <WithdrawnNotice publication={lastPublication} />
             ) : (
               <p className="text-sm text-muted">Aucune version publiée : rien n’est encore diffusé sur le terrain.</p>
             )}
@@ -241,8 +252,14 @@ export function EtarePanel({ siteId }: { siteId: string }) {
                 <PublicationPdfButton publicationId={active.id} number={active.publication_number} />
               </div>
             ) : null}
+            {active ? (
+              <div className="mt-3">
+                <WithdrawalSection siteId={siteId} active={active} />
+              </div>
+            ) : null}
           </CardContent>
         </Card>
+        <ArchiveCard site={site} etare={etare.data} />
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Historique</CardTitle>
@@ -273,6 +290,12 @@ export function EtarePanel({ siteId }: { siteId: string }) {
                         : ''}
                     </p>
                     {revision.change_summary ? <p className="text-xs">{revision.change_summary}</p> : null}
+                    {revision.publication?.withdrawal ? (
+                      <p className="text-xs text-important">
+                        Retirée le {when(revision.publication.withdrawal.withdrawn_at)} : «{' '}
+                        {revision.publication.withdrawal.reason} »
+                      </p>
+                    ) : null}
                     {revision.status !== 'draft' ? (
                       <Link href={`/validations/${revision.id}`} className="text-xs text-info hover:underline">
                         Détail

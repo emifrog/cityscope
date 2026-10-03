@@ -114,6 +114,18 @@ Garanties SQL (`tg_etare_revision_guard`, `tg_approval_guard`, `tg_publication_g
   les paquets en construction ni les publications retirées. La consultation des états intermédiaires
   est réservée aux profils disposant aussi de `etare:read`.
 
+## Cycle de vie d'un dossier
+
+Voir ADR-021. Retrait de la version en vigueur sous RLS (`publication:publish`, second facteur) avec un
+motif ; le trigger `publication_withdrawal` enregistre `withdrawn_at` et `withdrawn_by`. Archivage d'un
+site (`site:write`, `archive_reason` obligatoire) : le trigger `site_archive` le refuse tant qu'une version
+est en vigueur (`SITE_PUBLISHED`), qu'une publication est en fabrication (`SITE_PUBLICATION_PENDING`) ou
+qu'une révision attend une décision (`SITE_REVISION_SUBMITTED`), et enregistre qui et quand ;
+`site_archive_effects` clôt les brouillons et archive le dossier (réactivé à la restauration) ;
+`archived_site_frozen` refuse toute révision ou publication sur un site archivé. `sync_catalog` ajoute les
+raisons des disparitions (`withdrawals`) pour les sites que le terminal détient. Voir le test
+`200_lifecycle`.
+
 ## Distribution hors ligne
 
 Voir ADR-015. Le worker écrit la signature Ed25519 du manifeste avec le résultat de la fabrication

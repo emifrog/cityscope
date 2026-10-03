@@ -172,6 +172,26 @@ void main() {
     expect(await database.offlineDao.dataText(siteB), isNull);
   });
 
+  test('garde la raison d’un retrait annoncée par le SIS (MET-04), jusqu’à '
+      'une nouvelle publication du site', () async {
+    server
+      ..publish(publicationOf(siteA, 1))
+      ..publish(publicationOf(siteB, 1, name: 'Collège'));
+    await sync();
+    server.withdraw(siteB, reason: 'Bâtiment démoli.');
+
+    await sync();
+
+    final notices = await database.offlineDao.watchRemovalNotices().first;
+    expect(notices.map((n) => (n.siteId, n.siteName, n.label, n.reason)), [
+      (siteB, 'Collège', 'Version retirée par le SIS', 'Bâtiment démoli.'),
+    ]);
+
+    server.publish(publicationOf(siteB, 2, name: 'Collège'));
+    await sync();
+    expect(await database.offlineDao.watchRemovalNotices().first, isEmpty);
+  });
+
   test(
     'refuse un catalogue qui n’est pas signé par la clé de catalogue',
     () async {

@@ -273,6 +273,24 @@ export function translateDatabaseError(error: unknown): unknown {
       if (messageOf(error).includes('FIELD_REPORT_ASSIGNEE')) {
         return new InvalidInput('Affectez le signalement à un membre actif du SIS.');
       }
+      if (messageOf(error).includes('SITE_PUBLISHED')) {
+        return new Conflict('Une version est en vigueur : un validateur doit d’abord la retirer (onglet ETARE).');
+      }
+      if (messageOf(error).includes('SITE_PUBLICATION_PENDING')) {
+        return new Conflict('Une publication est en cours de fabrication : attendez sa fin avant d’archiver.');
+      }
+      if (messageOf(error).includes('SITE_REVISION_SUBMITTED')) {
+        return new Conflict('Une révision attend la décision d’un validateur : obtenez-la avant d’archiver.');
+      }
+      if (messageOf(error).includes('SITE_ARCHIVED')) {
+        return new Conflict('Ce site est archivé : restaurez-le avant de travailler sur son dossier.');
+      }
+      if (constraintOf(error) === 'site_archive_reason') {
+        return new InvalidInput('Archivez le site depuis son dossier ETARE, avec un motif.');
+      }
+      if (constraintOf(error) === 'publication_withdrawal_reason_length') {
+        return new InvalidInput('Motivez le retrait (3 à 1 000 caractères).');
+      }
       if (messageOf(error).includes('CONTRIBUTION_CLOSED')) {
         return new Conflict('Cette proposition est déjà décidée ou retirée : c’est définitif.');
       }

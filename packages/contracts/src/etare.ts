@@ -235,9 +235,20 @@ export const publicationSummarySchema = z
     manifest_hash: z.string().nullable(),
     /** The ETARE PDF generated with the publication (ETARE-02). */
     has_pdf: z.boolean(),
+    /** Withdrawal of the version (MET-04): when, by whom, why. */
+    withdrawal: z
+      .object({ withdrawn_at: isoDateTimeSchema, withdrawn_by: z.string().nullable(), reason: z.string() })
+      .nullable(),
+    row_version: z.number().int().positive(),
   })
   .meta({ id: 'PublicationSummary' });
 export type PublicationSummary = z.infer<typeof publicationSummarySchema>;
+
+/** Why the version in force is withdrawn (MET-04): read in the history and on the terminals. */
+export const publicationWithdrawSchema = z
+  .object({ reason: z.string().trim().min(3, 'Motivez le retrait.').max(1000) })
+  .meta({ id: 'PublicationWithdraw' });
+export type PublicationWithdraw = z.infer<typeof publicationWithdrawSchema>;
 
 export const etareRevisionSchema = z
   .object({

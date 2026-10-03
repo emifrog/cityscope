@@ -15,6 +15,7 @@ import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
 import 'package:etare_ops/src/features/sync/data/sync_api.dart';
 import 'package:etare_ops/src/features/sync/data/sync_status_repository.dart';
 import 'package:etare_ops/src/features/sync/domain/device_identity.dart';
+import 'package:etare_ops/src/features/sync/domain/removal_notice.dart';
 import 'package:etare_ops/src/features/sync/domain/sync_status.dart';
 import 'package:etare_ops/src/features/sync/domain/sync_trigger.dart';
 import 'package:flutter/foundation.dart';
@@ -28,6 +29,11 @@ final syncStatusRepositoryProvider = Provider<SyncStatusRepository>((ref) {
 /// État de synchronisation, mis à jour en continu depuis la base locale.
 final syncStatusProvider = StreamProvider<SyncStatus>(
   (ref) => ref.watch(syncStatusRepositoryProvider).watch(),
+);
+
+/// Raisons des sites retirés de la tablette (MET-04), les plus récentes d'abord.
+final removalNoticesProvider = StreamProvider<List<RemovalNotice>>(
+  (ref) => ref.watch(appDatabaseProvider).offlineDao.watchRemovalNotices(),
 );
 
 final deviceIdentityStoreProvider = Provider<DeviceIdentityStore>(
