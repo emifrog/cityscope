@@ -1,10 +1,11 @@
 import { IgnCartographyCatalog, IgnGeocoder, createLogger, type AccessTokenVerifier } from '@etare/adapters';
-import type { RequestSession, SessionFactory } from '@etare/application';
+import type { RateLimiter, RequestSession, SecurityEvent, SessionFactory } from '@etare/application';
 import { stubSession } from '@etare/application/testing';
 import { API_BASE_PATH, apiErrorSchema, endpoints, type SiteDetail } from '@etare/contracts';
 import { AccessDenied, Unauthenticated, permissionsForRoles, type RequestContext, type Role } from '@etare/domain';
 import { describe, expect, it } from 'vitest';
-import { createApiApp, routerPath } from './app';
+import { createApiApp, routerPath, type ApiDependencies } from './app';
+import { DEFAULT_RATE_LIMITS } from './network';
 
 const tenant06 = '06000000-0000-4000-8000-000000000000';
 const tenant83 = '83000000-0000-4000-8000-000000000000';
@@ -87,9 +88,10 @@ const tokens: AccessTokenVerifier = {
   },
 };
 
-function makeApp(roles: Role[] = ['PREVISION_EDITOR']) {
+function makeApp(roles: Role[] = ['PREVISION_EDITOR'], extra: Partial<ApiDependencies> = {}) {
   const fake = sessions(roles);
   const app = createApiApp({
+    ...extra,
     sessions: fake,
     tokens,
     health: { database: async () => 'ok' },
@@ -206,5 +208,70 @@ describe('me', () => {
     const response = await makeApp().call('/me', auth);
     const body = endpoints.getMe.response.parse(await response.json());
     expect(body.memberships[0]?.tenant_name).toBe('SDIS DEMO 06');
+  });
+});
+
+describe('network protection (SEC-03)', () => {
+  function recorder() {
+    const events: SecurityEvent[] = [];
+    return { events, securityEvents: { record: async (event: SecurityEvent) => void events.push(event) } };
+  }
+
+  it('refuses browsers of another origin and preflights, and traces it', async () => {
+    const { events, securityEvents } = recorder();
+    const { app, call } = makeApp(['PREVISION_EDITOR'], { securityEvents });
+    const foreign = await call('/me', { ...auth, origin: 'https://evil.example' });
+    expect(foreign.status).toBe(403);
+    expect(foreign.headers.get('access-control-allow-origin')).toBeNull();
+    expect((await app.request(`${API_BASE_PATH}/me`, { method: 'OPTIONS' })).status).toBe(403);
+    expect(events.map((event) => event.action)).toEqual(['security.cross_origin', 'security.cross_origin']);
+    // The own origin of the API (the web application) and native clients without Origin are served.
+    expect((await call('/me', { ...auth, origin: 'http://localhost' })).status).toBe(200);
+    expect((await call('/me', auth)).status).toBe(200);
+  });
+
+  it('answers JSON that nothing may run, frame or read from another site', async () => {
+    const response = await makeApp().call('/health');
+    expect(response.headers.get('content-security-policy')).toBe("default-src 'none'; frame-ancestors 'none'");
+    expect(response.headers.get('cross-origin-resource-policy')).toBe('same-origin');
+  });
+
+  it('limits the requests of a person, says when to retry, and traces the first refusal only', async () => {
+    const hits = new Map<string, number>();
+    const rateLimiter: RateLimiter = {
+      consume: async (key, limit) => {
+        const count = (hits.get(key) ?? 0) + 1;
+        hits.set(key, count);
+        return { allowed: count <= limit, hits: count, retryAfter: 42 };
+      },
+    };
+    const { events, securityEvents } = recorder();
+    const { call } = makeApp(['PREVISION_EDITOR'], {
+      rateLimiter,
+      securityEvents,
+      rateLimits: { ...DEFAULT_RATE_LIMITS, api: { name: 'api', limit: 2, windowSeconds: 60 } },
+    });
+    expect((await call('/me', auth)).status).toBe(200);
+    expect((await call('/me', auth)).status).toBe(200);
+    const refused = await call('/me', auth);
+    expect(refused.status).toBe(429);
+    expect(refused.headers.get('retry-after')).toBe('42');
+    expect(apiErrorSchema.parse(await refused.json()).error.code).toBe('RATE_LIMITED');
+    expect((await call('/me', auth)).status).toBe(429);
+    expect(events.filter((event) => event.action === 'security.rate_limited')).toHaveLength(1);
+    expect(events[0]?.principal).toEqual({ provider: 'supabase', subject: 'sub-2' });
+  });
+
+  it('traces a refused permission with the person and the active SIS', async () => {
+    const { events, securityEvents } = recorder();
+    const { call } = makeApp(['OPS_USER'], { securityEvents });
+    expect((await call('/sites', { ...auth, 'x-tenant-id': tenant06 })).status).toBe(403);
+    expect(events).toEqual([
+      expect.objectContaining({
+        action: 'security.forbidden',
+        tenantId: tenant06,
+        metadata: expect.objectContaining({ code: 'FORBIDDEN', method: 'GET' }),
+      }),
+    ]);
   });
 });

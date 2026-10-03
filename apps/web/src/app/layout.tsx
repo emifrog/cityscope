@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { connection } from 'next/server';
 import type { ReactNode } from 'react';
 import { brand } from '@/config/brand';
 import { AppProviders } from '@/providers/app-providers';
@@ -14,7 +15,9 @@ export const viewport: Viewport = {
   themeColor: '#012b5c',
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  // Every page is rendered per request: its scripts carry the nonce of its Content Security Policy.
+  await connection();
   return (
     <html lang="fr">
       <body className="min-h-screen antialiased">

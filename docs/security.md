@@ -129,7 +129,17 @@ journaux ne contiennent ni nom de fichier ni URL signée, seulement des identifi
 
 ## API et web
 
-- Pas de CORS : l’API n’est appelée que par le web (même origine) et l’application mobile.
+- Pas de CORS, explicitement (ADR-023) : une requête de navigateur d’une autre origine, ou de pré-vol,
+  est refusée (403) et tracée ; l’API n’est appelée que par le web (même origine) et l’application
+  mobile. Origines supplémentaires possibles par `ALLOWED_ORIGINS`.
+- **Limitation de débit** (ADR-023) : compteurs PostgreSQL partagés par les instances, écrits hors de
+  la transaction de la requête (une tentative refusée compte). Plafonds : requêtes par personne,
+  enrôlements, codes de secours, invitations, dépôts, géocodage, jetons refusés par adresse ; 429 avec
+  `Retry-After`. L’adresse n’est retenue que derrière un proxy de confiance (`TRUSTED_PROXY_HOPS`).
+  La connexion relève des plafonds du fournisseur d’identité.
+- **Refus tracés** (ADR-023) : second facteur, permission, terminal, session fermée, origine, code
+  d’enrôlement ou de secours refusé, première limite atteinte : `audit_event` avec le résultat
+  `denied`, dans sa propre transaction ; le SIS n’est noté que si la personne en est membre.
 - Carte : le navigateur charge les tuiles et les polices directement sur `data.geopf.fr` (IGN), qui voit
   donc l’adresse réseau et l’emprise consultée, jamais les données du SIS (servies par l’API). Flux
   à valider par la DSI ; un proxy limité reste possible (architecture §14).
@@ -138,7 +148,11 @@ journaux ne contiennent ni nom de fichier ni URL signée, seulement des identifi
   les paramètres sont validés avant tout appel.
 - Pas d’authentification par cookie sur l’API (jeton Bearer) : pas de CSRF possible.
 - `Cache-Control: no-store` sur toutes les réponses métier ; `trace_id` sur chaque réponse.
-- En-têtes : `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, COOP.
+- En-têtes : `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, COOP ;
+  HSTS en HTTPS. **CSP des pages avec nonce** par requête (scripts de l’application seulement, workers
+  carte et PDF de l’application, images et appels limités à l’application, Supabase et l’IGN, aucun
+  cadre ni plugin) ; réponses de l’API en `default-src 'none'` et `Cross-Origin-Resource-Policy:
+same-origin` (ADR-023).
 - Redirection après connexion limitée aux chemins internes (pas d’open redirect).
 - Les réponses du proxy d’authentification, redirections comprises, sont privées et non mises en
   cache ; les cookies renouvelés ou effacés sont conservés sur la réponse finale.
@@ -196,15 +210,13 @@ jetables (`pnpm setup:local`). Les clés de signature des environnements partag�
 
 ## Limites connues (à traiter avant le pilote)
 
-- Pas encore de CSP stricte (nonces Next.js) ni de limitation de débit (reverse proxy), y compris sur
-  les codes d’enrôlement des terminaux.
 - Clés de signature lues dans l’environnement : gestionnaire de secrets ou KMS à brancher avant la
   production.
 - Antivirus : ClamAV (clamd) obligatoire hors développement ; la fraîcheur des signatures, la
   supervision du démon et le choix éventuel d’un service managé restent à organiser avec l’exploitation.
 - Purge des dépôts abandonnés (`pending` jamais envoyés) et des objets orphelins de quarantaine à écrire.
-- Accès aux journaux d’audit refusés (403) non encore tracés dans `audit_event`.
-- SSO OIDC/SAML non développé ; codes de secours limités en débit par le lot SEC-03.
+- SSO OIDC/SAML non développé ; plafonds de connexion du fournisseur d’identité à reporter sur le projet
+  hébergé ; pas de rapport des violations CSP (`report-to`).
 - Durée maximale et inactivité des sessions (`[auth.sessions]`) à régler sur le projet hébergé avec la
   DSI, sans couper la synchronisation en arrière-plan des tablettes.
 - Tablette : ni verrouillage applicatif propre (PIN, biométrie), ni attestation d’intégrité du

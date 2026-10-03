@@ -4,6 +4,7 @@ import { createApiDependencies } from './dependencies';
 export { createApiApp, routerPath, type ApiDependencies } from './app';
 export { createApiDependencies } from './dependencies';
 export { toApiError } from './errors';
+export { DEFAULT_RATE_LIMITS, type RateLimitRule, type RateLimitRules } from './network';
 
 type FetchHandler = (request: Request) => Promise<Response>;
 

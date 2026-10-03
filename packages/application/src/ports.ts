@@ -198,6 +198,31 @@ export interface HealthProbe {
   database(): Promise<'ok' | 'unavailable'>;
 }
 
+/** Rate limiting shared by the instances (SEC-03); a hit counts even when the request then fails. */
+export interface RateLimiter {
+  /** One hit on a hashed key: allowed or not, hits in the window, seconds before the window ends. */
+  consume(
+    key: string,
+    limit: number,
+    windowSeconds: number,
+  ): Promise<{ allowed: boolean; hits: number; retryAfter: number }>;
+}
+
+/** A sensitive refusal (second factor, permission, terminal proof, rate limit...), traced on its own. */
+export interface SecurityEvent {
+  readonly action: string;
+  readonly reason: string;
+  readonly principal: { readonly provider: string; readonly subject: string } | null;
+  readonly tenantId: string | null;
+  readonly traceId: string | null;
+  readonly origin: string;
+  readonly metadata: Record<string, unknown>;
+}
+
+export interface SecurityEventRecorder {
+  record(event: SecurityEvent): Promise<void>;
+}
+
 /** A file waiting for its upload, created with the document (version). */
 export interface PendingUpload {
   readonly assetId: string;

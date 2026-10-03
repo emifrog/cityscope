@@ -1,3 +1,4 @@
+import { MAP_TILE_ORIGINS } from '@etare/contracts';
 import { describe, expect, it } from 'vitest';
 import { IGN_WMTS_LAYERS, IgnCartographyCatalog, checkWmtsLayer } from './ign';
 
@@ -15,6 +16,16 @@ const CAPABILITIES = `<Capabilities><Contents>
 const plan = IGN_WMTS_LAYERS.find((layer) => layer.sourceId === 'ign-plan-v2');
 
 describe('IGN catalogue', () => {
+  it('only uses hosts that the CSP of the web application allows', () => {
+    const catalog = new IgnCartographyCatalog();
+    const urls = [
+      ...catalog.sources().flatMap((source) => [source.url, ...('metadataUrl' in source ? [source.metadataUrl] : [])]),
+      catalog.glyphs().url,
+    ].filter((url): url is string => typeof url === 'string');
+    expect(urls.length).toBeGreaterThan(2);
+    for (const url of urls) expect(MAP_TILE_ORIGINS, url).toContain(new URL(url.replace(/[{}]/g, '')).origin);
+  });
+
   it('exposes Plan IGN as default base map, with attribution, licence and unverified offline rights', () => {
     const base = new IgnCartographyCatalog().defaultBaseMap();
     expect(base).toMatchObject({ id: 'ign-plan-v2', attribution: '© IGN – Plan IGN' });

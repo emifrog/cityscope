@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { contentSecurityPolicy, newNonce } from '@/lib/csp';
 import { safeNextPath } from '@/lib/navigation';
 
 /** Reachable without a session: sign-in, forgotten password, and the links of e-mails (invitation, reset). */
@@ -10,6 +11,7 @@ const PUBLIC_PATHS = new Set(['/login', '/mot-de-passe-oublie', '/auth/confirm']
  * on the login page. This is a navigation convenience only: authorization is
  * enforced by the API (bearer token + database membership) and by RLS.
  * API routes are excluded: they authenticate every request themselves.
+ * Also sets the Content Security Policy of the page, with a fresh nonce.
  */
 export async function proxy(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -21,13 +23,29 @@ export async function proxy(request: NextRequest) {
     });
   }
 
-  let response = NextResponse.next({ request });
+  const nonce = newNonce();
+  const secure = request.nextUrl.protocol === 'https:' || request.headers.get('x-forwarded-proto') === 'https';
+  const csp = contentSecurityPolicy({
+    nonce,
+    supabaseUrl: url,
+    development: process.env.NODE_ENV === 'development',
+    secure,
+  });
+  // Next.js reads the nonce from the policy of the request while rendering, and puts it on its scripts.
+  const forward = () => {
+    const headers = new Headers(request.headers);
+    headers.set('content-security-policy', csp);
+    headers.set('x-nonce', nonce);
+    return NextResponse.next({ request: { headers } });
+  };
+
+  let response = forward();
   const supabase = createServerClient(url, key, {
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll(cookiesToSet) {
         for (const { name, value } of cookiesToSet) request.cookies.set(name, value);
-        response = NextResponse.next({ request });
+        response = forward();
         for (const { name, value, options } of cookiesToSet) response.cookies.set(name, value, options);
       },
     },
@@ -41,6 +59,8 @@ export async function proxy(request: NextRequest) {
   function finish(target: NextResponse) {
     // A redirect is a new response: carry over refreshed (or cleared) auth cookies.
     for (const cookie of response.cookies.getAll()) target.cookies.set(cookie);
+    target.headers.set('content-security-policy', csp);
+    if (secure) target.headers.set('strict-transport-security', 'max-age=31536000; includeSubDomains');
     target.headers.set('cache-control', 'private, no-store');
     target.headers.set('pragma', 'no-cache');
     target.headers.set('expires', '0');

@@ -4,6 +4,8 @@ import {
   IgnCartographyCatalog,
   IgnGeocoder,
   PostgresHealthProbe,
+  PostgresRateLimiter,
+  PostgresSecurityEventRecorder,
   PostgresSessionFactory,
   SupabaseIdentityProvisioner,
   SupabaseObjectStorage,
@@ -51,5 +53,10 @@ export function createApiDependencies(env: Env): ApiDependencies {
     logger,
     version,
     openApiDocument: () => (openApi ??= buildOpenApiDocument()),
+    // SEC-03: counters and refusals in PostgreSQL, outside the transaction of the request.
+    rateLimiter: config.rateLimits ? new PostgresRateLimiter(pool) : null,
+    securityEvents: new PostgresSecurityEventRecorder(pool),
+    trustedProxyHops: config.trustedProxyHops,
+    allowedOrigins: config.allowedOrigins,
   };
 }

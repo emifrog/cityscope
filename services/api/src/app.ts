@@ -118,6 +118,8 @@ import {
   type HealthProbe,
   type IdentityProvisioner,
   type ObjectStorage,
+  type RateLimiter,
+  type SecurityEventRecorder,
   type SessionFactory,
 } from '@etare/application';
 import {
@@ -135,8 +137,10 @@ import {
   EMPTY_BODY_SHA256,
   InvalidInput,
   PreconditionRequired,
+  RateLimited,
   TenantRequired,
   Unauthenticated,
+  type Principal,
   type RequestContext,
   type RequestOrigin,
 } from '@etare/domain';
@@ -145,6 +149,16 @@ import { bodyLimit } from 'hono/body-limit';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
 import { toApiError } from './errors';
+import {
+  DEFAULT_RATE_LIMITS,
+  OPERATION_LIMITS,
+  clientAddress,
+  originAllowed,
+  rateLimitKey,
+  securityAction,
+  type RateLimitRule,
+  type RateLimitRules,
+} from './network';
 
 export interface ApiDependencies {
   readonly sessions: SessionFactory;
@@ -168,9 +182,18 @@ export interface ApiDependencies {
   readonly logger: Logger;
   readonly version: string;
   readonly openApiDocument: () => unknown;
+  /** Shared counters (SEC-03); null or absent: no rate limiting (automated tests). */
+  readonly rateLimiter?: RateLimiter | null;
+  readonly rateLimits?: RateLimitRules;
+  /** Sensitive refusals traced in the audit log; null or absent: logs only. */
+  readonly securityEvents?: SecurityEventRecorder | null;
+  /** Trusted reverse proxies (client address in X-Forwarded-For); 0: unknown. */
+  readonly trustedProxyHops?: number;
+  /** Origins allowed besides the own origin of the API (browsers). */
+  readonly allowedOrigins?: readonly string[];
 }
 
-type Env = { Variables: { traceId: string } };
+type Env = { Variables: { traceId: string; principal?: Principal; operationId?: string } };
 
 const CLIENT_HEADER = 'x-client-platform';
 const tenantIdSchema = z.uuid();
@@ -204,15 +227,56 @@ export function routerPath(path: string): string {
 export function createApiApp(deps: ApiDependencies): Hono<Env> {
   const app = new Hono<Env>().basePath(API_BASE_PATH);
 
+  const rules = deps.rateLimits ?? DEFAULT_RATE_LIMITS;
+  const addressOf = (c: Context<Env>) => clientAddress(c.req.header('x-forwarded-for'), deps.trustedProxyHops ?? 0);
+
+  /** One hit on a counter; over the limit, the request is refused (429) before any work. */
+  async function throttle(c: Context<Env>, rule: RateLimitRule, dimension: 'person' | 'address', value: string | null) {
+    if (!deps.rateLimiter || value === null) return;
+    const result = await deps.rateLimiter.consume(rateLimitKey(rule, dimension, value), rule.limit, rule.windowSeconds);
+    if (!result.allowed) throw new RateLimited(result.retryAfter, result.hits === rule.limit + 1);
+  }
+
   app.use('*', async (c, next) => {
     const traceId = crypto.randomUUID();
     c.set('traceId', traceId);
+    // No CORS: browsers call the API from its own origin (or a configured one), never from elsewhere.
+    const origin = c.req.header('origin');
+    if ((origin && !originAllowed(origin, c.req.url, deps.allowedOrigins ?? [])) || c.req.method === 'OPTIONS') {
+      deps.logger.warn('cross-origin request refused', { trace_id: traceId, method: c.req.method });
+      await recordRefusal(c, 'security.cross_origin', 'Origine non autorisée.', { method: c.req.method });
+      c.header('x-trace-id', traceId);
+      return c.json({ error: { code: 'FORBIDDEN', message: 'Origine non autorisée.', trace_id: traceId } }, 403);
+    }
     await next();
     c.header('x-trace-id', traceId);
     // Business answers are never cached by browsers or shared caches.
     c.header('cache-control', 'no-store');
     c.header('x-content-type-options', 'nosniff');
+    // JSON only: nothing of an answer may run, be framed, or be read by another site.
+    c.header('content-security-policy', "default-src 'none'; frame-ancestors 'none'");
+    c.header('cross-origin-resource-policy', 'same-origin');
   });
+
+  /** Traces a refusal in its own transaction; a failure of the trace never changes the answer. */
+  async function recordRefusal(c: Context<Env>, action: string, reason: string, metadata: Record<string, unknown>) {
+    if (!deps.securityEvents) return;
+    const principal = c.get('principal');
+    const address = addressOf(c);
+    try {
+      await deps.securityEvents.record({
+        action,
+        reason,
+        principal: principal ? { provider: principal.provider, subject: principal.subject } : null,
+        tenantId: c.req.header(TENANT_HEADER) ?? null,
+        traceId: c.get('traceId'),
+        origin: originSchema.safeParse(c.req.header(CLIENT_HEADER)).data ?? 'api',
+        metadata: { ...metadata, ...(address ? { address } : {}) },
+      });
+    } catch (error) {
+      deps.logger.warn('security event not recorded', { trace_id: c.get('traceId'), action, error });
+    }
+  }
 
   // JSON bodies are small: bigger payloads (files) go to object storage through signed URLs.
   // Installation receipts are the one exception (the list of the publications of a terminal).
@@ -226,9 +290,19 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
   const receiptPath = `${API_BASE_PATH}${endpoints.recordSyncReceipt.path}`;
   app.use('*', (c, next) => (c.req.path === receiptPath ? receiptLimit(c, next) : jsonLimit(c, next)));
 
-  app.onError((error, c) => {
+  app.onError(async (error, c) => {
     const traceId = c.get('traceId');
     const { status, body, expected } = toApiError(error, traceId);
+    if (error instanceof RateLimited) c.header('retry-after', String(error.retryAfterSeconds));
+    const action = securityAction(body.error.code, c.get('operationId') ?? null, c.get('principal') !== undefined);
+    // Only the first refusal of a rate-limit window is traced: the next ones would flood the audit.
+    if (action && !(error instanceof RateLimited && !error.firstRefusal)) {
+      await recordRefusal(c, action, body.error.message, {
+        method: c.req.method,
+        route: c.req.routePath,
+        code: body.error.code,
+      });
+    }
     const log = expected ? deps.logger.warn : deps.logger.error;
     log('request failed', {
       trace_id: traceId,
@@ -248,8 +322,21 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
   async function requestContext(c: Context<Env>, endpoint: EndpointContract): Promise<RequestContext> {
     const authorization = c.req.header('authorization') ?? '';
     const match = /^Bearer ([A-Za-z0-9._~+/=-]+)$/.exec(authorization);
-    if (!match?.[1]) throw new Unauthenticated();
-    const principal = await deps.tokens.verify(match[1]);
+    c.set('operationId', endpoint.operationId);
+    let principal: Principal;
+    try {
+      if (!match?.[1]) throw new Unauthenticated();
+      principal = await deps.tokens.verify(match[1]);
+    } catch (error) {
+      // Guessing tokens is counted per client address (known behind a trusted proxy).
+      await throttle(c, rules.unauthenticated, 'address', addressOf(c));
+      throw error;
+    }
+    c.set('principal', principal);
+    await throttle(c, rules.api, 'person', principal.subject);
+    for (const [rule, dimension] of OPERATION_LIMITS[endpoint.operationId] ?? []) {
+      await throttle(c, rules[rule], dimension, dimension === 'person' ? principal.subject : addressOf(c));
+    }
 
     let tenantId: string | null = null;
     if (endpoint.tenantScoped) {

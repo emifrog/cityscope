@@ -5,6 +5,12 @@ import { riskFilterShape } from './resources';
 const rightSchema = z.enum(['unverified', 'approved', 'forbidden']);
 
 /** A base map or overlay from the server-side catalogue (ADR-006): screens never hard-code a tile URL. */
+/**
+ * Hosts the browser loads map tiles, styles and glyphs from (ADR-006). The CSP of the web
+ * application allows exactly these; a test checks that every URL of the catalogue is covered.
+ */
+export const MAP_TILE_ORIGINS = ['https://data.geopf.fr'] as const;
+
 export const mapSourceSchema = z
   .object({
     id: z.string(),

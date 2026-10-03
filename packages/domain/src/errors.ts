@@ -11,6 +11,20 @@ export class Unauthenticated extends DomainError {
   }
 }
 
+/** Too many requests of a kind in a window (SEC-03): retry after the given delay. */
+export class RateLimited extends DomainError {
+  readonly code = 'RATE_LIMITED';
+  constructor(
+    readonly retryAfterSeconds: number,
+    /** First refusal of the window: the one worth tracing (the next ones would flood the audit). */
+    readonly firstRefusal = false,
+    message = 'Trop de requêtes : réessayez dans quelques minutes.',
+  ) {
+    super(message);
+    this.name = 'RateLimited';
+  }
+}
+
 export class AccessDenied extends DomainError {
   readonly code = 'FORBIDDEN';
   constructor(message = 'Accès refusé.') {

@@ -64,6 +64,16 @@ const apiEnvSchema = authSchema.extend({
     .string()
     .regex(/^\d{1,4}\.\d{1,4}\.\d{1,4}$/, 'MOBILE_MIN_APP_VERSION must look like 1.2.0')
     .optional(),
+  /** Rate limiting of the API (SEC-03): 'on' by default; 'off' only for automated tests. */
+  RATE_LIMITS: z.enum(['on', 'off']).default('on'),
+  /**
+   * Trusted reverse proxies in front of the web server: the client address is the entry of
+   * X-Forwarded-For that many positions from the right. 0 (default): unknown, since Next.js
+   * keeps an X-Forwarded-For sent by the client itself.
+   */
+  TRUSTED_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
+  /** Other origins allowed to call the API from a browser (comma-separated); none by default. */
+  ALLOWED_ORIGINS: z.string().optional(),
 });
 
 export interface ApiEnv {
@@ -76,6 +86,9 @@ export interface ApiEnv {
   /** Minimum OPS application version announced in the signed catalogues (null: none). */
   readonly minAppVersion: string | null;
   readonly auth: { readonly issuer: string; readonly jwksUrl: string; readonly audience: string };
+  readonly rateLimits: boolean;
+  readonly trustedProxyHops: number;
+  readonly allowedOrigins: readonly string[];
 }
 
 export function readApiEnv(env: Env): ApiEnv {
@@ -89,6 +102,13 @@ export function readApiEnv(env: Env): ApiEnv {
     supabaseSecretKey: parsed.SUPABASE_SECRET_KEY,
     catalogSigningKey: parsed.CATALOG_SIGNING_KEY ?? null,
     minAppVersion: parsed.MOBILE_MIN_APP_VERSION ?? null,
+    rateLimits: parsed.RATE_LIMITS === 'on',
+    trustedProxyHops: parsed.TRUSTED_PROXY_HOPS,
+    allowedOrigins: (parsed.ALLOWED_ORIGINS ?? '')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean)
+      .map((origin) => new URL(origin).origin),
     auth: {
       issuer,
       jwksUrl: parsed.AUTH_JWKS_URL ?? `${issuer}/.well-known/jwks.json`,
