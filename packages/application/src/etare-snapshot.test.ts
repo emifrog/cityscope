@@ -1,7 +1,13 @@
-import type { Contact, Document, OperationalObject, Plan, SiteDetail } from '@etare/contracts';
+import type { Contact, Document, OperationalObject, Plan, Risk, SiteDetail } from '@etare/contracts';
 import { canonicalJson } from '@etare/domain';
 import { describe, expect, it } from 'vitest';
-import { buildSnapshot, compareSnapshots, preSubmissionChecks, type WorkingData } from './etare-snapshot';
+import {
+  buildSnapshot,
+  compareSnapshots,
+  distanceMeters,
+  preSubmissionChecks,
+  type WorkingData,
+} from './etare-snapshot';
 
 const SITE = '06000002-0000-4000-8000-000000000001';
 const NOW = new Date('2026-09-30T12:00:00Z');
@@ -152,6 +158,28 @@ const document = (id: string, status: 'clean' | 'pending', portalVisible = false
   ],
 });
 
+const risk = (id: string, geometry: Risk['geometry'] = null): Risk => ({
+  id,
+  site_id: SITE,
+  risk_type_id: 'rt1',
+  type_code: 'GAZ',
+  type_name: 'Gaz',
+  icon_key: 'risk-gas',
+  severity: 4,
+  label: `Cuve ${id}`,
+  description: null,
+  quantity: null,
+  unit: null,
+  properties: {},
+  building_id: null,
+  level_id: null,
+  zone_id: null,
+  plan_position: null,
+  geometry,
+  status: 'active',
+  row_version: 1,
+});
+
 const data = (overrides: Partial<WorkingData> = {}): WorkingData => ({
   site,
   classifications: [],
@@ -264,6 +292,39 @@ describe('canonical snapshot', () => {
     const snapshot = buildSnapshot(data({ documents: [document('d1', 'clean', true), document('d2', 'clean')] }));
     expect(snapshot.documents.find((item) => item.id === 'd1')?.portal_visible).toBe(true);
     expect(snapshot.documents.find((item) => item.id === 'd2')).not.toHaveProperty('portal_visible');
+  });
+});
+
+describe('exterior risks (MET-02)', () => {
+  const near: Risk['geometry'] = { type: 'Point', coordinates: [7.2521, 43.7081] };
+
+  it('carry their location on the map, and no key at all without one', () => {
+    const snapshot = buildSnapshot(data({ risks: [risk('r1', near), risk('r2')] }));
+    expect(snapshot.risks.find((item) => item.id === 'r1')?.geometry).toEqual(near);
+    expect(snapshot.risks.find((item) => item.id === 'r2')).not.toHaveProperty('geometry');
+  });
+
+  it('are flagged before submission when drawn far from the site', () => {
+    expect(distanceMeters([7.2518, 43.7079], [7.2521, 43.7081])).toBeLessThan(50);
+    expect(Math.round(distanceMeters([0, 0], [0, 1]) / 1000)).toBe(111);
+    const far: Risk['geometry'] = {
+      type: 'Polygon',
+      coordinates: [
+        [
+          [7.3, 43.7],
+          [7.31, 43.7],
+          [7.31, 43.71],
+          [7.3, 43.7],
+        ],
+      ],
+    };
+    const now = new Date('2026-10-03T10:00:00Z');
+    expect(
+      preSubmissionChecks(data({ risks: [risk('r1', near)] }), now).find((c) => c.code === 'risk_locations'),
+    ).toBeUndefined();
+    const checks = preSubmissionChecks(data({ risks: [risk('r1', near), risk('r2', far)] }), now);
+    expect(checks.find((check) => check.code === 'risk_locations')).toMatchObject({ level: 'warning' });
+    expect(checks.find((check) => check.code === 'risks')?.detail).toContain('2 sur carte');
   });
 });
 

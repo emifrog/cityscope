@@ -8,6 +8,10 @@ import type {
   OperationalObject,
   OperationalObjectCreateInput,
   OperationalObjectUpdate,
+  Risk,
+  RiskCreateInput,
+  RiskType,
+  RiskUpdate,
   SiteDetail,
   SiteUpdate,
 } from '@etare/contracts';
@@ -18,7 +22,12 @@ import type { TerraDraw } from 'terra-draw';
 import { useEffect, useRef, useState } from 'react';
 import { AddressSearch } from '@/components/address-search';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
-import { CRITICALITY_LABELS, OBJECT_CATEGORY_LABELS, OBJECT_STATUS_LABELS } from '@/components/labels';
+import {
+  CRITICALITY_LABELS,
+  OBJECT_CATEGORY_LABELS,
+  OBJECT_STATUS_LABELS,
+  RISK_SEVERITY_LABELS,
+} from '@/components/labels';
 import { drawnGeometries, startDrawing, type DrawnGeometry } from '@/components/map/drawing';
 import { roundPosition, siteExtent, toMultiPolygon, toPolygons, type Position } from '@/components/map/geometry';
 import { BaseMapSwitch, BaseMapUnavailable } from '@/components/map/map-overlays';
@@ -30,6 +39,7 @@ import {
   objectLayers,
   siteObjectsData,
 } from '@/components/map/object-layers';
+import { filterRiskLayers, RISK_COLORS, riskLayerId, riskLayers, siteRisksData } from '@/components/map/risk-layers';
 import { useBaseMap, useMapLibre, type LoadedMap } from '@/components/map/use-map';
 import { api } from '@/lib/api-client';
 import {
@@ -40,9 +50,12 @@ import {
   useMapCatalog,
   useObjectTypes,
   usePermissions,
+  useRiskTypes,
   useSiteObjects,
+  useSiteRisks,
 } from '@/lib/queries';
 import { ObjectForm, type ObjectFormValues } from './object-form';
+import { RiskForm, type RiskFormValues } from './plan-item-forms';
 import { ObjectPhotos } from './object-photos';
 
 type Editing =
@@ -51,10 +64,21 @@ type Editing =
   /** Footprint of the site or of a building (its id). */
   | { readonly kind: 'surface'; readonly target: 'site' | string }
   /** Operational object: an existing one, or a new one of this type. */
-  | { readonly kind: 'object'; readonly type: ObjectType; readonly object: OperationalObject | null };
+  | { readonly kind: 'object'; readonly type: ObjectType; readonly object: OperationalObject | null }
+  /** Risk located on the map (MET-02): an existing one, or a new one of this type, as a point or a surface. */
+  | { readonly kind: 'risk'; readonly type: RiskType; readonly risk: Risk | null; readonly shape: 'point' | 'polygon' };
 
-const SOURCES = { site: 'site-footprint', buildings: 'building-footprints', objects: 'site-objects' } as const;
+const RISK_POINT_HINT = 'Cliquez sur la carte pour placer le risque.';
+const RISK_SURFACE_HINT = 'Cliquez pour poser les sommets de la zone de danger, puis sur le premier pour la fermer.';
+
+const SOURCES = {
+  site: 'site-footprint',
+  buildings: 'building-footprints',
+  objects: 'site-objects',
+  risks: 'site-risks',
+} as const;
 const OBJECTS = 'site-objects';
+const RISKS = 'site-risks';
 const EMPTY = { type: 'FeatureCollection' as const, features: [] };
 
 const formatPosition = ([longitude, latitude]: readonly number[]) =>
@@ -95,6 +119,7 @@ function addStaticLayers(loaded: LoadedMap, colors: MapColors, fontStack: readon
     layout: { 'text-field': ['get', 'name'], 'text-font': [...fontStack], 'text-size': 12 },
     paint: { 'text-color': colors.cluster, 'text-halo-color': '#ffffff', 'text-halo-width': 1.5 },
   });
+  for (const layer of riskLayers(RISKS, SOURCES.risks, fontStack, 16)) map.addLayer(layer);
   for (const layer of objectLayers(OBJECTS, SOURCES.objects, fontStack, 16)) map.addLayer(layer);
 }
 
@@ -104,10 +129,19 @@ export function LocationPanel({ site }: { site: SiteDetail }) {
   const buildings = useBuildings(site.id);
   const objects = useSiteObjects(site.id);
   const types = useObjectTypes();
-  if (catalog.isPending || buildings.isPending || objects.isPending || types.isPending) {
+  const risks = useSiteRisks(site.id);
+  const riskTypes = useRiskTypes(true);
+  if (
+    catalog.isPending ||
+    buildings.isPending ||
+    objects.isPending ||
+    types.isPending ||
+    risks.isPending ||
+    riskTypes.isPending
+  ) {
     return <LoadingCard lines={8} />;
   }
-  const failure = catalog.error ?? buildings.error ?? objects.error ?? types.error;
+  const failure = catalog.error ?? buildings.error ?? objects.error ?? types.error ?? risks.error ?? riskTypes.error;
   if (failure) return <ApiErrorAlert error={failure} />;
   return <LocationEditor site={site} canWrite={canWrite} />;
 }
@@ -117,6 +151,8 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
   const buildings = useBuildings(site.id);
   const objects = useSiteObjects(site.id);
   const types = useObjectTypes();
+  const risks = useSiteRisks(site.id);
+  const riskTypes = useRiskTypes(true);
   const geocoding = useGeocodingClient();
   const containerRef = useRef<HTMLDivElement>(null);
   const extent = siteExtent(site, buildings.data ?? []);
@@ -139,12 +175,17 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
   const [selectedDrawing, setSelectedDrawing] = useState<string | number | null>(null);
   const [visibleCategories, setVisibleCategories] = useState<readonly ObjectCategory[]>(OBJECT_CATEGORIES);
   const [newTypeId, setNewTypeId] = useState('');
+  const [newRiskTypeId, setNewRiskTypeId] = useState('');
+  const [newRiskShape, setNewRiskShape] = useState<'point' | 'polygon'>('point');
+  /** Scope of the risk being edited: the site ('') or a building. */
+  const [riskBuilding, setRiskBuilding] = useState('');
   const markerRef = useRef<Marker | null>(null);
   const drawRef = useRef<TerraDraw | null>(null);
   const initialGeometries = useRef<DrawnGeometry[]>([]);
   const editingRef = useRef<Editing>(editing);
   /** Latest "open this object" action, called by map clicks registered once. */
   const openObjectRef = useRef<(id: string) => void>(() => undefined);
+  const openRiskRef = useRef<(id: string) => void>(() => undefined);
   const fontStack = catalog.data?.glyphs.font_stack;
 
   const invalidateSite = (tenantId: string) => [queryKeys.site(tenantId, site.id), queryKeys.sites(tenantId)];
@@ -170,7 +211,26 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
       api.updateObject(options, object.id, object.row_version, patch),
     invalidateObjects,
   );
-  const saving = updateSite.isPending || updateBuilding.isPending || createObject.isPending || updateObject.isPending;
+  const invalidateRisks = (tenantId: string) => [
+    queryKeys.siteRecords(tenantId, site.id, 'risks'),
+    queryKeys.sites(tenantId),
+  ];
+  const createRisk = useApiMutation(
+    (options, input: RiskCreateInput) => api.createSiteRisk(options, site.id, input),
+    invalidateRisks,
+  );
+  const updateRisk = useApiMutation(
+    (options, { risk, patch }: { risk: Risk; patch: RiskUpdate }) =>
+      api.updateRisk(options, risk.id, risk.row_version, patch),
+    invalidateRisks,
+  );
+  const saving =
+    updateSite.isPending ||
+    updateBuilding.isPending ||
+    createObject.isPending ||
+    updateObject.isPending ||
+    createRisk.isPending ||
+    updateRisk.isPending;
   const siteSaveError = updateSite.error ?? updateBuilding.error;
 
   useEffect(() => {
@@ -189,6 +249,17 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
     for (const role of ['point', 'line', 'fill'] as const) {
       const layer = objectLayerId(OBJECTS, role);
       loaded.map.on('click', layer, open);
+      loaded.map.on('mouseenter', layer, () => (loaded.map.getCanvas().style.cursor = 'pointer'));
+      loaded.map.on('mouseleave', layer, () => (loaded.map.getCanvas().style.cursor = ''));
+    }
+    const openRisk = (event: MapLayerMouseEvent) => {
+      const id = event.features?.[0]?.properties?.['id'];
+      if (editingRef.current.kind !== 'none' || typeof id !== 'string') return;
+      openRiskRef.current(id);
+    };
+    for (const role of ['point', 'fill'] as const) {
+      const layer = riskLayerId(RISKS, role);
+      loaded.map.on('click', layer, openRisk);
       loaded.map.on('mouseenter', layer, () => (loaded.map.getCanvas().style.cursor = 'pointer'));
       loaded.map.on('mouseleave', layer, () => (loaded.map.getCanvas().style.cursor = ''));
     }
@@ -220,7 +291,9 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
       visibleCategories,
       editing.kind === 'object' ? (editing.object?.id ?? null) : null,
     );
-  }, [loaded, site.footprint, buildings.data, objects.data, editing, visibleCategories]);
+    loaded.map.getSource<GeoJSONSource>(SOURCES.risks)?.setData(siteRisksData(risks.data ?? []));
+    filterRiskLayers(loaded.map, RISKS, editing.kind === 'risk' ? (editing.risk?.id ?? null) : null);
+  }, [loaded, site.footprint, buildings.data, objects.data, risks.data, editing, visibleCategories]);
 
   // Reference point marker, draggable while the point is being moved.
   useEffect(() => {
@@ -276,15 +349,18 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
 
   // Drawing session: footprints (polygons) or one operational object of the kind of its type.
   useEffect(() => {
-    if (!loaded || (editing.kind !== 'surface' && editing.kind !== 'object')) return;
+    if (!loaded || editing.kind === 'none' || editing.kind === 'point') return;
     let disposed = false;
     let draw: TerraDraw | undefined;
-    const kind = editing.kind === 'surface' ? 'polygon' : editing.type.geometry_kind;
+    const kind =
+      editing.kind === 'surface' ? 'polygon' : editing.kind === 'risk' ? editing.shape : editing.type.geometry_kind;
     const color =
       editing.kind === 'surface'
         ? mapColors(getComputedStyle(document.documentElement)).published
-        : CATEGORY_COLORS[editing.type.category];
-    const single = editing.kind === 'object';
+        : editing.kind === 'risk'
+          ? RISK_COLORS.high
+          : CATEGORY_COLORS[editing.type.category];
+    const single = editing.kind !== 'surface';
     void startDrawing(loaded, color, kind, initialGeometries.current).then((session) => {
       if (disposed) {
         session.stop();
@@ -319,7 +395,9 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
   }, [loaded, editing]);
 
   function resetMutations() {
-    for (const mutation of [updateSite, updateBuilding, createObject, updateObject]) mutation.reset();
+    for (const mutation of [updateSite, updateBuilding, createObject, updateObject, createRisk, updateRisk]) {
+      mutation.reset();
+    }
   }
 
   function startPoint() {
@@ -349,12 +427,27 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
     setEditing({ kind: 'object', type, object });
   }
 
-  // Objects clicked on the map open their form.
+  function startRisk(type: RiskType, risk: Risk | null, shape: 'point' | 'polygon') {
+    resetMutations();
+    initialGeometries.current = risk?.geometry ? [risk.geometry as DrawnGeometry] : [];
+    setRiskBuilding(risk?.building_id ?? '');
+    setDrawCount(0);
+    setEditing({ kind: 'risk', type, risk, shape: risk?.geometry?.type === 'Polygon' ? 'polygon' : shape });
+  }
+
+  const riskTypeOf = (risk: Risk) => riskTypes.data?.find((candidate) => candidate.id === risk.risk_type_id);
+
+  // Objects and risks clicked on the map open their form.
   useEffect(() => {
     openObjectRef.current = (id) => {
       const object = objects.data?.find((candidate) => candidate.id === id);
       const type = types.data?.find((candidate) => candidate.id === object?.object_type_id);
       if (object && type && canWrite) startObject(type, object);
+    };
+    openRiskRef.current = (id) => {
+      const risk = risks.data?.find((candidate) => candidate.id === id);
+      const type = risk ? riskTypeOf(risk) : undefined;
+      if (risk && type && canWrite) startRisk(type, risk, 'point');
     };
   });
 
@@ -426,6 +519,33 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
     }
   }
 
+  function saveRisk(values: RiskFormValues) {
+    const draw = drawRef.current;
+    if (!draw || editing.kind !== 'risk') return;
+    const drawn = drawnGeometries(draw, editing.shape)[0];
+    if (!drawn || drawn.type === 'LineString') return;
+    const geometry = roundGeometry(drawn) as NonNullable<Risk['geometry']>;
+    const building = riskBuilding || null;
+    if (editing.risk) {
+      updateRisk.mutate(
+        {
+          risk: editing.risk,
+          patch: {
+            ...values,
+            geometry,
+            ...(building !== editing.risk.building_id ? { building_id: building } : {}),
+          },
+        },
+        { onSuccess: stopEditing },
+      );
+    } else {
+      createRisk.mutate(
+        { ...values, risk_type_id: editing.type.id, building_id: building, geometry },
+        { onSuccess: stopEditing },
+      );
+    }
+  }
+
   function goTo(candidate: AddressCandidate) {
     const position = roundPosition(candidate.location.coordinates);
     loaded?.map.flyTo({ center: position, zoom: candidate.kind === 'municipality' ? 13 : 18 });
@@ -443,6 +563,10 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
   const presentCategories = OBJECT_CATEGORIES.filter((category) =>
     placed.some((object) => object.category === category),
   );
+  const activeRisks = (risks.data ?? []).filter((risk) => risk.status === 'active');
+  const risksOnMap = activeRisks.filter((risk) => risk.geometry);
+  const risksElsewhere = activeRisks.filter((risk) => !risk.geometry);
+  const offeredRiskTypes = (riskTypes.data ?? []).filter((type) => type.status === 'active');
   const typesByCategory = OBJECT_CATEGORIES.map((category) => ({
     category,
     types: (types.data ?? []).filter((type) => type.category === category),
@@ -519,6 +643,168 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
             </CardContent>
           </Card>
         ) : null}
+
+        {editing.kind === 'risk' ? (
+          <Card>
+            <CardContent className="space-y-3 pt-5">
+              <div className="space-y-1 text-sm">
+                <label htmlFor="risk-scope" className="font-semibold">
+                  Portée
+                </label>
+                <Select id="risk-scope" value={riskBuilding} onChange={(event) => setRiskBuilding(event.target.value)}>
+                  <option value="">Site entier</option>
+                  {(buildings.data ?? []).map((building) => (
+                    <option key={building.id} value={building.id}>
+                      {building.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <RiskForm
+                key={editing.risk?.id ?? `new-${editing.type.id}-${editing.shape}`}
+                type={editing.type}
+                risk={editing.risk}
+                shape={editing.shape}
+                hint={editing.shape === 'point' ? RISK_POINT_HINT : RISK_SURFACE_HINT}
+                place="map"
+                geometryReady={drawCount > 0}
+                saving={saving}
+                error={createRisk.error ?? updateRisk.error}
+                onSave={saveRisk}
+                onCancel={stopEditing}
+                onDelete={
+                  editing.risk?.geometry
+                    ? () => {
+                        const risk = editing.risk;
+                        if (risk) updateRisk.mutate({ risk, patch: { geometry: null } }, { onSuccess: stopEditing });
+                      }
+                    : undefined
+                }
+              />
+            </CardContent>
+          </Card>
+        ) : null}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Risques sur la carte</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <ul className="space-y-2">
+              {risksOnMap.map((risk) => (
+                <li key={risk.id} className="flex items-start justify-between gap-2">
+                  <span className="flex items-start gap-2">
+                    <span
+                      aria-hidden="true"
+                      className="mt-1 inline-block size-2.5 shrink-0 rounded-sm"
+                      style={{ backgroundColor: risk.severity >= 4 ? RISK_COLORS.high : RISK_COLORS.other }}
+                    />
+                    <span>
+                      <span className="block font-semibold">{risk.label ?? risk.type_name}</span>
+                      <span className="block text-xs text-muted">
+                        {[
+                          risk.type_name,
+                          `gravité ${RISK_SEVERITY_LABELS[risk.severity]}`,
+                          risk.geometry?.type === 'Polygon' ? 'zone' : 'point',
+                        ].join(' · ')}
+                      </span>
+                    </span>
+                  </span>
+                  {canWrite ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={busy}
+                      onClick={() => {
+                        const type = riskTypeOf(risk);
+                        if (type) startRisk(type, risk, 'point');
+                      }}
+                    >
+                      Modifier
+                    </Button>
+                  ) : null}
+                </li>
+              ))}
+              {risksOnMap.length === 0 ? <li className="text-muted">Aucun risque placé sur la carte.</li> : null}
+            </ul>
+            {risksElsewhere.length > 0 ? (
+              <details className="text-xs">
+                <summary className="cursor-pointer text-info">
+                  Sans position sur la carte ({risksElsewhere.length})
+                </summary>
+                <ul className="mt-2 space-y-1">
+                  {risksElsewhere.map((risk) => (
+                    <li key={risk.id} className="flex items-center justify-between gap-2">
+                      <span>
+                        {risk.label ?? risk.type_name}
+                        {risk.plan_position ? <span className="text-muted"> · sur plan</span> : null}
+                      </span>
+                      {canWrite ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={busy}
+                          onClick={() => {
+                            const type = riskTypeOf(risk);
+                            if (type) startRisk(type, risk, 'point');
+                          }}
+                        >
+                          Placer
+                        </Button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
+            {canWrite && !busy ? (
+              <div className="space-y-2 border-t border-border pt-3">
+                <label htmlFor="new-risk-type" className="text-xs font-semibold">
+                  Placer un risque extérieur
+                </label>
+                <Select
+                  id="new-risk-type"
+                  value={newRiskTypeId}
+                  onChange={(event) => setNewRiskTypeId(event.target.value)}
+                >
+                  <option value="">Type de risque…</option>
+                  {offeredRiskTypes.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.name}
+                    </option>
+                  ))}
+                </Select>
+                <div className="flex items-center justify-between gap-2">
+                  <fieldset className="flex gap-3 text-xs">
+                    <legend className="sr-only">Forme</legend>
+                    {(['point', 'polygon'] as const).map((shape) => (
+                      <label key={shape} className="flex items-center gap-1">
+                        <input
+                          type="radio"
+                          name="new-risk-shape"
+                          className="size-3.5"
+                          checked={newRiskShape === shape}
+                          onChange={() => setNewRiskShape(shape)}
+                        />
+                        {shape === 'point' ? 'Point' : 'Zone'}
+                      </label>
+                    ))}
+                  </fieldset>
+                  <Button
+                    size="sm"
+                    disabled={!newRiskTypeId}
+                    onClick={() => {
+                      const type = riskTypes.data?.find((candidate) => candidate.id === newRiskTypeId);
+                      if (type) startRisk(type, null, newRiskShape);
+                    }}
+                  >
+                    Placer
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

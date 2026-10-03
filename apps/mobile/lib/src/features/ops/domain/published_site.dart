@@ -291,6 +291,7 @@ final class SiteRisk {
     this.levelId,
     this.zoneId,
     this.placement,
+    this.outdoor = false,
   });
 
   final String id;
@@ -309,6 +310,9 @@ final class SiteRisk {
   final String? levelId;
   final String? zoneId;
   final PlanPlacement? placement;
+
+  /// Placé sur la carte du site par la Prévision : risque extérieur (MET-02).
+  final bool outdoor;
 
   String get title => label ?? typeName;
 
@@ -593,6 +597,7 @@ final class PublishedSite {
           levelId: item.optionalString('level_id'),
           zoneId: item.optionalString('zone_id'),
           placement: PlanPlacement.fromJson(_object(item, 'plan_position')),
+          outdoor: _object(item, 'geometry') != null,
         ),
       )..sort((a, b) => b.severity.compareTo(a.severity)),
       documents: _each(data['documents'], (item) {

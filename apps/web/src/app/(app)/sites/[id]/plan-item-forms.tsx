@@ -25,6 +25,7 @@ function FormFrame({
   onSubmit,
   onCancel,
   onDelete,
+  place = 'plan',
   children,
 }: {
   title: ReactNode;
@@ -36,6 +37,8 @@ function FormFrame({
   onSubmit: () => void;
   onCancel: () => void;
   onDelete?: (() => void) | undefined;
+  /** Where the element is drawn: a plan (default) or the map. */
+  place?: 'plan' | 'map';
   children: ReactNode;
 }) {
   return (
@@ -57,14 +60,20 @@ function FormFrame({
       <div className="grid grid-cols-2 gap-3">{children}</div>
       <div className="flex flex-wrap gap-2">
         <Button type="submit" size="sm" disabled={!geometryReady || saving}>
-          {saving ? 'Enregistrement…' : creating ? 'Ajouter au plan' : 'Enregistrer'}
+          {saving
+            ? 'Enregistrement…'
+            : creating
+              ? place === 'map'
+                ? 'Ajouter sur la carte'
+                : 'Ajouter au plan'
+              : 'Enregistrer'}
         </Button>
         <Button type="button" size="sm" variant="secondary" onClick={onCancel}>
           Annuler
         </Button>
         {onDelete ? (
           <Button type="button" size="sm" variant="ghost" disabled={saving} onClick={onDelete}>
-            Supprimer
+            {place === 'map' ? 'Retirer de la carte' : 'Supprimer'}
           </Button>
         ) : null}
       </div>
@@ -150,6 +159,8 @@ export function RiskForm({
   type,
   risk,
   shape,
+  hint,
+  place,
   geometryReady,
   saving,
   error,
@@ -160,6 +171,9 @@ export function RiskForm({
   type: RiskType;
   risk: Risk | null;
   shape: 'point' | 'polygon';
+  /** Drawing instructions; plan wording by default. */
+  hint?: string | undefined;
+  place?: 'plan' | 'map';
   geometryReady: boolean;
   saving: boolean;
   error: unknown;
@@ -209,7 +223,8 @@ export function RiskForm({
           {type.name}
         </span>
       }
-      hint={shape === 'point' ? POINT_HINT : SURFACE_HINT}
+      hint={hint ?? (shape === 'point' ? POINT_HINT : SURFACE_HINT)}
+      {...(place ? { place } : {})}
       geometryReady={geometryReady}
       saving={saving}
       error={error}

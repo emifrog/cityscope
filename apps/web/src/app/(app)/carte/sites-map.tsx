@@ -27,6 +27,7 @@ import {
   objectLayers,
 } from '@/components/map/object-layers';
 import { describeWaterPoint, nearestWaterPoint } from '@/components/map/nearest-water';
+import { riskLayers } from '@/components/map/risk-layers';
 import { useBaseMap, useMapLibre } from '@/components/map/use-map';
 import { PageHeader } from '@/components/page-header';
 import { RiskFilterFields, riskFiltersFromParams } from '@/components/risk-filter-fields';
@@ -57,6 +58,7 @@ function useFiltersFromUrl(): MapSiteFilters {
 const DETAIL_ZOOM = 15;
 const DETAIL_BUILDINGS = 'detail-buildings';
 const DETAIL_OBJECTS = 'detail-objects';
+const DETAIL_RISKS = 'detail-risks';
 const EMPTY = { type: 'FeatureCollection' as const, features: [] };
 
 function extentBounds(extent: NonNullable<MapSitesResponse['extent']>): LngLatBoundsLike {
@@ -127,6 +129,7 @@ export function SitesMapView() {
     const colors = mapColors(getComputedStyle(document.documentElement));
     map.addSource(DETAIL_BUILDINGS, { type: 'geojson', data: EMPTY });
     map.addSource(DETAIL_OBJECTS, { type: 'geojson', data: EMPTY });
+    map.addSource(DETAIL_RISKS, { type: 'geojson', data: EMPTY });
     map.addLayer({
       id: 'detail-building-fill',
       type: 'fill',
@@ -139,6 +142,7 @@ export function SitesMapView() {
       source: DETAIL_BUILDINGS,
       paint: { 'line-color': colors.cluster, 'line-width': 1.5 },
     });
+    for (const layer of riskLayers(DETAIL_RISKS, DETAIL_RISKS, fontStack, 17)) map.addLayer(layer);
     for (const layer of objectLayers(DETAIL_OBJECTS, DETAIL_OBJECTS, fontStack, 17)) map.addLayer(layer);
     for (const layer of siteLayers(colors, fontStack)) map.addLayer(layer);
     for (const role of ['point', 'line', 'fill'] as const) {
@@ -200,6 +204,17 @@ export function SitesMapView() {
     const data = detailBbox ? details.data : undefined;
     loaded.map.getSource<GeoJSONSource>(DETAIL_BUILDINGS)?.setData(data ? data.buildings : EMPTY);
     loaded.map.getSource<GeoJSONSource>(DETAIL_OBJECTS)?.setData(data ? detailObjectsData(data) : EMPTY);
+    loaded.map.getSource<GeoJSONSource>(DETAIL_RISKS)?.setData(
+      data
+        ? {
+            type: 'FeatureCollection',
+            features: data.risks.features.map((feature) => ({
+              ...feature,
+              properties: { ...feature.properties, id: feature.id },
+            })),
+          }
+        : EMPTY,
+    );
   }, [loaded, details.data, detailBbox]);
 
   useEffect(() => {

@@ -17,7 +17,7 @@ import {
   planPositionJoin,
 } from './plan-position';
 import type { PoolClient } from './pool';
-import { applyAssignments, assignments, lockVersion } from './versioned';
+import { applyAssignments, asGeoJsonText, assignments, geoJsonGeometry, lockVersion } from './versioned';
 
 const TYPE_SELECT = `
   select t.id, t.code, t.name, t.default_severity, t.icon_key, t.properties_schema,
@@ -27,7 +27,7 @@ const TYPE_SELECT = `
 const RISK_SELECT = `
   select r.id, r.site_id, r.risk_type_id, t.code as type_code, t.name as type_name, t.icon_key, r.severity, r.label,
          r.description, r.quantity::float8 as quantity, r.unit, r.properties, r.building_id, r.level_id, r.zone_id,
-         ${planPositionColumn('r')}, r.status, r.row_version
+         ${planPositionColumn('r')}, extensions.st_asgeojson(r.geom, 7)::json as geometry, r.status, r.row_version
   from app.risk_occurrence r
   join app.risk_type t on t.id = r.risk_type_id
   ${planPositionJoin('r')}
@@ -105,8 +105,9 @@ export class PostgresRiskRepository implements RiskRepository {
     const { rows } = await this.client.query<{ id: string }>(
       `insert into app.risk_occurrence
          (tenant_id, site_id, risk_type_id, severity, label, description, quantity, unit, properties,
-          building_id, level_id, zone_id, plan_revision_id, local_geom)
-       values (app.current_tenant_id(), $1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11, $12, ${localGeometry('$13')})
+          building_id, level_id, zone_id, geom, plan_revision_id, local_geom)
+       values (app.current_tenant_id(), $1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11, ${geoJsonGeometry('$12')},
+               $13, ${localGeometry('$14')})
        returning id`,
       [
         siteId,
@@ -120,6 +121,7 @@ export class PostgresRiskRepository implements RiskRepository {
         input.building_id ?? null,
         input.level_id ?? null,
         input.zone_id ?? null,
+        input.geometry ? JSON.stringify(input.geometry) : null,
         ...placementValues(input.plan_position),
       ],
     );
@@ -139,8 +141,13 @@ export class PostgresRiskRepository implements RiskRepository {
       zone_id: 'zone_id',
       status: 'status',
       properties: { column: 'properties', expression: (parameter) => `${parameter}::jsonb` },
+      geometry: { column: 'geom', expression: geoJsonGeometry },
     }).map((assignment) =>
-      assignment.column === 'properties' ? { ...assignment, value: JSON.stringify(assignment.value) } : assignment,
+      assignment.column === 'properties'
+        ? { ...assignment, value: JSON.stringify(assignment.value) }
+        : assignment.column === 'geom'
+          ? asGeoJsonText(assignment)
+          : assignment,
     );
     await applyAssignments(this.client, 'app.risk_occurrence', id, [
       ...values,

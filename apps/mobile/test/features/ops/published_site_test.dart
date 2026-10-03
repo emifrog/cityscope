@@ -62,6 +62,21 @@ void main() {
       );
     });
 
+    test('un risque placé sur la carte est signalé à l’extérieur (MET-02)', () {
+      expect(site.risks.map((risk) => risk.outdoor), [false, false]);
+      final located = jsonDecode(jsonEncode(payload)) as Map<String, Object?>;
+      final risks =
+          (located['data']! as Map<String, Object?>)['risks']! as List<Object?>;
+      (risks.last! as Map<String, Object?>)['geometry'] = {
+        'type': 'Point',
+        'coordinates': [7.2516, 43.7078],
+      };
+      expect(
+        PublishedSite.fromJson(located).risks.map((risk) => risk.outdoor),
+        [false, true],
+      );
+    });
+
     test('une donnée inattendue n’empêche pas la lecture du reste', () {
       final altered = jsonDecode(jsonEncode(payload)) as Map<String, Object?>;
       final data = altered['data']! as Map<String, Object?>;

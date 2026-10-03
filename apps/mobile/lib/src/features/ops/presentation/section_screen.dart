@@ -93,6 +93,7 @@ class _RiskTile extends StatelessWidget {
         [
           if (risk.title != risk.typeName) risk.typeName,
           'gravité ${severityLabels[risk.severity]?.toLowerCase()}',
+          if (risk.outdoor) 'à l’extérieur',
           ?location,
         ].join(' · '),
       ),

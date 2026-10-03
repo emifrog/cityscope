@@ -24,7 +24,7 @@ import {
 } from './plan-position';
 import { ASSET_COLUMNS, insertPendingAsset, toAsset, type AssetColumns } from './pending-asset';
 import type { PoolClient } from './pool';
-import { applyAssignments, asGeoJsonText, assignments, lockVersion, toIso } from './versioned';
+import { applyAssignments, asGeoJsonText, assignments, lockVersion, toIso, geoJsonGeometry } from './versioned';
 
 /** Most details a map view receives per layer; beyond, the answer says "zoom in". */
 const MAP_DETAIL_LIMIT = 2000;
@@ -55,11 +55,6 @@ const OBJECT_SELECT = `
   join app.site s on s.tenant_id = o.tenant_id and s.id = o.site_id
   ${planPositionJoin('o')}
   where o.tenant_id = app.current_tenant_id()`;
-
-/** GeoJSON (WGS 84) parameter to a PostGIS geometry of any kind (null stays null). */
-const geoJsonGeometry = (parameter: string) =>
-  `case when ${parameter}::text is null then null
-   else extensions.st_setsrid(extensions.st_geomfromgeojson(${parameter}::text), 4326) end`;
 
 interface ObjectRow extends Omit<OperationalObject, 'verified_at'> {
   verified_at: Date | null;
@@ -261,6 +256,28 @@ export class PostgresOperationalObjectRepository implements OperationalObjectRep
        limit $5`,
       [...bbox, MAP_DETAIL_LIMIT + 1],
     );
+    const risks = await this.client.query<{
+      id: string;
+      site_id: string;
+      site_name: string;
+      type_code: string;
+      type_name: string;
+      icon_key: string;
+      severity: number;
+      label: string | null;
+      geometry: unknown;
+    }>(
+      `select r.id, r.site_id, s.name as site_name, t.code as type_code, t.name as type_name, t.icon_key,
+              r.severity, r.label, extensions.st_asgeojson(r.geom, 7)::json as geometry
+       from app.risk_occurrence r
+       join app.risk_type t on t.id = r.risk_type_id
+       join app.site s on s.tenant_id = r.tenant_id and s.id = r.site_id and s.status <> 'archived'
+       where r.tenant_id = app.current_tenant_id() and r.status = 'active' and r.geom is not null
+         and extensions.st_intersects(r.geom, ${envelope})
+       order by r.severity desc, r.id
+       limit $5`,
+      [...bbox, MAP_DETAIL_LIMIT + 1],
+    );
     return mapFeaturesResponseSchema.parse({
       buildings: {
         type: 'FeatureCollection',
@@ -280,7 +297,19 @@ export class PostgresOperationalObjectRepository implements OperationalObjectRep
           properties,
         })),
       },
-      truncated: buildings.rows.length > MAP_DETAIL_LIMIT || objects.rows.length > MAP_DETAIL_LIMIT,
+      risks: {
+        type: 'FeatureCollection',
+        features: risks.rows.slice(0, MAP_DETAIL_LIMIT).map(({ id, geometry, ...properties }) => ({
+          type: 'Feature',
+          id,
+          geometry,
+          properties,
+        })),
+      },
+      truncated:
+        buildings.rows.length > MAP_DETAIL_LIMIT ||
+        objects.rows.length > MAP_DETAIL_LIMIT ||
+        risks.rows.length > MAP_DETAIL_LIMIT,
     });
   }
 

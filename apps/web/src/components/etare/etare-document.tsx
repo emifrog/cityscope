@@ -127,6 +127,7 @@ export function EtareDocument({ snapshot, versionLabel }: { snapshot: EtareSnaps
           {scope(risk)}
           {risk.quantity !== null ? ` · ${risk.quantity} ${risk.unit ?? ''}` : ''}
           {risk.plan_position ? ' · sur plan' : ''}
+          {risk.geometry ? ' · sur carte' : ''}
         </p>
         <Properties schema={riskTypes.get(risk.type_code)?.properties_schema} values={risk.properties} />
         {risk.description ? <p className="text-sm whitespace-pre-line">{risk.description}</p> : null}

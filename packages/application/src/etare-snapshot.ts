@@ -179,6 +179,7 @@ export function buildSnapshot(data: WorkingData): EtareSnapshot {
         level_id: risk.level_id,
         zone_id: risk.zone_id,
         plan_position: placement(risk.plan_position),
+        ...(risk.geometry ? { geometry: risk.geometry } : {}),
       })),
     documents: data.documents
       .filter((document) => document.status === 'active' && document.versions[0]?.asset.scan_status === 'clean')
@@ -239,6 +240,23 @@ export async function contentHash(value: unknown, sha256: (text: string) => Prom
 }
 
 const plural = (count: number, one: string, many: string) => `${count} ${count > 1 ? many : one}`;
+
+/** Beyond this distance from the reference point, a risk drawn on the map is flagged. */
+const FAR_RISK_METERS = 2000;
+
+const firstPosition = (geometry: NonNullable<Risk['geometry']>): readonly number[] =>
+  geometry.type === 'Point' ? geometry.coordinates : (geometry.coordinates[0]?.[0] ?? []);
+
+/** Great-circle distance between two WGS 84 positions (longitude, latitude), in metres. */
+export function distanceMeters(from: readonly number[], to: readonly number[]): number {
+  const [lon1 = 0, lat1 = 0] = from;
+  const [lon2 = 0, lat2 = 0] = to;
+  const radians = (degrees: number) => (degrees * Math.PI) / 180;
+  const a =
+    Math.sin(radians(lat2 - lat1) / 2) ** 2 +
+    Math.cos(radians(lat1)) * Math.cos(radians(lat2)) * Math.sin(radians(lon2 - lon1) / 2) ** 2;
+  return 2 * 6_371_000 * Math.asin(Math.sqrt(a));
+}
 const CONTACT_CHECK_DAYS = 365;
 
 /**
@@ -326,8 +344,21 @@ export function preSubmissionChecks(data: WorkingData, now: Date): EtareCheck[] 
     'Risques localisés',
     risks.length === 0
       ? 'Aucun risque déclaré.'
-      : `${plural(risks.length, 'risque', 'risques')}, dont ${risks.filter((risk) => risk.plan_position).length} sur plan.`,
+      : `${plural(risks.length, 'risque', 'risques')}, dont ${risks.filter((risk) => risk.plan_position).length} sur plan et ${risks.filter((risk) => risk.geometry).length} sur carte.`,
   );
+  // A risk drawn far from the site is most likely misplaced (MET-02).
+  const origin = data.site.location?.coordinates;
+  const far = origin
+    ? risks.filter((risk) => risk.geometry && distanceMeters(origin, firstPosition(risk.geometry)) > FAR_RISK_METERS)
+    : [];
+  if (far.length > 0) {
+    add(
+      'risk_locations',
+      'warning',
+      'Risques loin du site',
+      `${far.map((risk) => risk.label ?? risk.type_name).join(', ')} : à plus de ${FAR_RISK_METERS / 1000} km du point de référence, vérifiez leur position sur la carte.`,
+    );
+  }
 
   const water = data.objects.filter((object) => object.status !== 'archived' && object.category === 'water').length;
   add(

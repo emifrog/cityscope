@@ -88,6 +88,11 @@ export const geoJsonPoint = (parameter: string) =>
 
 export const toIso = (value: Date | null): string | null => (value ? value.toISOString() : null);
 
+/** GeoJSON (WGS 84) parameter to a PostGIS geometry of any kind (null stays null). */
+export const geoJsonGeometry = (parameter: string) =>
+  `case when ${parameter}::text is null then null
+   else extensions.st_setsrid(extensions.st_geomfromgeojson(${parameter}::text), 4326) end`;
+
 /** GeoJSON Polygon or MultiPolygon (WGS 84) parameter to a PostGIS MultiPolygon. */
 export const geoJsonSurface = (parameter: string) =>
   `case when ${parameter}::text is null then null

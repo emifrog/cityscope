@@ -11,6 +11,7 @@ import { cursorSchema, isoDateTimeSchema, localGeometrySchema, pageLimitSchema, 
 import { z } from 'zod';
 import { assetSchema, documentSchema, documentVersionSchema } from './documents';
 import { exteriorGeometrySchema } from './objects';
+import { riskGeometrySchema } from './risks';
 import { buildingSchema, classificationSchema, contactSchema, levelSchema } from './referential';
 import { siteDetailSchema } from './resources';
 
@@ -144,6 +145,8 @@ export const etareSnapshotSchema = z
           level_id: uuidSchema.nullable(),
           zone_id: uuidSchema.nullable(),
           plan_position: snapshotPlacement.nullable(),
+          /** Location on the map (MET-02); absent when none, as in snapshots made before it. */
+          geometry: riskGeometrySchema.optional(),
         })
         .meta({ id: 'SnapshotRisk' }),
     ),

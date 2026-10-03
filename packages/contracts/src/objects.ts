@@ -172,7 +172,7 @@ export const operationalObjectUpdateSchema = z
 export type OperationalObjectUpdate = z.infer<typeof operationalObjectUpdateSchema>;
 
 // ------------------------------------------------------------------ map details (buildings and objects)
-export const MAP_DETAIL_LAYERS = ['buildings', 'objects'] as const;
+export const MAP_DETAIL_LAYERS = ['buildings', 'objects', 'risks'] as const;
 
 /** Largest extent served with details (about 20 km): beyond, the map shows sites only. */
 export const MAX_DETAIL_EXTENT_DEGREES = 0.2;
@@ -217,10 +217,28 @@ export const mapObjectFeatureSchema = z.object({
 });
 export type MapObjectFeature = z.infer<typeof mapObjectFeatureSchema>;
 
+/** Risk located on the map (MET-02): a point or a surface. */
+export const mapRiskFeatureSchema = z.object({
+  type: z.literal('Feature'),
+  id: uuidSchema,
+  geometry: z.union([pointSchema, polygonSchema]),
+  properties: z.object({
+    site_id: uuidSchema,
+    site_name: z.string(),
+    type_code: z.string(),
+    type_name: z.string(),
+    icon_key: z.string(),
+    severity: z.number().int().min(1).max(5),
+    label: z.string().nullable(),
+  }),
+});
+export type MapRiskFeature = z.infer<typeof mapRiskFeatureSchema>;
+
 export const mapFeaturesResponseSchema = z
   .object({
     buildings: z.object({ type: z.literal('FeatureCollection'), features: z.array(mapBuildingFeatureSchema) }),
     objects: z.object({ type: z.literal('FeatureCollection'), features: z.array(mapObjectFeatureSchema) }),
+    risks: z.object({ type: z.literal('FeatureCollection'), features: z.array(mapRiskFeatureSchema) }),
     /** More details exist in this extent than returned: zoom in. */
     truncated: z.boolean(),
   })

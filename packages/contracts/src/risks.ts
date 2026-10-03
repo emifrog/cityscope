@@ -6,7 +6,7 @@ import {
   RECORD_STATUSES,
   RISK_ICON_KEYS,
 } from '@etare/domain';
-import { uuidSchema } from '@etare/schemas';
+import { pointSchema, polygonSchema, uuidSchema } from '@etare/schemas';
 import { z } from 'zod';
 import { planPlacementSchema, planPositionSchema } from './plans';
 
@@ -88,6 +88,9 @@ export const riskTypeUpdateSchema = z
 export type RiskTypeUpdate = z.infer<typeof riskTypeUpdateSchema>;
 
 // ------------------------------------------------------------------ occurrences (RISK-02)
+/** A risk on the map is a point or a surface, like on a plan. */
+export const riskGeometrySchema = z.union([pointSchema, polygonSchema]).meta({ id: 'RiskGeometry' });
+
 export const riskSchema = z
   .object({
     id: uuidSchema,
@@ -108,6 +111,8 @@ export const riskSchema = z
     level_id: uuidSchema.nullable(),
     zone_id: uuidSchema.nullable(),
     plan_position: planPositionSchema.nullable(),
+    /** Location on the map (WGS 84), for a risk outside the buildings (MET-02). */
+    geometry: riskGeometrySchema.nullable(),
     status: z.enum(RECORD_STATUSES),
     row_version: z.number().int().positive(),
   })
@@ -115,6 +120,8 @@ export const riskSchema = z
 export type Risk = z.infer<typeof riskSchema>;
 
 export const riskListSchema = z.object({ items: z.array(riskSchema) }).meta({ id: 'RiskList' });
+
+export type RiskGeometry = z.infer<typeof riskGeometrySchema>;
 
 const properties = z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()]));
 
@@ -141,6 +148,7 @@ export const riskCreateSchema = z
     level_id: uuidSchema.nullable().optional(),
     zone_id: uuidSchema.nullable().optional(),
     plan_position: riskPlacement.optional(),
+    geometry: riskGeometrySchema.nullable().optional(),
   })
   .refine(quantityPair, { message: 'Une quantité s’accompagne de son unité.', path: ['unit'] })
   .meta({ id: 'RiskCreate' });
@@ -161,6 +169,8 @@ export const riskUpdateSchema = z
     zone_id: uuidSchema.nullable().optional(),
     /** Places the risk (again) on the current background of a plan; null removes it from the plan. */
     plan_position: riskPlacement.nullable().optional(),
+    /** Location on the map; null removes it from the map. */
+    geometry: riskGeometrySchema.nullable().optional(),
     status: z.enum(RECORD_STATUSES).optional(),
   })
   .refine((value) => Object.values(value).some((field) => field !== undefined), {

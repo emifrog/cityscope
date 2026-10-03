@@ -515,6 +515,7 @@ export class PdfLibEtareRenderer implements EtarePdfRenderer {
           scope(risk),
           risk.quantity !== null ? `${risk.quantity} ${risk.unit ?? ''}`.trim() : null,
           risk.plan_position ? 'sur plan' : null,
+          risk.geometry ? 'sur carte' : null,
         ]
           .filter(Boolean)
           .join(' · '),
