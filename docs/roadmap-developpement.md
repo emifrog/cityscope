@@ -1,6 +1,6 @@
 # Roadmap complète de développement — ETARE numérique
 
-**Mise à jour : 3 octobre 2026. Base : `ebb8e1c` (Sprint 7 livré).**
+**Mise à jour : 3 octobre 2026. Base : `0704b49` (Sprint 8 livré).**
 
 Ce document est le plan de développement courant : **ce qui est implémenté, ce qui reste à construire,
 dans quel ordre et avec quelle preuve de fin**. Il complète le
@@ -74,10 +74,14 @@ Un total de tests ou un nombre de sprints ne donne pas un pourcentage fiable d�
 | Sprint 7 B — consultation  | Liste blanche de la version publiée construite en base, documents « visibles exploitant » figés dans l’instantané, téléchargement contrôlé et tracé               | Commit `28b8e77`                                                                |
 | Sprint 7 C — propositions  | Propositions avec valeur publiée figée et pièces contrôlées, échanges, report en brouillon, décision motivée, conflit à résoudre explicitement, suivi exploitant  | Commit `a6292cb` ; report dans les données de travail manuel                    |
 | Sprint 7 D — notifications | Boîte d’envoi transactionnelle (invitation, question, décision), envoi SMTP par le worker, contenu minimal, échecs tracés et rejouables                           | Commit `1238901`, [ADR-020](decisions/ADR-020-notifications.md)                 |
+| Sprint 8 A — recherche     | Filtre par type de risque et gravité (liste et carte), commune sur la carte ; dossiers ETARE paginés avec compteurs exacts, fin du plafond de 1 000               | Commit `a397d63`                                                                |
+| Sprint 8 B — risques ext.  | Risques situés sur la carte (point ou zone) avec portée, couche de détail, instantané, aperçu, PDF ; alerte au-delà de 2 km ; signalés sur la tablette            | Commit `9bc1f6a` ; carte tablette en R3 CAR-02                                  |
+| Sprint 8 C — zones         | Rattachement recalculé quand une zone est tracée, déplacée, archivée ou réactivée ; position décisive ; référence à une zone inactive bloquante                   | Commit `71e0baf`, ADR-012 (complément)                                          |
+| Sprint 8 D — cycle de vie  | Retrait motivé par un validateur (second facteur), archivage motivé après retrait, gel, restauration ; raisons dans le catalogue signé et sur la tablette         | Commit `0704b49`, [ADR-021](decisions/ADR-021-dossier-lifecycle.md)             |
 
-**État technique vérifié :** 291 tests TypeScript, 392 assertions SQL, 96 tests d’intégration (dont
-l’antivirus contre un vrai ClamAV et les e-mails dans Mailpit en CI), 158 tests Flutter réussis et
-1 test optionnel ignoré ; 26 migrations, 20 ADR (CI du commit `ee1be43`, [rapport du Sprint 7](sprint-7-report.md)).
+**État technique vérifié :** 294 tests TypeScript, 429 assertions SQL, 107 tests d’intégration (dont
+l’antivirus contre un vrai ClamAV et les e-mails dans Mailpit en CI), 163 tests Flutter réussis et
+1 test optionnel ignoré ; 29 migrations, 21 ADR (CI du commit `0704b49`, [rapport du Sprint 8](sprint-8-report.md)).
 Origine de chaque vérification et limites : [bilan du 1er octobre](bilan-depot-2026-10-01.md).
 
 ## 3. Séquence proposée jusqu’au pilote
@@ -93,9 +97,9 @@ Origine de chaque vérification et limites : [bilan du 1er octobre](bilan-depot-
 | R6 — MVP+ / V1.5                   | Les neuf exigences P1, imports avancés, personnalisation, comparaison, rétention, exports                                           | Retours du pilote ; mesure de valeur                        | Produit + équipe de développement     | Extensions génériques, sans fork par SIS                                   |
 | R7 — industrialisation / V2–V3     | SSO étendu, MDM, connecteurs, RRF, assistance IA, partage contrôlé et écosystème                                                    | MVP exploité, accords/qualifications disponibles            | Produit + partenaires SIS             | Lots autonomes justifiés par usage et capacité                             |
 
-**Dès maintenant :** R1 et R2 sont réalisés ; développer R3 en commençant par les lots qui ne dépendent
-d’aucun arbitrage (MET-01 à MET-04), obtenir les décisions R0 qui bloquent le reste de R3 (DEC-02 pour la
-carte, DEC-04 pour les secteurs et sites sensibles, DEC-05 pour les sections) et poursuivre R4, transversal.
+**Dès maintenant :** R1, R2 et les lots MET-01 à MET-04 de R3 sont réalisés ; obtenir les décisions R0 qui
+bloquent le reste de R3 (DEC-02 pour la carte, DEC-04 pour les secteurs et sites sensibles, DEC-05 pour les
+sections) et poursuivre R4, transversal, qui n’attend aucun arbitrage pour ses premiers lots.
 La qualification sur la tablette de référence (Alldocube iPlay 40H) commence dès sa livraison.
 
 Les estimations de l’architecture §32 décrivent le projet initial avec une équipe de trois à quatre
@@ -221,13 +225,13 @@ non exposés, pas de notification des équipes du SIS ; recette avec un exploita
 
 ### R3 — compléter les parcours P0 et la carte terrain
 
-- [ ] **MET-01 — Recherche :** filtre par risque, combinaison avec commune/type/texte ; pagination et
+- [x] **MET-01 — Recherche :** filtre par risque, combinaison avec commune/type/texte ; pagination et
       compteurs exacts dans les dossiers ETARE, suppression du plafond silencieux de 1 000.
-- [ ] **MET-02 — Risques extérieurs :** placer et modifier la géométrie d’un risque sur la carte et
+- [x] **MET-02 — Risques extérieurs :** placer et modifier la géométrie d’un risque sur la carte et
       conserver sa portée site/bâtiment/zone dans l’aperçu, la publication et la consultation.
-- [ ] **MET-03 — Cohérence des zones :** comportement explicite lorsqu’une zone bouge ou est archivée :
+- [x] **MET-03 — Cohérence des zones :** comportement explicite lorsqu’une zone bouge ou est archivée :
       recalcul contrôlé des rattachements ou signalement bloquant des incohérences, avec tests de bords et chevauchements.
-- [ ] **MET-04 — Cycle de vie :** archivage du dossier et retrait motivé d’une publication, permissions,
+- [x] **MET-04 — Cycle de vie :** archivage du dossier et retrait motivé d’une publication, permissions,
       historique, diffusion du retrait et statut intelligible sur le terminal ; ne pas effacer l’audit.
 - [ ] **MET-05 — Composition :** implémenter les sections configurables minimales arbitrées en DEC-05,
       avec aperçu/PDF/OPS cohérents. Décider de la présence des photos d’objets dans le PDF et l’implémenter
@@ -251,6 +255,11 @@ Prévision, avec un motif, brouillons clos et site exclu des tablettes ; une zon
 entraîne le recalcul automatique des rattachements des éléments placés sur le plan (tracé dans l'audit),
 une référence encore incohérente bloquant la soumission ; la recherche par risque filtre sur le type du
 catalogue et une gravité minimale.
+
+**Livré au Sprint 8 (3 octobre 2026) :** MET-01 à MET-04 ([rapport](sprint-8-report.md), ADR-021). Restent
+dans R3 : MET-05 (après DEC-05), PER-01 et PER-02 (après DEC-04), CAR-01 à CAR-03 (après DEC-02). Réserves :
+tracé des risques sur la carte non éprouvé visuellement dans le navigateur intégré, mesure de la recherche
+sur jeu pilote (R5).
 
 **Acceptation :** toute exigence P0 partielle a un scénario démontré ; site sensible jamais exposé par
 un contournement API/pack ; terminal limité à son périmètre ; retrait appliqué au prochain contact ;
@@ -338,7 +347,7 @@ Les exigences transverses hors de cette table sont couvertes par R0/R4 et la sec
 | SITE-03   | P0       | Classifications                          | Implémenté  | R5 : valeurs multiples, dates et historique                                                   |
 | SITE-04   | P0       | Contacts et astreintes                   | Implémenté  | R5 : confidentialité et usage terrain                                                         |
 | SITE-05   | P0       | Photos et documents versionnés           | Implémenté  | R5 : documents « à la demande » sur tablette réelle, volumes                                  |
-| SITE-06   | P0       | Recherche texte/commune/catégorie/risque | Partiel     | R3 MET-01 ; mesure < 2 s en R5                                                                |
+| SITE-06   | P0       | Recherche texte/commune/catégorie/risque | Implémenté  | Sprint 8 (MET-01) ; mesure < 2 s sur jeu pilote en R5                                         |
 | MAP-01    | P0       | Carte des sites et regroupement          | Implémenté  | R4 CAP-01, R5 : fluidité/filtrage sur jeu cible                                               |
 | MAP-02    | P0       | Emprises et points opérationnels         | Implémenté  | R5 : zoom, filtres et ouverture des fiches                                                    |
 | MAP-03    | P1       | Import GeoJSON/CSV                       | À faire     | R6 ; décision DEC-06 pour reprise initiale MVP                                                |
@@ -350,13 +359,13 @@ Les exigences transverses hors de cette table sont couvertes par R0/R4 et la sec
 | PLAN-05   | P0       | Photos attachées aux objets              | Implémenté  | R4 CAP-03 (miniatures) ; R5 : photo du même objet offline                                     |
 | PLAN-06   | P0       | Historique des fonds                     | Implémenté  | R5 : ancienne publication intacte après remplacement                                          |
 | RISK-01   | P0       | Catalogue des risques SIS                | Implémenté  | R5 : catalogue national/propre au SIS et propriétés                                           |
-| RISK-02   | P0       | Risques avec géométrie et portée         | Partiel     | R3 MET-02/03 : extérieur et portée cohérente                                                  |
+| RISK-02   | P0       | Risques avec géométrie et portée         | Implémenté  | Sprint 8 (MET-02/03) ; carte sur la tablette en R3 CAR-02                                     |
 | RISK-03   | P1       | Matières dangereuses et FDS              | À faire     | R6 : produit, quantité/unité, localisation, FDS                                               |
 | ETARE-01  | P0       | Assemblage, aperçu, sections             | Partiel     | DEC-05 puis R3 MET-05 ; fidélité aperçu/publié                                                |
 | ETARE-02  | P0       | PDF standardisé/versionné                | Implémenté  | R5 : relecture métier ; R1 pour lecture mobile                                                |
 | ETARE-03  | P1       | Modèle ETARE par SIS                     | À faire     | R6 : logo, sections, couleurs, mentions et obligations                                        |
 | ETARE-04  | P1       | Scénarios et consignes structurés        | À faire     | R6 : création, validation, PDF et OPS                                                         |
-| WF-01     | P0       | Cycle de vie jusqu’à l’archive           | Partiel     | R3 MET-04 : parcours d’archivage/retrait                                                      |
+| WF-01     | P0       | Cycle de vie jusqu’à l’archive           | Implémenté  | Sprint 8 (MET-04, ADR-021) ; recette du retrait d’urgence en R5                               |
 | WF-02     | P0       | Validation avant publication             | Implémenté  | R5 : séparation des tâches, aucun brouillon OPS                                               |
 | WF-03     | P1       | Comparaison de versions                  | Partiel     | R6 : détail par champ/document, au-delà de l’élément                                          |
 | WF-04     | P0       | Journal d’audit                          | Implémenté  | R4 SEC-03, R5 : couverture des nouveaux parcours/refus                                        |
@@ -443,10 +452,10 @@ Après chaque lot :
 4. Écrire un rapport daté avec commit, tests, limites et décision de passage.
 5. Réestimer le lot suivant selon les retours ; toute nouvelle demande garde une priorité et un lien au cadrage.
 
-**Prochaine tranche recommandée :** R3, lots sans arbitrage préalable — MET-01 (recherche par risque,
-pagination et compteurs exacts), MET-02 (risques extérieurs sur la carte), MET-03 (cohérence des zones),
-MET-04 (archivage du dossier et retrait motivé d’une publication jusqu’au terminal) ; décisions R0 à
-engager pour la suite de R3 (DEC-02, DEC-04, DEC-05) et premier essai sur la tablette de référence.
+**Prochaine tranche recommandée :** R4 sans arbitrage — SEC-02 (second facteur imposé côté API selon la
+politique des comptes, codes de secours, révocation des sessions), SEC-03 (limitation de débit, CSP, CORS),
+CAP-03 (miniatures, purge des dépôts abandonnés) ; en parallèle, décisions DEC-02, DEC-04 et DEC-05 pour
+terminer R3, et premier essai sur la tablette de référence.
 
 ## 8. Références
 
