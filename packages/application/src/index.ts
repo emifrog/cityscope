@@ -1,6 +1,7 @@
 export * from './access-events';
 export * from './account';
 export * from './asset-verification';
+export * from './basemaps';
 export * from './cartography';
 export * from './contributions';
 export * from './distribution';

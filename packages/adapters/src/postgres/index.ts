@@ -1,5 +1,6 @@
 export * from './account-repository';
 export * from './asset-verification-store';
+export * from './basemap-repository';
 export * from './building-repository';
 export * from './cursor';
 export * from './access-journal';

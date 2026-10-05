@@ -1,4 +1,5 @@
 export * from './authorization';
+export * from './basemap';
 export * from './canonical';
 export * from './catalog';
 export * from './context';

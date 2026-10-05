@@ -1,5 +1,6 @@
 export * from './access-events';
 export * from './account';
+export * from './basemaps';
 export * from './contributions';
 export * from './documents';
 export * from './endpoints';

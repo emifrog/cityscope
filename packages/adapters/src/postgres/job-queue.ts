@@ -19,11 +19,11 @@ export class PostgresJobQueue implements JobQueue {
     private readonly workerId: string,
   ) {}
 
-  async claim(limit: number, leaseSeconds: number): Promise<Job[]> {
+  async claim(limit: number, leaseSeconds: number, excludeTypes: readonly string[] = []): Promise<Job[]> {
     const result = await this.pool.query<JobRow>(
       `select id, tenant_id, job_type, payload_version, payload, attempts, max_attempts, correlation_id
-       from app.claim_jobs($1, $2, $3)`,
-      [this.workerId, limit, leaseSeconds],
+       from app.claim_jobs($1, $2, $3, $4::text[])`,
+      [this.workerId, limit, leaseSeconds, excludeTypes],
     );
     return result.rows.map((row) => ({
       id: row.id,

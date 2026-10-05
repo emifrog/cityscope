@@ -24,6 +24,8 @@ export interface MapSource {
     readonly onlineDisplay: 'open' | 'licensed';
     readonly offlinePackaging: 'unverified' | 'approved' | 'forbidden';
     readonly pdfExport: 'unverified' | 'approved' | 'forbidden';
+    /** Reference of the rights sheet that approved the offline rights (ADR-024). */
+    readonly reference?: string;
   };
 }
 

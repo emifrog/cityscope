@@ -43,6 +43,26 @@ function requiredOutsideDevelopment(
   }
 }
 
+/**
+ * Source of the offline base maps of the tablets (ADR-024): the synthetic test map, the Plan
+ * IGN through the flow agreed with the IGN, or none. The synthetic map is never a real map:
+ * refused in production; it is the default of the development and test environments.
+ */
+export const BASEMAP_SOURCES = ['synthetic', 'ign-plan-vector', 'none'] as const;
+export type BasemapSourceId = Exclude<(typeof BASEMAP_SOURCES)[number], 'none'>;
+const basemapSourceSchema = z.enum(BASEMAP_SOURCES).optional();
+
+function basemapSourceSetting(
+  appEnv: AppEnv,
+  value: (typeof BASEMAP_SOURCES)[number] | undefined,
+): BasemapSourceId | null {
+  const chosen = value ?? (appEnv === 'staging' || appEnv === 'production' ? 'none' : 'synthetic');
+  if (chosen === 'synthetic' && appEnv === 'production') {
+    throw new Error('BASEMAP_SOURCE=synthetic is a test map: refused in production.');
+  }
+  return chosen === 'none' ? null : chosen;
+}
+
 const authSchema = z.object({
   SUPABASE_URL: z.url(),
   /** Defaults to {SUPABASE_URL}/auth/v1. */
@@ -74,6 +94,8 @@ const apiEnvSchema = authSchema.extend({
   TRUSTED_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
   /** Other origins allowed to call the API from a browser (comma-separated); none by default. */
   ALLOWED_ORIGINS: z.string().optional(),
+  /** Source of the offline base maps (ADR-024); the worker reads the same setting. */
+  BASEMAP_SOURCE: basemapSourceSchema,
 });
 
 export interface ApiEnv {
@@ -89,6 +111,8 @@ export interface ApiEnv {
   readonly rateLimits: boolean;
   readonly trustedProxyHops: number;
   readonly allowedOrigins: readonly string[];
+  /** Source of the offline base maps; null: none on this platform. */
+  readonly basemapSource: BasemapSourceId | null;
 }
 
 export function readApiEnv(env: Env): ApiEnv {
@@ -109,6 +133,7 @@ export function readApiEnv(env: Env): ApiEnv {
       .map((origin) => origin.trim())
       .filter(Boolean)
       .map((origin) => new URL(origin).origin),
+    basemapSource: basemapSourceSetting(parsed.APP_ENV, parsed.BASEMAP_SOURCE),
     auth: {
       issuer,
       jwksUrl: parsed.AUTH_JWKS_URL ?? `${issuer}/.well-known/jwks.json`,
@@ -146,6 +171,12 @@ const workerEnvSchema = z.object({
   MAIL_FROM: z.string().min(3).max(200).default('FireScape <ne-pas-repondre@firescape.invalid>'),
   /** Public address of the web application, for the links of the notifications. */
   APP_BASE_URL: z.url().optional(),
+  /** Source of the offline base maps (ADR-024), the same as the API. */
+  BASEMAP_SOURCE: basemapSourceSchema,
+  /** Contact of the operator, sent to the IGN with each request of the agreed flow. */
+  BASEMAP_CONTACT: z.string().min(3).max(200).optional(),
+  /** Pace of the requests to the source of the base maps. */
+  BASEMAP_REQUESTS_PER_SECOND: z.coerce.number().min(0.1).max(50).default(4),
 });
 
 export interface WorkerEnv {
@@ -163,6 +194,12 @@ export interface WorkerEnv {
   readonly antivirusUrl: string | null;
   /** Null when no mail server is configured: notifications fail visibly and can be replayed. */
   readonly mail: { readonly smtpUrl: string; readonly from: string; readonly appBaseUrl: string } | null;
+  /** Source of the offline base maps; null: none. */
+  readonly basemap: {
+    readonly source: BasemapSourceId;
+    readonly contact: string | null;
+    readonly requestsPerSecond: number;
+  } | null;
 }
 
 export function readWorkerEnv(env: Env): WorkerEnv {
@@ -170,6 +207,12 @@ export function readWorkerEnv(env: Env): WorkerEnv {
   requiredOutsideDevelopment(parsed.APP_ENV, 'PUBLICATION_SIGNING_KEY', parsed.PUBLICATION_SIGNING_KEY);
   // A file is never admitted without antivirus outside development (SEC-01).
   requiredOutsideDevelopment(parsed.APP_ENV, 'ANTIVIRUS_URL', parsed.ANTIVIRUS_URL, 'antivirus of uploaded files');
+  const basemapSource = basemapSourceSetting(parsed.APP_ENV, parsed.BASEMAP_SOURCE);
+  if (basemapSource === 'ign-plan-vector' && !parsed.BASEMAP_CONTACT) {
+    throw new Error(
+      'BASEMAP_CONTACT is required with BASEMAP_SOURCE=ign-plan-vector (identification agreed with the IGN).',
+    );
+  }
   return {
     appEnv: parsed.APP_ENV,
     databaseUrl: assertDedicatedDatabaseRole(parsed.WORKER_DATABASE_URL, 'etare_worker'),
@@ -187,6 +230,13 @@ export function readWorkerEnv(env: Env): WorkerEnv {
       parsed.SMTP_URL && parsed.APP_BASE_URL
         ? { smtpUrl: parsed.SMTP_URL, from: parsed.MAIL_FROM, appBaseUrl: parsed.APP_BASE_URL }
         : null,
+    basemap: basemapSource
+      ? {
+          source: basemapSource,
+          contact: parsed.BASEMAP_CONTACT ?? null,
+          requestsPerSecond: parsed.BASEMAP_REQUESTS_PER_SECOND,
+        }
+      : null,
   };
 }
 

@@ -33,6 +33,7 @@ import { PostgresOperationalObjectRepository } from './operational-object-reposi
 import { PostgresPlanRepository } from './plan-repository';
 import { PostgresRiskRepository } from './risk-repository';
 import { PostgresSectorRepository } from './sector-repository';
+import { PostgresBasemapRepository } from './basemap-repository';
 import { PostgresZoneRepository } from './zone-repository';
 import { sqlState, type Pool, type PoolClient } from './pool';
 import { PostgresAuditRecorder, PostgresJobScheduler } from './request-services';
@@ -92,6 +93,7 @@ export class PostgresSessionFactory implements SessionFactory {
         etare: new PostgresEtareRepository(client),
         devices: new PostgresDeviceRepository(client),
         sectors: new PostgresSectorRepository(client),
+        basemaps: new PostgresBasemapRepository(client),
         fieldReports: new PostgresFieldReportRepository(client),
         portal: new PostgresPortalAccessRepository(client),
         contributions: new PostgresContributionRepository(client),
@@ -268,6 +270,10 @@ export function translateDatabaseError(error: unknown): unknown {
       return new PreconditionFailed('Ce secteur a été modifié entre-temps : rechargez la liste.');
     case 'ETS09':
       return new Conflict('Ce secteur est archivé.');
+    case 'ETB04':
+      return new NotFound('Secteur introuvable dans votre SIS.');
+    case 'ETB22':
+      return new Conflict('Aucun site localisé dans ce secteur : rien à couvrir pour l’instant.');
     case 'ETSCU':
       return new Conflict(
         'Des membres ou des terminaux sont encore affectés à ce secteur : affectez-les ailleurs avant de l’archiver.',

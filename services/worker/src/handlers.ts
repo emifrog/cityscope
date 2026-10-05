@@ -1,4 +1,12 @@
 import {
+  BASEMAP_BUILD_JOB,
+  BASEMAP_PLAN_JOB,
+  basemapPlanningSlot,
+  buildBasemap,
+  planBasemaps,
+  type BasemapBuildDependencies,
+  type BasemapBuildStore,
+  type BasemapSourceInfo,
   ASSET_VARIANTS_JOB,
   ASSET_VERIFICATION_JOB,
   FILE_MAINTENANCE_JOB,
@@ -191,6 +199,54 @@ export function startMaintenanceScheduler(
   const tick = () =>
     store.schedule(maintenanceSlot(now())).catch((error: unknown) => {
       logger.warn('maintenance not scheduled', { error: error instanceof Error ? error.message : String(error) });
+    });
+  void tick();
+  const timer = setInterval(() => void tick(), options.intervalMs ?? 5 * 60_000);
+  timer.unref();
+  return () => clearInterval(timer);
+}
+
+/** Prepares the base map of a sector (ADR-024): long, one at a time per worker (exclusive type). */
+export function basemapBuildHandler(deps: BasemapBuildDependencies): JobHandler {
+  return defineHandler({
+    type: BASEMAP_BUILD_JOB,
+    payloadVersion: 1,
+    payload: z.object({ pack_id: z.uuid() }),
+    async handle(payload, { job, logger, signal }) {
+      if (!job.tenantId) throw new PermanentJobError('TENANT_REQUIRED');
+      const outcome = await buildBasemap(deps, payload.pack_id, job.tenantId, signal);
+      logger.info('basemap build', { pack_id: payload.pack_id, outcome });
+    },
+  });
+}
+
+/** Plans the base maps every SIS needs and removes superseded files: a platform job, without SIS. */
+export function basemapPlanHandler(deps: {
+  store: BasemapBuildStore;
+  objects: ObjectStoreAdmin | null;
+  source: BasemapSourceInfo | null;
+}): JobHandler {
+  return defineHandler({
+    type: BASEMAP_PLAN_JOB,
+    payloadVersion: 1,
+    payload: z.object({ slot: z.string().max(20) }),
+    async handle(payload, { logger }) {
+      const report = await planBasemaps(deps);
+      logger.info('basemap planning', { slot: payload.slot, source: deps.source?.id ?? null, ...report });
+    },
+  });
+}
+
+/** Asks for the planning of the base maps every few minutes (one job per quarter of an hour). */
+export function startBasemapScheduler(
+  store: Pick<BasemapBuildStore, 'schedule'>,
+  logger: Logger,
+  options: { intervalMs?: number; now?: () => Date } = {},
+): () => void {
+  const now = options.now ?? (() => new Date());
+  const tick = () =>
+    store.schedule(basemapPlanningSlot(now())).catch((error: unknown) => {
+      logger.warn('basemap planning not scheduled', { error: error instanceof Error ? error.message : String(error) });
     });
   void tick();
   const timer = setInterval(() => void tick(), options.intervalMs ?? 5 * 60_000);

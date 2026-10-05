@@ -12,6 +12,11 @@ export interface WorkerOptions {
   readonly leaseSeconds: number;
   readonly pollIntervalMs: number;
   readonly retryDelay?: (attempt: number) => number;
+  /**
+   * Long job types (preparation of a base map) of which a worker runs one at a time, so that
+   * they never take every slot from the publications and the files.
+   */
+  readonly exclusiveTypes?: readonly string[];
 }
 
 export interface Worker {
@@ -33,8 +38,24 @@ async function sleep(ms: number, signal: AbortSignal): Promise<void> {
 export function createWorker(options: WorkerOptions): Worker {
   const { queue, registry, logger, concurrency, leaseSeconds, pollIntervalMs } = options;
   const retryDelay = options.retryDelay ?? retryDelaySeconds;
+  const exclusive = new Set(options.exclusiveTypes ?? []);
+  const running = new Map<string, number>();
   const shutdown = new AbortController();
-  let loop: Promise<void> | undefined;
+  let slots: Promise<void>[] = [];
+  // One claim at a time in this worker: an exclusive type is marked running before the next claim.
+  let claiming: Promise<unknown> = Promise.resolve();
+
+  const excluded = () => [...exclusive].filter((type) => (running.get(type) ?? 0) > 0);
+
+  function claimOne(): Promise<Job[]> {
+    const claim = claiming.then(async () => {
+      const jobs = await queue.claim(1, leaseSeconds, excluded());
+      for (const job of jobs) running.set(job.type, (running.get(job.type) ?? 0) + 1);
+      return jobs;
+    });
+    claiming = claim.catch(() => undefined);
+    return claim;
+  }
 
   async function process(job: Job): Promise<void> {
     const jobLogger = logger.child({
@@ -74,35 +95,47 @@ export function createWorker(options: WorkerOptions): Worker {
     } finally {
       clearInterval(heartbeat);
       shutdown.signal.removeEventListener('abort', stopLease);
+      running.set(job.type, Math.max(0, (running.get(job.type) ?? 1) - 1));
     }
   }
 
   async function runOnce(): Promise<number> {
-    const jobs = await queue.claim(concurrency, leaseSeconds);
+    const jobs = await queue.claim(concurrency, leaseSeconds, excluded());
+    for (const job of jobs) running.set(job.type, (running.get(job.type) ?? 0) + 1);
     await Promise.all(jobs.map(process));
     return jobs.length;
+  }
+
+  /** A slot works on its own: a long job only holds its slot. */
+  async function slot(): Promise<void> {
+    while (!shutdown.signal.aborted) {
+      let jobs: Job[] = [];
+      try {
+        jobs = await claimOne();
+      } catch (error) {
+        logger.error('queue unavailable', { error });
+      }
+      const job = jobs[0];
+      if (job) await process(job);
+      else await sleep(pollIntervalMs, shutdown.signal);
+    }
   }
 
   return {
     runOnce,
     start() {
-      logger.info('worker started', { handlers: registry.types(), concurrency, lease_seconds: leaseSeconds });
-      loop = (async () => {
-        while (!shutdown.signal.aborted) {
-          let handled = 0;
-          try {
-            handled = await runOnce();
-          } catch (error) {
-            logger.error('queue unavailable', { error });
-          }
-          if (handled === 0) await sleep(pollIntervalMs, shutdown.signal);
-        }
-      })();
+      logger.info('worker started', {
+        handlers: registry.types(),
+        concurrency,
+        lease_seconds: leaseSeconds,
+        exclusive: [...exclusive],
+      });
+      slots = Array.from({ length: concurrency }, () => slot());
       return Promise.resolve();
     },
     async stop() {
       shutdown.abort();
-      await loop;
+      await Promise.all(slots);
       logger.info('worker stopped');
     },
   };

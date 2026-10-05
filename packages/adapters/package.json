@@ -14,7 +14,8 @@
     "./pdf": "./src/pdf/etare-pdf.ts",
     "./antivirus": "./src/antivirus/clamav.ts",
     "./mail": "./src/mail/smtp.ts",
-    "./images": "./src/images/sharp-resizer.ts"
+    "./images": "./src/images/sharp-resizer.ts",
+    "./basemaps": "./src/basemaps/index.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"
@@ -35,6 +36,7 @@
   },
   "devDependencies": {
     "@types/nodemailer": "8.0.2",
-    "@types/pg": "8.23.1"
+    "@types/pg": "8.23.1",
+    "pmtiles": "4.5.0"
   }
 }

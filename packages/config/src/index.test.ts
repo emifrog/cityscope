@@ -111,3 +111,41 @@ describe('notifications (POR-05)', () => {
     expect(() => readWorkerEnv({ ...worker, SMTP_URL: 'http://mail' })).toThrow(/SMTP_URL/);
   });
 });
+
+describe('base maps of the tablets (ADR-024)', () => {
+  const worker = { WORKER_DATABASE_URL: 'postgresql://etare_worker:pw@db:5432/etare' };
+  const api = {
+    SUPABASE_URL: 'http://127.0.0.1:54321',
+    DATABASE_URL: 'postgresql://etare_api:pw@127.0.0.1:54322/postgres',
+  };
+  const keys = { PUBLICATION_SIGNING_KEY: 'k', ANTIVIRUS_URL: 'tcp://av:3310', CATALOG_SIGNING_KEY: 'k' };
+
+  it('use the synthetic test map in development, none in shared environments unless chosen', () => {
+    expect(readWorkerEnv(worker).basemap).toEqual({ source: 'synthetic', contact: null, requestsPerSecond: 4 });
+    expect(readApiEnv(api).basemapSource).toBe('synthetic');
+    expect(readWorkerEnv({ ...worker, ...keys, APP_ENV: 'staging' }).basemap).toBeNull();
+    expect(readApiEnv({ ...api, ...keys, APP_ENV: 'production' }).basemapSource).toBeNull();
+    expect(readApiEnv({ ...api, BASEMAP_SOURCE: 'none' }).basemapSource).toBeNull();
+  });
+
+  it('never ship the synthetic map to production', () => {
+    expect(() => readApiEnv({ ...api, ...keys, APP_ENV: 'production', BASEMAP_SOURCE: 'synthetic' })).toThrow(
+      /refused in production/,
+    );
+    expect(() => readWorkerEnv({ ...worker, ...keys, APP_ENV: 'production', BASEMAP_SOURCE: 'synthetic' })).toThrow(
+      /refused in production/,
+    );
+  });
+
+  it('identify the operator to the IGN in the agreed flow', () => {
+    expect(() => readWorkerEnv({ ...worker, BASEMAP_SOURCE: 'ign-plan-vector' })).toThrow(/BASEMAP_CONTACT/);
+    expect(
+      readWorkerEnv({
+        ...worker,
+        BASEMAP_SOURCE: 'ign-plan-vector',
+        BASEMAP_CONTACT: 'sig@sdis06.example',
+        BASEMAP_REQUESTS_PER_SECOND: '2',
+      }).basemap,
+    ).toEqual({ source: 'ign-plan-vector', contact: 'sig@sdis06.example', requestsPerSecond: 2 });
+  });
+});

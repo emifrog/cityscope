@@ -67,6 +67,7 @@ export const SIGNATURE_CONTEXTS = {
   catalog: 'etare.catalog.v1',
   deviceRequest: 'etare.device-request.v1',
   enrollment: 'etare.enrollment.v1',
+  basemap: 'etare.basemap.v1',
 } as const;
 export type SignatureContext = (typeof SIGNATURE_CONTEXTS)[keyof typeof SIGNATURE_CONTEXTS];
 

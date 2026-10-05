@@ -1,5 +1,7 @@
+import type { BasemapRepository, DistributedBasemap } from './basemaps';
 import type {
   AccountSession,
+  CatalogBasemap,
   RecoveryCodesState,
   SecuritySettings,
   CatalogWithdrawal,
@@ -137,6 +139,7 @@ export interface RequestSession {
   readonly etare: EtareRepository;
   readonly devices: DeviceRepository;
   readonly sectors: SectorRepository;
+  readonly basemaps: BasemapRepository;
   readonly fieldReports: FieldReportRepository;
   readonly portal: PortalAccessRepository;
   readonly contributions: ContributionRepository;
@@ -737,4 +740,16 @@ export interface DeviceRepository {
   ): Promise<{ sha256: string; storageKey: string }[]>;
   /** Records the receipt; returns the number of sites reported as installed. */
   receipt(deviceId: string, receipt: SyncReceipt): Promise<number>;
+  /** Base maps in force for the sectors of the terminal (ADR-024). */
+  basemaps(deviceId: string): Promise<CatalogBasemap[]>;
+  /** Null when the base map is not (or no longer) in force for the terminal. */
+  basemap(deviceId: string, packId: string): Promise<DistributedBasemap | null>;
+  /** Storage keys of the requested parts of a base map in force, by hash. */
+  basemapFiles(
+    deviceId: string,
+    packId: string,
+    sha256: readonly string[],
+  ): Promise<{ sha256: string; storageKey: string }[]>;
+  /** Records the base maps complete on the terminal; returns how many it holds. */
+  basemapReceipt(deviceId: string, packIds: readonly string[]): Promise<number>;
 }

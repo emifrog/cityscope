@@ -8,6 +8,9 @@ import {
   type DeviceList,
   type DeviceRevoke,
   type SyncAccessEvents,
+  type SyncBasemap,
+  type SyncBasemapReceipt,
+  type SyncBasemapReceiptResult,
   type SyncAccessEventsResult,
   type Device,
   type SignedCatalog,
@@ -227,6 +230,7 @@ export async function getSyncCatalog(
       proof.deviceId,
       proof.appVersion,
     );
+    const basemaps = await session.devices.basemaps(proof.deviceId);
     const now = deps.now();
     const catalog: SyncCatalog = syncCatalogSchema.parse({
       catalog_version: CATALOG_VERSION,
@@ -244,6 +248,7 @@ export async function getSyncCatalog(
       publications,
       on_demand: onDemand,
       withdrawals,
+      basemaps,
     } satisfies SyncCatalog);
     const text = canonicalJson(catalog);
     return { catalog: text, signature: signer.sign(SIGNATURE_CONTEXTS.catalog, text) };
@@ -327,6 +332,60 @@ export async function submitAccessEvents(
     }
     return { received: input.events.length };
   });
+}
+
+/** Signed manifest of a base map in force for the terminal (ADR-024), served exactly as built. */
+export async function getSyncBasemap(
+  deps: DistributionDependencies,
+  context: RequestContext,
+  proof: DeviceProof,
+  packId: string,
+): Promise<SyncBasemap> {
+  const basemap = await asDevice(deps, context, proof, async (session) =>
+    found(
+      await session.devices.basemap(proof.deviceId, packId),
+      'Fond de carte non distribué : relancez la synchronisation.',
+    ),
+  );
+  const manifest = canonicalJson(basemap.manifest);
+  if ((await deps.sha256(manifest)) !== basemap.manifestHash) throw new Error('MANIFEST_HASH_MISMATCH');
+  return { manifest, signature: basemap.signature };
+}
+
+/** Short-lived URLs of the parts of a base map the terminal is missing. Public data: not audited. */
+export async function createSyncBasemapDownloads(
+  deps: DistributionDependencies,
+  context: RequestContext,
+  proof: DeviceProof,
+  packId: string,
+  input: SyncDownloadRequest,
+): Promise<SyncDownloads> {
+  if (!deps.storage) throw new ServiceUnavailable('Le stockage des fichiers n’est pas configuré.');
+  const storage = deps.storage;
+  const files = await asDevice(deps, context, proof, async (session) => {
+    found(await session.devices.basemap(proof.deviceId, packId), 'Fond de carte non distribué.');
+    return session.devices.basemapFiles(proof.deviceId, packId, input.sha256);
+  });
+  return {
+    files: await Promise.all(
+      files.map(async (file) => {
+        const { url, expiresAt } = await storage.createDownloadUrl(file.storageKey, SYNC_DOWNLOAD_URL_SECONDS);
+        return { sha256: file.sha256, url, expires_at: expiresAt.toISOString() };
+      }),
+    ),
+  };
+}
+
+export async function recordSyncBasemapReceipt(
+  deps: DistributionDependencies,
+  context: RequestContext,
+  proof: DeviceProof,
+  receipt: SyncBasemapReceipt,
+): Promise<SyncBasemapReceiptResult> {
+  const installed = await asDevice(deps, context, proof, (session) =>
+    session.devices.basemapReceipt(proof.deviceId, receipt.installed),
+  );
+  return { received_at: deps.now().toISOString(), installed };
 }
 
 export async function recordSyncReceipt(

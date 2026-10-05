@@ -20,8 +20,11 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 import {
   createDevice,
+  createSyncBasemapDownloads,
   createSyncDownloads,
   enrollDevice,
+  getSyncBasemap,
+  recordSyncBasemapReceipt,
   getSyncCatalog,
   getSyncPackage,
   submitAccessEvents,
@@ -105,6 +108,17 @@ const entry: CatalogEntry = {
 
 const builtSignature: Signature = { algorithm: 'Ed25519', key_id: 'publication', signature: 'signed' };
 
+const basemapEntry = {
+  pack_id: '0600000b-0000-4000-8000-000000000001',
+  sector_id: '06000005-0000-4000-8000-000000000001',
+  sector_name: 'CIS Nice Centre',
+  version: 2,
+  manifest_hash: 'c'.repeat(64),
+  total_bytes: 4_096,
+  built_at: '2026-10-05T08:00:00.000Z',
+  renew_after: '2027-04-05T08:00:00.000Z',
+};
+
 function setup(device: { status: DeviceStatus; publicKey: string | null } | null, roles: Role[] = ['OPS_USER']) {
   const devices = {
     syncDevice: vi.fn<DeviceRepository['syncDevice']>(async () => device),
@@ -124,6 +138,10 @@ function setup(device: { status: DeviceStatus; publicKey: string | null } | null
     create: vi.fn<DeviceRepository['create']>(),
     package: vi.fn<DeviceRepository['package']>(async () => null),
     packageFiles: vi.fn<DeviceRepository['packageFiles']>(async () => []),
+    basemaps: vi.fn<DeviceRepository['basemaps']>(async () => [basemapEntry]),
+    basemap: vi.fn<DeviceRepository['basemap']>(async () => null),
+    basemapFiles: vi.fn<DeviceRepository['basemapFiles']>(async () => []),
+    basemapReceipt: vi.fn<DeviceRepository['basemapReceipt']>(async (_device, packs) => packs.length),
   };
   const audit = { record: vi.fn(async () => undefined) };
   const accessJournal = {
@@ -267,6 +285,63 @@ describe('terminal requests', () => {
     await expect(getSyncPackage(deps, context, device.proof(), entry.publication_id)).rejects.toThrow(
       'MANIFEST_HASH_MISMATCH',
     );
+  });
+
+  it('lists the base maps of the terminal in the signed catalogue (ADR-024)', async () => {
+    const { deps } = setup({ status: 'active', publicKey: device.publicKey });
+    const signed = await getSyncCatalog(deps, context, device.proof());
+    expect(syncCatalogSchema.parse(JSON.parse(signed.catalog)).basemaps).toEqual([basemapEntry]);
+  });
+
+  it('serves a base map exactly as signed, its parts by short-lived URLs, not audited', async () => {
+    const { deps, devices, audit } = setup({ status: 'active', publicKey: device.publicKey });
+    await expect(getSyncBasemap(deps, context, device.proof(), basemapEntry.pack_id)).rejects.toThrow(
+      'Fond de carte non distribué',
+    );
+    const manifest = { kind: 'basemap', version: 2 };
+    devices.basemap.mockResolvedValue({
+      manifest,
+      manifestHash: await sha256(canonicalJson(manifest)),
+      signature: builtSignature,
+    });
+    await expect(getSyncBasemap(deps, context, device.proof(), basemapEntry.pack_id)).resolves.toEqual({
+      manifest: canonicalJson(manifest),
+      signature: builtSignature,
+    });
+    devices.basemap.mockResolvedValue({ manifest, manifestHash: 'd'.repeat(64), signature: builtSignature });
+    await expect(getSyncBasemap(deps, context, device.proof(), basemapEntry.pack_id)).rejects.toThrow(
+      'MANIFEST_HASH_MISMATCH',
+    );
+
+    await expect(
+      createSyncBasemapDownloads(deps, context, device.proof(), basemapEntry.pack_id, { sha256: ['e'.repeat(64)] }),
+    ).rejects.toBeInstanceOf(ServiceUnavailable);
+    const storage = {
+      createDownloadUrl: vi.fn(async (key: string, seconds: number) => ({
+        url: `https://storage.example/${key}`,
+        expiresAt: new Date(NOW.getTime() + seconds * 1000),
+      })),
+      createUploadUrl: vi.fn(),
+    };
+    devices.basemapFiles.mockResolvedValue([{ sha256: 'e'.repeat(64), storageKey: 'tenants/t/basemaps/p/style.json' }]);
+    const downloads = await createSyncBasemapDownloads(
+      { ...deps, storage },
+      context,
+      device.proof(),
+      basemapEntry.pack_id,
+      { sha256: ['e'.repeat(64)] },
+    );
+    expect(downloads.files).toEqual([
+      {
+        sha256: 'e'.repeat(64),
+        url: 'https://storage.example/tenants/t/basemaps/p/style.json',
+        expires_at: new Date(NOW.getTime() + 300_000).toISOString(),
+      },
+    ]);
+    expect(audit.record).not.toHaveBeenCalled();
+    await expect(
+      recordSyncBasemapReceipt(deps, context, device.proof(), { installed: [basemapEntry.pack_id] }),
+    ).resolves.toEqual({ received_at: NOW.toISOString(), installed: 1 });
   });
 
   it('opens a restricted site on demand for 24 hours, journaled as an offline download (PER-02)', async () => {

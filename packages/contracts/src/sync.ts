@@ -12,6 +12,7 @@ import {
 } from '@etare/domain';
 import { isoDateTimeSchema, sha256Schema, uuidSchema } from '@etare/schemas';
 import { z } from 'zod';
+import { catalogBasemapSchema } from './basemaps';
 import { namedRefSchema } from './sectors';
 
 /** Headers of a request signed by an enrolled terminal (OFF-04, architecture §19). */
@@ -213,6 +214,11 @@ export const syncCatalogSchema = z
     on_demand: z.array(catalogEntrySchema),
     /** Sites held by the terminal whose version was withdrawn or which were archived (MET-04). */
     withdrawals: z.array(catalogWithdrawalSchema),
+    /**
+     * Base maps in force for the sectors of the terminal (ADR-024): public data, kept on the
+     * terminal whoever synchronises; one missing from the list is removed.
+     */
+    basemaps: z.array(catalogBasemapSchema),
   })
   .meta({ id: 'SyncCatalog' });
 export type SyncCatalog = z.infer<typeof syncCatalogSchema>;
@@ -238,6 +244,32 @@ export const syncPackageSchema = z
   })
   .meta({ id: 'SyncPackage' });
 export type SyncPackage = z.infer<typeof syncPackageSchema>;
+
+/** Signed manifest of a base map; its SHA-256 is the manifest_hash of the catalogue. */
+export const syncBasemapSchema = z
+  .object({
+    /** Canonical JSON of the BasemapManifest: verify the signature on these exact bytes, then parse. */
+    manifest: z.string(),
+    signature: signatureSchema,
+  })
+  .meta({ id: 'SyncBasemap' });
+export type SyncBasemap = z.infer<typeof syncBasemapSchema>;
+
+/** Base maps complete on the terminal after its transfers (the administration sees who is up to date). */
+export const syncBasemapReceiptSchema = z
+  .object({
+    installed: z
+      .array(uuidSchema)
+      .max(200)
+      .refine((values) => new Set(values).size === values.length, 'Fonds en double.'),
+  })
+  .meta({ id: 'SyncBasemapReceipt' });
+export type SyncBasemapReceipt = z.infer<typeof syncBasemapReceiptSchema>;
+
+export const syncBasemapReceiptResultSchema = z
+  .object({ received_at: isoDateTimeSchema, installed: z.number().int().nonnegative() })
+  .meta({ id: 'SyncBasemapReceiptResult' });
+export type SyncBasemapReceiptResult = z.infer<typeof syncBasemapReceiptResultSchema>;
 
 export const syncDownloadRequestSchema = z
   .object({

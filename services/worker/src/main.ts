@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import { hostname } from 'node:os';
-import { antivirusNotConfigured } from '@etare/application';
+import { BASEMAP_BUILD_JOB, antivirusNotConfigured } from '@etare/application';
 import { ClamAvScanner, parseClamAvUrl } from '@etare/adapters/antivirus';
+import { PmtilesArchiveFactory, basemapTileSource } from '@etare/adapters/basemaps';
 import { Ed25519Signer } from '@etare/adapters/crypto';
 import { SharpImageResizer } from '@etare/adapters/images';
 import { createLogger } from '@etare/adapters/logging';
@@ -10,6 +11,7 @@ import { PdfLibEtareRenderer } from '@etare/adapters/pdf';
 import {
   PostgresAssetVariantStore,
   PostgresAssetVerificationStore,
+  PostgresBasemapBuildStore,
   PostgresFileMaintenanceStore,
   PostgresJobQueue,
   PostgresNotificationStore,
@@ -22,6 +24,9 @@ import {
   HandlerRegistry,
   assetVariantsHandler,
   assetVerificationHandler,
+  basemapBuildHandler,
+  basemapPlanHandler,
+  startBasemapScheduler,
   fileMaintenanceHandler,
   startMaintenanceScheduler,
   noopHandler,
@@ -48,6 +53,9 @@ const signer = env.publicationSigningKey ? Ed25519Signer.fromPkcs8(env.publicati
 const antivirus = env.antivirusUrl ? new ClamAvScanner(parseClamAvUrl(env.antivirusUrl)) : null;
 // Reduced images: thumbnails of the back-office and photos of the PDF annex (CAP-03, ADR-026).
 const images = new SharpImageResizer();
+// Base maps of the tablets (ADR-024): synthetic test map or the Plan IGN through the agreed flow.
+const basemaps = new PostgresBasemapBuildStore(pool);
+const basemapSource = basemapTileSource(env.basemap);
 const registry = new HandlerRegistry([
   noopHandler,
   publicationBuildHandler({
@@ -80,6 +88,19 @@ if (objects) {
   // CAP-03: reduced images of clean images, and the hourly maintenance of the files.
   registry.register(assetVariantsHandler({ store: new PostgresAssetVariantStore(pool), objects, images }));
   registry.register(fileMaintenanceHandler({ store: new PostgresFileMaintenanceStore(pool), objects }));
+  // ADR-024: base maps of the tablets, from the configured source, once its rights are approved.
+  registry.register(
+    basemapBuildHandler({
+      store: basemaps,
+      source: basemapSource,
+      archives: new PmtilesArchiveFactory(),
+      objects,
+      signer,
+      sha256,
+      utf8: (text) => new TextEncoder().encode(text),
+      now: () => new Date(),
+    }),
+  );
   if (antivirus) {
     logger.info('uploaded files checked by ClamAV', { antivirus: env.antivirusUrl });
   } else {
@@ -87,6 +108,20 @@ if (objects) {
   }
 } else {
   logger.warn('object storage not configured: no file verification, publications are built without their PDF');
+}
+
+registry.register(basemapPlanHandler({ store: basemaps, objects, source: basemapSource?.info ?? null }));
+if (!basemapSource) {
+  logger.warn('no base map source configured (BASEMAP_SOURCE): the tablets get no map');
+} else if (basemapSource.info.rights !== 'approved') {
+  logger.warn('base map source without approved offline rights: no preparation until the rights sheet', {
+    source: basemapSource.info.id,
+  });
+} else {
+  logger.info('base maps prepared for the tablets', {
+    source: basemapSource.info.id,
+    synthetic: basemapSource.info.synthetic,
+  });
 }
 
 if (signer) {
@@ -102,9 +137,16 @@ const worker = createWorker({
   concurrency: env.concurrency,
   leaseSeconds: env.leaseSeconds,
   pollIntervalMs: env.pollIntervalMs,
+  // A preparation of a base map lasts long: one at a time, the other slots stay free.
+  exclusiveTypes: [BASEMAP_BUILD_JOB],
 });
 
-const stopScheduler = objects ? startMaintenanceScheduler(new PostgresFileMaintenanceStore(pool), logger) : () => {};
+const stopMaintenance = objects ? startMaintenanceScheduler(new PostgresFileMaintenanceStore(pool), logger) : () => {};
+const stopBasemaps = startBasemapScheduler(basemaps, logger);
+const stopScheduler = () => {
+  stopMaintenance();
+  stopBasemaps();
+};
 
 let stopping = false;
 async function shutdown(signal: string): Promise<void> {

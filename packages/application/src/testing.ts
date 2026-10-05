@@ -141,6 +141,11 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       archive: unstubbed('sectors.archive'),
       ...overrides.sectors,
     },
+    basemaps: {
+      overview: unstubbed('basemaps.overview'),
+      requestBuild: unstubbed('basemaps.requestBuild'),
+      ...overrides.basemaps,
+    },
     members: {
       list: unstubbed('members.list'),
       add: unstubbed('members.add'),
@@ -163,6 +168,10 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       package: unstubbed('devices.package'),
       packageFiles: unstubbed('devices.packageFiles'),
       receipt: unstubbed('devices.receipt'),
+      basemaps: async () => [],
+      basemap: unstubbed('devices.basemap'),
+      basemapFiles: unstubbed('devices.basemapFiles'),
+      basemapReceipt: unstubbed('devices.basemapReceipt'),
       ...overrides.devices,
     },
     fieldReports: {

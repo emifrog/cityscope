@@ -121,3 +121,49 @@ describe('retry delay', () => {
     expect(retryDelaySeconds(3, () => 0)).toBe(1);
   });
 });
+
+describe('worker slots', () => {
+  it('lets the other slots work while a long job runs, and runs one exclusive job at a time', async () => {
+    const long = job({ id: 'long-1', type: 'test.long' });
+    const queued = [long, job({ id: 'long-2', type: 'test.long' }), job({ id: 'short', type: 'system.noop' })];
+    const excludedSeen: (readonly string[])[] = [];
+    let release = () => {};
+    const blocker = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const longHandler = defineHandler({
+      type: 'test.long',
+      payloadVersion: 1,
+      payload: z.object({}),
+      handle: () => blocker,
+    });
+    const queue = {
+      claim: vi.fn(async (_limit: number, _lease: number, exclude: readonly string[] = []) => {
+        excludedSeen.push(exclude);
+        const index = queued.findIndex((candidate) => !exclude.includes(candidate.type));
+        return index < 0 ? [] : queued.splice(index, 1);
+      }),
+      heartbeat: vi.fn(async () => true),
+      complete: vi.fn(async () => true),
+      fail: vi.fn(async (): Promise<'queued' | 'dead'> => 'queued'),
+    } satisfies JobQueue;
+    const w = createWorker({
+      queue,
+      registry: new HandlerRegistry([noopHandler, longHandler]),
+      logger: silent,
+      concurrency: 2,
+      leaseSeconds: 30,
+      pollIntervalMs: 5,
+      exclusiveTypes: ['test.long'],
+    });
+    await w.start();
+    await vi.waitFor(() => expect(queue.complete).toHaveBeenCalledWith('short'));
+    // The second long job waits: the running one excludes its type from the claims.
+    expect(queued.map((candidate) => candidate.id)).toEqual(['long-2']);
+    expect(excludedSeen.some((exclude) => exclude.includes('test.long'))).toBe(true);
+    release();
+    await vi.waitFor(() => expect(queue.complete).toHaveBeenCalledWith('long-2'));
+    await w.stop();
+    expect(queue.complete).toHaveBeenCalledWith('long-1');
+  });
+});

@@ -1,6 +1,7 @@
 export * from './antivirus/clamav';
 export * from './auth/identity-provisioner';
 export * from './auth/token-verifier';
+export * from './basemaps';
 export * from './cartography/ign';
 export * from './cartography/ign-geocoder';
 export * from './crypto/ed25519';

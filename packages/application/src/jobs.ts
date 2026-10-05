@@ -11,7 +11,8 @@ export interface Job {
 }
 
 export interface JobQueue {
-  claim(limit: number, leaseSeconds: number): Promise<Job[]>;
+  /** Leases runnable jobs, none of the excluded types (types the worker already runs). */
+  claim(limit: number, leaseSeconds: number, excludeTypes?: readonly string[]): Promise<Job[]>;
   heartbeat(jobId: string, leaseSeconds: number): Promise<boolean>;
   complete(jobId: string): Promise<boolean>;
   /** retryInSeconds = null: permanent failure (dead immediately). */

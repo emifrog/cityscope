@@ -51,6 +51,7 @@ import {
 } from './field-reports';
 import { addressCandidatesSchema, addressSearchQuerySchema, reverseGeocodingQuerySchema } from './geocoding';
 import { mapCatalogSchema, mapSitesQuerySchema, mapSitesResponseSchema } from './map';
+import { basemapOverviewSchema } from './basemaps';
 import {
   myPortalInvitationListSchema,
   portalAccessSchema,
@@ -172,6 +173,9 @@ import {
   deviceRevokeSchema,
   deviceSchema,
   signedCatalogSchema,
+  syncBasemapReceiptResultSchema,
+  syncBasemapReceiptSchema,
+  syncBasemapSchema,
   syncDownloadRequestSchema,
   syncDownloadsSchema,
   syncPackageSchema,
@@ -1110,6 +1114,26 @@ export const endpoints = {
     response: sectorListSchema,
   }),
 
+  getBasemapOverview: tenantEndpoint({
+    operationId: 'getBasemapOverview',
+    method: 'get',
+    path: '/basemaps',
+    summary: 'Fonds de carte hors ligne des tablettes : source, droits et état secteur par secteur',
+    tags: ['basemaps'],
+    successStatus: 200,
+    response: basemapOverviewSchema,
+  }),
+  requestBasemapBuild: tenantEndpoint({
+    operationId: 'requestBasemapBuild',
+    method: 'post',
+    path: '/basemaps/sectors/{id}/builds',
+    summary: 'Préparer maintenant le fond de carte d’un secteur (une préparation en cours est conservée)',
+    tags: ['basemaps'],
+    params: idParamsSchema,
+    successStatus: 200,
+    response: basemapOverviewSchema,
+  }),
+
   resetMemberSecondFactor: tenantEndpoint({
     operationId: 'resetMemberSecondFactor',
     method: 'post',
@@ -1249,6 +1273,40 @@ export const endpoints = {
     deviceProof: true,
     successStatus: 200,
     response: syncReceiptResultSchema,
+  }),
+  getSyncBasemap: tenantEndpoint({
+    operationId: 'getSyncBasemap',
+    method: 'get',
+    path: '/sync/basemaps/{id}',
+    summary: 'Manifeste signé d’un fond de carte en vigueur pour un secteur du terminal',
+    tags: ['sync'],
+    params: idParamsSchema,
+    deviceProof: true,
+    successStatus: 200,
+    response: syncBasemapSchema,
+  }),
+  createSyncBasemapDownloads: tenantEndpoint({
+    operationId: 'createSyncBasemapDownloads',
+    method: 'post',
+    path: '/sync/basemaps/{id}/downloads',
+    summary: 'URL de téléchargement (5 min) des parties d’un fond de carte, par empreinte',
+    tags: ['sync'],
+    params: idParamsSchema,
+    body: syncDownloadRequestSchema,
+    deviceProof: true,
+    successStatus: 200,
+    response: syncDownloadsSchema,
+  }),
+  recordSyncBasemapReceipt: tenantEndpoint({
+    operationId: 'recordSyncBasemapReceipt',
+    method: 'post',
+    path: '/sync/basemaps/receipts',
+    summary: 'Accuser les fonds de carte complets sur le terminal',
+    tags: ['sync'],
+    body: syncBasemapReceiptSchema,
+    deviceProof: true,
+    successStatus: 200,
+    response: syncBasemapReceiptResultSchema,
   }),
   submitAccessEvents: tenantEndpoint({
     operationId: 'submitAccessEvents',

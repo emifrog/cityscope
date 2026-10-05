@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import {
+  basemapSourceInfo,
   Ed25519Signer,
   IgnCartographyCatalog,
   IgnGeocoder,
@@ -42,6 +43,8 @@ export function createApiDependencies(env: Env): ApiDependencies {
       ? SupabaseIdentityProvisioner.fromSecretKey(config.supabaseUrl, config.supabaseSecretKey)
       : null,
     cartography: new IgnCartographyCatalog(),
+    // Base maps of the tablets: product and rights of the configured source (ADR-024).
+    basemapSource: basemapSourceInfo(config.basemapSource),
     geocoder: new IgnGeocoder(),
     sha256: async (text) => createHash('sha256').update(text, 'utf8').digest('hex'),
     // Catalogue key: server-side only; terminals trust its public key (ADR-015).

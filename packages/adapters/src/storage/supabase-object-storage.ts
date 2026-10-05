@@ -18,14 +18,21 @@ const KEY_PATTERN = /^tenants\/[0-9a-f-]{36}\/(assets|quarantine)\/[0-9a-f-]{36}
 const PUBLICATION_KEY_PATTERN = /^tenants\/[0-9a-f-]{36}\/publications\/[0-9a-f-]{36}\/[a-z0-9-]+\.pdf$/;
 /** Reduced images of a clean image, computed by the worker (CAP-03). */
 const VARIANT_KEY_PATTERN = /^tenants\/[0-9a-f-]{36}\/thumbnails\/[0-9a-f-]{36}\/[0-9a-f-]{36}-\d{2,4}\.webp$/;
-/** Readable objects: verified assets, their reduced images and publication files, never the quarantine. */
+/** Offline base maps of a sector (ADR-024): parts of the PMTiles file, style and pictograms. */
+const BASEMAP_KEY_PATTERN = /^tenants\/[0-9a-f-]{36}\/basemaps\/[0-9a-f-]{36}\/[a-z0-9][a-z0-9._@-]{0,63}$/;
+/** Readable objects: verified assets, their reduced images, publication files and base maps, never the quarantine. */
 const isReadable = (key: string) =>
-  key.includes('/assets/') || VARIANT_KEY_PATTERN.test(key) || PUBLICATION_KEY_PATTERN.test(key);
+  key.includes('/assets/') ||
+  VARIANT_KEY_PATTERN.test(key) ||
+  PUBLICATION_KEY_PATTERN.test(key) ||
+  BASEMAP_KEY_PATTERN.test(key);
 /**
  * Removable objects: the quarantine and the files of publication builds (losing attempts),
- * which the database designates. A verified asset or a reduced image is never deleted here.
+ * and superseded or failed base maps, which the database designates. A verified asset or a reduced
+ * image is never deleted here.
  */
-const isRemovable = (key: string) => key.includes('/quarantine/') || PUBLICATION_KEY_PATTERN.test(key);
+const isRemovable = (key: string) =>
+  key.includes('/quarantine/') || PUBLICATION_KEY_PATTERN.test(key) || BASEMAP_KEY_PATTERN.test(key);
 const MAX_DOWNLOAD_TTL_SECONDS = 300;
 /** Lifetime of Supabase signed upload URLs (fixed by the provider). */
 const UPLOAD_URL_LIFETIME_MS = 2 * 60 * 60 * 1000;
@@ -115,7 +122,12 @@ export class SupabaseObjectStorage implements ObjectStorage, ObjectStoreAdmin {
 }
 
 function assertKey(key: string): void {
-  if (!KEY_PATTERN.test(key) && !PUBLICATION_KEY_PATTERN.test(key) && !VARIANT_KEY_PATTERN.test(key)) {
+  if (
+    !KEY_PATTERN.test(key) &&
+    !PUBLICATION_KEY_PATTERN.test(key) &&
+    !VARIANT_KEY_PATTERN.test(key) &&
+    !BASEMAP_KEY_PATTERN.test(key)
+  ) {
     throw new Error('Invalid storage key.');
   }
 }

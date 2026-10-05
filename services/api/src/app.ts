@@ -27,6 +27,11 @@ import {
   createBuilding,
   createDevice,
   createSyncDownloads,
+  createSyncBasemapDownloads,
+  getBasemapOverview,
+  getSyncBasemap,
+  recordSyncBasemapReceipt,
+  requestBasemapBuild,
   getFieldReport,
   listFieldReports,
   listSyncReports,
@@ -122,6 +127,7 @@ import {
   archiveSite,
   restoreSite,
   withdrawPublication,
+  type BasemapSourceInfo,
   type CartographyCatalog,
   type ContentSigner,
   type DeviceProof,
@@ -181,6 +187,8 @@ export interface ApiDependencies {
   /** Null when identity administration is not configured (invitations of new addresses answer 503). */
   readonly identities: IdentityProvisioner | null;
   readonly cartography: CartographyCatalog;
+  /** Source of the offline base maps (ADR-024); null or absent: none on this platform. */
+  readonly basemapSource?: BasemapSourceInfo | null;
   readonly geocoder: Geocoder;
   /** SHA-256 (hex) of the UTF-8 bytes of a text (revision snapshots, enrollment codes, request bodies). */
   readonly sha256: (text: string) => Promise<string>;
@@ -959,6 +967,19 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     return respond(c, endpoints.archiveSector, await archiveSector(deps.sessions, context, idOf(c), version));
   });
 
+  // ---------------------------------------------------------------- base maps of the tablets (ADR-024)
+  app.get(routerPath(endpoints.getBasemapOverview.path), async (c) => {
+    const context = await requestContext(c, endpoints.getBasemapOverview);
+    const basemaps = { sessions: deps.sessions, source: deps.basemapSource ?? null };
+    return respond(c, endpoints.getBasemapOverview, await getBasemapOverview(basemaps, context));
+  });
+
+  app.post(routerPath(endpoints.requestBasemapBuild.path), async (c) => {
+    const context = await requestContext(c, endpoints.requestBasemapBuild);
+    const basemaps = { sessions: deps.sessions, source: deps.basemapSource ?? null };
+    return respond(c, endpoints.requestBasemapBuild, await requestBasemapBuild(basemaps, context, idOf(c)));
+  });
+
   // ---------------------------------------------------------------- exploitant access (POR-01, ADR-019)
   app.get(routerPath(endpoints.listPortalInvitations.path), async (c) => {
     const context = await requestContext(c, endpoints.listPortalInvitations);
@@ -1137,6 +1158,35 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     );
     if (!body) throw new InvalidInput();
     return respond(c, endpoints.recordSyncReceipt, await recordSyncReceipt(deps, context, proof, body));
+  });
+
+  app.get(routerPath(endpoints.getSyncBasemap.path), async (c) => {
+    const { context, proof } = await deviceRequest(c, endpoints.getSyncBasemap);
+    return respond(c, endpoints.getSyncBasemap, await getSyncBasemap(deps, context, proof, idOf(c)));
+  });
+
+  app.post(routerPath(endpoints.createSyncBasemapDownloads.path), async (c) => {
+    const { context, proof, body } = await deviceRequest(
+      c,
+      endpoints.createSyncBasemapDownloads,
+      endpoints.createSyncBasemapDownloads.body,
+    );
+    if (!body) throw new InvalidInput();
+    return respond(
+      c,
+      endpoints.createSyncBasemapDownloads,
+      await createSyncBasemapDownloads(deps, context, proof, idOf(c), body),
+    );
+  });
+
+  app.post(routerPath(endpoints.recordSyncBasemapReceipt.path), async (c) => {
+    const { context, proof, body } = await deviceRequest(
+      c,
+      endpoints.recordSyncBasemapReceipt,
+      endpoints.recordSyncBasemapReceipt.body,
+    );
+    if (!body) throw new InvalidInput();
+    return respond(c, endpoints.recordSyncBasemapReceipt, await recordSyncBasemapReceipt(deps, context, proof, body));
   });
 
   app.post(routerPath(endpoints.submitAccessEvents.path), async (c) => {

@@ -1,10 +1,12 @@
-import type { DeviceRepository, DistributedPackage } from '@etare/application';
+import type { DeviceRepository, DistributedBasemap, DistributedPackage } from '@etare/application';
 import {
+  catalogBasemapSchema,
   catalogEntrySchema,
   catalogWithdrawalSchema,
   deviceEnrollmentSchema,
   deviceSchema,
   signatureSchema,
+  type CatalogBasemap,
   type CatalogEntry,
   type CatalogWithdrawal,
   type Device,
@@ -267,6 +269,41 @@ export class PostgresDeviceRepository implements DeviceRepository {
     const { rows } = await this.client.query<{ installed: number }>(
       'select app.sync_receipt($1, $2, $3, $4, $5) as installed',
       [deviceId, receipt.generation, receipt.status, receipt.error_code, receipt.installed],
+    );
+    return rows[0]?.installed ?? 0;
+  }
+
+  async basemaps(deviceId: string): Promise<CatalogBasemap[]> {
+    const { rows } = await this.client.query<{ items: unknown[] }>('select app.sync_basemaps($1) as items', [deviceId]);
+    return (rows[0]?.items ?? []).map((item) => catalogBasemapSchema.parse(item));
+  }
+
+  async basemap(deviceId: string, packId: string): Promise<DistributedBasemap | null> {
+    const { rows } = await this.client.query<{ manifest: unknown; manifest_hash: string; signature: unknown }>(
+      'select manifest, manifest_hash, signature from app.sync_basemap($1, $2)',
+      [deviceId, packId],
+    );
+    const row = rows[0];
+    if (!row) return null;
+    return { manifest: row.manifest, manifestHash: row.manifest_hash, signature: signatureSchema.parse(row.signature) };
+  }
+
+  async basemapFiles(
+    deviceId: string,
+    packId: string,
+    sha256: readonly string[],
+  ): Promise<{ sha256: string; storageKey: string }[]> {
+    const { rows } = await this.client.query<{ sha256: string; storage_key: string }>(
+      'select sha256, storage_key from app.sync_basemap_files($1, $2, $3)',
+      [deviceId, packId, sha256],
+    );
+    return rows.map((row) => ({ sha256: row.sha256, storageKey: row.storage_key }));
+  }
+
+  async basemapReceipt(deviceId: string, packIds: readonly string[]): Promise<number> {
+    const { rows } = await this.client.query<{ installed: number }>(
+      'select app.sync_basemap_receipt($1, $2::uuid[]) as installed',
+      [deviceId, packIds],
     );
     return rows[0]?.installed ?? 0;
   }
