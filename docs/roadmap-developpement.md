@@ -101,9 +101,9 @@ Origine de chaque vérification et limites : [bilan du 1er octobre](bilan-depot-
 | R6 — MVP+ / V1.5                   | Les neuf exigences P1, imports avancés, personnalisation, comparaison, rétention, exports                                                                                                                             | Retours du pilote ; mesure de valeur                        | Produit + équipe de développement     | Extensions génériques, sans fork par SIS                                   |
 | R7 — industrialisation / V2–V3     | SSO étendu, MDM, connecteurs, RRF, assistance IA, partage contrôlé et écosystème                                                                                                                                      | MVP exploité, accords/qualifications disponibles            | Produit + partenaires SIS             | Lots autonomes justifiés par usage et capacité                             |
 
-**Dès maintenant :** R1, R2, les lots MET-01 à MET-04 de R3 et les lots SEC-01 à SEC-03 et CAP-03 de R4 sont
-réalisés, et les décisions DEC-02, DEC-04 et DEC-05 sont prises (3 octobre 2026) : terminer R3 (MET-05,
-PER-01, PER-02, puis CAR-01 à CAR-03 sur la tablette) et poursuivre R4 (secrets, volumétrie, supervision).
+**Dès maintenant :** R1, R2, R3 hors carte (MET-01 à MET-05, PER-01, PER-02) et les lots SEC-01 à SEC-03 et
+CAP-03 de R4 sont réalisés. La carte sur tablette (CAR-01 à CAR-03) attend la fiche de droits IGN et la
+tablette de référence ; R4 se poursuit (secrets, volumétrie, supervision).
 La qualification sur la tablette de référence (Alldocube iPlay 40H) commence dès sa livraison.
 
 Les estimations de l’architecture §32 décrivent le projet initial avec une équipe de trois à quatre
@@ -308,6 +308,15 @@ confirmer par le référent SIG, le RSSI et la direction opérationnelle) :
   - téléchargement en Wi-Fi, renouvellement semestriel, attribution visible ;
   - position de l'agent affichée, jamais transmise.
 
+**Livré au Sprint 10 (5 octobre 2026) :** MET-05, PER-01 et PER-02 ([rapport](sprint-10-report.md),
+ADR-025 et ADR-026 complétés). Reste dans R3 : CAR-01 à CAR-03, après la fiche de droits IGN et la
+livraison de la tablette. Réserves :
+
+- onglets d'administration des secteurs, des affectations, des habilitations et du journal non vus dans le
+  navigateur (second facteur de démonstration), mais couverts par l'intégration ;
+- durée, code et sites élevés à confirmer par le RSSI ;
+- `MOBILE_MIN_APP_VERSION` à relever à 0.2.0 au déploiement.
+
 **Acceptation :** toute exigence P0 partielle a un scénario démontré ; site sensible jamais exposé par
 un contournement API/pack ; terminal limité à son périmètre ; retrait appliqué au prochain contact ;
 carte, fiches et plans utilisables après démarrage à froid en mode avion sur la tablette choisie.
@@ -504,10 +513,10 @@ Après chaque lot :
 4. Écrire un rapport daté avec commit, tests, limites et décision de passage.
 5. Réestimer le lot suivant selon les retours ; toute nouvelle demande garde une priorité et un lien au cadrage.
 
-**Prochaine tranche recommandée :** Sprint 10 — MET-05 (sections et annexe photos), PER-01 (secteurs) et
-PER-02 (sites sensibles, code local), décisions du 3 octobre 2026 ; puis Sprint 11 — CAR-01 à CAR-03 (fonds
-IGN par secteur et carte locale), dès la fiche de droits validée et la tablette de référence livrée. R4 se
-poursuit en parallèle (SEC-04, CAP-01, EXP-03).
+**Prochaine tranche recommandée :** Sprint 11 — CAR-01 à CAR-03 (fonds IGN par secteur et carte locale), dès
+la fiche de droits validée par le référent SIG et la tablette de référence livrée. En attendant, suite de
+R4 : SEC-04 (secrets et rotation des clés de signature), CAP-01 (volumétrie de 10 000 sites, dont le coût des
+périmètres) et EXP-03 (supervision).
 
 ## 8. Références
 
