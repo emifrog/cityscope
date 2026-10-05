@@ -1,11 +1,14 @@
 import {
   CRITICALITIES,
+  LAYOUT_SECTIONS,
   OBJECT_CATEGORIES,
+  OPTIONAL_SECTIONS,
   OBJECT_STATUSES,
   PLAN_TYPES,
   PUBLICATION_STATUSES,
   REVISION_STATUSES,
   ZONE_TYPES,
+  isLayoutValid,
 } from '@etare/domain';
 import { cursorSchema, isoDateTimeSchema, localGeometrySchema, pageLimitSchema, uuidSchema } from '@etare/schemas';
 import { z } from 'zod';
@@ -184,6 +187,15 @@ export const etareSnapshotSchema = z
         ),
       })
       .meta({ id: 'SnapshotCatalog' }),
+    /**
+     * Sections shown, frozen from the setting of the SIS (DEC-05, ADR-026); absent when none is
+     * hidden, as in snapshots made before it: every section is then shown.
+     */
+    layout: z
+      .object({ sections: z.array(z.enum(LAYOUT_SECTIONS)) })
+      .refine(isLayoutValid, 'Sections obligatoires manquantes ou ordre différent du registre.')
+      .meta({ id: 'SnapshotLayout' })
+      .optional(),
   })
   .meta({ id: 'EtareSnapshot' });
 export type EtareSnapshot = z.infer<typeof etareSnapshotSchema>;
@@ -379,6 +391,7 @@ export const ETARE_SECTIONS = [
   'objects',
   'risks',
   'documents',
+  'layout',
 ] as const;
 export type EtareSection = (typeof ETARE_SECTIONS)[number];
 
@@ -422,3 +435,10 @@ export const revisionDecisionSchema = z
   .meta({ id: 'RevisionDecision' });
 export type RevisionDecisionInput = z.input<typeof revisionDecisionSchema>;
 export type RevisionDecision = z.infer<typeof revisionDecisionSchema>;
+
+// ------------------------------------------------------------------ sections of the SIS (DEC-05)
+/** Optional sections the SIS hides (ADR-026); frozen in each revision submitted afterwards. */
+export const etareLayoutSettingsSchema = z
+  .object({ hidden_sections: z.array(z.enum(OPTIONAL_SECTIONS)).max(OPTIONAL_SECTIONS.length) })
+  .meta({ id: 'EtareLayoutSettings' });
+export type EtareLayoutSettings = z.infer<typeof etareLayoutSettingsSchema>;

@@ -239,6 +239,7 @@ const data = (overrides: Partial<WorkingData> = {}): WorkingData => ({
     },
   ],
   riskTypes: [],
+  hiddenSections: [],
   ...overrides,
 });
 
@@ -287,6 +288,17 @@ describe('canonical snapshot', () => {
       },
     ]);
     expect(snapshot.objects.find((item) => item.id === 'o0')).not.toHaveProperty('photos');
+  });
+
+  it('freezes the sections hidden by the SIS, and no layout at all when none is (DEC-05)', () => {
+    expect(buildSnapshot(data())).not.toHaveProperty('layout');
+    const snapshot = buildSnapshot(data({ hiddenSections: ['photos', 'energy'] }));
+    expect(snapshot.layout).toEqual({
+      sections: ['synthesis', 'access', 'risks', 'water', 'rescue', 'plans', 'contacts', 'annexes'],
+    });
+    expect(compareSnapshots(buildSnapshot(data()), snapshot)).toEqual([
+      { section: 'layout', id: 'layout', label: 'Sections affichées', change: 'modified' },
+    ]);
   });
 
   it('marks the documents shown to the exploitant, and no key at all for the others', () => {

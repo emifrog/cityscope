@@ -129,6 +129,8 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       approvalOf: unstubbed('etare.approvalOf'),
       requestPublication: unstubbed('etare.requestPublication'),
       withdraw: unstubbed('etare.withdraw'),
+      layoutSettings: async () => [],
+      updateLayoutSettings: unstubbed('etare.updateLayoutSettings'),
       ...overrides.etare,
     },
     members: {

@@ -3,6 +3,7 @@ import {
   type AssetDownload,
   type EtareDossierList,
   type EtareDossierListQuery,
+  type EtareLayoutSettings,
   type EtareOverview,
   type EtarePreview,
   type EtareRevision,
@@ -47,19 +48,31 @@ export interface EtareDependencies {
 
 async function workingData(session: RequestSession, siteId: string): Promise<WorkingData> {
   const site = found(await session.sites.get(siteId), 'Site introuvable.');
-  const [classifications, buildings, contacts, plans, zones, objects, risks, documents, objectTypes, riskTypes] =
-    await Promise.all([
-      session.classifications.listBySite(siteId),
-      session.buildings.listBySite(siteId),
-      session.contacts.listBySite(siteId),
-      session.plans.listBySite(siteId),
-      session.zones.listBySite(siteId),
-      session.objects.listBySite(siteId),
-      session.risks.listBySite(siteId),
-      session.documents.listBySite(siteId),
-      session.objects.types(),
-      session.risks.types({ includeDeprecated: true }),
-    ]);
+  const [
+    classifications,
+    buildings,
+    contacts,
+    plans,
+    zones,
+    objects,
+    risks,
+    documents,
+    objectTypes,
+    riskTypes,
+    hiddenSections,
+  ] = await Promise.all([
+    session.classifications.listBySite(siteId),
+    session.buildings.listBySite(siteId),
+    session.contacts.listBySite(siteId),
+    session.plans.listBySite(siteId),
+    session.zones.listBySite(siteId),
+    session.objects.listBySite(siteId),
+    session.risks.listBySite(siteId),
+    session.documents.listBySite(siteId),
+    session.objects.types(),
+    session.risks.types({ includeDeprecated: true }),
+    session.etare.layoutSettings(),
+  ]);
   return {
     site,
     classifications,
@@ -72,7 +85,28 @@ async function workingData(session: RequestSession, siteId: string): Promise<Wor
     documents,
     objectTypes,
     riskTypes,
+    hiddenSections,
   };
+}
+
+/** Sections hidden by the SIS (DEC-05): frozen in each revision submitted afterwards. */
+export function getEtareLayoutSettings(
+  sessions: SessionFactory,
+  context: RequestContext,
+): Promise<EtareLayoutSettings> {
+  return inTenant(sessions, context, 'etare:read', async (session) => ({
+    hidden_sections: await session.etare.layoutSettings(),
+  }));
+}
+
+export function updateEtareLayoutSettings(
+  sessions: SessionFactory,
+  context: RequestContext,
+  input: EtareLayoutSettings,
+): Promise<EtareLayoutSettings> {
+  return inTenant(sessions, context, 'catalog:manage', async (session) => ({
+    hidden_sections: await session.etare.updateLayoutSettings(input.hidden_sections),
+  }));
 }
 
 export function listEtareDossiers(

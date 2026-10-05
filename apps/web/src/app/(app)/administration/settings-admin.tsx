@@ -1,11 +1,19 @@
 'use client';
 
 import type { SecondFactorPolicy } from '@etare/contracts';
+import { OPTIONAL_SECTIONS, SECTION_TITLES, type OptionalSection } from '@etare/domain';
 import { Alert, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@etare/ui';
 import { useState } from 'react';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { api } from '@/lib/api-client';
-import { queryKeys, useApiMutation, usePortalSettings, useSecuritySettings } from '@/lib/queries';
+import {
+  queryKeys,
+  useApiMutation,
+  useEtareLayoutSettings,
+  usePermissions,
+  usePortalSettings,
+  useSecuritySettings,
+} from '@/lib/queries';
 
 const POLICIES: readonly { value: SecondFactorPolicy; label: string; help: string }[] = [
   {
@@ -86,13 +94,83 @@ function SecurityPolicyCard() {
   );
 }
 
-/** Settings of the SIS: second-factor policy (ADR-022) and second factor of the exploitants (ADR-019). */
+/**
+ * Settings of the SIS: second-factor policy (ADR-022), second factor of the
+ * exploitants (ADR-019) and sections of the ETARE (ADR-026).
+ */
 export function SettingsAdmin() {
+  const permissions = usePermissions();
   return (
     <div className="space-y-4">
       <SecurityPolicyCard />
       <PortalSettingsCard />
+      {permissions.has('catalog:manage') ? <EtareLayoutCard /> : null}
     </div>
+  );
+}
+
+const SECTION_HELP: Readonly<Record<OptionalSection, string>> = {
+  energy: 'Coupures d’électricité, de gaz, photovoltaïque. Masquée aussi sur la tablette.',
+  rescue: 'Sécurité incendie, désenfumage, refuges, circulations, liaisons. Masquée aussi sur la tablette.',
+  plans: 'Liste des plans et pages de plans du PDF. La tablette garde toujours ses plans.',
+  annexes: 'Liste des documents dans le PDF. La tablette garde toujours ses documents.',
+  photos: 'Annexe photos en fin de PDF et galerie de la tablette. Les photos restent sur les fiches des points.',
+};
+
+/** Sections of the ETARE (DEC-05): the national order stays, the optional sections can be hidden. */
+function EtareLayoutCard() {
+  const settings = useEtareLayoutSettings();
+  const [hidden, setHidden] = useState<readonly OptionalSection[] | null>(null);
+  const save = useApiMutation(
+    (options, input: { hidden_sections: OptionalSection[] }) => api.updateEtareLayoutSettings(options, input),
+    (tenantId) => [queryKeys.etareLayoutSettings(tenantId)],
+  );
+
+  if (settings.isPending) return <LoadingCard lines={3} />;
+  if (settings.error) return <ApiErrorAlert error={settings.error} />;
+  const current = hidden ?? settings.data.hidden_sections;
+  const changed = [...current].sort().join() !== [...settings.data.hidden_sections].sort().join();
+  const toggle = (section: OptionalSection, shown: boolean) =>
+    setHidden(shown ? current.filter((item) => item !== section) : [...current, section]);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Sections de l’ETARE</CardTitle>
+        <CardDescription>
+          Synthèse, Accès, Risques, Eau et Contacts figurent toujours, dans l’ordre national. Le réglage s’applique aux
+          révisions soumises ensuite : une version déjà publiée ne change pas.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {save.error ? <ApiErrorAlert error={save.error} /> : null}
+        {save.isSuccess && !changed ? <Alert tone="info">Réglage enregistré et tracé.</Alert> : null}
+        <fieldset className="space-y-3">
+          <legend className="text-sm font-semibold">Sections affichées</legend>
+          {OPTIONAL_SECTIONS.map((section) => (
+            <label key={section} className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                className="mt-1 size-4 accent-brand-accent"
+                checked={!current.includes(section)}
+                onChange={(event) => toggle(section, event.target.checked)}
+              />
+              <span>
+                <span className="font-semibold">{SECTION_TITLES[section]}</span>
+                <span className="block text-sm text-muted">{SECTION_HELP[section]}</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+        <Button
+          size="sm"
+          disabled={!changed || save.isPending}
+          onClick={() => save.mutate({ hidden_sections: [...current] }, { onSuccess: () => setHidden(null) })}
+        >
+          {save.isPending ? 'Enregistrement…' : 'Enregistrer'}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

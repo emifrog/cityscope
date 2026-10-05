@@ -1,6 +1,7 @@
 import { etareSnapshotSchema, type EtareSnapshot, type Signature } from '@etare/contracts';
-import { SIGNATURE_CONTEXTS, canonicalJson } from '@etare/domain';
+import { SIGNATURE_CONTEXTS, canonicalJson, photoAnnex, visibleSections } from '@etare/domain';
 import { PermanentJobError } from './jobs';
+import { ImageUnreadable, type ImageResizer } from './file-lifecycle';
 import type { ContentSigner, ObjectStoreAdmin } from './ports';
 
 export const PUBLICATION_BUILD_JOB = 'publication.build';
@@ -92,6 +93,11 @@ export interface EtarePdfInput {
   readonly snapshot: EtareSnapshot;
   /** Plan backgrounds by background revision id (PNG, JPEG or WebP), checked against their original hash. */
   readonly planImages: ReadonlyMap<string, PlanImage>;
+  /**
+   * Photos of the annex by photo id: reduced JPEG of the original checked against its approved hash;
+   * null when the checked original cannot be decoded (drawn as such, the publication goes on).
+   */
+  readonly photoImages: ReadonlyMap<string, PlanImage | null>;
 }
 
 export interface EtarePdfRenderer {
@@ -104,6 +110,8 @@ export interface PublicationArtifacts {
   readonly renderer: EtarePdfRenderer;
   readonly objects: ObjectStoreAdmin;
   readonly sha256Bytes: (content: Uint8Array) => Promise<string>;
+  /** Reduces the photos of the annex (never the thumbnails of the back-office, ADR-026). */
+  readonly images: Pick<ImageResizer, 'documentImage'>;
 }
 
 export interface ManifestFile {
@@ -251,8 +259,9 @@ export async function buildPublicationContent(
 
 /**
  * Renders the ETARE PDF from the snapshot and stores it. The plan backgrounds
- * drawn are read from storage and checked against the hash the snapshot
- * approved: a mismatch stops the publication.
+ * and the photos of the annex are read from storage and checked against the
+ * hash the snapshot approved: a mismatch stops the publication. Photos are
+ * reduced one at a time from that original (ADR-026).
  */
 export async function generateEtarePdf(
   store: PublicationBuildStore,
@@ -261,13 +270,15 @@ export async function generateEtarePdf(
   snapshot: EtareSnapshot,
   createdAt: Date,
 ): Promise<GeneratedFile> {
-  const backgrounds = snapshot.plans.map((plan) => plan.background);
+  const sections = visibleSections(snapshot.layout);
+  const backgrounds = sections.includes('plans') ? snapshot.plans.map((plan) => plan.background) : [];
+  const annex = photoAnnex(snapshot.objects, sections)?.entries ?? [];
   const files = new Map(
     (
-      await store.assetFiles(
-        publication.tenantId,
-        backgrounds.map((background) => background.asset.id),
-      )
+      await store.assetFiles(publication.tenantId, [
+        ...backgrounds.map((background) => background.asset.id),
+        ...annex.map((entry) => entry.photo.asset.id),
+      ])
     ).map((file) => [file.id, file]),
   );
   const planImages = new Map<string, PlanImage>();
@@ -279,6 +290,20 @@ export async function generateEtarePdf(
       throw new PermanentJobError('PLAN_BACKGROUND_HASH_MISMATCH');
     }
     planImages.set(background.revision_id, { bytes, mimeType: background.asset.mime_type });
+  }
+  const photoImages = new Map<string, PlanImage | null>();
+  for (const { photo } of annex) {
+    const file = files.get(photo.asset.id);
+    const bytes = file ? await artifacts.objects.download(file.storageKey) : null;
+    if (!file || !bytes) throw new Error('PHOTO_UNAVAILABLE');
+    if ((await artifacts.sha256Bytes(bytes)) !== photo.asset.sha256) throw new PermanentJobError('PHOTO_HASH_MISMATCH');
+    try {
+      photoImages.set(photo.id, { bytes: await artifacts.images.documentImage(bytes), mimeType: 'image/jpeg' });
+    } catch (error) {
+      // A checked file that no decoder reads: said in the annex rather than blocking the publication.
+      if (!(error instanceof ImageUnreadable)) throw error;
+      photoImages.set(photo.id, null);
+    }
   }
 
   const pdf = await artifacts.renderer.render({
@@ -295,6 +320,7 @@ export async function generateEtarePdf(
     },
     snapshot,
     planImages,
+    photoImages,
   });
   const sha256 = await artifacts.sha256Bytes(pdf);
   const storageKey = publicationPdfKey(publication.tenantId, publication.id, sha256);

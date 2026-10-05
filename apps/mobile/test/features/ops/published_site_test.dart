@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
+import 'package:etare_ops/src/features/ops/domain/ops_order.dart';
 import 'package:etare_ops/src/features/ops/domain/plan_items.dart';
 import 'package:etare_ops/src/features/ops/domain/published_site.dart';
 import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
@@ -85,6 +87,77 @@ void main() {
       final parsed = PublishedSite.fromJson(altered);
       expect(parsed.zones, isEmpty);
       expect(parsed.risks, hasLength(3));
+    });
+  });
+
+  group('sections du registre (MET-05, ADR-026)', () {
+    test('les points à risque rejoignent les risques, comptés ensemble', () {
+      expect(site.objectsOf(OpsSection.risks.categories).single.id, oxygenId);
+      expect(site.countOf(OpsSection.risks), site.risks.length + 1);
+      expect(
+        site.criticalObjects.map((object) => object.id),
+        contains(oxygenId),
+      );
+    });
+
+    test('tout est affiché pour une version sans réglage du SIS', () {
+      expect(site.layoutSections, isNull);
+      expect(OpsSection.values.every(site.shows), isTrue);
+      expect(site.gallery.single.photo.id, photoId);
+      expect(site.gallery.single.section, OpsSection.energy);
+    });
+
+    test('masquées par le SIS : Coupures et Photos disparaissent, plans et documents restent', () {
+      final data =
+          Map<String, Object?>.of(payload['data']! as Map<String, Object?>)
+            ..['layout'] = {
+              'sections': [
+                'synthesis',
+                'access',
+                'risks',
+                'water',
+                'rescue',
+                'contacts',
+              ],
+            };
+      final hidden = PublishedSite.fromJson({...payload, 'data': data});
+      expect(hidden.shows(OpsSection.energy), isFalse);
+      expect(hidden.shows(OpsSection.photos), isFalse);
+      expect(hidden.shows(OpsSection.rescue), isTrue);
+      expect(hidden.shows(OpsSection.plans), isTrue);
+      expect(hidden.shows(OpsSection.annexes), isTrue);
+      expect(hidden.gallery, isEmpty);
+    });
+
+    test('même ordre que l’aperçu et le PDF : criticité, titre sans accents, identifiant', () {
+      expect(sortKey('Œil Été'), 'oeil ete');
+      int compare(
+        String a,
+        String ca,
+        String ta,
+        String b,
+        String cb,
+        String tb,
+      ) => compareObjectParts(
+        leftId: a,
+        leftCriticality: ca,
+        leftTitle: ta,
+        rightId: b,
+        rightCriticality: cb,
+        rightTitle: tb,
+      );
+      expect(
+        compare('2', 'critical', 'Poteau', '1', 'info', 'Accès'),
+        lessThan(0),
+      );
+      expect(
+        compare('5', 'info', 'Éclairage', '3', 'info', 'Escalier'),
+        lessThan(0),
+      );
+      expect(
+        compare('3', 'info', 'Bouche', '4', 'info', 'Bouche'),
+        lessThan(0),
+      );
     });
   });
 

@@ -46,13 +46,15 @@ const objects = env.storage ? SupabaseObjectStorage.fromSecretKey(env.storage.ur
 const signer = env.publicationSigningKey ? Ed25519Signer.fromPkcs8(env.publicationSigningKey) : null;
 // Antivirus of uploaded files (SEC-01): required outside development.
 const antivirus = env.antivirusUrl ? new ClamAvScanner(parseClamAvUrl(env.antivirusUrl)) : null;
+// Reduced images: thumbnails of the back-office and photos of the PDF annex (CAP-03, ADR-026).
+const images = new SharpImageResizer();
 const registry = new HandlerRegistry([
   noopHandler,
   publicationBuildHandler({
     store: new PostgresPublicationBuildStore(pool),
     tools: { sha256, byteLength: (text) => Buffer.byteLength(text, 'utf8'), now: () => new Date(), signer },
     // Without storage, publications are built without their PDF (said at startup).
-    artifacts: objects ? { renderer: new PdfLibEtareRenderer(), objects, sha256Bytes: sha256 } : null,
+    artifacts: objects ? { renderer: new PdfLibEtareRenderer(), objects, sha256Bytes: sha256, images } : null,
   }),
   // Notifications of the exploitant portal (POR-05); without mail server they fail visibly, replayable.
   notificationHandler({
@@ -76,9 +78,7 @@ if (objects) {
     }),
   );
   // CAP-03: reduced images of clean images, and the hourly maintenance of the files.
-  registry.register(
-    assetVariantsHandler({ store: new PostgresAssetVariantStore(pool), objects, images: new SharpImageResizer() }),
-  );
+  registry.register(assetVariantsHandler({ store: new PostgresAssetVariantStore(pool), objects, images }));
   registry.register(fileMaintenanceHandler({ store: new PostgresFileMaintenanceStore(pool), objects }));
   if (antivirus) {
     logger.info('uploaded files checked by ClamAV', { antivirus: env.antivirusUrl });

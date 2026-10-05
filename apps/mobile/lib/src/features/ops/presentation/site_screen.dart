@@ -12,8 +12,9 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Synthèse opérationnelle d'un site (OPS-01, maquette écran 07) : les
-/// risques critiques d'emblée, puis six grandes entrées. Données de la
-/// dernière version publiée installée, avec son âge (OPS-05).
+/// points critiques d'emblée, puis six grandes entrées et les autres
+/// sections du registre (ADR-026). Données de la dernière version publiée
+/// installée, avec son âge (OPS-05).
 class SiteScreen extends ConsumerWidget {
   const SiteScreen({required this.siteId, super.key});
 
@@ -36,19 +37,15 @@ class _Synthesis extends StatelessWidget {
 
   final PublishedSite site;
 
-  int _count(OpsSection section) => switch (section) {
-    OpsSection.risks => site.risks.length,
-    OpsSection.plans => site.plans.length,
-    OpsSection.contacts => site.contacts.length,
-    OpsSection.documents => site.tabletDocuments.length,
-    _ => site.objectsOf(section.categories).length,
-  };
-
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final critical = site.risks.where((risk) => risk.critical).toList();
     final outOfService = site.objects.where((object) => object.outOfService);
+    // Points critiques, comme dans l'aperçu et le PDF (ceux hors service sont déjà signalés).
+    final criticalObjects = site.criticalObjects.where(
+      (object) => !object.outOfService,
+    );
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -70,6 +67,13 @@ class _Synthesis extends StatelessWidget {
                 '${risk.title} · gravité ${severityLabels[risk.severity]?.toLowerCase()}',
             onTap: () => showItemSheet(context, site, risk: risk),
           ),
+        for (final object in criticalObjects)
+          _Alert(
+            icon: Icons.priority_high,
+            color: BrandColors.critical,
+            text: '${object.title} · critique',
+            onTap: () => showItemSheet(context, site, object: object),
+          ),
         const SizedBox(height: 8),
         LayoutBuilder(
           builder: (context, constraints) => GridView.count(
@@ -80,33 +84,27 @@ class _Synthesis extends StatelessWidget {
             crossAxisSpacing: 12,
             childAspectRatio: 1.5,
             children: [
-              for (final section in const [
-                OpsSection.risks,
-                OpsSection.access,
-                OpsSection.plans,
-                OpsSection.water,
-                OpsSection.cuts,
-                OpsSection.contacts,
-              ])
-                _SectionTile(
-                  key: SiteScreen.tileKey(section),
-                  section: section,
-                  count: _count(section),
-                  onTap: () => context.push(
-                    AppRoutes.section(site.siteId, section.name),
+              for (final section in OpsSection.tiles)
+                if (site.shows(section))
+                  _SectionTile(
+                    key: SiteScreen.tileKey(section),
+                    section: section,
+                    count: site.countOf(section),
+                    onTap: () => context.push(
+                      AppRoutes.section(site.siteId, section.name),
+                    ),
                   ),
-                ),
             ],
           ),
         ),
         const SizedBox(height: 12),
         _EtarePdfTile(site: site),
-        for (final section in const [OpsSection.rescue, OpsSection.documents])
-          if (_count(section) > 0)
+        for (final section in OpsSection.others)
+          if (site.shows(section) && site.countOf(section) > 0)
             ListTile(
               key: SiteScreen.tileKey(section),
               leading: Icon(section.icon),
-              title: Text('${section.label} (${_count(section)})'),
+              title: Text('${section.label} (${site.countOf(section)})'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () =>
                   context.push(AppRoutes.section(site.siteId, section.name)),

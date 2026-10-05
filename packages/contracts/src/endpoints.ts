@@ -86,6 +86,7 @@ import {
 } from './plans';
 import {
   etareDossierListQuerySchema,
+  etareLayoutSettingsSchema,
   publicationSummarySchema,
   publicationWithdrawSchema,
   etareDossierListSchema,
@@ -1272,6 +1273,25 @@ export const endpoints = {
     body: portalSettingsSchema,
     successStatus: 200,
     response: portalSettingsSchema,
+  }),
+  getEtareLayoutSettings: tenantEndpoint({
+    operationId: 'getEtareLayoutSettings',
+    method: 'get',
+    path: '/settings/etare',
+    summary: 'Sections facultatives masquées par le SIS dans l’ETARE (DEC-05)',
+    tags: ['etare'],
+    successStatus: 200,
+    response: etareLayoutSettingsSchema,
+  }),
+  updateEtareLayoutSettings: tenantEndpoint({
+    operationId: 'updateEtareLayoutSettings',
+    method: 'put',
+    path: '/settings/etare',
+    summary: 'Masquer ou montrer des sections facultatives (administration du SIS, audité) ; figé à chaque soumission',
+    tags: ['etare'],
+    body: etareLayoutSettingsSchema,
+    successStatus: 200,
+    response: etareLayoutSettingsSchema,
   }),
   getPortalAccess: tenantEndpoint({
     operationId: 'getPortalAccess',

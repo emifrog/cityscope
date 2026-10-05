@@ -245,6 +245,7 @@ export const ETARE_SECTION_LABELS: Readonly<Record<string, string>> = {
   objects: 'Points opérationnels',
   risks: 'Risques',
   documents: 'Documents',
+  layout: 'Mise en page',
 };
 
 export const CHANGE_LABELS: Readonly<Record<'added' | 'removed' | 'modified', string>> = {

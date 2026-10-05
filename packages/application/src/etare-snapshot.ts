@@ -16,7 +16,7 @@ import type {
   SiteDetail,
   Zone,
 } from '@etare/contracts';
-import { canonicalJson } from '@etare/domain';
+import { canonicalJson, layoutFor, type OptionalSection } from '@etare/domain';
 
 /** Working data of a site, as the API reads it (RLS applied). */
 export interface WorkingData {
@@ -32,6 +32,8 @@ export interface WorkingData {
   /** Catalogue of the SIS (national and own entries). */
   readonly objectTypes: readonly ObjectType[];
   readonly riskTypes: readonly RiskType[];
+  /** Optional sections hidden by the SIS (DEC-05), read in the same transaction. */
+  readonly hiddenSections: readonly OptionalSection[];
 }
 
 /** Deterministic order: display order first when there is one, then the stable identifier. */
@@ -213,8 +215,11 @@ export function buildSnapshot(data: WorkingData): EtareSnapshot {
   const byCode = <T extends { code: string }>(left: T, right: T) => (left.code < right.code ? -1 : 1);
   const objectCodes = new Set(snapshot.objects.map((object) => object.type_code));
   const riskCodes = new Set(snapshot.risks.map((risk) => risk.type_code));
+  const layout = layoutFor(data.hiddenSections);
   return {
     ...snapshot,
+    // Omitted when nothing is hidden: the content of a SIS that hides nothing keeps its hash.
+    ...(layout ? { layout: { sections: [...layout.sections] } } : {}),
     catalog: {
       object_types: data.objectTypes
         .filter((type) => objectCodes.has(type.code))
@@ -415,7 +420,7 @@ export function preSubmissionChecks(data: WorkingData, now: Date): EtareCheck[] 
   return checks;
 }
 
-const LABELS: Readonly<Record<Exclude<EtareSection, 'site'>, (item: Record<string, unknown>) => string>> = {
+const LABELS: Readonly<Record<Exclude<EtareSection, 'site' | 'layout'>, (item: Record<string, unknown>) => string>> = {
   classifications: (item) => String(item['label'] ?? item['code'] ?? 'Classement'),
   buildings: (item) => String(item['name']),
   contacts: (item) => String(item['name']),
@@ -431,6 +436,9 @@ export function compareSnapshots(base: EtareSnapshot, next: EtareSnapshot): Etar
   const changes: EtareChange[] = [];
   if (canonicalJson(base.site) !== canonicalJson(next.site)) {
     changes.push({ section: 'site', id: next.site.id, label: 'Fiche du site', change: 'modified' });
+  }
+  if (canonicalJson(base.layout ?? null) !== canonicalJson(next.layout ?? null)) {
+    changes.push({ section: 'layout', id: 'layout', label: 'Sections affichées', change: 'modified' });
   }
   for (const section of Object.keys(LABELS) as (keyof typeof LABELS)[]) {
     const before = new Map<string, Record<string, unknown>>(base[section].map((item) => [item.id, item]));

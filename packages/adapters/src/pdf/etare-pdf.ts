@@ -1,6 +1,18 @@
 import type { EtarePdfInput, EtarePdfRenderer, PlanImage } from '@etare/application';
 import type { EtareSnapshot } from '@etare/contracts';
-import { propertyDefinitions, type ObjectCategory } from '@etare/domain';
+import {
+  SECTION_TITLES,
+  compareObjects,
+  compareRisks,
+  objectTitle,
+  photoAnnex,
+  propertyDefinitions,
+  sectionObjects,
+  visibleSections,
+  type LayoutSection,
+  type ObjectCategory,
+  type PhotoAnnex,
+} from '@etare/domain';
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFImage, type PDFPage, type RGB } from 'pdf-lib';
 
 /**
@@ -9,7 +21,7 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFImage, type PDFP
  * published and the SHA-256 of the approved content. Standard PDF fonts
  * (WinAnsi): characters they cannot encode are replaced by their closest form.
  */
-export const ETARE_PDF_TEMPLATE_VERSION = 'etare-pdf/3';
+export const ETARE_PDF_TEMPLATE_VERSION = 'etare-pdf/4';
 
 const PORTRAIT: [number, number] = [595.28, 841.89];
 const LANDSCAPE: [number, number] = [841.89, 595.28];
@@ -64,12 +76,8 @@ const CATEGORY_NAMES: Readonly<Record<ObjectCategory, string>> = {
   annotation: 'Annotations',
 };
 
-const SECTIONS: readonly { title: string; categories: readonly ObjectCategory[] }[] = [
-  { title: 'Accès', categories: ['access'] },
-  { title: 'Eau', categories: ['water'] },
-  { title: 'Énergies', categories: ['energy'] },
-  { title: 'Moyens de secours', categories: ['safety', 'smoke_control', 'refuge', 'vertical', 'communication'] },
-];
+type SnapshotObject = EtareSnapshot['objects'][number];
+type SnapshotPhoto = NonNullable<SnapshotObject['photos']>[number];
 
 const SITE_TYPES: Readonly<Record<string, string>> = {
   erp: 'Établissement recevant du public',
@@ -159,6 +167,11 @@ class Writer {
 
   ensure(space: number): void {
     if (this.y - space < MARGIN + FOOTER) this.newPage();
+  }
+
+  /** Continues the flow below a block drawn by hand (grid of photos). */
+  moveTo(y: number): void {
+    this.y = y;
   }
 
   space(height: number): void {
@@ -435,6 +448,86 @@ function drawPlan(
   }
 }
 
+/**
+ * Annex of the photos (ADR-026): two columns, three rows per page, each photo
+ * with its caption, its object and its section; what is left out is counted.
+ */
+function drawPhotoAnnex(
+  writer: Writer,
+  title: string,
+  annex: PhotoAnnex<SnapshotObject, SnapshotPhoto>,
+  images: ReadonlyMap<string, PDFImage | null>,
+): void {
+  writer.newPage();
+  writer.heading(title);
+  if (annex.entries.length === 0) writer.text('Aucune photo dans les sections affichées.', { color: COLORS.muted });
+  const gutter = 16;
+  const columns = 2;
+  const cellWidth = (writer.width - gutter) / columns;
+  const imageHeight = 170;
+  const rowHeight = imageHeight + 44;
+  const line = (text: string, size: number, bold: boolean) => {
+    const font = bold ? writer.bold : writer.font;
+    const [first = '', ...rest] = writer.lines(text, font, size, cellWidth);
+    return rest.length > 0 ? `${first.slice(0, Math.max(first.length - 1, 1))}…` : first;
+  };
+  let top = writer.cursor - 6;
+  annex.entries.forEach((entry, index) => {
+    const column = index % columns;
+    if (column === 0 && top - rowHeight < MARGIN + FOOTER) {
+      writer.newPage();
+      top = writer.cursor;
+    }
+    const page = writer.current;
+    const x = MARGIN + column * (cellWidth + gutter);
+    const image = images.get(entry.photo.id);
+    if (image === undefined) throw new Error('PHOTO_UNAVAILABLE');
+    page.drawRectangle({ x, y: top - imageHeight, width: cellWidth, height: imageHeight, color: hex('#f1f5f9') });
+    if (image) {
+      const scale = Math.min(cellWidth / image.width, imageHeight / image.height);
+      const width = image.width * scale;
+      const height = image.height * scale;
+      page.drawImage(image, {
+        x: x + (cellWidth - width) / 2,
+        y: top - imageHeight + (imageHeight - height) / 2,
+        width,
+        height,
+      });
+    } else {
+      const text = writer.encode('Image illisible : voir la tablette');
+      page.drawText(text, {
+        x: x + (cellWidth - writer.font.widthOfTextAtSize(text, 8)) / 2,
+        y: top - imageHeight / 2,
+        size: 8,
+        font: writer.font,
+        color: COLORS.muted,
+      });
+    }
+    const captions: [string, number, boolean, RGB][] = [
+      [entry.photo.caption ?? 'Sans légende', 8, true, COLORS.text],
+      [`${objectTitle(entry.object)} — ${entry.object.type_name}`, 7.5, false, COLORS.text],
+      [SECTION_TITLES[entry.section], 7, false, COLORS.muted],
+    ];
+    captions.forEach(([text, size, bold, color], row) => {
+      page.drawText(line(text, size, bold), {
+        x,
+        y: top - imageHeight - 11 - row * 10,
+        size,
+        font: bold ? writer.bold : writer.font,
+        color,
+      });
+    });
+    if (column === columns - 1 || index === annex.entries.length - 1) top -= rowHeight;
+  });
+  writer.moveTo(top);
+  if (annex.omitted > 0) {
+    writer.text(
+      `${annex.omitted} autre${annex.omitted > 1 ? 's photos sont consultables' : ' photo est consultable'} sur la tablette, avec les fiches des points.`,
+      { size: 8.5, color: COLORS.muted },
+    );
+  }
+}
+
 async function embed(doc: PDFDocument, image: PlanImage): Promise<PDFImage> {
   if (image.mimeType === 'image/png') return doc.embedPng(image.bytes);
   if (image.mimeType === 'image/jpeg') return doc.embedJpg(image.bytes);
@@ -449,7 +542,7 @@ async function embed(doc: PDFDocument, image: PlanImage): Promise<PDFImage> {
 export class PdfLibEtareRenderer implements EtarePdfRenderer {
   readonly templateVersion = ETARE_PDF_TEMPLATE_VERSION;
 
-  async render({ publication, snapshot, planImages }: EtarePdfInput): Promise<Uint8Array> {
+  async render({ publication, snapshot, planImages, photoImages }: EtarePdfInput): Promise<Uint8Array> {
     const doc = await PDFDocument.create();
     const font = await doc.embedFont(StandardFonts.Helvetica);
     const bold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -483,113 +576,160 @@ export class PdfLibEtareRenderer implements EtarePdfRenderer {
     );
     writer.text(`Empreinte du contenu validé (SHA-256) : ${publication.contentHash}`, { size: 7, color: COLORS.muted });
 
-    writer.heading('1. Synthèse');
-    writer.text(`Type : ${SITE_TYPES[site.site_type] ?? site.site_type}`);
-    for (const classification of snapshot.classifications) {
-      writer.text(
-        `${classification.classification_type.toUpperCase()} : ${[classification.code, classification.category && `${classification.category}e cat.`, classification.label].filter(Boolean).join(' · ')}`,
-      );
-    }
     const critical = [
       ...snapshot.risks
         .filter((risk) => risk.severity >= 4)
+        .sort(compareRisks)
         .map((risk) => [risk.type_name, risk.label].filter(Boolean).join(' ')),
       ...snapshot.objects
         .filter((object) => object.criticality === 'critical')
-        .map((object) => object.label ?? object.name ?? object.type_name),
+        .sort(compareObjects)
+        .map(objectTitle),
     ];
-    writer.space(4);
-    writer.text('POINTS CRITIQUES', { size: 8.5, bold: true, color: COLORS.critical });
-    writer.text(critical.length > 0 ? critical.join(' • ') : 'Aucun point critique déclaré.', { gap: 2 });
-
-    writer.heading('2. Risques');
-    const risks = [...snapshot.risks].sort((left, right) => right.severity - left.severity);
-    if (risks.length === 0) writer.text('Aucun risque déclaré.', { color: COLORS.muted });
-    for (const risk of risks) {
-      writer.text(`${risk.type_name}${risk.label ? ` — ${risk.label}` : ''} (gravité ${risk.severity})`, {
-        bold: true,
-        color: risk.severity >= 4 ? COLORS.critical : COLORS.text,
-      });
+    const sections = visibleSections(snapshot.layout);
+    let number = 1;
+    const heading = (section: LayoutSection) => writer.heading(`${number++}. ${SECTION_TITLES[section]}`);
+    const objectEntry = (object: SnapshotObject) => {
       writer.text(
-        [
-          scope(risk),
-          risk.quantity !== null ? `${risk.quantity} ${risk.unit ?? ''}`.trim() : null,
-          risk.plan_position ? 'sur plan' : null,
-          risk.geometry ? 'sur carte' : null,
-        ]
+        `${objectTitle(object)} — ${object.type_name}${object.criticality === 'critical' ? ' (critique)' : ''}${object.status !== 'active' ? ' — HORS SERVICE OU INCONNU' : ''}`,
+        {
+          bold: true,
+          color: object.criticality === 'critical' ? COLORS.critical : COLORS.text,
+        },
+      );
+      writer.text(
+        [scope(object), object.plan_position ? 'sur plan' : object.geometry ? 'sur carte' : null]
           .filter(Boolean)
           .join(' · '),
         { size: 8, color: COLORS.muted, indent: 10 },
       );
-      const fields = propertiesText(riskTypes.get(risk.type_code)?.properties_schema, risk.properties);
+      const fields = propertiesText(objectTypes.get(object.type_code)?.properties_schema, object.properties);
       if (fields) writer.text(fields, { size: 8, indent: 10 });
-      if (risk.description) writer.text(risk.description, { size: 8.5, indent: 10 });
+      if (object.instructions) writer.text(object.instructions, { size: 8.5, indent: 10 });
       writer.space(3);
-    }
+    };
 
-    let number = 3;
-    const objectsOf = (categories: readonly ObjectCategory[]) =>
-      snapshot.objects.filter((object) => categories.includes(object.category));
-    for (const section of [{ title: 'Objets à risque', categories: ['risk'] as const }, ...SECTIONS]) {
-      const items = objectsOf(section.categories);
-      if (section.title === 'Objets à risque' && items.length === 0) continue;
-      writer.heading(`${number++}. ${section.title}`);
-      if (items.length === 0) writer.text('Rien de déclaré.', { color: COLORS.muted });
-      for (const object of items) {
-        writer.text(
-          `${object.label ?? object.name ?? object.type_name} — ${object.type_name}${object.criticality === 'critical' ? ' (critique)' : ''}${object.status !== 'active' ? ' — HORS SERVICE OU INCONNU' : ''}`,
-          {
-            bold: true,
-            color: object.criticality === 'critical' ? COLORS.critical : COLORS.text,
-          },
-        );
-        writer.text(
-          [scope(object), object.plan_position ? 'sur plan' : object.geometry ? 'sur carte' : null]
-            .filter(Boolean)
-            .join(' · '),
-          { size: 8, color: COLORS.muted, indent: 10 },
-        );
-        const fields = propertiesText(objectTypes.get(object.type_code)?.properties_schema, object.properties);
-        if (fields) writer.text(fields, { size: 8, indent: 10 });
-        if (object.instructions) writer.text(object.instructions, { size: 8.5, indent: 10 });
-        writer.space(3);
+    for (const section of sections) {
+      switch (section) {
+        case 'synthesis': {
+          heading(section);
+          writer.text(`Type : ${SITE_TYPES[site.site_type] ?? site.site_type}`);
+          for (const classification of snapshot.classifications) {
+            writer.text(
+              `${classification.classification_type.toUpperCase()} : ${[classification.code, classification.category && `${classification.category}e cat.`, classification.label].filter(Boolean).join(' · ')}`,
+            );
+          }
+          writer.space(4);
+          writer.text('POINTS CRITIQUES', { size: 8.5, bold: true, color: COLORS.critical });
+          writer.text(critical.length > 0 ? critical.join(' • ') : 'Aucun point critique déclaré.', { gap: 2 });
+          break;
+        }
+        case 'risks': {
+          heading(section);
+          const risks = [...snapshot.risks].sort(compareRisks);
+          const riskObjects = sectionObjects(snapshot.objects, 'risks');
+          if (risks.length === 0 && riskObjects.length === 0) {
+            writer.text('Aucun risque déclaré.', { color: COLORS.muted });
+          }
+          for (const risk of risks) {
+            writer.text(`${risk.type_name}${risk.label ? ` — ${risk.label}` : ''} (gravité ${risk.severity})`, {
+              bold: true,
+              color: risk.severity >= 4 ? COLORS.critical : COLORS.text,
+            });
+            writer.text(
+              [
+                scope(risk),
+                risk.quantity !== null ? `${risk.quantity} ${risk.unit ?? ''}`.trim() : null,
+                risk.plan_position ? 'sur plan' : null,
+                risk.geometry ? 'sur carte' : null,
+              ]
+                .filter(Boolean)
+                .join(' · '),
+              { size: 8, color: COLORS.muted, indent: 10 },
+            );
+            const fields = propertiesText(riskTypes.get(risk.type_code)?.properties_schema, risk.properties);
+            if (fields) writer.text(fields, { size: 8, indent: 10 });
+            if (risk.description) writer.text(risk.description, { size: 8.5, indent: 10 });
+            writer.space(3);
+          }
+          riskObjects.forEach(objectEntry);
+          break;
+        }
+        case 'access':
+        case 'water':
+        case 'energy':
+        case 'rescue': {
+          heading(section);
+          const items = sectionObjects(snapshot.objects, section);
+          if (items.length === 0) writer.text('Rien de déclaré.', { color: COLORS.muted });
+          items.forEach(objectEntry);
+          break;
+        }
+        case 'plans': {
+          heading(section);
+          for (const building of snapshot.buildings) {
+            writer.text(
+              `${building.name}${building.levels.length > 0 ? ` — niveaux : ${building.levels.map((level) => level.label).join(', ')}` : ''}`,
+            );
+          }
+          for (const plan of snapshot.plans)
+            writer.text(`${plan.title} (fond n° ${plan.background.revision_no}) : voir la page du plan.`, {
+              size: 8.5,
+            });
+          if (snapshot.buildings.length === 0 && snapshot.plans.length === 0)
+            writer.text('Aucun bâtiment ni plan.', { color: COLORS.muted });
+          break;
+        }
+        case 'contacts': {
+          heading(section);
+          if (snapshot.contacts.length === 0) {
+            writer.text('Aucun contact destiné aux intervenants.', { color: COLORS.muted });
+          }
+          for (const contact of snapshot.contacts) {
+            writer.text(`${contact.name}${contact.role ? ` — ${contact.role}` : ''}`, { bold: true });
+            writer.text([contact.phone, contact.phone_alt, contact.availability].filter(Boolean).join(' · '), {
+              size: 9,
+              indent: 10,
+              gap: 2,
+            });
+          }
+          break;
+        }
+        case 'annexes': {
+          heading(section);
+          if (snapshot.documents.length === 0) writer.text('Aucun document.', { color: COLORS.muted });
+          for (const document of snapshot.documents) {
+            writer.text(
+              `${document.title} — version ${document.version.version_no} (${document.version.asset.filename})`,
+              { size: 9 },
+            );
+          }
+          break;
+        }
+        case 'photos':
+          // At the end of the document, after the plan pages (ADR-026).
+          break;
       }
     }
 
-    writer.heading(`${number++}. Bâtiments et plans`);
-    for (const building of snapshot.buildings) {
-      writer.text(
-        `${building.name}${building.levels.length > 0 ? ` — niveaux : ${building.levels.map((level) => level.label).join(', ')}` : ''}`,
-      );
-    }
-    for (const plan of snapshot.plans)
-      writer.text(`${plan.title} (fond n° ${plan.background.revision_no}) : voir la page du plan.`, { size: 8.5 });
-    if (snapshot.buildings.length === 0 && snapshot.plans.length === 0)
-      writer.text('Aucun bâtiment ni plan.', { color: COLORS.muted });
-
-    writer.heading(`${number++}. Contacts`);
-    if (snapshot.contacts.length === 0) writer.text('Aucun contact destiné aux intervenants.', { color: COLORS.muted });
-    for (const contact of snapshot.contacts) {
-      writer.text(`${contact.name}${contact.role ? ` — ${contact.role}` : ''}`, { bold: true });
-      writer.text([contact.phone, contact.phone_alt, contact.availability].filter(Boolean).join(' · '), {
-        size: 9,
-        indent: 10,
-        gap: 2,
-      });
+    if (sections.includes('plans')) {
+      for (const plan of snapshot.plans) {
+        const image = planImages.get(plan.background.revision_id);
+        if (!image) throw new Error('PLAN_BACKGROUND_UNAVAILABLE');
+        drawPlan(writer, snapshot, plan, await embed(doc, image));
+      }
     }
 
-    writer.heading(`${number++}. Annexes`);
-    if (snapshot.documents.length === 0) writer.text('Aucun document.', { color: COLORS.muted });
-    for (const document of snapshot.documents) {
-      writer.text(`${document.title} — version ${document.version.version_no} (${document.version.asset.filename})`, {
-        size: 9,
-      });
-    }
-
-    for (const plan of snapshot.plans) {
-      const image = planImages.get(plan.background.revision_id);
-      if (!image) throw new Error('PLAN_BACKGROUND_UNAVAILABLE');
-      drawPlan(writer, snapshot, plan, await embed(doc, image));
+    const annex = photoAnnex(snapshot.objects, sections);
+    // No annex for a content without any photo; a mention when they all are elsewhere.
+    if (annex && (annex.entries.length > 0 || annex.omitted > 0)) {
+      const images = new Map<string, PDFImage | null>();
+      for (const { photo } of annex.entries) {
+        const image = photoImages.get(photo.id);
+        if (image === undefined) throw new Error('PHOTO_UNAVAILABLE');
+        images.set(photo.id, image && (await embed(doc, image)));
+      }
+      drawPhotoAnnex(writer, `${number++}. ${SECTION_TITLES.photos}`, annex, images);
     }
 
     // Header and footer on every page: which published version, when, and its fingerprint.

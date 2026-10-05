@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:etare_ops/src/core/json/json_reader.dart';
+import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
+import 'package:etare_ops/src/features/ops/domain/ops_order.dart';
 import 'package:flutter/foundation.dart';
 
 /// Lecture du fichier de données d'une version publiée (`data/site.json`),
@@ -441,6 +443,7 @@ final class PublishedSite {
     this.etareNumber,
     this.address,
     this.location,
+    this.layoutSections,
   });
 
   factory PublishedSite.fromJsonText(String text) =>
@@ -460,6 +463,7 @@ final class PublishedSite {
         ? json['properties']! as Map<String, Object?>
         : const {};
 
+    final layout = _object(data, 'layout');
     final catalogLists = (
       objects: _each(catalog?['object_types'], (type) => type),
       risks: _each(catalog?['risk_types'], (type) => type),
@@ -599,7 +603,7 @@ final class PublishedSite {
           placement: PlanPlacement.fromJson(_object(item, 'plan_position')),
           outdoor: _object(item, 'geometry') != null,
         ),
-      )..sort((a, b) => b.severity.compareTo(a.severity)),
+      )..sort(compareRisks),
       documents: _each(data['documents'], (item) {
         final version = _object(item, 'version');
         final asset = version == null ? null : _object(version, 'asset');
@@ -616,6 +620,15 @@ final class PublishedSite {
           expiresAt: date(version, 'expires_at'),
         );
       }),
+      layoutSections: layout == null
+          ? null
+          : {
+              for (final section
+                  in layout['sections'] is List<Object?>
+                      ? layout['sections']! as List<Object?>
+                      : const <Object?>[])
+                if (section is String) section,
+            },
       objectFields: {
         for (final type in catalogLists.objects)
           type.optionalString('code') ?? '': fieldsOf(
@@ -660,8 +673,12 @@ final class PublishedSite {
   final List<SiteZone> zones;
   final List<SiteObject> objects;
 
-  /// Triés par gravité décroissante.
+  /// Triés par gravité décroissante, puis par titre.
   final List<SiteRisk> risks;
+
+  /// Sections affichées, figées à la soumission (DEC-05) ; null pour une
+  /// version antérieure : tout est affiché.
+  final Set<String>? layoutSections;
   final List<SiteDocument> documents;
   final Map<String, Map<String, FieldDefinition>> objectFields;
   final Map<String, Map<String, FieldDefinition>> riskFields;
@@ -675,19 +692,47 @@ final class PublishedSite {
       if (document.onDemand) document,
   ];
 
+  /// Points des catégories données, dans l'ordre de l'aperçu et du PDF.
   List<SiteObject> objectsOf(Set<String> categories) => [
     for (final object in objects)
       if (categories.contains(object.category)) object,
-  ]..sort(_byCriticality);
+  ]..sort(compareObjects);
 
-  static int _byCriticality(SiteObject a, SiteObject b) =>
-      _rank(b.criticality).compareTo(_rank(a.criticality));
-
-  static int _rank(String criticality) => switch (criticality) {
-    'critical' => 2,
-    'important' => 1,
-    _ => 0,
+  /// Le SIS peut masquer des sections (ADR-026) : sur la tablette, seules
+  /// Coupures, Moyens de secours et Photos disparaissent ; les plans et les
+  /// documents restent, indispensables en intervention.
+  bool shows(OpsSection section) => switch (section) {
+    OpsSection.energy ||
+    OpsSection.rescue ||
+    OpsSection.photos => layoutSections?.contains(section.name) ?? true,
+    _ => true,
   };
+
+  /// Nombre d'éléments d'une entrée de la tablette.
+  int countOf(OpsSection section) => switch (section) {
+    OpsSection.risks => risks.length + objectsOf(section.categories).length,
+    OpsSection.plans => plans.length,
+    OpsSection.contacts => contacts.length,
+    OpsSection.annexes => tabletDocuments.length,
+    OpsSection.photos => gallery.length,
+    _ => objectsOf(section.categories).length,
+  };
+
+  /// Points critiques de la synthèse, comme dans l'aperçu et le PDF.
+  List<SiteObject> get criticalObjects => [
+    for (final object in objects)
+      if (object.criticality == 'critical') object,
+  ]..sort(compareObjects);
+
+  /// Photos des points des sections affichées, dans l'ordre des sections et
+  /// des points (comme l'annexe du PDF, sans plafond).
+  List<GalleryPhoto> get gallery => [
+    for (final section in OpsSection.objectSections)
+      if (shows(section))
+        for (final object in objectsOf(section.categories))
+          for (final photo in object.photos)
+            GalleryPhoto(photo: photo, object: object, section: section),
+  ];
 
   /// Dernière vérification connue d'un élément (affichage de l'âge, OPS-05).
   DateTime? get lastVerifiedAt =>
@@ -737,3 +782,35 @@ final class PublishedSite {
     });
   }
 }
+
+/// Photo de la galerie, avec son point et sa section.
+@immutable
+final class GalleryPhoto {
+  const GalleryPhoto({
+    required this.photo,
+    required this.object,
+    required this.section,
+  });
+
+  final ObjectPhoto photo;
+  final SiteObject object;
+  final OpsSection section;
+}
+
+int compareObjects(SiteObject left, SiteObject right) => compareObjectParts(
+  leftId: left.id,
+  leftCriticality: left.criticality,
+  leftTitle: left.title,
+  rightId: right.id,
+  rightCriticality: right.criticality,
+  rightTitle: right.title,
+);
+
+int compareRisks(SiteRisk left, SiteRisk right) => compareRiskParts(
+  leftId: left.id,
+  leftSeverity: left.severity,
+  leftTitle: left.title,
+  rightId: right.id,
+  rightSeverity: right.severity,
+  rightTitle: right.title,
+);

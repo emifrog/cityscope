@@ -88,6 +88,7 @@ import type {
 import type {
   DevicePlatform,
   DeviceStatus,
+  OptionalSection,
   Permission,
   PortalAccessState,
   RequestContext,
@@ -371,6 +372,10 @@ export interface EtareRepository {
   requestPublication(revisionId: string, approvalId: string): Promise<string>;
   /** Withdraws the version in force (MET-04); Conflict when it is not the one in force. */
   withdraw(id: string, expectedVersion: number, reason: string): Promise<PublicationSummary | null>;
+  /** Optional sections hidden by the SIS (DEC-05), in the order of the registry. */
+  layoutSettings(): Promise<OptionalSection[]>;
+  /** catalog:manage; audited. Returns the stored setting. */
+  updateLayoutSettings(hidden: readonly OptionalSection[]): Promise<OptionalSection[]>;
 }
 
 /** Zones of the levels, drawn on level plans. */

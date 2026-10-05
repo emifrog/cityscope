@@ -8,6 +8,7 @@
 import {
   Ed25519Signer,
   PdfLibEtareRenderer,
+  SharpImageResizer,
   PostgresAssetVerificationStore,
   PostgresJobQueue,
   PostgresPublicationBuildStore,
@@ -48,7 +49,7 @@ const worker = createWorker({
         now: () => new Date(),
         signer: Ed25519Signer.fromPkcs8(requireEnv('PUBLICATION_SIGNING_KEY')),
       },
-      artifacts: { renderer: new PdfLibEtareRenderer(), objects, sha256Bytes: sha256 },
+      artifacts: { renderer: new PdfLibEtareRenderer(), objects, sha256Bytes: sha256, images: new SharpImageResizer() },
     }),
   ]),
   logger: createLogger({}, { write: () => undefined }),

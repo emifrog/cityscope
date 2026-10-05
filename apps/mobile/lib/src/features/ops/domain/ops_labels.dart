@@ -108,14 +108,16 @@ Color criticalityColor(String criticality) => switch (criticality) {
   _ => const Color(0xFF475569),
 };
 
-/// Les six entrées de la synthèse (maquette, écran 07) et les catégories
-/// de points qu'elles regroupent.
+/// Entrées de la tablette : les six grandes entrées de la synthèse
+/// (maquette, écran 07), puis les autres sections du registre national
+/// (ADR-026, `packages/domain/src/etare-layout.ts`). Le nom de chaque valeur
+/// est la clé du registre, aussi utilisée dans les routes.
 enum OpsSection {
-  risks('Risques', Icons.warning_amber_rounded, {}),
+  risks('Risques', Icons.warning_amber_rounded, {'risk'}),
   access('Accès', Icons.directions, {'access'}),
   plans('Plans', Icons.map_outlined, {}),
   water('Eau', Icons.water_drop_outlined, {'water'}),
-  cuts('Coupures', Icons.power_off_outlined, {'energy'}),
+  energy('Coupures', Icons.power_off_outlined, {'energy'}),
   contacts('Contacts', Icons.contact_phone_outlined, {}),
   rescue('Moyens de secours', Icons.health_and_safety_outlined, {
     'safety',
@@ -124,13 +126,25 @@ enum OpsSection {
     'refuge',
     'communication',
   }),
-  documents('Documents', Icons.description_outlined, {});
+  annexes('Documents', Icons.description_outlined, {}),
+  photos('Photos', Icons.photo_library_outlined, {});
 
   const OpsSection(this.label, this.icon, this.categories);
 
   final String label;
   final IconData icon;
+
+  /// Catégories de points listées ; les risques ajoutent ceux du catalogue.
   final Set<String> categories;
+
+  /// Les grandes entrées de la synthèse, dans l'ordre de l'écran 07.
+  static const tiles = [risks, access, plans, water, energy, contacts];
+
+  /// Les autres entrées, montrées quand elles ont du contenu.
+  static const others = [rescue, annexes, photos];
+
+  /// Sections listant des points, dans l'ordre du registre (annexe photos).
+  static const objectSections = [access, risks, water, energy, rescue];
 }
 
 /// « 12 avenue des Mimosas, 06000 Nice » : la commune n'est ajoutée que si

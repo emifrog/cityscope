@@ -211,6 +211,7 @@ describe('ETARE PDF', () => {
         publication: PUBLICATION,
         snapshot,
         planImages: new Map([[REVISION, { bytes: image, mimeType }]]),
+        photoImages: new Map(),
       });
       expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe('%PDF-');
       const document = await PDFDocument.load(bytes);
@@ -246,7 +247,107 @@ describe('ETARE PDF', () => {
 
   it('refuses to render a plan without its background rather than leave it out', async () => {
     await expect(
-      new PdfLibEtareRenderer().render({ publication: PUBLICATION, snapshot, planImages: new Map() }),
+      new PdfLibEtareRenderer().render({
+        publication: PUBLICATION,
+        snapshot,
+        planImages: new Map(),
+        photoImages: new Map(),
+      }),
     ).rejects.toThrow('PLAN_BACKGROUND_UNAVAILABLE');
+  });
+});
+
+/** Section headings of a page, in the order drawn. */
+const headingsOf = (document: PDFDocument, index: number) =>
+  textsOf(contentOf(document, document.getPage(index))).filter((text) => /^\d+\. /.test(text));
+
+describe('sections of the ETARE PDF (MET-05)', () => {
+  const plan = async () => new Map([[REVISION, { bytes: DEMO_PLAN, mimeType: 'image/png' }]]);
+
+  it('follows the national registry and puts the risk objects under the risks', async () => {
+    const bytes = await new PdfLibEtareRenderer().render({
+      publication: PUBLICATION,
+      snapshot,
+      planImages: await plan(),
+      photoImages: new Map(),
+    });
+    const document = await PDFDocument.load(bytes);
+    expect(headingsOf(document, 0)).toEqual([
+      '1. SYNTHÈSE',
+      '2. ACCÈS',
+      '3. RISQUES',
+      '4. EAU',
+      '5. ÉNERGIES',
+      '6. MOYENS DE SECOURS',
+      '7. PLANS',
+      '8. CONTACTS',
+      '9. ANNEXES',
+    ]);
+    const texts = textsOf(contentOf(document, document.getPage(0)));
+    const risks = texts.indexOf('3. RISQUES');
+    const water = texts.indexOf('4. EAU');
+    const object = texts.findIndex((text) => text.startsWith('O2 >= 18 bouteilles'));
+    expect(object).toBeGreaterThan(risks);
+    expect(object).toBeLessThan(water);
+  });
+
+  it('leaves out the sections hidden by the SIS, plan pages included, and keeps the numbering', async () => {
+    const bytes = await new PdfLibEtareRenderer().render({
+      publication: PUBLICATION,
+      snapshot: {
+        ...snapshot,
+        layout: { sections: ['synthesis', 'access', 'risks', 'water', 'rescue', 'contacts', 'annexes', 'photos'] },
+      },
+      planImages: new Map(),
+      photoImages: new Map(),
+    });
+    const document = await PDFDocument.load(bytes);
+    expect(document.getPageCount()).toBe(1);
+    expect(headingsOf(document, 0)).toEqual([
+      '1. SYNTHÈSE',
+      '2. ACCÈS',
+      '3. RISQUES',
+      '4. EAU',
+      '5. MOYENS DE SECOURS',
+      '6. CONTACTS',
+      '7. ANNEXES',
+    ]);
+  });
+
+  it('ends with the annex of the photos, reduced images with their captions', async () => {
+    const photo = await sharp(DEMO_PLAN).resize(400).jpeg().toBuffer();
+    const [object] = snapshot.objects;
+    if (!object) throw new Error('fixture');
+    const withPhoto: EtareSnapshot = {
+      ...snapshot,
+      objects: [
+        {
+          ...object,
+          photos: [
+            {
+              id: 'ph1',
+              caption: 'Vanne de coupure',
+              asset: { id: 'pa1', filename: 'vanne.jpg', mime_type: 'image/jpeg', size_bytes: 10, sha256: 'y' },
+            },
+          ],
+        },
+      ],
+    };
+    const render = (photoImages: Map<string, { bytes: Uint8Array; mimeType: string } | null>) =>
+      new PdfLibEtareRenderer().render({
+        publication: PUBLICATION,
+        snapshot: withPhoto,
+        planImages: new Map([[REVISION, { bytes: DEMO_PLAN, mimeType: 'image/png' }]]),
+        photoImages,
+      });
+    const document = await PDFDocument.load(await render(new Map([['ph1', { bytes: photo, mimeType: 'image/jpeg' }]])));
+    expect(document.getPageCount()).toBe(3);
+    const texts = textsOf(contentOf(document, document.getPage(2)));
+    expect(texts).toEqual(expect.arrayContaining(['10. PHOTOS', 'Vanne de coupure', 'Risques']));
+    expect(imageOf(document, document.getPage(2)).stream.dict.get(PDFName.of('Width'))?.toString()).toBe('400');
+    await expect(render(new Map())).rejects.toThrow('PHOTO_UNAVAILABLE');
+    // A checked original that no decoder reads is said, not hidden.
+    const unreadable = await PDFDocument.load(await render(new Map([['ph1', null]])));
+    expect(textsOf(contentOf(unreadable, unreadable.getPage(2)))).toContain('Image illisible : voir la tablette');
   });
 });

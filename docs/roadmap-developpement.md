@@ -248,9 +248,11 @@ non exposés, pas de notification des équipes du SIS ; recette avec un exploita
       recalcul contrôlé des rattachements ou signalement bloquant des incohérences, avec tests de bords et chevauchements.
 - [x] **MET-04 — Cycle de vie :** archivage du dossier et retrait motivé d’une publication, permissions,
       historique, diffusion du retrait et statut intelligible sur le terminal ; ne pas effacer l’audit.
-- [ ] **MET-05 — Composition :** implémenter les sections configurables minimales arbitrées en DEC-05,
+- [x] **MET-05 — Composition :** implémenter les sections configurables minimales arbitrées en DEC-05,
       avec aperçu/PDF/OPS cohérents. Décider de la présence des photos d’objets dans le PDF et l’implémenter
       si retenue ; elles sont déjà présentes dans le paquet et les fiches OPS.
+      **Livré au Sprint 10** : registre unique (aperçu, PDF `etare-pdf/4`, tablette), masquage par le SIS
+      figé dans la version soumise, points à risque sous Risques, même tri partout, annexe photos (ADR-026).
 - [ ] **PER-01 — Secteurs et listes :** administrer les périmètres, affecter les droits et les packs,
       filtrer le catalogue signé, retirer localement ce qui n’est plus autorisé.
 - [ ] **PER-02 — Sites sensibles :** règles d’accès, audit des consultations/exports, exclusion des
@@ -406,7 +408,7 @@ Les exigences transverses hors de cette table sont couvertes par R0/R4 et la sec
 | RISK-01   | P0       | Catalogue des risques SIS                | Implémenté  | R5 : catalogue national/propre au SIS et propriétés                                           |
 | RISK-02   | P0       | Risques avec géométrie et portée         | Implémenté  | Sprint 8 (MET-02/03) ; carte sur la tablette en R3 CAR-02                                     |
 | RISK-03   | P1       | Matières dangereuses et FDS              | À faire     | R6 : produit, quantité/unité, localisation, FDS                                               |
-| ETARE-01  | P0       | Assemblage, aperçu, sections             | Partiel     | DEC-05 puis R3 MET-05 ; fidélité aperçu/publié                                                |
+| ETARE-01  | P0       | Assemblage, aperçu, sections             | À qualifier | Sprint 10 (MET-05, ADR-026) ; R5 : dossiers longs et chargés en texte                         |
 | ETARE-02  | P0       | PDF standardisé/versionné                | Implémenté  | R5 : relecture métier ; R1 pour lecture mobile                                                |
 | ETARE-03  | P1       | Modèle ETARE par SIS                     | À faire     | R6 : logo, sections, couleurs, mentions et obligations                                        |
 | ETARE-04  | P1       | Scénarios et consignes structurés        | À faire     | R6 : création, validation, PDF et OPS                                                         |

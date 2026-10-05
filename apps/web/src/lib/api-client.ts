@@ -67,6 +67,7 @@ import {
   type PortalInvitationCreated,
   type PortalInvitationRevoke,
   type PortalSettings,
+  type EtareLayoutSettings,
   type PortalSite,
   type PortalSiteSummary,
   type Device,
@@ -548,6 +549,15 @@ export const api = {
 
   updatePortalSettings: (options: ApiCallOptions, input: PortalSettings): Promise<PortalSettings> =>
     call(endpoints.updatePortalSettings.response, endpoints.updatePortalSettings.path, options, {
+      method: 'PUT',
+      body: input,
+    }),
+
+  getEtareLayoutSettings: (options: ApiCallOptions): Promise<EtareLayoutSettings> =>
+    call(endpoints.getEtareLayoutSettings.response, endpoints.getEtareLayoutSettings.path, options),
+
+  updateEtareLayoutSettings: (options: ApiCallOptions, input: EtareLayoutSettings): Promise<EtareLayoutSettings> =>
+    call(endpoints.updateEtareLayoutSettings.response, endpoints.updateEtareLayoutSettings.path, options, {
       method: 'PUT',
       body: input,
     }),

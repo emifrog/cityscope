@@ -7,6 +7,7 @@
 import { createHash } from 'node:crypto';
 import {
   PdfLibEtareRenderer,
+  SharpImageResizer,
   PostgresJobQueue,
   PostgresPublicationBuildStore,
   SupabaseObjectStorage,
@@ -40,6 +41,7 @@ const worker = createWorker({
         renderer,
         objects: SupabaseObjectStorage.fromSecretKey(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SECRET_KEY')),
         sha256Bytes: sha256,
+        images: new SharpImageResizer(),
       },
     }),
   ]),

@@ -26,6 +26,8 @@ export interface AssetVariantStore {
 /** Reduces an image (orientation applied, metadata such as GPS removed). Throws ImageUnreadable. */
 export interface ImageResizer {
   variants(content: Uint8Array): Promise<{ thumbnail: Uint8Array; preview: Uint8Array }>;
+  /** JPEG small enough for a printed document (photo annex of the ETARE PDF, ADR-026). */
+  documentImage(content: Uint8Array): Promise<Uint8Array>;
 }
 
 export class ImageUnreadable extends Error {
@@ -38,7 +40,7 @@ export class ImageUnreadable extends Error {
 export interface AssetVariantDependencies {
   readonly store: AssetVariantStore;
   readonly objects: ObjectStoreAdmin;
-  readonly images: ImageResizer;
+  readonly images: Pick<ImageResizer, 'variants'>;
 }
 
 const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);

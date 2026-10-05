@@ -14,7 +14,7 @@ import {
   type PublicationSummary,
   type ValidationQueueItem,
 } from '@etare/contracts';
-import { Conflict } from '@etare/domain';
+import { Conflict, type OptionalSection } from '@etare/domain';
 import { decodeCursor, encodeCursor } from './cursor';
 import type { PoolClient } from './pool';
 import { likeLiteral } from './site-repository';
@@ -200,6 +200,21 @@ export class PostgresEtareRepository implements EtareRepository {
       revisions: revisions.rows.map(toRevision),
       publications: publications.rows.map(toPublicationSummary),
     };
+  }
+
+  async layoutSettings(): Promise<OptionalSection[]> {
+    const { rows } = await this.client.query<{ hidden_sections: OptionalSection[] }>(
+      'select hidden_sections from app.etare_layout_settings()',
+    );
+    return rows[0]?.hidden_sections ?? [];
+  }
+
+  async updateLayoutSettings(hidden: readonly OptionalSection[]): Promise<OptionalSection[]> {
+    const { rows } = await this.client.query<{ hidden: OptionalSection[] }>(
+      'select app.update_etare_layout_settings($1::text[]) as hidden',
+      [hidden],
+    );
+    return rows[0]?.hidden ?? [];
   }
 
   async withdraw(id: string, expectedVersion: number, reason: string): Promise<PublicationSummary | null> {

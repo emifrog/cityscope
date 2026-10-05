@@ -61,7 +61,7 @@ void main() {
     );
     await tester.tap(find.text('EHPAD Les Oliviers'));
     await tester.pumpAndSettle();
-    final documents = find.byKey(SiteScreen.tileKey(OpsSection.documents));
+    final documents = find.byKey(SiteScreen.tileKey(OpsSection.annexes));
     await tester.scrollUntilVisible(
       documents,
       200,

@@ -6660,6 +6660,9 @@
           },
           "catalog": {
             "$ref": "#/components/schemas/SnapshotCatalog"
+          },
+          "layout": {
+            "$ref": "#/components/schemas/SnapshotLayout"
           }
         },
         "required": [
@@ -7884,6 +7887,32 @@
           "properties_schema"
         ]
       },
+      "SnapshotLayout": {
+        "type": "object",
+        "properties": {
+          "sections": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "synthesis",
+                "access",
+                "risks",
+                "water",
+                "energy",
+                "rescue",
+                "plans",
+                "contacts",
+                "annexes",
+                "photos"
+              ]
+            }
+          }
+        },
+        "required": [
+          "sections"
+        ]
+      },
       "RevisionCreate": {
         "type": "object",
         "properties": {
@@ -8041,7 +8070,8 @@
               "zones",
               "objects",
               "risks",
-              "documents"
+              "documents",
+              "layout"
             ]
           },
           "id": {
@@ -10160,6 +10190,28 @@
         },
         "required": [
           "mfa_required"
+        ]
+      },
+      "EtareLayoutSettings": {
+        "type": "object",
+        "properties": {
+          "hidden_sections": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "energy",
+                "rescue",
+                "plans",
+                "annexes",
+                "photos"
+              ]
+            },
+            "maxItems": 5
+          }
+        },
+        "required": [
+          "hidden_sections"
         ]
       },
       "PortalAccess": {
@@ -22447,6 +22499,182 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PortalSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflit avec des données existantes (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/settings/etare": {
+      "get": {
+        "operationId": "getEtareLayoutSettings",
+        "summary": "Sections facultatives masquées par le SIS dans l’ETARE (DEC-05)",
+        "tags": [
+          "etare"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtareLayoutSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateEtareLayoutSettings",
+        "summary": "Masquer ou montrer des sections facultatives (administration du SIS, audité) ; figé à chaque soumission",
+        "tags": [
+          "etare"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EtareLayoutSettings"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtareLayoutSettings"
                 }
               }
             }

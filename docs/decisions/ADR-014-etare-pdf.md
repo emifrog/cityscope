@@ -14,8 +14,9 @@ travail.
 
 1. **Produit par le worker pendant la fabrication de la publication**, à partir de l’instantané figé
    (ADR-013) : `generateEtarePdf` (application) prépare les entrées, `PdfLibEtareRenderer` (adaptateur,
-   `pdf-lib` 1.17.1, MIT) dessine. Version de gabarit `etare-pdf/3` (depuis le 01/10/2026 : couleurs et
-   producteur FireScape ; `etare-pdf/2` depuis le 30/09/2026), enregistrée dans
+   `pdf-lib` 1.17.1, MIT) dessine. Version de gabarit `etare-pdf/4` (depuis le 05/10/2026 : registre des
+   sections et annexe photos, ADR-026 ; `etare-pdf/3` depuis le 01/10/2026 : couleurs et producteur
+   FireScape ; `etare-pdf/2` depuis le 30/09/2026), enregistrée dans
    `publication.template_version`.
 2. **Identification sur chaque page** : « VERSION PUBLIÉE N° n », date et heure de publication (heure de
    Paris), numéro de révision, empreinte SHA-256 du contenu validé, pagination ; métadonnées du document
@@ -45,7 +46,8 @@ travail.
   d’ETARE-03 (MVP+).
 - La signature du manifeste (Ed25519) couvrira le PDF comme les autres fichiers.
 - `sharp` 0.35 (Apache-2.0) embarque des binaires libvips sous LGPL-3.0-or-later, liés dynamiquement et
-  non modifiés ; il n’est chargé par le worker que pour convertir un fond WebP.
+  non modifiés ; le worker le charge pour convertir un fond WebP, pour les miniatures (Sprint 9) et pour
+  réduire les photos de l’annexe (Sprint 10).
 - Les PDF des tentatives perdantes restent dans le stockage sans être référencés : purgés par la
   maintenance horaire depuis le Sprint 9 (ADR-009, complément).
 - Le test du rendu vérifie le contenu visuel de la page du plan : fond identique au pixel près (PNG,
@@ -55,3 +57,5 @@ travail.
 
 Sections et photos décidées par l’ADR-026 (DEC-05, 3 octobre 2026) : registre unique dans l’ordre de la
 maquette, sections non obligatoires masquables par le SIS et figées dans la version soumise, annexe photos.
+Livré au Sprint 10 (gabarit `etare-pdf/4`) : les points 3 et 4 ci-dessus suivent désormais l’ADR-026 ;
+les pages de plans disparaissent quand le SIS masque la section Plans.

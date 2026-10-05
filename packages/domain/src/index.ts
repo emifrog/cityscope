@@ -4,6 +4,7 @@ export * from './catalog';
 export * from './context';
 export * from './contributions';
 export * from './distribution';
+export * from './etare-layout';
 export * from './errors';
 export * from './field-reports';
 export * from './files';

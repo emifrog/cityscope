@@ -45,6 +45,7 @@ export const queryKeys = {
   notifications: (tenantId: string) => ['tenant', tenantId, 'notifications'] as const,
   portalInvitations: (tenantId: string) => ['tenant', tenantId, 'portal-invitations'] as const,
   portalSettings: (tenantId: string) => ['tenant', tenantId, 'portal-settings'] as const,
+  etareLayoutSettings: (tenantId: string) => ['tenant', tenantId, 'etare-layout-settings'] as const,
   portalAccess: (tenantId: string) => ['tenant', tenantId, 'portal-access'] as const,
   portalSites: (tenantId: string) => ['tenant', tenantId, 'portal-sites'] as const,
   portalSite: (tenantId: string, siteId: string) => ['tenant', tenantId, 'portal-sites', siteId] as const,
@@ -288,6 +289,16 @@ export function usePortalSettings(wanted = true) {
     queryKey: queryKeys.portalSettings(tenantId ?? 'none'),
     enabled: enabled && wanted,
     queryFn: ({ signal }) => api.getPortalSettings({ ...options, signal }),
+  });
+}
+
+/** Optional sections of the ETARE hidden by the SIS (DEC-05). */
+export function useEtareLayoutSettings(wanted = true) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.etareLayoutSettings(tenantId ?? 'none'),
+    enabled: enabled && wanted,
+    queryFn: ({ signal }) => api.getEtareLayoutSettings({ ...options, signal }),
   });
 }
 

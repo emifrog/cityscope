@@ -58,6 +58,35 @@ dans le PDF.
 - Le poids du PDF, fichier obligatoire du paquet, est mesuré au regard du budget de synchronisation
   (ADR-018).
 
+## Mise en œuvre (Sprint 10, 5 octobre 2026)
+
+- **Registre** : `packages/domain/src/etare-layout.ts` (clés `synthesis`, `access`, `risks`, `water`,
+  `energy`, `rescue`, `plans`, `contacts`, `annexes`, `photos`), repris à l'identique en Dart
+  (`ops_labels.dart`, `ops_order.dart`).
+- **Réglage du SIS** : Administration › Paramètres, carte « Sections de l'ETARE ». Il exige
+  `catalog:manage` et chaque changement est tracé (`tenant.etare_layout`). Le champ `layout` n'est figé
+  que si une section est masquée : un SIS qui ne masque rien garde les mêmes empreintes de contenu.
+- **Précision du porteur (5 octobre 2026)** : masquer **Plans** ou **Annexes** ne concerne que le
+  document (aperçu et PDF, pages de plans comprises). La tablette garde toujours ses entrées Plans et
+  Documents, indispensables en intervention (OPS-02, DOC-02). Énergies, Moyens de secours et Photos
+  masquées disparaissent aussi de la tablette.
+- **Tri commun** :
+  - points par criticité, puis titre sans accents, puis identifiant ;
+  - risques par gravité, puis titre ;
+  - le titre d'un point est son nom complet, à défaut son libellé court de carte, comme sur la tablette.
+- **Tablette** :
+  - les six grandes entrées gardent l'ordre de l'écran 07 (Risques en tête), et Coupures reste le nom
+    terrain de la section Énergies ;
+  - les points à risque sont listés sous Risques ;
+  - les points critiques apparaissent dans la synthèse ;
+  - une galerie Photos est ajoutée.
+- **Annexe photos** (gabarit `etare-pdf/4`) :
+  - au plus 4 photos par point et 40 par PDF, deux colonnes et trois rangées par page ;
+  - une photo réduite à 1 000 px (JPEG) depuis l'original, après vérification de son empreinte ;
+  - une photo dont l'original contrôlé ne se décode pas est signalée « Image illisible » au lieu de
+    bloquer la publication ;
+  - pas d'annexe pour un contenu sans photo.
+
 ## Critère de réexamen
 
 Demande d'un SIS pour réordonner ou renommer les sections avant ETARE-03 ; poids des PDF incompatible

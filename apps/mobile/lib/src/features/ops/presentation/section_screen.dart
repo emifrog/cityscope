@@ -2,6 +2,7 @@ import 'package:etare_ops/src/core/formatting/date_formatting.dart';
 import 'package:etare_ops/src/core/routing/app_routes.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
 import 'package:etare_ops/src/features/ops/application/document_downloads.dart';
+import 'package:etare_ops/src/features/ops/application/ops_providers.dart';
 import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
 import 'package:etare_ops/src/features/ops/domain/published_site.dart';
 import 'package:etare_ops/src/features/ops/presentation/document_screen.dart';
@@ -12,8 +13,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// Liste d'une entrée de la synthèse : risques par gravité, points par
-/// criticité, plans par bâtiment et niveau, contacts, documents.
+/// Liste d'une entrée de la synthèse : risques par gravité puis points à
+/// risque, points par criticité, plans par bâtiment et niveau, contacts,
+/// documents, galerie des photos (même ordre que l'aperçu et le PDF).
 class SectionScreen extends ConsumerWidget {
   const SectionScreen({required this.siteId, required this.section, super.key});
 
@@ -25,9 +27,15 @@ class SectionScreen extends ConsumerWidget {
     siteId: siteId,
     title: (site) => '${section.label} · ${site.shortName ?? site.name}',
     builder: (context, site) {
+      if (section == OpsSection.photos && site.shows(section)) {
+        return _Gallery(site: site);
+      }
       final children = switch (section) {
+        _ when !site.shows(section) => const <Widget>[],
         OpsSection.risks => [
           for (final risk in site.risks) _RiskTile(site: site, risk: risk),
+          for (final object in site.objectsOf(section.categories))
+            _ObjectTile(site: site, object: object),
         ],
         OpsSection.plans => [
           for (final plan in site.orderedPlans)
@@ -36,7 +44,7 @@ class SectionScreen extends ConsumerWidget {
         OpsSection.contacts => [
           for (final contact in site.contacts) _ContactCard(contact: contact),
         ],
-        OpsSection.documents => [
+        OpsSection.annexes => [
           for (final document in site.tabletDocuments)
             _DocumentTile(site: site, document: document),
         ],
@@ -50,7 +58,9 @@ class SectionScreen extends ConsumerWidget {
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Text(
-              'Aucun élément « ${section.label} » dans la version publiée.',
+              site.shows(section)
+                  ? 'Aucun élément « ${section.label} » dans la version publiée.'
+                  : 'Section « ${section.label} » masquée par le SIS ; ses points restent sur les plans.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyLarge,
             ),
@@ -328,5 +338,108 @@ class _DocumentTile extends ConsumerWidget {
         BrandColors.important,
       ),
     };
+  }
+}
+
+/// Galerie des photos des points (ADR-026) ; un appui ouvre la photo.
+class _Gallery extends ConsumerWidget {
+  const _Gallery({required this.site});
+
+  final PublishedSite site;
+
+  static Key photoKey(String photoId) => Key('gallery.photo.$photoId');
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final photos = site.gallery;
+    if (photos.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            'Aucune photo dans la version publiée.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+        ),
+      );
+    }
+    return GridView.builder(
+      padding: const EdgeInsets.all(12),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 260,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.8,
+      ),
+      itemCount: photos.length,
+      itemBuilder: (context, index) {
+        final entry = photos[index];
+        final caption = entry.photo.caption ?? 'Sans légende';
+        final file = ref.watch(installedFileProvider(entry.photo.assetSha256));
+        return Semantics(
+          button: true,
+          label: '$caption, ${entry.object.title}',
+          excludeSemantics: true,
+          child: InkWell(
+            key: photoKey(entry.photo.id),
+            borderRadius: BorderRadius.circular(8),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (context) => DocumentScreen(
+                  title: entry.object.title,
+                  sha256: entry.photo.assetSha256,
+                  mimeType: entry.photo.mimeType,
+                  caption: caption,
+                ),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox.expand(
+                      child: switch (file) {
+                        AsyncData(value: final bytes?) => Image.memory(
+                          bytes,
+                          fit: BoxFit.cover,
+                          cacheWidth: 520,
+                          errorBuilder: (_, _, _) => const Icon(
+                            Icons.broken_image_outlined,
+                            color: BrandColors.textMuted,
+                          ),
+                        ),
+                        AsyncLoading() => const ColoredBox(
+                          color: BrandColors.background,
+                        ),
+                        _ => const Icon(
+                          Icons.broken_image_outlined,
+                          color: BrandColors.textMuted,
+                        ),
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  caption,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                Text(
+                  '${entry.object.title} · ${entry.section.label}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }

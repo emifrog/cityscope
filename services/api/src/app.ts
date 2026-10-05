@@ -52,6 +52,8 @@ import {
   getSyncPackage,
   getRevision,
   getSiteEtare,
+  getEtareLayoutSettings,
+  updateEtareLayoutSettings,
   getMe,
   acceptPortalInvitation,
   createPortalInvitation,
@@ -951,6 +953,21 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     const context = await requestContext(c, endpoints.updatePortalSettings);
     const input = await readBody(c, endpoints.updatePortalSettings.body);
     return respond(c, endpoints.updatePortalSettings, await updatePortalSettings(deps.sessions, context, input));
+  });
+
+  app.get(routerPath(endpoints.getEtareLayoutSettings.path), async (c) => {
+    const context = await requestContext(c, endpoints.getEtareLayoutSettings);
+    return respond(c, endpoints.getEtareLayoutSettings, await getEtareLayoutSettings(deps.sessions, context));
+  });
+
+  app.put(routerPath(endpoints.updateEtareLayoutSettings.path), async (c) => {
+    const context = await requestContext(c, endpoints.updateEtareLayoutSettings);
+    const input = await readBody(c, endpoints.updateEtareLayoutSettings.body);
+    return respond(
+      c,
+      endpoints.updateEtareLayoutSettings,
+      await updateEtareLayoutSettings(deps.sessions, context, input),
+    );
   });
 
   app.get(routerPath(endpoints.getPortalAccess.path), async (c) => {

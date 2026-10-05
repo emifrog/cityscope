@@ -1,6 +1,7 @@
 import type { EtareSnapshot } from '@etare/contracts';
 import { canonicalJson } from '@etare/domain';
 import { describe, expect, it, vi } from 'vitest';
+import { ImageUnreadable } from './file-lifecycle';
 import { PermanentJobError } from './jobs';
 import {
   PDF_FILE,
@@ -199,9 +200,9 @@ describe('ETARE PDF', () => {
       recordOutput: vi.fn().mockResolvedValue(undefined),
       assetFiles: vi
         .fn()
-        .mockResolvedValue([
-          { id: background?.asset.id, storageKey: 'tenants/t/assets/a/b', sha256: 'x', mimeType: 'image/png' },
-        ]),
+        .mockImplementation(async (_tenant: string, ids: readonly string[]) =>
+          ids.map((id) => ({ id, storageKey: `tenants/t/assets/${id}`, sha256: 'x', mimeType: 'image/png' })),
+        ),
     };
     const artifacts: PublicationArtifacts = {
       renderer: {
@@ -210,24 +211,30 @@ describe('ETARE PDF', () => {
       },
       objects,
       sha256Bytes: bytesHash,
+      images: { documentImage: vi.fn().mockResolvedValue(new Uint8Array([255, 216, 255])) },
     };
     return { objects, store, artifacts };
   };
+  /** The checked files all hold the given bytes: give every approved hash theirs. */
+  const approved = (content: EtareSnapshot, hash: string, mimeType = 'image/png'): EtareSnapshot => ({
+    ...content,
+    plans: content.plans.map((plan) => ({
+      ...plan,
+      background: { ...plan.background, asset: { ...plan.background.asset, sha256: hash, mime_type: mimeType } },
+    })),
+    objects: content.objects.map((object) => ({
+      ...object,
+      ...(object.photos
+        ? { photos: object.photos.map((photo) => ({ ...photo, asset: { ...photo.asset, sha256: hash } })) }
+        : {}),
+    })),
+  });
+  const bare = { ...snapshot, plans: [], objects: [] };
 
   it.each(['image/png', 'image/jpeg', 'image/webp'])(
     'checks %s backgrounds and stores an immutable PDF',
     async (mimeType) => {
-      const expected = await bytesHash(pngBytes);
-      const withHash = {
-        ...snapshot,
-        plans: snapshot.plans.map((plan) => ({
-          ...plan,
-          background: {
-            ...plan.background,
-            asset: { ...plan.background.asset, sha256: expected, mime_type: mimeType },
-          },
-        })),
-      };
+      const withHash = approved(snapshot, await bytesHash(pngBytes), mimeType);
       const publication = { ...(await toBuild(withHash)), contentHash: await tools.sha256(canonicalJson(withHash)) };
       const { objects, store, artifacts } = setup(pngBytes);
       const generated = await generateEtarePdf(
@@ -251,6 +258,11 @@ describe('ETARE PDF', () => {
       );
       const input = vi.mocked(artifacts.renderer.render).mock.calls[0]?.[0];
       expect([...(input?.planImages.keys() ?? [])]).toEqual([background?.revision_id]);
+      // The photo of the annex: reduced from its checked original, never from a thumbnail.
+      expect([...(input?.photoImages.entries() ?? [])]).toEqual([
+        [snapshot.objects[0]?.photos?.[0]?.id, { bytes: new Uint8Array([255, 216, 255]), mimeType: 'image/jpeg' }],
+      ]);
+      expect(artifacts.images.documentImage).toHaveBeenCalledWith(pngBytes);
       const built = await buildPublicationContent(publication, tools, generated);
       expect(built.pdfStorageKey).toBe(generated.storageKey);
     },
@@ -263,8 +275,44 @@ describe('ETARE PDF', () => {
     );
   });
 
+  it('stops when a stored photo is not the approved one', async () => {
+    const content = approved(snapshot, await bytesHash(pngBytes));
+    const photo = content.objects[0]?.photos?.[0];
+    const altered = {
+      ...content,
+      objects: content.objects.map((object) => ({
+        ...object,
+        photos: photo ? [{ ...photo, asset: { ...photo.asset, sha256: 'f'.repeat(64) } }] : [],
+      })),
+    };
+    const { store, artifacts } = setup(pngBytes);
+    await expect(generateEtarePdf(store, artifacts, await toBuild(), altered, new Date())).rejects.toThrow(
+      'PHOTO_HASH_MISMATCH',
+    );
+  });
+
+  it('goes on when a checked photo cannot be decoded: the annex says so', async () => {
+    const content = approved(snapshot, await bytesHash(pngBytes));
+    const { store, artifacts } = setup(pngBytes);
+    vi.mocked(artifacts.images.documentImage).mockRejectedValue(new ImageUnreadable());
+    await generateEtarePdf(store, artifacts, await toBuild(), content, new Date());
+    const input = vi.mocked(artifacts.renderer.render).mock.calls[0]?.[0];
+    expect([...(input?.photoImages.values() ?? [])]).toEqual([null]);
+  });
+
+  it('reads neither plans nor photos for the sections the SIS hides', async () => {
+    const hidden: EtareSnapshot = {
+      ...snapshot,
+      layout: { sections: ['synthesis', 'access', 'risks', 'water', 'energy', 'rescue', 'contacts', 'annexes'] },
+    };
+    const { store, artifacts } = setup(new Uint8Array([9]));
+    await generateEtarePdf(store, artifacts, await toBuild(), hidden, new Date());
+    expect(store.assetFiles).toHaveBeenCalledWith(expect.any(String), []);
+    expect(artifacts.images.documentImage).not.toHaveBeenCalled();
+  });
+
   it('accepts a duplicate upload only when the existing object has the same hash', async () => {
-    const noPlans = { ...snapshot, plans: [] };
+    const noPlans = bare;
     const publication = await toBuild(noPlans);
     const { store, artifacts, objects } = setup(new Uint8Array([37, 80, 68, 70]));
     objects.upload.mockRejectedValue(new Error('OBJECT_EXISTS'));
@@ -276,7 +324,7 @@ describe('ETARE PDF', () => {
   });
 
   it('keeps the published PDF intact when an older attempt finishes after its replacement', async () => {
-    const noPlans = { ...snapshot, plans: [] };
+    const noPlans = bare;
     const publication = { ...(await toBuild(noPlans)), contentHash: await tools.sha256(canonicalJson(noPlans)) };
     const stored = new Map<string, Uint8Array>();
     let currentAttempt = 1;
@@ -303,6 +351,7 @@ describe('ETARE PDF', () => {
     const resume = deferred();
     const artifacts: PublicationArtifacts = {
       sha256Bytes: bytesHash,
+      images: { documentImage: vi.fn() },
       objects: {
         download: async (key) => stored.get(key) ?? null,
         upload: async (key, bytes, _mime, options) => {

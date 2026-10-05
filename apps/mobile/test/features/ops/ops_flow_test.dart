@@ -49,6 +49,8 @@ void main() {
     expect(find.byType(SiteScreen), findsOneWidget);
     expect(find.text('Oxygène médical · gravité forte'), findsOneWidget);
     expect(find.text('PEI principal : HORS SERVICE'), findsOneWidget);
+    // Point critique, comme dans l'aperçu et le PDF (ADR-026).
+    expect(find.text('Stockage O₂ médical · critique'), findsOneWidget);
     expect(find.textContaining('version 2'), findsOneWidget);
     expect(find.text('ERP J cat. 3'), findsOneWidget);
 
@@ -67,6 +69,14 @@ void main() {
     final database = await installedDatabase();
     await pumpApp(tester, database);
     await tester.tap(find.text('EHPAD Les Oliviers'));
+    await tester.pumpAndSettle();
+
+    // Risques : ceux du catalogue puis les points à risque (ADR-026).
+    await tester.tap(find.byKey(SiteScreen.tileKey(OpsSection.risks)));
+    await tester.pumpAndSettle();
+    expect(find.text('Oxygène médical'), findsOneWidget);
+    expect(find.text('Stockage O₂ médical'), findsOneWidget);
+    GoRouter.of(tester.element(find.byType(SectionScreen))).pop();
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(SiteScreen.tileKey(OpsSection.water)));
@@ -119,7 +129,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(
-      find.byKey(SiteScreen.tileKey(OpsSection.documents)),
+      find.byKey(SiteScreen.tileKey(OpsSection.annexes)),
       200,
       scrollable: find
           .descendant(
@@ -128,7 +138,7 @@ void main() {
           )
           .first,
     );
-    await tester.tap(find.byKey(SiteScreen.tileKey(OpsSection.documents)));
+    await tester.tap(find.byKey(SiteScreen.tileKey(OpsSection.annexes)));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Consignes de sécurité'));
     await tester.pumpAndSettle();
@@ -143,7 +153,7 @@ void main() {
     await pumpApp(tester, database);
     await tester.tap(find.text('EHPAD Les Oliviers'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(SiteScreen.tileKey(OpsSection.cuts)));
+    await tester.tap(find.byKey(SiteScreen.tileKey(OpsSection.energy)));
     await tester.pumpAndSettle();
     await tester.tap(find.text('TGBT principal'));
     await tester.pumpAndSettle();

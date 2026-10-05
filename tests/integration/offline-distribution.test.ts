@@ -9,6 +9,7 @@ import { createHash } from 'node:crypto';
 import {
   Ed25519Signer,
   PdfLibEtareRenderer,
+  SharpImageResizer,
   PostgresAssetVerificationStore,
   PostgresJobQueue,
   PostgresPublicationBuildStore,
@@ -63,6 +64,7 @@ const worker = createWorker({
         renderer: new PdfLibEtareRenderer(),
         objects,
         sha256Bytes: sha256,
+        images: new SharpImageResizer(),
       },
     }),
   ]),
