@@ -49,6 +49,12 @@ export function isAppVersionBelow(version: string | null, minimum: string | null
  */
 export const OFFLINE_AUTHORIZATION_DAYS = 7;
 
+/** A "restricted" site opened on demand stays consultable this long on the tablet (ADR-025). */
+export const ON_DEMAND_ACCESS_HOURS = 24;
+
+/** Longest habilitation to the sensitive sites, renewable (ADR-025, porteur 5 octobre 2026). */
+export const SENSITIVE_HABILITATION_MAX_DAYS = 366;
+
 /** An enrollment code is valid one day, once. */
 export const ENROLLMENT_CODE_TTL_HOURS = 24;
 

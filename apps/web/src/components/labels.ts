@@ -248,6 +248,13 @@ export const ETARE_SECTION_LABELS: Readonly<Record<string, string>> = {
   layout: 'Mise en page',
 };
 
+/** Accesses journaled for the sensitive sites (PER-02). */
+export const ACCESS_ACTION_LABELS: Readonly<Record<'view' | 'export' | 'download_offline', string>> = {
+  view: 'Consultation',
+  export: 'Export (PDF, document)',
+  download_offline: 'Ouverture à la demande sur tablette',
+};
+
 export const CHANGE_LABELS: Readonly<Record<'added' | 'removed' | 'modified', string>> = {
   added: 'Ajout',
   removed: 'Suppression',

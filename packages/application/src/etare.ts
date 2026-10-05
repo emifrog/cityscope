@@ -142,6 +142,7 @@ export function previewSiteEtare(
       async (session) => {
         const data = await workingData(session, siteId);
         const snapshot = buildSnapshot(data);
+        await session.accessJournal.record(data.site.id, null, 'view');
         return {
           checks: preSubmissionChecks(data, new Date()),
           snapshot,
@@ -217,6 +218,7 @@ export function getRevision(
 ): Promise<RevisionDetail> {
   return inTenant(sessions, context, 'etare:read', async (session) => {
     const record = found(await session.etare.revision(revisionId), 'Révision introuvable.');
+    await session.accessJournal.record(record.revision.site_id, null, 'view');
     const snapshot = etareSnapshotSchema.safeParse(record.snapshot);
     const base = etareSnapshotSchema.safeParse(record.baseSnapshot);
     return {
@@ -341,9 +343,14 @@ export async function getPublicationPdf(
   const publication = await inTenant(deps.sessions, context, 'publication:read', async (session) => {
     const record = found(await session.etare.publication(publicationId), 'Publication introuvable.');
     if (!record.hasPdf) throw new NotFound('Aucun PDF pour cette version.');
+    // A sensitive site: its back-office roles, or a habilitation for a "restricted" one (PER-02).
+    if (!(await session.accessJournal.exportAllowed(record.id))) {
+      throw new AccessDenied('Site sensible : le PDF est réservé aux personnes habilitées.');
+    }
     await session.audit.record('publication.pdf_download', 'publication', record.id, {
       publication_number: record.publicationNumber,
     });
+    await session.accessJournal.record(record.siteId, record.id, 'export');
     return record;
   });
   const { url, expiresAt } = await storage.createDownloadUrl(

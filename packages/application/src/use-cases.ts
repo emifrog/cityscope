@@ -142,8 +142,11 @@ export async function listSites(
   return inTenant(sessions, context, 'site:read', (session) => session.sites.list(query));
 }
 
+/** The consultation of a sensitive site is journaled (PER-02). */
 export async function getSite(sessions: SessionFactory, context: RequestContext, id: string): Promise<SiteDetail> {
-  return inTenant(sessions, context, 'site:read', async (session) =>
-    found(await session.sites.get(id), 'Site introuvable.'),
-  );
+  return inTenant(sessions, context, 'site:read', async (session) => {
+    const site = found(await session.sites.get(id), 'Site introuvable.');
+    await session.accessJournal.record(site.id, null, 'view');
+    return site;
+  });
 }

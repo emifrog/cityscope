@@ -31,6 +31,7 @@ pas exposé par la Data API Supabase (`supabase/config.toml` → `api.schemas`),
 | `20261005000100_field_reports.sql`                 | Sprint 5 : signalements terrain (`field_report`, `field_report_photo`), permission `field_report:review`, fonctions `sync_*report*` des terminaux, photos de signalement exclues des auteurs des données de travail                          |
 | `20261004000200_object_photos.sql`                 | Sprint 4 : photos des objets (`object_photo`) : image contrôlée du même site, rattachement immuable, archivage définitif, jamais supprimée                                                                                                   |
 | `20261014000100_etare_layout.sql`                  | Sprint 10 : sections masquées par le SIS (`etare_layout_settings`, `update_etare_layout_settings`, `catalog:manage`, audité), figées dans l’instantané soumis                                                                                |
+| `20261014000300_sensitive_sites.sql`               | Sprint 10 : sensibilité effective, habilitation nominative datée (`sensitive_habilitation`), journal `access_event` (ajout seul), ouverture à la demande des sites restreints (`on_demand`), sites élevés jamais distribués                  |
 | `20261014000200_sectors.sql`                       | Sprint 10 : `sector`, `sector_commune`, `sector_site`, portée « secteur » de `has_permission`, `holds_permission_on_part`, affectation des terminaux (`device.scope`, `device_sector`), catalogue à l’intersection et retraits « périmètre » |
 
 ## Correspondance avec les documents de cadrage
@@ -58,7 +59,9 @@ dans le SIS), `site_edit` (auteurs des modifications de chaque site).
 Ajoutés au Sprint 10 : `sector` (groupes de sites par commune et site par site, plutôt qu’une géométrie),
 `device_sector` (affectation des terminaux, à la place de `sync_subscription`).
 
-Pas encore créés : `organization`, `scenario`, `access_event`, intégrations.
+`access_event` est créé au Sprint 10 (journal des sites sensibles), avec `sensitive_habilitation`.
+
+Pas encore créés : `organization`, `scenario`, intégrations.
 
 ## Règles structurantes
 
@@ -311,6 +314,30 @@ Voir ADR-025 (DEC-04) et le test `260_sectors`.
 - **Archivage** : un secteur encore affecté à des membres ou des terminaux n’est pas archivé (`ETSCU`).
 - **Audit** : compositions et périmètres sont audités (`sector.composition`, `member.perimeter`,
   `device.perimeter`).
+
+## Sites sensibles
+
+Voir ADR-025 (DEC-04) et le test `270_sensitive_sites`.
+
+- **Sensibilité effective** (`effective_sensitivity`) : la plus restrictive de la version publiée et du
+  site au moment présent. Changer la sensibilité d’un site fait avancer la génération du catalogue.
+- **Habilitation** (`sensitive_habilitation`) :
+  - nominative, pour tout le SIS ou par secteur, datée de douze mois au plus (`ETHAB`) ;
+  - révocable, auditée ;
+  - fixée par `admin_set_sensitive_access` (`member:manage`) ;
+  - `holds_sensitive_access` répond pour la personne courante et un site.
+- **Distribution** :
+  - `distributable_publication` sert un site normal, ou un site restreint à une personne habilitée,
+    jamais un site élevé ;
+  - `sync_catalog` sépare `publications` (installées en masse) et `on_demand` (sites restreints
+    proposés à la demande).
+- **Journal** (`access_event`) :
+  - ajout seul, lisible avec `audit:read` ;
+  - `record_site_access` n’écrit que pour un site sensible : consultations du web comptées une fois par
+    cinq minutes, événements des tablettes une fois par identifiant, horloge de tablette bornée ;
+  - `access_journal` le lit pour l’administration.
+- **Export** : `publication_export_allowed` réserve le PDF d’un site sensible à ses rôles du back-office,
+  ou aux personnes habilitées pour un site restreint.
 
 ## Habilitations des membres
 

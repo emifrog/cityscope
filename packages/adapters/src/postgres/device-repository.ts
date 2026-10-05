@@ -96,6 +96,9 @@ interface CatalogRow {
   site_name: string;
 }
 
+const toCatalogEntry = (entry: CatalogRow): CatalogEntry =>
+  catalogEntrySchema.parse({ ...entry, published_at: new Date(entry.published_at).toISOString() });
+
 /**
  * Administration reads are plain queries under RLS (device:manage); every
  * change and every terminal access goes through app.admin_* and app.sync_*
@@ -114,8 +117,10 @@ export class PostgresDeviceRepository implements DeviceRepository {
         `select coalesce((select g.generation from app.distribution_generation g
                           where g.tenant_id = app.current_tenant_id()), 0) as generation,
                 (select count(*)::int from app.publication p
+                 join app.site s on s.tenant_id = p.tenant_id and s.id = p.site_id
                  where p.tenant_id = app.current_tenant_id() and p.status = 'published'
-                   and (p.manifest_signature is null or p.sensitivity <> 'normal')) as undistributed`,
+                   and (p.manifest_signature is null
+                        or app.effective_sensitivity(p.sensitivity, s.sensitivity) <> 'normal')) as undistributed`,
       ),
     ]);
     const now = this.now();
@@ -198,6 +203,7 @@ export class PostgresDeviceRepository implements DeviceRepository {
     generation: number;
     tenantName: string;
     publications: CatalogEntry[];
+    onDemand: CatalogEntry[];
     withdrawals: CatalogWithdrawal[];
   }> {
     const { rows } = await this.client.query<{
@@ -205,6 +211,7 @@ export class PostgresDeviceRepository implements DeviceRepository {
         generation: number;
         tenant_name: string;
         publications: CatalogRow[];
+        on_demand?: CatalogRow[];
         withdrawals?: (Omit<CatalogWithdrawal, 'at'> & { at: string })[];
       };
     }>('select app.sync_catalog($1, $2) as catalog', [deviceId, appVersion]);
@@ -213,9 +220,8 @@ export class PostgresDeviceRepository implements DeviceRepository {
     return {
       generation: Number(catalog.generation),
       tenantName: catalog.tenant_name,
-      publications: catalog.publications.map((entry) =>
-        catalogEntrySchema.parse({ ...entry, published_at: new Date(entry.published_at).toISOString() }),
-      ),
+      publications: catalog.publications.map(toCatalogEntry),
+      onDemand: (catalog.on_demand ?? []).map(toCatalogEntry),
       withdrawals: (catalog.withdrawals ?? []).map((entry) =>
         catalogWithdrawalSchema.parse({ ...entry, at: new Date(entry.at).toISOString() }),
       ),
@@ -224,17 +230,20 @@ export class PostgresDeviceRepository implements DeviceRepository {
 
   async package(deviceId: string, publicationId: string): Promise<DistributedPackage | null> {
     const { rows } = await this.client.query<{
+      site_id: string;
       manifest: unknown;
       manifest_hash: string;
       manifest_signature: unknown;
       payload: unknown;
-    }>('select manifest, manifest_hash, manifest_signature, payload from app.sync_package($1, $2)', [
-      deviceId,
-      publicationId,
-    ]);
+    }>(
+      `select manifest ->> 'site_id' as site_id, manifest, manifest_hash, manifest_signature, payload
+       from app.sync_package($1, $2)`,
+      [deviceId, publicationId],
+    );
     const row = rows[0];
     if (!row) return null;
     return {
+      siteId: row.site_id,
       manifest: row.manifest,
       manifestHash: row.manifest_hash,
       signature: signatureSchema.parse(row.manifest_signature),

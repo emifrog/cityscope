@@ -4,6 +4,7 @@ import {
   type Member,
   type MemberInvite,
   type MemberPerimeterInput,
+  type MemberSensitiveAccessInput,
   type MemberUpdate,
 } from '@etare/contracts';
 import type { PoolClient } from './pool';
@@ -19,6 +20,7 @@ interface MemberRow {
   roles: string[];
   site_roles: { role: string; site_id: string; site_name: string | null }[];
   perimeter: { sectors: { id: string; name: string }[]; sites: { id: string; name: string }[] } | null;
+  sensitive_access: { sectors: { id: string; name: string }[]; valid_until: string } | null;
   is_self: boolean;
   last_sign_in_at: Date | null;
   second_factor: boolean | null;
@@ -46,7 +48,16 @@ const MEMBER_SELECT = `
                                    filter (where b.scope_type = 'sector'), '[]'),
              'sites', coalesce(jsonb_agg(distinct jsonb_build_object('id', s.id, 'name', coalesce(s.name, 'Site')))
                                  filter (where b.scope_type = 'site' and r.code <> 'EXPLOITANT'), '[]'))
-         end as perimeter
+         end as perimeter,
+         -- Habilitation to the sensitive sites (PER-02): whole SIS when no sector.
+         (select jsonb_build_object(
+                   'valid_until', min(h.valid_until),
+                   'sectors', coalesce(jsonb_agg(jsonb_build_object('id', sc2.id, 'name', sc2.name))
+                                         filter (where h.scope_type = 'sector'), '[]'))
+          from app.sensitive_habilitation h
+          left join app.sector sc2 on sc2.id = h.scope_id
+          where h.membership_id = m.id and h.revoked_at is null and h.valid_until > now()
+          having count(*) > 0) as sensitive_access
   from app.membership m
   join app.user_account u on u.id = m.user_id
   left join app.member_identity_states() ids on ids.user_id = m.user_id
@@ -60,6 +71,9 @@ const MEMBER_SELECT = `
 const toMember = (row: MemberRow): Member =>
   memberSchema.parse({
     ...row,
+    sensitive_access: row.sensitive_access
+      ? { ...row.sensitive_access, valid_until: new Date(row.sensitive_access.valid_until).toISOString() }
+      : null,
     created_at: toIso(row.created_at),
     last_sign_in_at: row.last_sign_in_at ? toIso(row.last_sign_in_at) : null,
     second_factor: row.second_factor === true,
@@ -107,6 +121,20 @@ export class PostgresMemberRepository implements MemberRepository {
       expectedVersion,
       input.sector_ids,
       input.site_ids,
+    ]);
+    return this.get(id);
+  }
+
+  async setSensitiveAccess(
+    id: string,
+    expectedVersion: number,
+    input: MemberSensitiveAccessInput,
+  ): Promise<Member | null> {
+    await this.client.query('select app.admin_set_sensitive_access($1, $2, $3::uuid[], $4)', [
+      id,
+      expectedVersion,
+      input.sector_ids,
+      input.valid_until,
     ]);
     return this.get(id);
   }

@@ -103,6 +103,9 @@ import {
   updateLevel,
   updateMember,
   setMemberPerimeter,
+  setMemberSensitiveAccess,
+  listAccessEvents,
+  submitAccessEvents,
   setDevicePerimeter,
   listSectors,
   listSectorCommunes,
@@ -908,6 +911,24 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     );
   });
 
+  app.put(routerPath(endpoints.setMemberSensitiveAccess.path), async (c) => {
+    const context = await requestContext(c, endpoints.setMemberSensitiveAccess);
+    const version = expectedVersion(c);
+    const input = await readBody(c, endpoints.setMemberSensitiveAccess.body);
+    return respond(
+      c,
+      endpoints.setMemberSensitiveAccess,
+      await setMemberSensitiveAccess(deps.sessions, context, idOf(c), version, input),
+    );
+  });
+
+  // ---------------------------------------------------------------- journal of the sensitive sites (PER-02)
+  app.get(routerPath(endpoints.listAccessEvents.path), async (c) => {
+    const context = await requestContext(c, endpoints.listAccessEvents);
+    const query = endpoints.listAccessEvents.query.parse(c.req.query());
+    return respond(c, endpoints.listAccessEvents, await listAccessEvents(deps.sessions, context, query));
+  });
+
   // ---------------------------------------------------------------- sectors (PER-01, ADR-025)
   app.get(routerPath(endpoints.listSectors.path), async (c) => {
     const context = await requestContext(c, endpoints.listSectors);
@@ -1116,6 +1137,16 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     );
     if (!body) throw new InvalidInput();
     return respond(c, endpoints.recordSyncReceipt, await recordSyncReceipt(deps, context, proof, body));
+  });
+
+  app.post(routerPath(endpoints.submitAccessEvents.path), async (c) => {
+    const { context, proof, body } = await deviceRequest(
+      c,
+      endpoints.submitAccessEvents,
+      endpoints.submitAccessEvents.body,
+    );
+    if (!body) throw new InvalidInput();
+    return respond(c, endpoints.submitAccessEvents, await submitAccessEvents(deps, context, proof, body));
   });
 
   // ---------------------------------------------------------------- field reports (OPS-04, ADR-017)

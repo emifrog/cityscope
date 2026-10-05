@@ -206,6 +206,11 @@ export const syncCatalogSchema = z
      */
     min_app_version: z.string().regex(APP_VERSION_PATTERN).nullable(),
     publications: z.array(catalogEntrySchema),
+    /**
+     * "Restricted" sites offered on demand to the habilitated person (PER-02): never installed in
+     * bulk, opened one by one with the network, consultable 24 hours, the local code asked each time.
+     */
+    on_demand: z.array(catalogEntrySchema),
     /** Sites held by the terminal whose version was withdrawn or which were archived (MET-04). */
     withdrawals: z.array(catalogWithdrawalSchema),
   })
@@ -228,6 +233,8 @@ export const syncPackageSchema = z
     signature: signatureSchema,
     /** Canonical JSON of the data file (data/site.json), checked against the manifest. */
     data: z.string(),
+    /** End of the local consultation of a sensitive site opened on demand; null for the others. */
+    access_expires_at: isoDateTimeSchema.nullable(),
   })
   .meta({ id: 'SyncPackage' });
 export type SyncPackage = z.infer<typeof syncPackageSchema>;

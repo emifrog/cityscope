@@ -146,6 +146,7 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       add: unstubbed('members.add'),
       update: unstubbed('members.update'),
       setPerimeter: unstubbed('members.setPerimeter'),
+      setSensitiveAccess: unstubbed('members.setSensitiveAccess'),
       resetSecondFactor: unstubbed('members.resetSecondFactor'),
       ...overrides.members,
     },
@@ -211,5 +212,12 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
     },
     jobs: { enqueue: unstubbed('jobs.enqueue'), ...overrides.jobs },
     audit: { record: unstubbed('audit.record'), ...overrides.audit },
+    // Normal sites by default: nothing journaled unless a test says otherwise.
+    accessJournal: {
+      record: async () => 'normal',
+      list: unstubbed('accessJournal.list'),
+      exportAllowed: async () => true,
+      ...overrides.accessJournal,
+    },
   };
 }

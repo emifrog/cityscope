@@ -1,3 +1,4 @@
+export * from './access-events';
 export * from './account';
 export * from './contributions';
 export * from './documents';

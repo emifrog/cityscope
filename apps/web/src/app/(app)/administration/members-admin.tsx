@@ -52,6 +52,94 @@ function AccessCell({ member }: { member: Member }) {
   );
 }
 
+const dayFormat = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeZone: 'Europe/Paris' });
+/** End of a habilitation proposed by default: one year, the longest allowed (ADR-025). */
+const inOneYear = () => new Date(Date.now() + 365 * 86_400_000).toISOString().slice(0, 10);
+
+/** Habilitation to the "restricted" sites, dated (PER-02). */
+function SensitiveAccessBadge({ member }: { member: Member }) {
+  if (!member.sensitive_access) return null;
+  const scope =
+    member.sensitive_access.sectors.length === 0
+      ? 'tout le SIS'
+      : member.sensitive_access.sectors.map((sector) => sector.name).join(', ');
+  return (
+    <Badge tone="important">
+      Sites sensibles ({scope}) jusqu’au {dayFormat.format(new Date(member.sensitive_access.valid_until))}
+    </Badge>
+  );
+}
+
+function SensitiveAccessForm({ member, onDone }: { member: Member; onDone: () => void }) {
+  const [sectors, setSectors] = useState<SectorSelection>({
+    whole: (member.sensitive_access?.sectors.length ?? 0) === 0,
+    sectorIds: member.sensitive_access?.sectors.map((sector) => sector.id) ?? [],
+  });
+  const [until, setUntil] = useState(member.sensitive_access?.valid_until.slice(0, 10) ?? inOneYear());
+  const save = useApiMutation(
+    (options, input: { sector_ids: string[]; valid_until: string | null }) =>
+      api.setMemberSensitiveAccess(options, member.id, member.row_version, input),
+    (tenantId) => [queryKeys.members(tenantId)],
+  );
+  const incomplete = (!sectors.whole && sectors.sectorIds.length === 0) || until.length !== 10;
+  return (
+    <div className="max-w-2xl space-y-3">
+      {save.error ? <ApiErrorAlert error={save.error} /> : null}
+      <p className="text-sm">
+        L’habilitation est nominative et datée (douze mois au plus, renouvelable). Elle permet d’ouvrir à la demande,
+        sur une tablette, les sites « restreints » de son périmètre ; les sites « élevés » ne vont jamais sur tablette.
+      </p>
+      <SectorChoice
+        name={`sensitive-${member.id}`}
+        wholeLabel="Tous les sites restreints du SIS"
+        limitedLabel="Les sites restreints de certains secteurs"
+        value={sectors}
+        onChange={setSectors}
+      />
+      <Field label="Jusqu’au" htmlFor={`sensitive-until-${member.id}`}>
+        <Input
+          id={`sensitive-until-${member.id}`}
+          type="date"
+          value={until}
+          max={inOneYear()}
+          onChange={(event) => setUntil(event.target.value)}
+        />
+      </Field>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          disabled={save.isPending || incomplete}
+          onClick={() =>
+            save.mutate(
+              {
+                sector_ids: sectors.whole ? [] : [...sectors.sectorIds],
+                // End of the chosen day, in the time of the administrator.
+                valid_until: new Date(`${until}T23:59:59`).toISOString(),
+              },
+              { onSuccess: onDone },
+            )
+          }
+        >
+          {save.isPending ? 'Enregistrement…' : member.sensitive_access ? 'Renouveler' : 'Habiliter'}
+        </Button>
+        {member.sensitive_access ? (
+          <Button
+            size="sm"
+            variant="danger"
+            disabled={save.isPending}
+            onClick={() => save.mutate({ sector_ids: [], valid_until: null }, { onSuccess: onDone })}
+          >
+            Retirer l’habilitation
+          </Button>
+        ) : null}
+        <Button size="sm" variant="secondary" onClick={onDone}>
+          Annuler
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /** "Tout le SIS" or the sectors and sites the roles are limited to (PER-01). */
 function PerimeterBadge({ member }: { member: Member }) {
   if (member.roles.length === 0) return null;
@@ -284,6 +372,7 @@ function InviteForm({ onClose }: { onClose: (result: MemberInvitation | null) =>
 function MemberRow({ member }: { member: Member }) {
   const [editing, setEditing] = useState(false);
   const [limiting, setLimiting] = useState(false);
+  const [habilitating, setHabilitating] = useState(false);
   const [roles, setRoles] = useState<TenantWideRole[]>(() =>
     member.roles.filter((role): role is TenantWideRole => (TENANT_WIDE_ROLES as readonly string[]).includes(role)),
   );
@@ -326,8 +415,9 @@ function MemberRow({ member }: { member: Member }) {
               <span className="text-xs text-muted">Aucun rôle</span>
             ) : null}
           </div>
-          <div className="mt-1">
+          <div className="mt-1 flex flex-wrap gap-1">
             <PerimeterBadge member={member} />
+            <SensitiveAccessBadge member={member} />
           </div>
         </TableCell>
         <TableCell>
@@ -352,6 +442,14 @@ function MemberRow({ member }: { member: Member }) {
               <Button
                 size="sm"
                 variant="ghost"
+                onClick={() => setHabilitating((open) => !open)}
+                aria-expanded={habilitating}
+              >
+                Sites sensibles
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
                 disabled={update.isPending}
                 onClick={() => update.mutate({ status: suspended ? 'active' : 'suspended' })}
               >
@@ -366,6 +464,13 @@ function MemberRow({ member }: { member: Member }) {
           )}
         </TableCell>
       </TableRow>
+      {habilitating ? (
+        <TableRow>
+          <TableCell colSpan={5} className="bg-subtle/40">
+            <SensitiveAccessForm member={member} onDone={() => setHabilitating(false)} />
+          </TableCell>
+        </TableRow>
+      ) : null}
       {limiting ? (
         <TableRow>
           <TableCell colSpan={5} className="bg-subtle/40">

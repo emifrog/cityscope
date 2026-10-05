@@ -23,6 +23,11 @@ export const memberSchema = z
     site_roles: z.array(z.object({ role: roleSchema, site_id: uuidSchema, site_name: z.string().nullable() })),
     /** Perimeter of the roles above (PER-01): null for the whole SIS, otherwise sectors and sites. */
     perimeter: z.object({ sectors: z.array(namedRefSchema), sites: z.array(namedRefSchema) }).nullable(),
+    /** Habilitation to the "restricted" sites (PER-02): whole SIS when no sector; null when none. */
+    sensitive_access: z
+      .object({ sectors: z.array(namedRefSchema), valid_until: isoDateTimeSchema })
+      .meta({ id: 'SensitiveAccess' })
+      .nullable(),
     /** The member is the caller: their own roles and status cannot be changed here. */
     is_self: z.boolean(),
     /** Null: the person never signed in (invitation not accepted yet). */
@@ -57,6 +62,12 @@ export const memberInvitationSchema = z
   })
   .meta({ id: 'MemberInvitation' });
 export type MemberInvitation = z.infer<typeof memberInvitationSchema>;
+
+/** Grants (valid_until set, twelve months at most) or revokes (null) the habilitation to the sensitive sites. */
+export const memberSensitiveAccessSchema = z
+  .object({ sector_ids: z.array(uuidSchema).max(50), valid_until: isoDateTimeSchema.nullable() })
+  .meta({ id: 'MemberSensitiveAccess' });
+export type MemberSensitiveAccessInput = z.infer<typeof memberSensitiveAccessSchema>;
 
 export const memberUpdateSchema = z
   .object({

@@ -29,6 +29,7 @@ const member: Member = {
   roles: ['READER'],
   site_roles: [],
   perimeter: null,
+  sensitive_access: null,
   is_self: false,
   last_sign_in_at: null,
   second_factor: false,

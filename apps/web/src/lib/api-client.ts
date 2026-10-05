@@ -77,6 +77,9 @@ import {
   type DeviceRevoke,
   type DevicePerimeterInput,
   type MemberPerimeterInput,
+  type MemberSensitiveAccessInput,
+  type AccessEventList,
+  type AccessEventListQuery,
   type Sector,
   type SectorCommuneList,
   type SectorList,
@@ -800,6 +803,26 @@ export const api = {
       body: input,
       ifMatch: version,
     }),
+
+  setMemberSensitiveAccess: (
+    options: ApiCallOptions,
+    id: string,
+    version: number,
+    input: MemberSensitiveAccessInput,
+  ): Promise<Member> =>
+    call(
+      endpoints.setMemberSensitiveAccess.response,
+      pathOf(endpoints.setMemberSensitiveAccess.path, { id }),
+      options,
+      {
+        method: 'PUT',
+        body: input,
+        ifMatch: version,
+      },
+    ),
+
+  listAccessEvents: (options: ApiCallOptions, query: Partial<AccessEventListQuery> = {}): Promise<AccessEventList> =>
+    call(endpoints.listAccessEvents.response, endpoints.listAccessEvents.path, options, { query }),
 
   // ---------------------------------------------------------------- sectors (PER-01)
   listSectors: (options: ApiCallOptions): Promise<SectorList> =>

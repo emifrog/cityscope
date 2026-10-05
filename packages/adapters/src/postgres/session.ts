@@ -17,6 +17,7 @@ import {
   type ResolvedAccess,
 } from '@etare/domain';
 import { z } from 'zod';
+import { PostgresAccessJournal } from './access-journal';
 import { PostgresAccountRepository, PostgresSecuritySettingsRepository } from './account-repository';
 import { PostgresBuildingRepository } from './building-repository';
 import { PostgresDeviceRepository } from './device-repository';
@@ -97,6 +98,7 @@ export class PostgresSessionFactory implements SessionFactory {
         notifications: new PostgresNotificationRepository(client),
         jobs: new PostgresJobScheduler(client),
         audit: new PostgresAuditRecorder(client),
+        accessJournal: new PostgresAccessJournal(client),
       });
       // The terminal named by the request may have stood for the second factor of the
       // account: nothing commits nor answers unless its signature was verified.
@@ -256,6 +258,10 @@ export function translateDatabaseError(error: unknown): unknown {
       return new NotFound('Membre introuvable dans votre SIS.');
     case 'ETD04':
       return new NotFound('Terminal introuvable dans votre SIS.');
+    case 'ETHAB':
+      return new InvalidInput('Une habilitation dure douze mois au plus : choisissez une date de fin plus proche.', [
+        { path: 'valid_until', message: 'Douze mois au plus.' },
+      ]);
     case 'ETS04':
       return new NotFound('Secteur introuvable dans votre SIS.');
     case 'ETS12':

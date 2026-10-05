@@ -73,7 +73,11 @@ import type {
   Member,
   MemberInvite,
   MemberPerimeterInput,
+  MemberSensitiveAccessInput,
   MemberUpdate,
+  AccessAction,
+  AccessEventList,
+  AccessEventListQuery,
   Sector,
   SectorCommuneList,
   SectorList,
@@ -99,6 +103,7 @@ import type {
   RequestContext,
   ResolvedAccess,
   ScanStatus,
+  Sensitivity,
   SignatureContext,
 } from '@etare/domain';
 
@@ -138,6 +143,26 @@ export interface RequestSession {
   readonly notifications: NotificationRepository;
   readonly jobs: JobScheduler;
   readonly audit: AuditRecorder;
+  readonly accessJournal: AccessJournal;
+}
+
+/**
+ * Journal of the accesses to sensitive sites (PER-02): only sensitive sites are
+ * written, web views of one person on one site counted once per five minutes,
+ * tablet events once by their identifier.
+ */
+export interface AccessJournal {
+  /** Returns the effective sensitivity of the site (null: unknown in the SIS). */
+  record(
+    siteId: string,
+    publicationId: string | null,
+    action: AccessAction,
+    device?: { readonly deviceId: string; readonly clientEventId?: string; readonly occurredAt?: Date },
+  ): Promise<Sensitivity | null>;
+  /** audit:read; newest first. */
+  list(query: AccessEventListQuery): Promise<AccessEventList>;
+  /** May the caller export (PDF) this version? A sensitive site needs its back-office roles or a habilitation. */
+  exportAllowed(publicationId: string): Promise<boolean>;
 }
 
 export interface SessionOptions {
@@ -260,6 +285,8 @@ export interface StoredAsset {
   /** Reduced images (320 and 1 280 px, WebP) of a clean image, once computed by the worker. */
   readonly thumbnailKey?: string | null;
   readonly previewKey?: string | null;
+  /** Site the file belongs to (null for a file of no site). */
+  readonly siteId?: string | null;
 }
 
 export interface AssetRepository {
@@ -288,6 +315,8 @@ export interface MemberRepository {
   update(id: string, expectedVersion: number, patch: MemberUpdate): Promise<Member | null>;
   /** Limits the roles of a member to sectors and sites (both empty: the whole SIS). */
   setPerimeter(id: string, expectedVersion: number, input: MemberPerimeterInput): Promise<Member | null>;
+  /** Grants (dated) or revokes the habilitation to the sensitive sites (PER-02). */
+  setSensitiveAccess(id: string, expectedVersion: number, input: MemberSensitiveAccessInput): Promise<Member | null>;
   /** Removes the second factor of a member (and their sessions); a new one is then required. */
   resetSecondFactor(id: string, expectedVersion: number): Promise<Member | null>;
 }
@@ -567,6 +596,7 @@ export interface DeviceSignatureVerifier {
 
 /** A publication as distributed to terminals: signed manifest and data, as built by the worker. */
 export interface DistributedPackage {
+  readonly siteId: string;
   readonly manifest: unknown;
   readonly manifestHash: string;
   readonly signature: Signature;
@@ -694,6 +724,7 @@ export interface DeviceRepository {
     generation: number;
     tenantName: string;
     publications: CatalogEntry[];
+    onDemand: CatalogEntry[];
     withdrawals: CatalogWithdrawal[];
   }>;
   /** Null when the publication is not (or no longer) distributable. */

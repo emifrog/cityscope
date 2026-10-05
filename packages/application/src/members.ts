@@ -1,4 +1,11 @@
-import type { Member, MemberInvitation, MemberInvite, MemberPerimeterInput, MemberUpdate } from '@etare/contracts';
+import type {
+  Member,
+  MemberInvitation,
+  MemberInvite,
+  MemberPerimeterInput,
+  MemberSensitiveAccessInput,
+  MemberUpdate,
+} from '@etare/contracts';
 import { ServiceUnavailable, type RequestContext } from '@etare/domain';
 import type { IdentityProvisioner, RequestSession, SessionFactory } from './ports';
 import { found, inTenant } from './use-cases';
@@ -80,6 +87,22 @@ export async function setMemberPerimeter(
 ): Promise<Member> {
   return inTenant(sessions, context, 'member:manage', async (session) =>
     found(await session.members.setPerimeter(id, expectedVersion, input), 'Membre introuvable.'),
+  );
+}
+
+/**
+ * Habilitation to the "restricted" sensitive sites (PER-02): nominative, dated
+ * (twelve months at most, renewable), for the whole SIS or sectors; null revokes it.
+ */
+export async function setMemberSensitiveAccess(
+  sessions: SessionFactory,
+  context: RequestContext,
+  id: string,
+  expectedVersion: number,
+  input: MemberSensitiveAccessInput,
+): Promise<Member> {
+  return inTenant(sessions, context, 'member:manage', async (session) =>
+    found(await session.members.setSensitiveAccess(id, expectedVersion, input), 'Membre introuvable.'),
   );
 }
 

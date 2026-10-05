@@ -9,6 +9,7 @@ import { TabLinks } from '@/components/tab-links';
 import { usePermissions } from '@/lib/queries';
 import { useSession } from '@/providers/session-provider';
 import { useTenant } from '@/providers/tenant-provider';
+import { AccessJournalAdmin } from './access-journal-admin';
 import { DevicesAdmin } from './devices-admin';
 import { MembersAdmin } from './members-admin';
 import { NotificationsAdmin } from './notifications-admin';
@@ -22,6 +23,7 @@ const TABS: readonly { key: string; label: string; permission: Permission }[] = 
   { key: 'terminaux', label: 'Terminaux', permission: 'device:manage' },
   { key: 'risques', label: 'Catalogue des risques', permission: 'catalog:manage' },
   { key: 'notifications', label: 'Notifications', permission: 'member:manage' },
+  { key: 'journal', label: 'Journal des sites sensibles', permission: 'audit:read' },
   { key: 'parametres', label: 'Paramètres', permission: 'member:manage' },
 ];
 
@@ -60,6 +62,8 @@ export function AdminView() {
         <DevicesAdmin />
       ) : tab.key === 'notifications' ? (
         <NotificationsAdmin />
+      ) : tab.key === 'journal' ? (
+        <AccessJournalAdmin />
       ) : tab.key === 'parametres' ? (
         <SettingsAdmin />
       ) : (

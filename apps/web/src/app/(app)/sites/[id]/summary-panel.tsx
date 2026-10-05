@@ -117,6 +117,15 @@ export function SummaryPanel({ site }: { site: SiteDetail }) {
                 </Item>
                 <Item label="Dernière modification">{dateFormat.format(new Date(site.updated_at))}</Item>
               </dl>
+              {site.sensitivity !== 'normal' ? (
+                <p className="mt-4 text-xs text-muted">
+                  Site sensible : ses consultations, exports et ouvertures sur tablette sont tracés (journal de
+                  l’administration).{' '}
+                  {site.sensitivity === 'restricted'
+                    ? 'Sur tablette, il s’ouvre à la demande, pour les seules personnes habilitées.'
+                    : 'Il n’est jamais diffusé sur les tablettes.'}
+                </p>
+              ) : null}
             </>
           )}
         </CardContent>

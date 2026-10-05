@@ -106,6 +106,8 @@ export async function getAssetDownload(
       requested === 'thumbnail' ? visible.thumbnailKey : requested === 'preview' ? visible.previewKey : null;
     const served: AssetVariant = reduced ? requested : 'original';
     await session.audit.record('asset.download', 'asset', visible.id, { filename: visible.filename, variant: served });
+    // A file of a sensitive site leaving the back-office is an export (PER-02).
+    if (visible.siteId) await session.accessJournal.record(visible.siteId, null, 'export');
     return { asset: visible, variant: served, key: reduced ?? visible.storageKey };
   });
   const { url, expiresAt } = await storage.createDownloadUrl(key, DOWNLOAD_URL_SECONDS);

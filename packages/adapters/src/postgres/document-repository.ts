@@ -198,8 +198,9 @@ export class PostgresAssetRepository implements AssetRepository {
       scan_status: ScanStatus;
       thumbnail_key: string | null;
       preview_key: string | null;
+      site_id: string | null;
     }>(
-      `select id, storage_key, filename, mime_type, scan_status, thumbnail_key, preview_key from app.asset
+      `select id, storage_key, filename, mime_type, scan_status, thumbnail_key, preview_key, site_id from app.asset
        where id = $1 and tenant_id = app.current_tenant_id()`,
       [id],
     );
@@ -212,6 +213,7 @@ export class PostgresAssetRepository implements AssetRepository {
           mimeType: row.mime_type,
           scanStatus: row.scan_status,
           thumbnailKey: row.thumbnail_key,
+          siteId: row.site_id,
           previewKey: row.preview_key,
         }
       : null;

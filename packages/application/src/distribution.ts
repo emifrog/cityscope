@@ -7,6 +7,8 @@ import {
   type DeviceEnrollmentCode,
   type DeviceList,
   type DeviceRevoke,
+  type SyncAccessEvents,
+  type SyncAccessEventsResult,
   type Device,
   type SignedCatalog,
   type SyncCatalog,
@@ -27,6 +29,7 @@ import {
   ENROLLMENT_CODE_TTL_HOURS,
   InvalidInput,
   OFFLINE_AUTHORIZATION_DAYS,
+  ON_DEMAND_ACCESS_HOURS,
   SIGNATURE_CONTEXTS,
   ServiceUnavailable,
   TenantRequired,
@@ -220,7 +223,7 @@ export async function getSyncCatalog(
   proof: DeviceProof,
 ): Promise<SignedCatalog> {
   return asDevice(deps, context, proof, async (session, signer) => {
-    const { generation, tenantName, publications, withdrawals } = await session.devices.catalog(
+    const { generation, tenantName, publications, onDemand, withdrawals } = await session.devices.catalog(
       proof.deviceId,
       proof.appVersion,
     );
@@ -239,6 +242,7 @@ export async function getSyncCatalog(
       },
       min_app_version: deps.minAppVersion ?? null,
       publications,
+      on_demand: onDemand,
       withdrawals,
     } satisfies SyncCatalog);
     const text = canonicalJson(catalog);
@@ -253,16 +257,28 @@ export async function getSyncPackage(
   proof: DeviceProof,
   publicationId: string,
 ): Promise<SyncPackage> {
-  const distributed = await asDevice(deps, context, proof, async (session) =>
-    found(
+  const now = deps.now();
+  const { distributed, sensitivity } = await asDevice(deps, context, proof, async (session) => {
+    const served = found(
       await session.devices.package(proof.deviceId, publicationId),
       'Version non distribuée : relancez la synchronisation.',
-    ),
-  );
+    );
+    // A sensitive site opened on demand: journaled, consultable 24 hours on the tablet (PER-02).
+    const level = await session.accessJournal.record(served.siteId, publicationId, 'download_offline', {
+      deviceId: proof.deviceId,
+    });
+    return { distributed: served, sensitivity: level };
+  });
   const manifest = canonicalJson(distributed.manifest);
   // Never serve a manifest that is not the one signed and hashed at build time.
   if ((await deps.sha256(manifest)) !== distributed.manifestHash) throw new Error('MANIFEST_HASH_MISMATCH');
-  return { manifest, signature: distributed.signature, data: canonicalJson(distributed.payload) };
+  return {
+    manifest,
+    signature: distributed.signature,
+    data: canonicalJson(distributed.payload),
+    access_expires_at:
+      sensitivity === 'restricted' ? new Date(now.getTime() + ON_DEMAND_ACCESS_HOURS * 3_600_000).toISOString() : null,
+  };
 }
 
 /** Short-lived URLs of the files the terminal is missing, after authorization and audit. */
@@ -292,6 +308,25 @@ export async function createSyncDownloads(
       }),
     ),
   };
+}
+
+/** Offline consultations of sensitive sites, sent at the next contact: journaled once each (PER-02). */
+export async function submitAccessEvents(
+  deps: DistributionDependencies,
+  context: RequestContext,
+  proof: DeviceProof,
+  input: SyncAccessEvents,
+): Promise<SyncAccessEventsResult> {
+  return asDevice(deps, context, proof, async (session) => {
+    for (const event of input.events) {
+      await session.accessJournal.record(event.site_id, event.publication_id, event.action, {
+        deviceId: proof.deviceId,
+        clientEventId: event.client_event_id,
+        occurredAt: new Date(event.occurred_at),
+      });
+    }
+    return { received: input.events.length };
+  });
 }
 
 export async function recordSyncReceipt(

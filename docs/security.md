@@ -187,7 +187,23 @@ Voir ADR-015.
   méthode, le chemin, l’heure (± 5 min) et le corps ; PostgreSQL revérifie `offline:download`, le SIS et
   l’état du terminal. Un terminal révoqué est refusé à la requête suivante (`DEVICE_REVOKED`).
 - Fichiers : URL signées de 5 minutes, seulement pour des empreintes présentes dans le manifeste d’une
-  version distribuable ; téléchargements audités. Les sites sensibles ne sont pas distribués.
+  version distribuable ; téléchargements audités.
+- Périmètres (PER-01, ADR-025) : le catalogue signé ne contient que l’intersection des secteurs de la
+  tablette et du périmètre de la personne ; un site qui en sort est retiré au contact suivant, avec son
+  motif.
+- Sites sensibles (PER-02, ADR-025) :
+  - la sensibilité retenue est la plus restrictive de la version publiée et du site au moment présent :
+    un site rendu sensible cesse aussitôt d’être distribué ;
+  - un site « restreint » n’est jamais installé en masse. Il est proposé à la demande, site par site, aux
+    seules personnes titulaires d’une habilitation nominative et datée (douze mois au plus), dans leur
+    périmètre et celui de la tablette ; la tablette le garde 24 h ;
+  - un site « élevé » ne va jamais sur une tablette ;
+  - le PDF d’un site sensible est réservé à ses rôles du back-office et, pour un site restreint, aux
+    personnes habilitées ;
+  - consultations, exports et ouvertures sur tablette sont tracés dans `access_event` (journal en ajout
+    seul, lisible avec `audit:read`), y compris les consultations hors ligne remontées au contact suivant ;
+  - au back-office, l’accès suit les rôles (choix du porteur du 5 octobre 2026) et chaque consultation est
+    tracée.
 - Signalements terrain (ADR-017) : transmis par requête signée du terminal, reçus une seule fois par
   identifiant (empreinte du contenu accepté), élément et position vérifiés dans la version consultée ;
   photos par la chaîne contrôlée et l’antivirus ; constat immuable, instruction réservée à

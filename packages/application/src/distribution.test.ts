@@ -24,10 +24,11 @@ import {
   enrollDevice,
   getSyncCatalog,
   getSyncPackage,
+  submitAccessEvents,
   type DeviceProof,
   type DistributionDependencies,
 } from './distribution';
-import type { ContentSigner, DeviceRepository, RequestSession, SessionFactory } from './ports';
+import type { AccessJournal, ContentSigner, DeviceRepository, RequestSession, SessionFactory } from './ports';
 import { stubSession } from './testing';
 
 const TENANT = '06000000-0000-4000-8000-000000000000';
@@ -111,6 +112,7 @@ function setup(device: { status: DeviceStatus; publicKey: string | null } | null
       generation: 7,
       tenantName: 'SDIS DEMO 06',
       publications: [entry],
+      onDemand: [],
       withdrawals: [],
     })),
     enroll: vi.fn<DeviceRepository['enroll']>(async () => ({
@@ -124,6 +126,11 @@ function setup(device: { status: DeviceStatus; publicKey: string | null } | null
     packageFiles: vi.fn<DeviceRepository['packageFiles']>(async () => []),
   };
   const audit = { record: vi.fn(async () => undefined) };
+  const accessJournal = {
+    record: vi.fn<AccessJournal['record']>(async () => 'normal'),
+    list: vi.fn(),
+    exportAllowed: vi.fn(async () => true),
+  };
   const contexts: RequestContext[] = [];
   const proven: (string | undefined)[] = [];
   const sessions: SessionFactory = {
@@ -131,7 +138,7 @@ function setup(device: { status: DeviceStatus; publicKey: string | null } | null
       contexts.push(ctx);
       const session = stubSession(
         { userId: USER, tenantId: ctx.tenantId, permissions: permissionsForRoles(roles) },
-        { devices, audit },
+        { devices, audit, accessJournal },
       );
       return work({ ...session, confirmDeviceProof: () => proven.push(ctx.deviceId) });
     },
@@ -145,7 +152,7 @@ function setup(device: { status: DeviceStatus; publicKey: string | null } | null
     randomBytes: (length) => new Uint8Array(length).fill(1),
     now: () => NOW,
   };
-  return { deps, devices, audit, contexts, proven };
+  return { deps, devices, audit, accessJournal, contexts, proven };
 }
 
 describe('terminal requests', () => {
@@ -238,6 +245,7 @@ describe('terminal requests', () => {
     const { deps, devices } = setup({ status: 'active', publicKey: device.publicKey });
     const manifest = { manifest_version: 1, files: [] };
     devices.package.mockResolvedValue({
+      siteId: entry.site_id,
       manifest,
       manifestHash: await sha256(canonicalJson(manifest)),
       signature: builtSignature,
@@ -247,8 +255,10 @@ describe('terminal requests', () => {
       manifest: canonicalJson(manifest),
       signature: builtSignature,
       data: '{"a":2,"b":1}',
+      access_expires_at: null,
     });
     devices.package.mockResolvedValue({
+      siteId: entry.site_id,
       manifest,
       manifestHash: 'b'.repeat(64),
       signature: builtSignature,
@@ -259,13 +269,56 @@ describe('terminal requests', () => {
     );
   });
 
+  it('opens a restricted site on demand for 24 hours, journaled as an offline download (PER-02)', async () => {
+    const { deps, devices, accessJournal } = setup({ status: 'active', publicKey: device.publicKey });
+    const manifest = { manifest_version: 1, files: [] };
+    devices.package.mockResolvedValue({
+      siteId: entry.site_id,
+      manifest,
+      manifestHash: await sha256(canonicalJson(manifest)),
+      signature: builtSignature,
+      payload: {},
+    });
+    accessJournal.record.mockResolvedValue('restricted');
+    const served = await getSyncPackage(deps, context, device.proof(), entry.publication_id);
+    expect(served.access_expires_at).toBe(new Date(NOW.getTime() + 24 * 3_600_000).toISOString());
+    expect(accessJournal.record).toHaveBeenCalledWith(entry.site_id, entry.publication_id, 'download_offline', {
+      deviceId: DEVICE,
+    });
+  });
+
+  it('journals the offline consultations sent by the terminal, with its identity', async () => {
+    const { deps, accessJournal } = setup({ status: 'active', publicKey: device.publicKey });
+    const event = {
+      client_event_id: '0600000e-0000-4000-8000-0000000000e1',
+      site_id: entry.site_id,
+      publication_id: entry.publication_id,
+      action: 'view' as const,
+      occurred_at: '2026-10-05T08:00:00.000Z',
+    };
+    await expect(submitAccessEvents(deps, context, device.proof(), { events: [event] })).resolves.toEqual({
+      received: 1,
+    });
+    expect(accessJournal.record).toHaveBeenCalledWith(entry.site_id, entry.publication_id, 'view', {
+      deviceId: DEVICE,
+      clientEventId: event.client_event_id,
+      occurredAt: new Date(event.occurred_at),
+    });
+  });
+
   it('gives download URLs only with object storage, after auditing the download', async () => {
     const { deps, devices, audit } = setup({ status: 'active', publicKey: device.publicKey });
     const request = { sha256: ['c'.repeat(64)] };
     await expect(createSyncDownloads(deps, context, device.proof(), entry.publication_id, request)).rejects.toThrow(
       ServiceUnavailable,
     );
-    devices.package.mockResolvedValue({ manifest: {}, manifestHash: '', signature: builtSignature, payload: {} });
+    devices.package.mockResolvedValue({
+      siteId: entry.site_id,
+      manifest: {},
+      manifestHash: '',
+      signature: builtSignature,
+      payload: {},
+    });
     devices.packageFiles.mockResolvedValue([{ sha256: 'c'.repeat(64), storageKey: 'tenants/t/assets/a' }]);
     const storage = {
       createDownloadUrl: vi.fn(async (key: string) => ({ url: `https://storage.test/${key}`, expiresAt: NOW })),

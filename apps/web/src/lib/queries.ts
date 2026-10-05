@@ -38,6 +38,7 @@ export const queryKeys = {
   members: (tenantId: string) => ['tenant', tenantId, 'members'] as const,
   devices: (tenantId: string) => ['tenant', tenantId, 'devices'] as const,
   sectors: (tenantId: string) => ['tenant', tenantId, 'sectors'] as const,
+  accessEvents: (tenantId: string) => ['tenant', tenantId, 'access-events'] as const,
   sectorCommunes: (tenantId: string) => ['tenant', tenantId, 'sector-communes'] as const,
   etare: (tenantId: string) => ['tenant', tenantId, 'etare'] as const,
   revision: (tenantId: string, id: string) => ['tenant', tenantId, 'etare', 'revision', id] as const,
@@ -532,6 +533,23 @@ export function useSectors(wanted = true) {
     enabled: enabled && wanted,
     queryFn: ({ signal }) => api.listSectors({ ...options, signal }),
     retry: false,
+  });
+}
+
+/** Journal of the accesses to sensitive sites (audit:read), newest first, page by page (PER-02). */
+export function useAccessEvents(siteId: string | null = null, pageSize = 50) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useInfiniteQuery({
+    queryKey: [...queryKeys.accessEvents(tenantId ?? 'none'), siteId, pageSize],
+    enabled,
+    retry: false,
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam, signal }) =>
+      api.listAccessEvents(
+        { ...options, signal },
+        { limit: pageSize, ...(siteId ? { site_id: siteId } : {}), ...(pageParam ? { cursor: pageParam } : {}) },
+      ),
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
   });
 }
 

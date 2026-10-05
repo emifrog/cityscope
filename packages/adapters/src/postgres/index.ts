@@ -2,6 +2,7 @@ export * from './account-repository';
 export * from './asset-verification-store';
 export * from './building-repository';
 export * from './cursor';
+export * from './access-journal';
 export * from './device-repository';
 export * from './sector-repository';
 export * from './document-repository';

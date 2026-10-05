@@ -10,6 +10,12 @@ import {
 } from './account';
 import { notificationListQuerySchema, notificationListSchema, notificationSchema } from './notifications';
 import {
+  accessEventListQuerySchema,
+  accessEventListSchema,
+  syncAccessEventsResultSchema,
+  syncAccessEventsSchema,
+} from './access-events';
+import {
   contributionCreateSchema,
   contributionListQuerySchema,
   contributionListSchema,
@@ -115,6 +121,7 @@ import {
   memberInviteSchema,
   memberListResponseSchema,
   memberSchema,
+  memberSensitiveAccessSchema,
   memberUpdateSchema,
 } from './members';
 import {
@@ -1025,6 +1032,31 @@ export const endpoints = {
     response: memberSchema,
   }),
 
+  setMemberSensitiveAccess: tenantEndpoint({
+    operationId: 'setMemberSensitiveAccess',
+    method: 'put',
+    path: '/members/{id}/sensitive-access',
+    summary:
+      'Habiliter un membre aux sites sensibles « restreints » (12 mois au plus, SIS ou secteurs) ou retirer l’habilitation',
+    tags: ['members'],
+    params: idParamsSchema,
+    body: memberSensitiveAccessSchema,
+    concurrency: 'if-match',
+    successStatus: 200,
+    response: memberSchema,
+  }),
+
+  listAccessEvents: tenantEndpoint({
+    operationId: 'listAccessEvents',
+    method: 'get',
+    path: '/access-events',
+    summary: 'Journal des consultations, exports et téléchargements des sites sensibles (audit:read)',
+    tags: ['audit'],
+    query: accessEventListQuerySchema,
+    successStatus: 200,
+    response: accessEventListSchema,
+  }),
+
   // ---------------------------------------------------------------- sectors (PER-01)
   listSectors: tenantEndpoint({
     operationId: 'listSectors',
@@ -1217,6 +1249,17 @@ export const endpoints = {
     deviceProof: true,
     successStatus: 200,
     response: syncReceiptResultSchema,
+  }),
+  submitAccessEvents: tenantEndpoint({
+    operationId: 'submitAccessEvents',
+    method: 'post',
+    path: '/sync/access-events',
+    summary: 'Remonter les consultations hors ligne des sites sensibles (journal, idempotent par identifiant)',
+    tags: ['sync'],
+    body: syncAccessEventsSchema,
+    deviceProof: true,
+    successStatus: 200,
+    response: syncAccessEventsResultSchema,
   }),
 
   // ---------------------------------------------------------------- field reports (OPS-04, ADR-017)

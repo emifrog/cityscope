@@ -32,6 +32,7 @@ function makeApp() {
       generation: 3,
       tenantName: 'SDIS',
       publications: [],
+      onDemand: [],
       withdrawals: [],
     })),
     receipt: vi.fn<DeviceRepository['receipt']>(async (_device, receipt) => receipt.installed.length),

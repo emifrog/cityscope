@@ -92,6 +92,30 @@ hors ligne et l'identification sur tablette partagée.
 - **Déploiement** : relever `MOBILE_MIN_APP_VERSION`, car une application antérieure refuse un catalogue
   qui contient ce motif.
 
+## Mise en œuvre de PER-02, côté serveur (Sprint 10, 5 octobre 2026)
+
+- **Sensibilité effective** : la plus restrictive de la version publiée et du site au moment présent. Un
+  site rendu sensible n'attend pas une nouvelle publication pour quitter les tablettes.
+- **Habilitation** :
+  - choix du porteur du 5 octobre : nominative, pour tout le SIS ou des secteurs, avec une date de fin
+    obligatoire de douze mois au plus, renouvelable ;
+  - Administration › Membres › Sites sensibles ;
+  - elle est tenue dans une table dédiée, et non comme un rôle, pour rester hors des rôles et de leur
+    périmètre.
+- **Catalogue signé** :
+  - il sépare les sites installés en masse (`publications`) des sites restreints proposés à la demande
+    (`on_demand`) ;
+  - le paquet d'un site restreint porte la fin de sa consultation locale (24 h) ;
+  - un site élevé n'est jamais servi.
+- **Back-office** : l'accès suit les rôles (choix du porteur du 5 octobre).
+- **Journal** :
+  - consultations du site, aperçu et révisions ETARE, exports (PDF, documents) et ouvertures sur tablette
+    sont tracés ;
+  - Administration › Journal des sites sensibles (`audit:read`) ;
+  - les consultations hors ligne sont remontées par la tablette (`POST /sync/access-events`, idempotent).
+- **PDF d'un site sensible** : réservé à ses rôles du back-office et, pour un site restreint, aux
+  personnes habilitées.
+
 ## Critère de réexamen
 
 Avis contraire du RSSI ou de la direction opérationnelle (durée, code, purge à l'expiration) ; tablettes
