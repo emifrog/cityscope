@@ -1,6 +1,6 @@
 # Roadmap complète de développement — ETARE numérique
 
-**Mise à jour : 5 octobre 2026. Base : Sprint 11 livré ([rapport](sprint-11-report.md)).**
+**Mise à jour : 5 octobre 2026. Base : Sprint 12 livré ([rapport](sprint-12-report.md)).**
 
 Ce document est le plan de développement courant : **ce qui est implémenté, ce qui reste à construire,
 dans quel ordre et avec quelle preuve de fin**. Il complète le
@@ -87,11 +87,15 @@ Un total de tests ou un nombre de sprints ne donne pas un pourcentage fiable d�
 | Sprint 11 B — back-office   | Administration › Fonds de carte : source et droits, état par secteur, tablettes à jour, préparation à la demande                                                            | Commit `f8de1e5`                                                                |
 | Sprint 11 C — transfert     | Téléchargement par parties vérifiées, reprise, Wi-Fi au-delà de 50 Mo, budget 2 Go, ancienne version gardée jusqu’au remplacement                                           | Commit `d44a633`                                                                |
 | Sprint 11 D — carte locale  | MapLibre hors ligne, glyphes Noto Sans embarqués, sites et points, couverture expliquée, position à la demande ; émulateur en mode avion                                    | Commit `bfcde2b`, [rapport](sprint-11-report.md) ; tablette et fond IGN à venir |
+| Sprint 12 A — clés          | Clés en fichier de secret ou OpenBao Transit, racine hors ligne, jeu de clés signé (active, retirée, révoquée), re-signature par le worker, procédures de compromission     | Commit `63466e6`, [ADR-027](decisions/ADR-027-signing-keys-rotation.md)         |
+| Sprint 12 B — tablette      | Jeu de clés vérifié par la racine, rejeu et conflit refusés, revérification sans retéléchargement, sites sensibles refermés à la révocation ; émulateur en rotation         | Commit `81f808d`                                                                |
+| Sprint 12 C — supervision   | Métriques Prometheus protégées, trace W3C jusqu'aux travaux, battements des workers, 22 alertes avec procédures, onglet Supervision du SIS                                  | Commit `8da86ff`, [ADR-028](decisions/ADR-028-supervision.md)                   |
+| Sprint 12 D — volumétrie    | Banc de 10 000 sites ; périmètres évalués par ensemble (1,6–9,8 s → 16–60 ms), recherche par trigrammes, charge 170 → 292 req/s ; version réduite en CI                     | Commit `f6bb6e8`, [rapport CAP-01](volumetrie/cap-01.md)                        |
 
-**État technique vérifié :** 397 tests TypeScript, 587 assertions SQL, 139 tests d’intégration (dont
-l’antivirus contre un vrai ClamAV, les e-mails dans Mailpit et la préparation des fonds de carte par le worker
-en CI), 219 tests Flutter réussis et 1 test optionnel ignoré ; 39 migrations, 26 ADR
-([rapport du Sprint 11](sprint-11-report.md)). Origine de chaque vérification et limites :
+**État technique vérifié :** 437 tests TypeScript, 648 assertions SQL, 147 tests d’intégration (dont
+l’antivirus contre un vrai ClamAV, les e-mails dans Mailpit, la préparation des fonds de carte par le worker
+et la signature par OpenBao Transit en CI), 236 tests Flutter réussis et 1 test optionnel ignoré ; banc de
+volumétrie de 10 000 sites ; 42 migrations, 28 ADR ([rapport du Sprint 12](sprint-12-report.md)). Origine de chaque vérification et limites :
 [bilan du 1er octobre](bilan-depot-2026-10-01.md).
 
 ## 3. Séquence proposée jusqu’au pilote
@@ -102,14 +106,15 @@ en CI), 219 tests Flutter réussis et 1 test optionnel ignoré ; 39 migrations, 
 | R1 — boucle terrain (Sprints 5–6)  | **Réalisé** : signalement hors ligne avec photo, transmission/reprise, instruction Prévision, nouvelle publication ; lecteur PDF                                                                                      | Socle Sprint 4 ; sécurité des fichiers pour données réelles | Mobile + API/web + référent Prévision | Un écart créé sans réseau devient une correction publiée et resynchronisée |
 | R2 — portail exploitant (Sprint 7) | **Réalisé** : invitation par site, consultation filtrée, propositions, documents, validation SIS, notifications                                                                                                       | Chaîne de contributions R1 ; antivirus R4                   | Web/API + référent Prévision          | Aucun accès transversal, aucune publication directe exploitant             |
 | R3 — compléter le périmètre MVP    | Recherche par risque, risques extérieurs, archivage/retrait, sections minimales, secteurs/listes, politique sensible, carte offline                                                                                   | Arbitrages R0 ; R1/R2 selon parcours                        | Web/API/mobile + SIG/RSSI             | Tous les P0 ont une preuve ou un écart explicitement accepté               |
-| R4 — sécuriser et exploiter        | **En cours** : antivirus, second facteur et sessions, limitation de débit, CSP, cycle des fichiers réalisés (Sprints 5 et 9) ; restent clés, terminal, charge, sauvegardes, supervision, déploiement, version Android | Sans arbitrage pour la plupart ; choix R0 (hébergement)     | API/mobile + exploitation + RSSI      | Préproduction et dossier de sécurité prêts pour recette                    |
+| R4 — sécuriser et exploiter        | **En cours** : antivirus, second facteur et sessions, débit, CSP, fichiers (Sprints 5 et 9), clés, supervision et volumétrie (Sprint 12) ; restent terminal, gros fichiers, sauvegardes, déploiement, version Android | Sans arbitrage pour la plupart ; choix R0 (hébergement)     | API/mobile + exploitation + RSSI      | Préproduction et dossier de sécurité prêts pour recette                    |
 | R5 — recette et pilote SIS         | Tablette physique, réseau dégradé, charge, intrusion, restauration, formation, pilote mesuré                                                                                                                          | R1–R4 et décisions bloquantes levées                        | Métier, SIG, DSI/RSSI, exploitation   | Procès-verbal de recette et décision d’ouverture                           |
 | R6 — MVP+ / V1.5                   | Les neuf exigences P1, imports avancés, personnalisation, comparaison, rétention, exports                                                                                                                             | Retours du pilote ; mesure de valeur                        | Produit + équipe de développement     | Extensions génériques, sans fork par SIS                                   |
 | R7 — industrialisation / V2–V3     | SSO étendu, MDM, connecteurs, RRF, assistance IA, partage contrôlé et écosystème                                                                                                                                      | MVP exploité, accords/qualifications disponibles            | Produit + partenaires SIS             | Lots autonomes justifiés par usage et capacité                             |
 
 **Dès maintenant :** R1, R2 et R3 (MET-01 à MET-05, PER-01, PER-02, CAR-02, CAR-03) et les lots SEC-01 à
-SEC-03 et CAP-03 de R4 sont réalisés. CAR-01 est éprouvé sur émulateur avec le fond d’essai : il attend la
-fiche de droits IGN et la tablette de référence. R4 se poursuit (secrets, volumétrie, supervision).
+SEC-04, CAP-01, CAP-03 et EXP-03 de R4 sont réalisés. CAR-01 est éprouvé sur émulateur avec le fond d’essai :
+il attend la fiche de droits IGN et la tablette de référence. R4 se poursuit (terminal, gros fichiers,
+livraison mobile, puis environnements et reprise avec l’hébergement).
 La qualification sur la tablette de référence (Alldocube iPlay 40H) commence dès sa livraison.
 
 Les estimations de l’architecture §32 décrivent le projet initial avec une équipe de trois à quatre
@@ -354,14 +359,14 @@ carte, fiches et plans utilisables après démarrage à froid en mode avion sur 
       récupération sécurisée, codes de secours, suspension/révocation de sessions et état des invitations/MFA visible.
 - [x] **SEC-03 — Protection réseau :** limitation de débit login/invitations/enrôlement/uploads/API,
       CSP compatible avec les workers carte/PDF, politique CORS et traces des refus sensibles.
-- [ ] **SEC-04 — Secrets et signatures :** stockage dans un gestionnaire de secrets ou KMS, séparation
+- [x] **SEC-04 — Secrets et signatures :** stockage dans un gestionnaire de secrets ou KMS, séparation
       des clés API/worker, rotation testée avec chevauchement des clés publiques, procédure de compromission.
 - [ ] **SEC-05 — Terminal :** verrouillage applicatif selon le parc, politique déconnexion/expiration,
       rotation/récupération de clé locale, test d’horloge manipulée et de tablette partagée. Attestation,
       détection root et épinglage de certificat à arbitrer par l’analyse de risques, pas à présumer obligatoires.
 - [ ] **SEC-06 — Analyse de risques :** permissions, imports, cache, distribution, support exceptionnel
       limité dans le temps ; SAST/DAST, contrôle des dépendances et pentest avant pilote opérationnel.
-- [ ] **CAP-01 — Volumétrie :** jeu représentatif de 10 000 sites et plusieurs centaines de milliers
+- [x] **CAP-01 — Volumétrie :** jeu représentatif de 10 000 sites et plusieurs centaines de milliers
       d’objets ; recherche, carte, RLS, publication, file de jobs, catalogue et transfert mesurés.
 - [ ] **CAP-02 — Gros fichiers :** contrôle d’espace libre, réserve pour ancienne/nouvelle version,
       erreurs disque plein, limites mémoire, décodage des images et lecture des PDF ; optimiser les BLOB
@@ -372,7 +377,7 @@ carte, fiches et plans utilisables après démarrage à froid en mode avion sur 
       configuration obligatoire vérifiée, déploiement web/worker/base coordonné et procédure de retour arrière.
 - [ ] **EXP-02 — Reprise :** sauvegardes chiffrées, restauration base + objets + configuration de clés,
       mesure RPO/RTO, répétition d’un parcours publié/restauré et vérification des empreintes.
-- [ ] **EXP-03 — Supervision :** métriques de jobs en échec, délai de publication, erreurs de sync,
+- [x] **EXP-03 — Supervision :** métriques de jobs en échec, délai de publication, erreurs de sync,
       espace/volumes, disponibilité et fraîcheur métier ; alertes, corrélation et procédures de diagnostic.
 - [ ] **EXP-04 — Livraison mobile :** clé de signature Android dédiée, paquet release, distribution/MDM
       et mise à jour compatibles avec les anciens manifestes et migrations locales ; iOS selon DEC-01.
@@ -386,6 +391,16 @@ carte, fiches et plans utilisables après démarrage à froid en mode avion sur 
 ADR-023, complément de l’ADR-009). Réserves : droits du rôle des migrations sur le schéma `auth`, gabarit
 « mot de passe oublié », plafonds et durée des sessions à reporter sur le projet hébergé ; adresse du client
 connue seulement derrière un proxy de confiance (DEC-03).
+
+**Livré au Sprint 12 (5 octobre 2026) :** SEC-04, EXP-03 et CAP-01 ([rapport](sprint-12-report.md),
+ADR-027, ADR-028, [volumétrie](volumetrie/cap-01.md)). Choix du porteur du 5 octobre : fichier de secret ou
+OpenBao Transit, racine hors ligne et jeu de clés signé, métriques Prometheus et trace W3C sans dépendance
+nouvelle, banc local sur deux SIS fictifs. Réserves :
+
+- première cérémonie des clés avec le RSSI ; KMS d’un fournisseur selon l’hébergement (DEC-03) ;
+- collecteur et outil d’alerte à choisir avec l’hébergeur, seuils à ajuster après le pilote ;
+- volumétrie mesurée sur un poste de développement : à confirmer en préproduction, transfert réel vers
+  les tablettes en R5.
 
 **Acceptation :** aucune réserve critique de sécurité ouverte ; restauration démontrée ; installation
 et mise à jour d’une release sur matériel cible ; tableaux et alertes utilisés pendant un incident simulé ;
@@ -432,8 +447,8 @@ Les exigences transverses hors de cette table sont couvertes par R0/R4 et la sec
 | SITE-03   | P0       | Classifications                          | Implémenté  | R5 : valeurs multiples, dates et historique                                                  |
 | SITE-04   | P0       | Contacts et astreintes                   | Implémenté  | R5 : confidentialité et usage terrain                                                        |
 | SITE-05   | P0       | Photos et documents versionnés           | Implémenté  | R5 : documents « à la demande » sur tablette réelle, volumes                                 |
-| SITE-06   | P0       | Recherche texte/commune/catégorie/risque | Implémenté  | Sprint 8 (MET-01) ; mesure < 2 s sur jeu pilote en R5                                        |
-| MAP-01    | P0       | Carte des sites et regroupement          | Implémenté  | R4 CAP-01, R5 : fluidité/filtrage sur jeu cible                                              |
+| SITE-06   | P0       | Recherche texte/commune/catégorie/risque | Implémenté  | Sprint 8 (MET-01) ; CAP-01 : 13–31 ms sur 10 000 sites ; mesure < 2 s sur jeu pilote en R5   |
+| MAP-01    | P0       | Carte des sites et regroupement          | Implémenté  | CAP-01 mesuré (Sprint 12) ; R5 : fluidité/filtrage sur jeu cible                             |
 | MAP-02    | P0       | Emprises et points opérationnels         | Implémenté  | R5 : zoom, filtres et ouverture des fiches                                                   |
 | MAP-03    | P1       | Import GeoJSON/CSV                       | À faire     | R6 ; décision DEC-06 pour reprise initiale MVP                                               |
 | MAP-04    | P1       | Mesure de distances                      | À faire     | R6 ; desktop/tablette, unités/projections explicites                                         |
@@ -537,10 +552,11 @@ Après chaque lot :
 4. Écrire un rapport daté avec commit, tests, limites et décision de passage.
 5. Réestimer le lot suivant selon les retours ; toute nouvelle demande garde une priorité et un lien au cadrage.
 
-**Prochaine tranche recommandée :** Sprint 12 — R4 : SEC-04 (secrets et rotation des clés de signature),
-CAP-01 (volumétrie de 10 000 sites, dont le coût des périmètres et la préparation des fonds) et EXP-03
-(supervision, dont les préparations de fonds échouées). Dès la fiche de droits validée et la tablette
-livrée : activation du Plan IGN sur un secteur pilote et qualification de CAR-01 sur matériel.
+**Prochaine tranche recommandée :** Sprint 13 — suite de R4 sans attendre l’hébergement : SEC-05
+(terminal), CAP-02 (gros fichiers sur la tablette) et EXP-04 (livraison mobile). Avec la décision
+d’hébergement (DEC-03) : EXP-01, EXP-02, première cérémonie des clés et mesure de CAP-01 en préproduction.
+Dès la fiche de droits validée et la tablette livrée : activation du Plan IGN sur un secteur pilote et
+qualification de CAR-01 sur matériel.
 
 ## 8. Références
 

@@ -7,7 +7,7 @@ consultation hors ligne des plans ETARE numériques. Dépôt technique `etare-pl
 > Identité (nom, logos, couleurs) : [`assets/brand/`](assets/brand/README.md) ; déclinaisons web et
 > mobile générées par `pnpm brand:assets`.
 
-**État : Sprint 11 livré.** Le back-office couvre la préparation d’un ETARE : référentiel des sites,
+**État : Sprint 12 livré.** Le back-office couvre la préparation d’un ETARE : référentiel des sites,
 carte IGN, plans de niveaux, objets (avec photos), zones et risques, contrôle avant validation,
 validation par un validateur indépendant avec double authentification, publication immuable et PDF.
 Les versions publiées sont distribuées, signées, aux tablettes enrôlées par l’administration du SIS
@@ -29,7 +29,12 @@ sur la tablette, ces sites s'ouvrent à la demande, avec un code personnel, et c
 La tablette a une carte hors ligne : un fond par secteur, préparé par la plateforme et téléchargé en Wi-Fi,
 avec les sites installés et la position de l'agent à sa demande. Le Plan IGN y entrera une fois sa fiche de
 droits validée ; d'ici là, un fond d'essai synthétique sert aux essais.
-**Restent à venir** : fond IGN réel, tablette de référence et qualification du pilote.
+Les clés de signature sont tenues dans un coffre (fichier de secret ou OpenBao Transit). Une racine hors
+ligne signe le jeu de clés que la tablette vérifie ; une clé tourne ou se révoque sans nouvelle version de
+l'application. La plateforme expose ses métriques et ses alertes, et le SIS dispose d'un onglet de
+supervision. Un banc de 10 000 sites mesure la tenue en charge.
+**Restent à venir** : fond IGN réel, tablette de référence, environnements et sauvegardes, et
+qualification du pilote.
 La CI GitHub (TypeScript et build, base et intégration, Flutter) s’exécute à chaque push sur `main`.
 Voir la **[roadmap complète du développement](docs/roadmap-developpement.md)**,
 le [bilan actuel du dépôt](docs/bilan-depot-2026-10-01.md), le
@@ -37,7 +42,7 @@ le [bilan actuel du dépôt](docs/bilan-depot-2026-10-01.md), le
 [0](docs/sprint-0-report.md), [1](docs/sprint-1-report.md), [2](docs/sprint-2-report.md),
 [3](docs/sprint-3-report.md), [4](docs/sprint-4-report.md), [5](docs/sprint-5-report.md),
 [6](docs/sprint-6-report.md), [7](docs/sprint-7-report.md), [8](docs/sprint-8-report.md), [9](docs/sprint-9-report.md),
-[10](docs/sprint-10-report.md) et [11](docs/sprint-11-report.md).
+[10](docs/sprint-10-report.md), [11](docs/sprint-11-report.md) et [12](docs/sprint-12-report.md).
 
 ## Démarrage rapide
 
@@ -98,12 +103,14 @@ docs/               architecture, développement, base, sécurité, ADR
 ## Documentation
 
 - [Architecture](docs/architecture.md) · [Développement](docs/development.md) ·
-  [Base de données](docs/database.md) · [Sécurité](docs/security.md)
+  [Base de données](docs/database.md) · [Sécurité](docs/security.md) ·
+  [Clés de signature](docs/exploitation/cles-de-signature.md) · [Supervision](docs/exploitation/supervision.md) ·
+  [Volumétrie](docs/volumetrie/cap-01.md)
 - [Décisions d’architecture (ADR)](docs/decisions/)
 - [Roadmap complète](docs/roadmap-developpement.md) · [Bilan du dépôt au 01/10/2026](docs/bilan-depot-2026-10-01.md)
 - [Suivi des exigences](docs/suivi-exigences.md) · [Bilan historique du 30/09/2026](docs/bilan-alignement-2026-09-30.md)
 - Rapports de sprint : [0](docs/sprint-0-report.md) · [1](docs/sprint-1-report.md) ·
-  [2](docs/sprint-2-report.md) · [3](docs/sprint-3-report.md) · [4](docs/sprint-4-report.md) · [5](docs/sprint-5-report.md) · [6](docs/sprint-6-report.md) · [7](docs/sprint-7-report.md) · [8](docs/sprint-8-report.md) · [9](docs/sprint-9-report.md) · [10](docs/sprint-10-report.md) · [11](docs/sprint-11-report.md)
+  [2](docs/sprint-2-report.md) · [3](docs/sprint-3-report.md) · [4](docs/sprint-4-report.md) · [5](docs/sprint-5-report.md) · [6](docs/sprint-6-report.md) · [7](docs/sprint-7-report.md) · [8](docs/sprint-8-report.md) · [9](docs/sprint-9-report.md) · [10](docs/sprint-10-report.md) · [11](docs/sprint-11-report.md) · [12](docs/sprint-12-report.md)
 - Documents de cadrage : [`docs/reference/`](docs/reference/)
 
 ## Sécurité en bref
