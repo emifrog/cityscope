@@ -279,6 +279,33 @@ Principes :
 - **Limite connue** : qui détient à la fois la base et le secret de l'installation (stockage sécurisé
   Android) peut essayer le million de codes possibles ; la durée de 24 h borne l'exposition.
 
+## 7 ter. Carte hors ligne (CAR-01 à CAR-03, ADR-024)
+
+- **Fonds de carte** :
+  - un fichier PMTiles par secteur de la tablette, avec son style et ses pictogrammes, listé par le
+    catalogue signé ;
+  - manifeste signé par la clé des publications ; parties de 32 Mo vérifiées une à une puis ajoutées au
+    fichier, reprise après coupure, fichier entier revérifié ;
+  - stockés hors de la base chiffrée (`files/basemaps/`, donnée publique) ; index dans la table
+    `installed_basemaps` (schéma local v7) ;
+  - au-delà de 50 Mo, un fond attend une tâche Android sur réseau non limité (Wi-Fi) ; budget de 2 Go ;
+  - l'ancienne version reste affichée jusqu'au remplacement ; un secteur qui n'est plus reçu perd son
+    fond ; tout est effacé à la révocation, rien au changement d'agent.
+- **Carte** (`maplibre_gl`, MapLibre Native) :
+  - accessible depuis l'accueil (icône carte) et depuis la fiche d'un site (« Situer sur la carte ») ;
+  - un secteur à la fois, avec un sélecteur quand la tablette en a plusieurs ;
+  - sites installés (position lue dans les données publiées), points extérieurs du site visé, fiche
+    ouverte d'un toucher ;
+  - libellés en Noto Sans : glyphes PBF de `assets/map/glyphs/` (licence OFL 1.1, `OFL.txt`) copiés
+    une fois dans `files/map-glyphs/`. Le moteur ne lit que des fichiers locaux ;
+  - avertissements « fond non disponible ici », « détail non disponible ici », « aucun fond » et
+    « aucune donnée opérationnelle » ; sans fond, les sites restent placés sur un aplat ;
+  - attribution et date du fond affichées, distinctes de celles des ETARE ;
+  - « Me situer » demande la localisation au premier usage (`permission_handler` 12, compatible avec le
+    SDK de compilation 36) ; la position reste sur la tablette.
+- **Tests de widgets** : la vue native n'existe pas sous `flutter test` ; `opsMapBuilderProvider` est
+  remplacé par une doublure (`test/features/map/map_screen_test.dart`).
+
 ## 8. Hors ligne : enrôlement et synchronisation (ADR-015, ADR-016)
 
 1. L'administrateur du SIS déclare la tablette (web, onglet « Terminaux ») et
@@ -350,8 +377,9 @@ du réseau pour l'obtenir. Les documents « jamais » restent au back-office.
   livrées au Sprint 4 (lecture locale ; signalement terrain à venir).
 - ~~Synchronisation hors ligne et stockage des publications~~ : livrés au
   Sprint 4 (sections 6 et 8).
-- Cartographie et géolocalisation (la caméra sert aux photos des signalements,
-  par l’application appareil photo du système, sans permission).
+- ~~Cartographie et géolocalisation~~ : carte hors ligne et position à la demande livrées au Sprint 11
+  (section 7 ter). La caméra sert aux photos des signalements, par l’application appareil photo du
+  système, sans permission.
 - Client API généré depuis l'OpenAPI (client manuel provisoire).
 - ~~Verrouillage applicatif~~ : code personnel livré au Sprint 10 (section 7 bis) ;
   restent l'épinglage de certificats et la détection root/jailbreak (à arbitrer, SEC-05).

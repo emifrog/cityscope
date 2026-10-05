@@ -33,6 +33,9 @@ pas exposé par la Data API Supabase (`supabase/config.toml` → `api.schemas`),
 | `20261014000100_etare_layout.sql`                  | Sprint 10 : sections masquées par le SIS (`etare_layout_settings`, `update_etare_layout_settings`, `catalog:manage`, audité), figées dans l’instantané soumis                                                                                |
 | `20261014000300_sensitive_sites.sql`               | Sprint 10 : sensibilité effective, habilitation nominative datée (`sensitive_habilitation`), journal `access_event` (ajout seul), ouverture à la demande des sites restreints (`on_demand`), sites élevés jamais distribués                  |
 | `20261014000200_sectors.sql`                       | Sprint 10 : `sector`, `sector_commune`, `sector_site`, portée « secteur » de `has_permission`, `holds_permission_on_part`, affectation des terminaux (`device.scope`, `device_sector`), catalogue à l’intersection et retraits « périmètre » |
+| `20261021000100_basemaps.sql`                      | Sprint 11 : fonds de carte par secteur (`basemap_pack`, `device_basemap`), couverture (`basemap_coverage`), planification et préparation par le worker (`worker_*_basemap*`), distribution aux terminaux (`sync_basemap*`)                   |
+| `20261021000200_worker_slots.sql`                  | Sprint 11 : `claim_jobs` exclut les types de travaux qu’un worker mène déjà (une préparation de fond à la fois)                                                                                                                              |
+| `20261021000300_basemap_signed_detail.sql`         | Sprint 11 : zones de détail des fonds limitées aux sites de version signée (réellement diffusés)                                                                                                                                             |
 
 ## Correspondance avec les documents de cadrage
 
@@ -338,6 +341,36 @@ Voir ADR-025 (DEC-04) et le test `270_sensitive_sites`.
   - `access_journal` le lit pour l’administration.
 - **Export** : `publication_export_allowed` réserve le PDF d’un site sensible à ses rôles du back-office,
   ou aux personnes habilitées pour un site restreint.
+
+## Fonds de carte
+
+Voir ADR-024 (DEC-02) et le test `280_basemaps`.
+
+- **`basemap_pack`** : un fond par secteur et par version.
+  - États : `queued` → `building` → `ready`, puis `superseded` à la version suivante, ou `failed`
+    avec un code et un motif.
+  - Un seul fond en vigueur et une seule préparation à la fois par secteur (index uniques partiels).
+  - Le manifeste est signé par la clé des publications (worker). Les parties de chaque fichier sont
+    rangées avec leur clé de stockage.
+  - Tous les objets écrits sont enregistrés avant l'écriture, pour le nettoyage d'une préparation
+    interrompue.
+- **Couverture** (`basemap_coverage`) :
+  - emprise des sites localisés du secteur (vue générale) ;
+  - points de détail : sites de version signée en vigueur et de sensibilité normale ;
+  - une signature qui change quand l'un ou l'autre change.
+- **Planification** (`worker_plan_basemaps`, travail `basemap.plan` par quart d'heure) :
+  - secteurs reçus par au moins une tablette, pour un premier fond, des sites modifiés, une nouvelle
+    source ou le renouvellement semestriel ;
+  - une préparation dont le travail est mort passe en échec, un échec sur la même couverture attend un
+    jour ;
+  - `request_basemap_build` (`device:manage`, audité) prépare un secteur à la demande.
+- **Distribution** :
+  - `sync_basemaps` liste les fonds en vigueur des secteurs de la tablette (tous pour « tout le SIS ») ;
+  - `sync_basemap` et `sync_basemap_files` servent le manifeste et les clés des parties ;
+  - `sync_basemap_receipt` tient `device_basemap`, ce que chaque tablette détient.
+- **Nettoyage** : les fichiers d'une version remplacée sont effacés après une semaine, ceux d'une
+  préparation échouée aussitôt (`worker_basemap_objects_to_remove`).
+- Les tables ne sont lisibles par aucun rôle applicatif : tout passe par les fonctions ci-dessus.
 
 ## Habilitations des membres
 

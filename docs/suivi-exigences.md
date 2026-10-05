@@ -1,7 +1,6 @@
 # Suivi des exigences
 
-**État au 3 octobre 2026**, après le Sprint 9 (second facteur imposé par la base, sessions révocables,
-codes de secours, limitation de débit, CSP, cycle des fichiers). Ce
+**État au 5 octobre 2026**, après le Sprint 11 (carte hors ligne de la tablette, fonds par secteur). Ce
 tableau est le point d’entrée courant ; les rapports de sprint restent des photographies datées.
 Priorités et lots : [cahier des charges MVP](reference/01_Cahier_des_charges_MVP_ETARE_numerique.pdf).
 La [roadmap complète](roadmap-developpement.md) affecte chacune des 44 exigences à un lot et à un
@@ -26,7 +25,7 @@ pilote**. Les chemins de tests sont relatifs à la racine du dépôt.
 | PLAN-02 à 04 — placement, objets typés, calques        | P0    | Implémenté  | `tests/integration/plan-items.test.ts`, pgTAP `100_plan_placement`, `190_zone_consistency`                               | glisser-déposer vérifié à la main ; rattachement recalculé quand une zone est tracée, déplacée ou archivée                                           |
 | PLAN-05 — photos attachées aux objets                  | P0    | Implémenté  | `tests/integration/object-photos.test.ts`, pgTAP `130_object_photos`, tests Flutter `ops`                                | photos absentes du PDF ETARE ; miniatures calculées par le worker (Sprint 9)                                                                         |
 | RISK-01 — catalogue de risques du SIS                  | P0    | Implémenté  | `tests/integration/plan-items.test.ts`, pgTAP `100_plan_placement`                                                       | catalogue d’objets non configurable (ADMIN-03)                                                                                                       |
-| RISK-02 — localisation des risques                     | P0    | Implémenté  | `tests/integration/exterior-risks.test.ts`, `plan-items.test.ts`, pgTAP `190_zone_consistency`                           | sur plan, sur la carte et par portée, zones cohérentes ; pas de carte sur la tablette (CAR-02)                                                       |
+| RISK-02 — localisation des risques                     | P0    | Implémenté  | `tests/integration/exterior-risks.test.ts`, `plan-items.test.ts`, pgTAP `190_zone_consistency`                           | sur plan, sur la carte et par portée, zones cohérentes ; risques non encore placés sur la carte de la tablette (points et sites seulement)           |
 | RISK-03 — matières dangereuses et FDS                  | P1    | À faire     | —                                                                                                                        | un document classé FDS ne remplace pas cette fonction                                                                                                |
 | ETARE-01 — assemblage et aperçu                        | P0    | À qualifier | `etare-workflow.test.ts`, `etare-layout.test.ts`, `etare-pdf.test.ts`, pgTAP `250_etare_layout`                          | registre des sections, masquage par SIS et annexe photos livrés (Sprint 10, ADR-026) ; R5 : dossiers longs et chargés en texte                       |
 | ETARE-02 — PDF standardisé                             | P0    | Implémenté  | `packages/adapters/src/pdf/etare-pdf.test.ts`, `etare-workflow.test.ts`                                                  | polices standard (caractères hors WinAnsi remplacés)                                                                                                 |
@@ -41,6 +40,7 @@ pilote**. Les chemins de tests sont relatifs à la racine du dépôt.
 | OFF-01, OFF-02 — paquets et synchronisation            | P0    | Implémenté  | `tests/integration/offline-distribution.test.ts`, pgTAP `120`, `sync_service_test.dart`, `background_sync_test.dart`     | à l’ouverture, au retour, à la demande et en arrière-plan sur Android (ADR-018) ; sites sensibles non distribués ; différentiel par fichier (DEC-08) |
 | OFF-03 — chiffrement local                             | P0    | Implémenté  | tests Flutter (`apps/mobile`), ADR-016                                                                                   | fichiers des paquets dans la base SQLCipher ; sites restreints chiffrés par le code de l’agent (Sprint 10) ; ni rotation de la clé ni attestation    |
 | OFF-04 — révocation d’un terminal                      | P0    | Implémenté  | `offline-distribution.test.ts`, pgTAP `120`, `sync_service_test.dart` (purge)                                            | effective au premier contact réseau ; hors réseau, l’autorisation locale expire après 7 jours                                                        |
+| CAR-01 à 03 — carte hors ligne de la tablette          | P0    | À qualifier | `tests/integration/basemaps.test.ts`, pgTAP `280_basemaps`, `basemap_sync_test.dart`, `map_screen_test.dart`             | chaîne complète avec le fond d’essai (émulateur, mode avion) ; Plan IGN verrouillé jusqu’à la fiche de droits ; tablette de référence (Sprint 11)    |
 | OFF-05 — politique de rétention                        | P1    | À faire     | —                                                                                                                        | MVP+                                                                                                                                                 |
 | PORTAL-01 à 03 — portail exploitant                    | P0    | Implémenté  | `tests/integration/portal-*.test.ts`, pgTAP `150` à `180`                                                                | report manuel des propositions acceptées ; notifications des équipes du SIS et recette exploitant à venir (ADR-019, ADR-020)                         |
 | ADMIN-01 — RBAC et périmètres                          | P0    | Implémenté  | `members.test.ts`, `offline-distribution.test.ts`, `sensitive-sites.test.ts`, pgTAP `260`, `270`                         | rôles, membres, second facteur, sessions, codes de secours ; secteurs, périmètres et habilitation aux sites sensibles (Sprint 10)                    |
@@ -78,8 +78,10 @@ Défauts relevés par le [bilan d’alignement](bilan-alignement-2026-09-30.md),
 - Secteurs : livrés au Sprint 10 (PER-01, ADR-025) pour le back-office et la distribution (communes et sites,
   tablettes et membres affectés, catalogue à l’intersection, retrait motivé) ; à éprouver sur un parc pilote
   (volumétrie, CAP-01).
-- Consultation terrain : carte de contexte absente ; fond retenu le 3 octobre 2026 (ADR-024 : Plan IGN
-  vectoriel par secteur), fiche de droits à valider par le référent SIG (CAR-01 à CAR-03) ; PDF et
+- Consultation terrain : carte locale livrée au Sprint 11 (ADR-024). Fond d’un secteur en PMTiles,
+  préparé par la plateforme et lu sans réseau ; sites et points extérieurs, position de l’agent à la
+  demande. Restent : la fiche de droits du Plan IGN, à valider par le référent SIG
+  ([modèle](sig/fiche-droits-plan-ign.md)) ; le volume réel d’un secteur ; la tablette de référence. PDF et
   documents « à la demande » lus dans l’application (DOC-01, DOC-02).
 - Synchronisation en arrière-plan : éprouvée sur émulateur (Android 16) ; fréquence, budget de 50 Mo
   et recours au Wi-Fi à arbitrer, comportement à mesurer sur la tablette de référence (ADR-018).

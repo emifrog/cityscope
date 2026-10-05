@@ -217,14 +217,22 @@ Voir ADR-015.
   rafraîchissement rejoué ; aucune donnée en clair hors de la base chiffrée et du stockage sécurisé.
 - Version minimale d’application (SYN-02) : portée par le catalogue signé, non falsifiable en transit ;
   la version déclarée par le terminal n’est qu’une information d’administration.
+- Fonds de carte (ADR-024) :
+  - aucune préparation, donc aucune requête vers le producteur, sans droits hors ligne validés pour la
+    source (fiche de droits) ; le fond d'essai synthétique est refusé en production ;
+  - le manifeste de chaque fond est signé par la clé des publications ; la tablette vérifie la signature,
+    l'empreinte annoncée par le catalogue signé, chaque partie et le fichier entier ;
+  - donnée publique : distribuée selon les secteurs de la tablette, sans journal ; aucune zone de détail
+    autour d'un site restreint ou élevé, qui le désignerait ;
+  - le fond n'est servi qu'aux tablettes de son secteur, par des URL signées de 5 minutes.
 - Le catalogue accorde une consultation locale de 7 jours à l’utilisateur ; une horloge de tablette
   manipulée peut prolonger cette durée hors réseau (limite décrite par l’architecture §19).
 
 ## Mobile
 
 Jetons et clé de base dans le stockage sécurisé Android (Keystore), base SQLite chiffrée SQLCipher dès le
-Sprint 0, sauvegardes Android désactivées, permission `INTERNET` seule, HTTP en clair uniquement en debug
-vers l’émulateur. Voir `apps/mobile/README.md`.
+Sprint 0, sauvegardes Android désactivées, permission `INTERNET` (et, depuis le Sprint 11, localisation à
+la demande), HTTP en clair uniquement en debug vers l’émulateur. Voir `apps/mobile/README.md`.
 
 Depuis le Sprint 10 (ADR-025) :
 
@@ -234,6 +242,14 @@ Depuis le Sprint 10 (ADR-025) :
   (PBKDF2, secret de l’installation, AES-256-GCM), et gardés 24 h au plus.
 - **Changement d’agent** : le code et les sites sensibles du précédent sont effacés ; ses consultations
   restent à remonter au journal.
+
+Depuis le Sprint 11 (ADR-024) :
+
+- **Fonds de carte** : stockés hors de la base chiffrée (donnée publique, `files/basemaps/`), effacés à
+  la révocation ; le moteur de carte ne lit que des fichiers locaux, sans aucun appel à un serveur.
+- **Localisation** : permission demandée au premier « Me situer » (`ACCESS_FINE_LOCATION`,
+  `ACCESS_COARSE_LOCATION`) ; la position est affichée par le moteur de carte et n'est jamais transmise ;
+  un refus laisse la carte utilisable.
 
 ## Secrets et Git
 
