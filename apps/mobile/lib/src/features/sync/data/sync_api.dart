@@ -130,6 +130,15 @@ final class SyncApi {
     );
   }
 
+  /// Jeu de clés signé par la clé racine (SEC-04) ; 404 sans jeu configuré.
+  Future<SignedPayload> keyset(DeviceCredentials device) async {
+    final json = await _signed(device, 'GET', '/sync/keyset');
+    return SignedPayload(
+      json.requireString('keyset'),
+      SignatureEnvelope.fromJson(json.requireObject('signature')),
+    );
+  }
+
   Future<SignedPayload> catalog(DeviceCredentials device) async {
     final json = await _signed(device, 'GET', '/sync/catalog');
     return SignedPayload(
@@ -252,6 +261,7 @@ final class SyncApi {
     required String status,
     required String? errorCode,
     required List<String> installed,
+    int? keysetSequence,
   }) async {
     await _signed(
       device,
@@ -262,6 +272,7 @@ final class SyncApi {
         'status': status,
         'error_code': errorCode,
         'installed': installed,
+        'keyset_sequence': ?keysetSequence,
       },
     );
   }

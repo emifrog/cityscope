@@ -7,6 +7,7 @@ import 'package:cryptography/cryptography.dart';
 import 'package:dio/dio.dart';
 import 'package:etare_ops/src/core/security/trusted_keys.dart';
 import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
+import 'package:etare_ops/src/features/sync/domain/keyset.dart';
 import 'package:etare_ops/src/features/sync/domain/signed_content.dart';
 
 const tenantId = '06000000-0000-4000-8000-000000000000';
@@ -227,33 +228,91 @@ final class FakeReport {
 /// vraies clés Ed25519 et vérifie la signature de la tablette sur chaque
 /// requête (méthode, chemin, heure, corps), comme l'API.
 final class FakeSyncServer {
-  FakeSyncServer._(this._publicationKey, this._catalogKey, this.trustedKeys);
+  FakeSyncServer._(this._rootKey, this.rootKeyId);
 
   static Future<FakeSyncServer> start() async {
-    final algorithm = Ed25519();
-    final publicationKey = await algorithm.newKeyPair();
-    final catalogKey = await algorithm.newKeyPair();
-    return FakeSyncServer._(
-      publicationKey,
-      catalogKey,
-      TrustedKeys([
-        TrustedKey(
-          purpose: KeyPurpose.publication,
-          keyId: 'pub-test',
-          publicKey: (await publicationKey.extractPublicKey()).bytes,
-        ),
-        TrustedKey(
-          purpose: KeyPurpose.catalog,
-          keyId: 'cat-test',
-          publicKey: (await catalogKey.extractPublicKey()).bytes,
-        ),
-      ]),
+    final root = await Ed25519().newKeyPair();
+    final server = FakeSyncServer._(
+      root,
+      keyIdOfPublicKey((await root.extractPublicKey()).bytes),
     );
+    server
+      ..publicationKeyId = await server.addKey(KeyPurpose.publication)
+      ..catalogKeyId = await server.addKey(KeyPurpose.catalog);
+    server.trustedKeys = TrustedKeys([
+      TrustedKey(
+        purpose: KeyPurpose.root,
+        keyId: server.rootKeyId,
+        publicKey: (await root.extractPublicKey()).bytes,
+      ),
+      for (final MapEntry(key: id, value: key) in server._keys.entries)
+        TrustedKey(
+          purpose: server._purposes[id]!,
+          keyId: id,
+          publicKey: (await key.extractPublicKey()).bytes,
+        ),
+    ]);
+    return server;
   }
 
-  final SimpleKeyPair _publicationKey;
-  final SimpleKeyPair _catalogKey;
-  final TrustedKeys trustedKeys;
+  /// Clé racine (hors ligne en vrai) : signe les jeux de clés (SEC-04).
+  final SimpleKeyPair _rootKey;
+  final String rootKeyId;
+
+  /// Clés de service du serveur, par identifiant dérivé, et leur usage.
+  final Map<String, SimpleKeyPair> _keys = {};
+  final Map<String, KeyPurpose> _purposes = {};
+
+  /// Clés embarquées dans l'application : racine et clés de premier contact.
+  late final TrustedKeys trustedKeys;
+
+  /// Clés qui signent maintenant les manifestes et les catalogues.
+  late String publicationKeyId;
+  late String catalogKeyId;
+
+  /// Jeu de clés servi (null : 404, aucun jeu configuré) et statut de chaque
+  /// clé qu'il liste ; un jeu signé par une autre racine pour les tests.
+  int? keysetSequence;
+  final Map<String, KeyStatus> keysetStatuses = {};
+  bool signKeysetWithForeignRoot = false;
+  final List<String> keysetRequests = [];
+
+  /// Nouvelle clé de service ; renvoie son identifiant dérivé.
+  Future<String> addKey(KeyPurpose purpose) async {
+    final key = await Ed25519().newKeyPair();
+    final id = keyIdOfPublicKey((await key.extractPublicKey()).bytes);
+    _keys[id] = key;
+    _purposes[id] = purpose;
+    return id;
+  }
+
+  /// Publie un jeu de clés : les clés listées dans [statuses], par identifiant.
+  void publishKeyset(int sequence, Map<String, KeyStatus> statuses) {
+    keysetSequence = sequence;
+    keysetStatuses
+      ..clear()
+      ..addAll(statuses);
+  }
+
+  Future<String> keysetText() async => jsonEncode({
+    'issued_at': serverClock.toIso8601String(),
+    'keys': [
+      for (final MapEntry(key: id, value: status) in keysetStatuses.entries)
+        {
+          'key_id': id,
+          'public_key': base64.encode(
+            (await _keys[id]!.extractPublicKey()).bytes,
+          ),
+          'purpose': _purposes[id]!.name,
+          'status': status.name,
+        },
+    ],
+    'keyset_version': 1,
+    'sequence': keysetSequence,
+  });
+
+  SimpleKeyPair get _publicationKey => _keys[publicationKeyId]!;
+  SimpleKeyPair get _catalogKey => _keys[catalogKeyId]!;
 
   /// Clé publique de la tablette enrôlée (base64), pour vérifier ses requêtes.
   String? devicePublicKey;
@@ -388,6 +447,23 @@ final class FakeSyncServer {
     if (refusal != null) return refusal;
     if (revoked) return _error(403, 'DEVICE_REVOKED');
 
+    if (path.endsWith('/sync/keyset')) {
+      keysetRequests.add(path);
+      if (keysetSequence == null) return _error(404, 'NOT_FOUND');
+      final text = await keysetText();
+      final signer = signKeysetWithForeignRoot
+          ? await Ed25519().newKeyPair()
+          : _rootKey;
+      return _json(200, {
+        'keyset': text,
+        'signature': {
+          'algorithm': 'Ed25519',
+          'key_id': rootKeyId,
+          'signature': await _sign(signer, SignatureContexts.keyset, text),
+        },
+      });
+    }
+
     if (path.endsWith('/sync/catalog')) {
       final text = jsonEncode({
         'catalog_version': catalogVersion,
@@ -429,7 +505,9 @@ final class FakeSyncServer {
         'catalog': text,
         'signature': {
           'algorithm': 'Ed25519',
-          'key_id': signCatalogWithPublicationKey ? 'pub-test' : 'cat-test',
+          'key_id': signCatalogWithPublicationKey
+              ? publicationKeyId
+              : catalogKeyId,
           'signature': await _sign(key, SignatureContexts.catalog, text),
         },
       });
@@ -446,7 +524,7 @@ final class FakeSyncServer {
             : manifest,
         'signature': {
           'algorithm': 'Ed25519',
-          'key_id': 'pub-test',
+          'key_id': publicationKeyId,
           'signature': await _sign(
             _publicationKey,
             SignatureContexts.manifest,
@@ -481,7 +559,7 @@ final class FakeSyncServer {
         'manifest': served.manifest,
         'signature': {
           'algorithm': 'Ed25519',
-          'key_id': 'pub-test',
+          'key_id': publicationKeyId,
           'signature': await _sign(
             signBasemapWithCatalogKey ? _catalogKey : _publicationKey,
             SignatureContexts.basemap,

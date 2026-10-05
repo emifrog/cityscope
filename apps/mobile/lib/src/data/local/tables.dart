@@ -425,6 +425,42 @@ class InstalledBasemaps extends Table {
 
   DateTimeColumn get installedAt => dateTime()();
 
+  /// Clé qui a signé le manifeste installé (SEC-04) : révoquée, le manifeste
+  /// est revérifié avec sa nouvelle signature. Null pour un fond installé
+  /// avant la version 8 du schéma.
+  TextColumn get signatureKeyId => text().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => {packId};
+}
+
+/// Dernier jeu de clés accepté (SEC-04, ADR-027), ligne unique `id = 1` :
+/// texte exact signé par la clé racine, revérifié à chaque lecture. Conservé
+/// à la révocation (donnée publique) : la tablette ne revient jamais à un jeu
+/// plus ancien.
+@DataClassName('TrustedKeysetRow')
+class TrustedKeysets extends Table {
+  @override
+  String get tableName => 'trusted_keyset';
+
+  static const singletonId = 1;
+
+  IntColumn get id => integer()();
+
+  IntColumn get sequence => integer()();
+
+  /// JSON canonique du jeu, octet pour octet celui qui a été signé.
+  TextColumn get keysetText => text()();
+
+  TextColumn get rootKeyId => text()();
+
+  TextColumn get signature => text()();
+
+  DateTimeColumn get receivedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+
+  @override
+  List<String> get customConstraints => const ['CHECK (id = 1)'];
 }

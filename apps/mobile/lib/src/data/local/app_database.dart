@@ -1,10 +1,12 @@
 import 'package:drift/drift.dart';
+import 'package:etare_ops/src/data/local/app_database.steps.dart';
 import 'package:etare_ops/src/data/local/daos/basemap_dao.dart';
 import 'package:etare_ops/src/data/local/daos/local_meta_dao.dart';
 import 'package:etare_ops/src/data/local/daos/offline_dao.dart';
 import 'package:etare_ops/src/data/local/daos/reports_dao.dart';
 import 'package:etare_ops/src/data/local/daos/sensitive_dao.dart';
 import 'package:etare_ops/src/data/local/daos/sync_state_dao.dart';
+import 'package:etare_ops/src/data/local/daos/trust_dao.dart';
 import 'package:etare_ops/src/data/local/tables.dart';
 
 part 'app_database.g.dart';
@@ -30,6 +32,7 @@ part 'app_database.g.dart';
     SensitiveFiles,
     AccessEventOutbox,
     InstalledBasemaps,
+    TrustedKeysets,
   ],
   daos: [
     LocalMetaDao,
@@ -38,14 +41,17 @@ part 'app_database.g.dart';
     ReportsDao,
     SensitiveDao,
     BasemapDao,
+    TrustDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   /// Incrémenter à chaque évolution du schéma, puis :
-  /// `dart run drift_dev make-migrations` (instantané + tests générés).
-  static const currentSchemaVersion = 7;
+  /// `dart run drift_dev make-migrations` (instantanés, tests générés et
+  /// `app_database.steps.dart`, définitions de tables par version). Une étape
+  /// qui crée une table modifiée plus tard prend sa définition versionnée.
+  static const currentSchemaVersion = 8;
 
   @override
   int get schemaVersion => currentSchemaVersion;
@@ -59,6 +65,7 @@ class AppDatabase extends _$AppDatabase {
     5: _migrateToV5,
     6: _migrateToV6,
     7: _migrateToV7,
+    8: _migrateToV8,
   };
 
   /// v2 (Sprint 4) : contenu hors ligne installé et état de synchronisation
@@ -110,8 +117,20 @@ class AppDatabase extends _$AppDatabase {
   }
 
   /// v7 (Sprint 11) : fonds de carte installés, un par secteur (ADR-024).
+  /// La table telle qu'elle était en v7 (instantané généré par drift_dev) :
+  /// l'étape v8 lui ajoute ensuite sa colonne.
   static Future<void> _migrateToV7(Migrator m, AppDatabase db) async {
-    await m.createTable(db.installedBasemaps);
+    await m.createTable(Schema7(database: db).installedBasemaps);
+  }
+
+  /// v8 (Sprint 12) : jeu de clés de signature accepté, et clé qui a signé
+  /// chaque fond installé (rotation et révocation, ADR-027).
+  static Future<void> _migrateToV8(Migrator m, AppDatabase db) async {
+    await m.createTable(db.trustedKeysets);
+    await m.addColumn(
+      db.installedBasemaps,
+      db.installedBasemaps.signatureKeyId,
+    );
   }
 
   @override

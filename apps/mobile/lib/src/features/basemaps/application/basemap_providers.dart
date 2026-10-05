@@ -24,7 +24,6 @@ final basemapSyncProvider = Provider<BasemapSync?>(
     api: ref.watch(syncApiProvider),
     dao: ref.watch(appDatabaseProvider).basemapDao,
     store: ref.watch(basemapStoreProvider),
-    trustedKeys: ref.watch(appConfigProvider).trustedKeys,
     clock: ref.watch(clockProvider),
   ),
 );

@@ -4,6 +4,7 @@ import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/features/sync/application/document_downloader.dart';
 import 'package:etare_ops/src/features/sync/application/enrollment_service.dart';
 import 'package:etare_ops/src/features/sync/application/sync_service.dart';
+import 'package:etare_ops/src/features/sync/application/trust_store.dart';
 import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
 import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
 import 'package:etare_ops/src/features/sync/data/sync_api.dart';
@@ -49,7 +50,7 @@ void main() {
       reports: database.reportsDao,
       state: database.syncStateDao,
       identities: identities,
-      trustedKeys: server.trustedKeys,
+      trust: TrustStore(embedded: server.trustedKeys, dao: database.trustDao),
       clock: () => server.serverClock,
     );
     downloader = DocumentDownloader(

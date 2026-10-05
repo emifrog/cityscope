@@ -12,6 +12,7 @@ import 'package:etare_ops/src/features/reports/application/report_providers.dart
 import 'package:etare_ops/src/features/sensitive/application/sensitive_providers.dart';
 import 'package:etare_ops/src/features/sync/application/enrollment_service.dart';
 import 'package:etare_ops/src/features/sync/application/sync_service.dart';
+import 'package:etare_ops/src/features/sync/application/trust_store.dart';
 import 'package:etare_ops/src/features/sync/background/background_scheduler.dart';
 import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
 import 'package:etare_ops/src/features/sync/data/sync_api.dart';
@@ -66,6 +67,16 @@ final syncApiProvider = Provider<SyncApi>(
   ),
 );
 
+/// Clés reconnues par la tablette : racine de la configuration, jeu de clés
+/// retenu (SEC-04, ADR-027).
+final trustStoreProvider = Provider<TrustStore>(
+  (ref) => TrustStore(
+    embedded: ref.watch(appConfigProvider).trustedKeys,
+    dao: ref.watch(appDatabaseProvider).trustDao,
+    clock: ref.watch(clockProvider),
+  ),
+);
+
 final syncServiceProvider = Provider<SyncService>((ref) {
   final database = ref.watch(appDatabaseProvider);
   return SyncService(
@@ -74,7 +85,7 @@ final syncServiceProvider = Provider<SyncService>((ref) {
     reports: database.reportsDao,
     state: database.syncStateDao,
     identities: ref.watch(deviceIdentityStoreProvider),
-    trustedKeys: ref.watch(appConfigProvider).trustedKeys,
+    trust: ref.watch(trustStoreProvider),
     basemaps: ref.watch(basemapSyncProvider),
     clock: ref.watch(clockProvider),
   );

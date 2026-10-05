@@ -15,6 +15,7 @@ import 'package:etare_ops/src/data/local/daos/reports_dao.dart';
 import 'package:etare_ops/src/data/local/daos/sync_state_dao.dart';
 import 'package:etare_ops/src/features/basemaps/application/basemap_sync.dart';
 import 'package:etare_ops/src/features/sync/application/package_verification.dart';
+import 'package:etare_ops/src/features/sync/application/trust_store.dart';
 import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
 import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
 import 'package:etare_ops/src/features/sync/data/sync_api.dart';
@@ -154,7 +155,7 @@ final class SyncService {
     required this._reports,
     required this._state,
     required this._identities,
-    required this._trustedKeys,
+    required this._trust,
     this._basemaps,
     this._clock = DateTime.now,
   });
@@ -166,7 +167,12 @@ final class SyncService {
   final ReportsDao _reports;
   final SyncStateDao _state;
   final DeviceIdentityStore _identities;
-  final TrustedKeys _trustedKeys;
+
+  /// Clés reconnues (SEC-04) : jeu de clés lu avant chaque catalogue.
+  final TrustStore _trust;
+
+  /// Clés reconnues pour ce passage, une fois le jeu de clés relu.
+  TrustedKeys _trustedKeys = TrustedKeys.empty;
 
   /// Fonds de carte de la tablette (ADR-024) ; null : pas de carte.
   final BasemapSync? _basemaps;
@@ -204,9 +210,12 @@ final class SyncService {
     _allowLargeBasemaps = allowLargeBasemaps;
     final identity = await _identities.read();
     if (identity == null) return const SyncNotEnrolled();
-    if (!_trustedKeys.has(KeyPurpose.publication) ||
-        !_trustedKeys.has(KeyPurpose.catalog)) {
-      throw const SyncIntegrityException('TRUSTED_KEYS_MISSING');
+    if (!_trust.verifiesKeysets) {
+      final embedded = await _trust.current();
+      if (!embedded.has(KeyPurpose.publication) ||
+          !embedded.has(KeyPurpose.catalog)) {
+        throw const SyncIntegrityException('TRUSTED_KEYS_MISSING');
+      }
     }
     final device = DeviceCredentials(
       identity,
@@ -219,6 +228,13 @@ final class SyncService {
       ),
     );
     try {
+      onProgress?.call(const SyncProgress(step: SyncStep.catalog));
+      await _refreshKeyset(device);
+      _trustedKeys = await _trust.current();
+      if (!_trustedKeys.has(KeyPurpose.publication) ||
+          !_trustedKeys.has(KeyPurpose.catalog)) {
+        throw const SyncIntegrityException('TRUSTED_KEYS_MISSING');
+      }
       return await _synchronize(
         device,
         userId,
@@ -283,6 +299,29 @@ final class SyncService {
     }
   }
 
+  /// Jeu de clés lu avant le catalogue (SEC-04, ADR-027) : vérifié par la
+  /// clé racine, jamais plus ancien que celui retenu. Un serveur sans jeu
+  /// (404) laisse la tablette sur les clés qu'elle connaît.
+  Future<void> _refreshKeyset(DeviceCredentials device) async {
+    if (!_trust.verifiesKeysets) return;
+    final SignedPayload signed;
+    try {
+      signed = await _api.keyset(device);
+    } on ApiException catch (error) {
+      if (error.code == ApiErrorCode.notFound) return;
+      rethrow;
+    }
+    final change = await _trust.accept(signed);
+    if (change.newlyRevokedPublicationKeys.isNotEmpty) {
+      // Les sites sensibles ouverts ne gardent pas leur signature : refermés,
+      // ils seront revérifiés à leur prochaine ouverture.
+      _logger.warning(
+        'Clé de publication révoquée : sites sensibles refermés.',
+      );
+      await _offline.closeOpenedSensitiveSites();
+    }
+  }
+
   /// Révocation (OFF-04) : données installées, fonds de carte, état et
   /// identité effacés.
   Future<void> purge() async {
@@ -301,14 +340,22 @@ final class SyncService {
     onProgress(const SyncProgress(step: SyncStep.catalog));
     final catalog = await _verifiedCatalog(device, userId);
     final installed = await _offline.installed();
-    final plan = planSync([
-      for (final row in installed)
-        InstalledVersion(
-          siteId: row.siteId,
-          publicationId: row.publicationId,
-          manifestHash: row.manifestHash,
-        ),
-    ], catalog);
+    // Une version signée par une clé révoquée est revérifiée : même version,
+    // signature renouvelée par le serveur, fichiers déjà présents.
+    final plan = planSync(
+      [
+        for (final row in installed)
+          InstalledVersion(
+            siteId: row.siteId,
+            publicationId: row.publicationId,
+            manifestHash: row.manifestHash,
+            signatureKeyId: row.signatureKeyId,
+          ),
+      ],
+      catalog,
+      trusted: (keyId) =>
+          _trustedKeys.find(keyId, KeyPurpose.publication) != null,
+    );
 
     final minVersion = catalog.minAppVersion;
     if (minVersion != null &&
@@ -453,6 +500,7 @@ final class SyncService {
       return await basemaps.synchronize(
         device,
         catalog.basemaps,
+        trustedKeys: _trustedKeys,
         allowLarge: _allowLargeBasemaps,
         onProgress: (progress) => onProgress(
           SyncProgress(
@@ -718,6 +766,7 @@ final class SyncService {
         installed: [
           for (final row in await _offline.installed()) row.publicationId,
         ],
+        keysetSequence: await _trust.sequence(),
       );
       await _state.write(
         const SyncStateCompanion(receiptPending: Value(false)),
@@ -769,7 +818,7 @@ final class SyncService {
   }
 
   /// Codes remontés dans l'accusé quand l'application est trop ancienne.
-  static const _updateRequired = 'APP_UPDATE_REQUIRED';
+  static const _updateRequired = appUpdateRequiredCode;
   static const _readerTooOld = readerTooOldCode;
 
   static String _integrityMessage(String code) => switch (code) {
@@ -778,6 +827,10 @@ final class SyncService {
     'CATALOG_REPLAYED' =>
       'Catalogue plus ancien que celui déjà installé : refusé.',
     'CATALOG_USER_MISMATCH' => 'Catalogue émis pour un autre utilisateur.',
+    'KEYSET_REPLAYED' || 'KEYSET_CONFLICT' =>
+      'Jeu de clés de signature plus ancien que celui de la tablette : refusé.',
+    'KEYSET_SIGNATURE_INVALID' =>
+      'Jeu de clés de signature non reconnu par l’application : refusé.',
     _ => 'Données reçues invalides ($code) : rien n’a été installé.',
   };
 }

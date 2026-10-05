@@ -2,13 +2,13 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:etare_ops/src/core/security/local_code.dart';
-import 'package:etare_ops/src/core/security/trusted_keys.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/data/local/daos/sensitive_dao.dart';
 import 'package:etare_ops/src/features/ops/domain/published_site.dart';
 import 'package:etare_ops/src/features/reports/application/report_providers.dart'
     show newClientReportId;
 import 'package:etare_ops/src/features/sync/application/package_verification.dart';
+import 'package:etare_ops/src/features/sync/application/trust_store.dart';
 import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
 import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
 import 'package:etare_ops/src/features/sync/data/sync_api.dart';
@@ -68,7 +68,7 @@ class SensitiveSiteService {
     required this._api,
     required this._dao,
     required this._identities,
-    required this._trustedKeys,
+    required this._trust,
     required this._codes,
     this._clock = DateTime.now,
     Random? random,
@@ -77,7 +77,9 @@ class SensitiveSiteService {
   final SyncApi _api;
   final SensitiveDao _dao;
   final DeviceIdentityStore _identities;
-  final TrustedKeys _trustedKeys;
+
+  /// Clés reconnues (jeu de clés retenu à la dernière synchronisation).
+  final TrustStore _trust;
   final LocalCodeStore _codes;
   final DateTime Function() _clock;
   final Random _random;
@@ -141,7 +143,7 @@ class SensitiveSiteService {
     );
     final package = await _api.package(device, entry.publicationId);
     final verified = await verifyPackage(
-      trustedKeys: _trustedKeys,
+      trustedKeys: await _trust.current(),
       package: package,
       entry: entry,
       tenantId: device.identity.tenantId,

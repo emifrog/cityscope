@@ -166,15 +166,15 @@ final class AppConfig {
     } on FormatException catch (error) {
       issues.add(ConfigIssue(trustedSigningKeysKey, error.message));
     }
-    final complete =
-        trustedKeys.has(KeyPurpose.publication) &&
-        trustedKeys.has(KeyPurpose.catalog);
-    if (effectiveEnv != AppEnvironment.dev && !complete) {
+    // Hors développement, la clé racine des jeux de clés est obligatoire
+    // (SEC-04, ADR-027) : c'est elle qui fait connaître les clés de service.
+    if (effectiveEnv != AppEnvironment.dev &&
+        !trustedKeys.has(KeyPurpose.root)) {
       issues.add(
         ConfigIssue(
           trustedSigningKeysKey,
-          'Clés publiques de publication et de catalogue obligatoires en '
-          'environnement ${effectiveEnv.name}.',
+          'Clé racine des jeux de clés obligatoire en environnement '
+          '${effectiveEnv.name} (root:<id>:<clé>).',
         ),
       );
     }

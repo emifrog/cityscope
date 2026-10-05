@@ -444,6 +444,12 @@ class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
       .map(decodeRemovalNotices);
 
   /// Revocation (OFF-04) : efface tout le contenu hors ligne et l'état.
+  /// Une clé de publication vient d'être révoquée (SEC-04) : les sites
+  /// sensibles ouverts à la demande sont refermés (rouverts, ils seront
+  /// revérifiés) ; les consultations à remonter sont gardées.
+  Future<void> closeOpenedSensitiveSites() =>
+      attachedDatabase.sensitiveDao.purgeOtherUsers(null);
+
   Future<void> purgeAll() async {
     await transaction(() async {
       await attachedDatabase.sensitiveDao.purgeAll();

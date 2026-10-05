@@ -17,7 +17,8 @@ List<String> rejectedKeys(ConfigLoadResult result) => switch (result) {
 /// Clé publique factice (32 octets nuls) : seul le format est contrôlé ici.
 const testKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
 const trustedKeys =
-    'publication:ed25519-pub:$testKey;catalog:ed25519-cat:$testKey';
+    'root:ed25519-root:$testKey;publication:ed25519-pub:$testKey;'
+    'catalog:ed25519-cat:$testKey';
 
 void main() {
   group('clés de signature approuvées (ADR-015)', () {
@@ -29,6 +30,7 @@ void main() {
         }),
       );
       expect(config.trustedKeys.has(KeyPurpose.publication), isTrue);
+      expect(config.trustedKeys.roots.single.keyId, 'ed25519-root');
       expect(
         config.trustedKeys.find('ed25519-pub', KeyPurpose.catalog),
         isNull,
@@ -50,10 +52,25 @@ void main() {
             'API_BASE_URL': 'https://api.example.fr/api/v1',
             'AUTH_URL': 'https://auth.example.fr/auth/v1',
             'AUTH_PUBLISHABLE_KEY': 'k',
-            'TRUSTED_SIGNING_KEYS': 'publication:ed25519-pub:$testKey',
+            'TRUSTED_SIGNING_KEYS':
+                'publication:ed25519-pub:$testKey;catalog:ed25519-cat:$testKey',
           }),
         ),
         ['TRUSTED_SIGNING_KEYS'],
+        reason: 'hors dev, la clé racine est obligatoire (SEC-04)',
+      );
+      // La racine seule suffit : les clés de service viennent du jeu de clés.
+      expect(
+        expectLoaded(
+          AppConfig.parse({
+            'ENV': 'staging',
+            'API_BASE_URL': 'https://api.example.fr/api/v1',
+            'AUTH_URL': 'https://auth.example.fr/auth/v1',
+            'AUTH_PUBLISHABLE_KEY': 'k',
+            'TRUSTED_SIGNING_KEYS': 'root:ed25519-root:$testKey',
+          }),
+        ).trustedKeys.has(KeyPurpose.root),
+        isTrue,
       );
     });
 
@@ -105,7 +122,7 @@ void main() {
       expect(config.apiBaseUrl, 'https://api.staging.example.fr/api/v1');
       expect(config.authUrl, 'https://auth.staging.example.fr/auth/v1');
       expect(config.authPublishableKey, 'sb_publishable_xyz');
-      expect(config.trustedKeys.keys, hasLength(2));
+      expect(config.trustedKeys.keys, hasLength(3));
     });
 
     test('rejette une clé publishable absente ou vide', () {

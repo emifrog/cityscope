@@ -190,7 +190,8 @@ const mobile = {
   ...mobileDefines,
   AUTH_URL: authUrl.toString().replace(/\/$/, ''),
   AUTH_PUBLISHABLE_KEY: publishableKey,
-  TRUSTED_SIGNING_KEYS: trustedKeys,
+  // Root of the key sets (SEC-04) first; the service keys serve the first contact only.
+  TRUSTED_SIGNING_KEYS: `${rootKeys};${trustedKeys}`,
 };
 writeFileSync(mobileFile, `${JSON.stringify(mobile, null, 2)}\n`);
 console.log('Wrote apps/mobile/dart_defines.local.json');

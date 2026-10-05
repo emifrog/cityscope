@@ -21,6 +21,7 @@ import 'package:etare_ops/src/core/security/trusted_keys.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/features/sync/application/enrollment_service.dart';
 import 'package:etare_ops/src/features/sync/application/sync_service.dart';
+import 'package:etare_ops/src/features/sync/application/trust_store.dart';
 import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
 import 'package:etare_ops/src/features/sync/data/sync_api.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -80,7 +81,10 @@ void main() {
         reports: database.reportsDao,
         state: database.syncStateDao,
         identities: identities,
-        trustedKeys: TrustedKeys.parse(_require('ETARE_E2E_TRUSTED_KEYS')),
+        trust: TrustStore(
+          embedded: TrustedKeys.parse(_require('ETARE_E2E_TRUSTED_KEYS')),
+          dao: database.trustDao,
+        ),
       ).run(userId: userId) as SyncCompleted;
 
       expect(report.failures, isEmpty);

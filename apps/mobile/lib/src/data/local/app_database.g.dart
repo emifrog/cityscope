@@ -7550,6 +7550,17 @@ class $InstalledBasemapsTable extends InstalledBasemaps
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _signatureKeyIdMeta = const VerificationMeta(
+    'signatureKeyId',
+  );
+  @override
+  late final GeneratedColumn<String> signatureKeyId = GeneratedColumn<String>(
+    'signature_key_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     packId,
@@ -7562,6 +7573,7 @@ class $InstalledBasemapsTable extends InstalledBasemaps
     builtAt,
     renewAfter,
     installedAt,
+    signatureKeyId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -7664,6 +7676,15 @@ class $InstalledBasemapsTable extends InstalledBasemaps
     } else if (isInserting) {
       context.missing(_installedAtMeta);
     }
+    if (data.containsKey('signature_key_id')) {
+      context.handle(
+        _signatureKeyIdMeta,
+        signatureKeyId.isAcceptableOrUnknown(
+          data['signature_key_id']!,
+          _signatureKeyIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -7713,6 +7734,10 @@ class $InstalledBasemapsTable extends InstalledBasemaps
         DriftSqlType.dateTime,
         data['${effectivePrefix}installed_at'],
       )!,
+      signatureKeyId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}signature_key_id'],
+      ),
     );
   }
 
@@ -7738,6 +7763,11 @@ class InstalledBasemapRow extends DataClass
   /// Renouvellement semestriel prévu (date du fond, distincte de l'ETARE).
   final DateTime renewAfter;
   final DateTime installedAt;
+
+  /// Clé qui a signé le manifeste installé (SEC-04) : révoquée, le manifeste
+  /// est revérifié avec sa nouvelle signature. Null pour un fond installé
+  /// avant la version 8 du schéma.
+  final String? signatureKeyId;
   const InstalledBasemapRow({
     required this.packId,
     required this.sectorId,
@@ -7749,6 +7779,7 @@ class InstalledBasemapRow extends DataClass
     required this.builtAt,
     required this.renewAfter,
     required this.installedAt,
+    this.signatureKeyId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -7763,6 +7794,9 @@ class InstalledBasemapRow extends DataClass
     map['built_at'] = Variable<DateTime>(builtAt);
     map['renew_after'] = Variable<DateTime>(renewAfter);
     map['installed_at'] = Variable<DateTime>(installedAt);
+    if (!nullToAbsent || signatureKeyId != null) {
+      map['signature_key_id'] = Variable<String>(signatureKeyId);
+    }
     return map;
   }
 
@@ -7778,6 +7812,9 @@ class InstalledBasemapRow extends DataClass
       builtAt: Value(builtAt),
       renewAfter: Value(renewAfter),
       installedAt: Value(installedAt),
+      signatureKeyId: signatureKeyId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(signatureKeyId),
     );
   }
 
@@ -7797,6 +7834,7 @@ class InstalledBasemapRow extends DataClass
       builtAt: serializer.fromJson<DateTime>(json['builtAt']),
       renewAfter: serializer.fromJson<DateTime>(json['renewAfter']),
       installedAt: serializer.fromJson<DateTime>(json['installedAt']),
+      signatureKeyId: serializer.fromJson<String?>(json['signatureKeyId']),
     );
   }
   @override
@@ -7813,6 +7851,7 @@ class InstalledBasemapRow extends DataClass
       'builtAt': serializer.toJson<DateTime>(builtAt),
       'renewAfter': serializer.toJson<DateTime>(renewAfter),
       'installedAt': serializer.toJson<DateTime>(installedAt),
+      'signatureKeyId': serializer.toJson<String?>(signatureKeyId),
     };
   }
 
@@ -7827,6 +7866,7 @@ class InstalledBasemapRow extends DataClass
     DateTime? builtAt,
     DateTime? renewAfter,
     DateTime? installedAt,
+    Value<String?> signatureKeyId = const Value.absent(),
   }) => InstalledBasemapRow(
     packId: packId ?? this.packId,
     sectorId: sectorId ?? this.sectorId,
@@ -7838,6 +7878,9 @@ class InstalledBasemapRow extends DataClass
     builtAt: builtAt ?? this.builtAt,
     renewAfter: renewAfter ?? this.renewAfter,
     installedAt: installedAt ?? this.installedAt,
+    signatureKeyId: signatureKeyId.present
+        ? signatureKeyId.value
+        : this.signatureKeyId,
   );
   InstalledBasemapRow copyWithCompanion(InstalledBasemapsCompanion data) {
     return InstalledBasemapRow(
@@ -7863,6 +7906,9 @@ class InstalledBasemapRow extends DataClass
       installedAt: data.installedAt.present
           ? data.installedAt.value
           : this.installedAt,
+      signatureKeyId: data.signatureKeyId.present
+          ? data.signatureKeyId.value
+          : this.signatureKeyId,
     );
   }
 
@@ -7878,7 +7924,8 @@ class InstalledBasemapRow extends DataClass
           ..write('totalBytes: $totalBytes, ')
           ..write('builtAt: $builtAt, ')
           ..write('renewAfter: $renewAfter, ')
-          ..write('installedAt: $installedAt')
+          ..write('installedAt: $installedAt, ')
+          ..write('signatureKeyId: $signatureKeyId')
           ..write(')'))
         .toString();
   }
@@ -7895,6 +7942,7 @@ class InstalledBasemapRow extends DataClass
     builtAt,
     renewAfter,
     installedAt,
+    signatureKeyId,
   );
   @override
   bool operator ==(Object other) =>
@@ -7909,7 +7957,8 @@ class InstalledBasemapRow extends DataClass
           other.totalBytes == this.totalBytes &&
           other.builtAt == this.builtAt &&
           other.renewAfter == this.renewAfter &&
-          other.installedAt == this.installedAt);
+          other.installedAt == this.installedAt &&
+          other.signatureKeyId == this.signatureKeyId);
 }
 
 class InstalledBasemapsCompanion extends UpdateCompanion<InstalledBasemapRow> {
@@ -7923,6 +7972,7 @@ class InstalledBasemapsCompanion extends UpdateCompanion<InstalledBasemapRow> {
   final Value<DateTime> builtAt;
   final Value<DateTime> renewAfter;
   final Value<DateTime> installedAt;
+  final Value<String?> signatureKeyId;
   final Value<int> rowid;
   const InstalledBasemapsCompanion({
     this.packId = const Value.absent(),
@@ -7935,6 +7985,7 @@ class InstalledBasemapsCompanion extends UpdateCompanion<InstalledBasemapRow> {
     this.builtAt = const Value.absent(),
     this.renewAfter = const Value.absent(),
     this.installedAt = const Value.absent(),
+    this.signatureKeyId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   InstalledBasemapsCompanion.insert({
@@ -7948,6 +7999,7 @@ class InstalledBasemapsCompanion extends UpdateCompanion<InstalledBasemapRow> {
     required DateTime builtAt,
     required DateTime renewAfter,
     required DateTime installedAt,
+    this.signatureKeyId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : packId = Value(packId),
        sectorId = Value(sectorId),
@@ -7970,6 +8022,7 @@ class InstalledBasemapsCompanion extends UpdateCompanion<InstalledBasemapRow> {
     Expression<DateTime>? builtAt,
     Expression<DateTime>? renewAfter,
     Expression<DateTime>? installedAt,
+    Expression<String>? signatureKeyId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -7983,6 +8036,7 @@ class InstalledBasemapsCompanion extends UpdateCompanion<InstalledBasemapRow> {
       if (builtAt != null) 'built_at': builtAt,
       if (renewAfter != null) 'renew_after': renewAfter,
       if (installedAt != null) 'installed_at': installedAt,
+      if (signatureKeyId != null) 'signature_key_id': signatureKeyId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -7998,6 +8052,7 @@ class InstalledBasemapsCompanion extends UpdateCompanion<InstalledBasemapRow> {
     Value<DateTime>? builtAt,
     Value<DateTime>? renewAfter,
     Value<DateTime>? installedAt,
+    Value<String?>? signatureKeyId,
     Value<int>? rowid,
   }) {
     return InstalledBasemapsCompanion(
@@ -8011,6 +8066,7 @@ class InstalledBasemapsCompanion extends UpdateCompanion<InstalledBasemapRow> {
       builtAt: builtAt ?? this.builtAt,
       renewAfter: renewAfter ?? this.renewAfter,
       installedAt: installedAt ?? this.installedAt,
+      signatureKeyId: signatureKeyId ?? this.signatureKeyId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -8048,6 +8104,9 @@ class InstalledBasemapsCompanion extends UpdateCompanion<InstalledBasemapRow> {
     if (installedAt.present) {
       map['installed_at'] = Variable<DateTime>(installedAt.value);
     }
+    if (signatureKeyId.present) {
+      map['signature_key_id'] = Variable<String>(signatureKeyId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -8067,7 +8126,411 @@ class InstalledBasemapsCompanion extends UpdateCompanion<InstalledBasemapRow> {
           ..write('builtAt: $builtAt, ')
           ..write('renewAfter: $renewAfter, ')
           ..write('installedAt: $installedAt, ')
+          ..write('signatureKeyId: $signatureKeyId, ')
           ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $TrustedKeysetsTable extends TrustedKeysets
+    with TableInfo<$TrustedKeysetsTable, TrustedKeysetRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TrustedKeysetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sequenceMeta = const VerificationMeta(
+    'sequence',
+  );
+  @override
+  late final GeneratedColumn<int> sequence = GeneratedColumn<int>(
+    'sequence',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _keysetTextMeta = const VerificationMeta(
+    'keysetText',
+  );
+  @override
+  late final GeneratedColumn<String> keysetText = GeneratedColumn<String>(
+    'keyset_text',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _rootKeyIdMeta = const VerificationMeta(
+    'rootKeyId',
+  );
+  @override
+  late final GeneratedColumn<String> rootKeyId = GeneratedColumn<String>(
+    'root_key_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _signatureMeta = const VerificationMeta(
+    'signature',
+  );
+  @override
+  late final GeneratedColumn<String> signature = GeneratedColumn<String>(
+    'signature',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _receivedAtMeta = const VerificationMeta(
+    'receivedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> receivedAt = GeneratedColumn<DateTime>(
+    'received_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    sequence,
+    keysetText,
+    rootKeyId,
+    signature,
+    receivedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'trusted_keyset';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TrustedKeysetRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('sequence')) {
+      context.handle(
+        _sequenceMeta,
+        sequence.isAcceptableOrUnknown(data['sequence']!, _sequenceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sequenceMeta);
+    }
+    if (data.containsKey('keyset_text')) {
+      context.handle(
+        _keysetTextMeta,
+        keysetText.isAcceptableOrUnknown(data['keyset_text']!, _keysetTextMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_keysetTextMeta);
+    }
+    if (data.containsKey('root_key_id')) {
+      context.handle(
+        _rootKeyIdMeta,
+        rootKeyId.isAcceptableOrUnknown(data['root_key_id']!, _rootKeyIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_rootKeyIdMeta);
+    }
+    if (data.containsKey('signature')) {
+      context.handle(
+        _signatureMeta,
+        signature.isAcceptableOrUnknown(data['signature']!, _signatureMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_signatureMeta);
+    }
+    if (data.containsKey('received_at')) {
+      context.handle(
+        _receivedAtMeta,
+        receivedAt.isAcceptableOrUnknown(data['received_at']!, _receivedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_receivedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TrustedKeysetRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TrustedKeysetRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      sequence: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sequence'],
+      )!,
+      keysetText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}keyset_text'],
+      )!,
+      rootKeyId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}root_key_id'],
+      )!,
+      signature: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}signature'],
+      )!,
+      receivedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}received_at'],
+      )!,
+    );
+  }
+
+  @override
+  $TrustedKeysetsTable createAlias(String alias) {
+    return $TrustedKeysetsTable(attachedDatabase, alias);
+  }
+}
+
+class TrustedKeysetRow extends DataClass
+    implements Insertable<TrustedKeysetRow> {
+  final int id;
+  final int sequence;
+
+  /// JSON canonique du jeu, octet pour octet celui qui a été signé.
+  final String keysetText;
+  final String rootKeyId;
+  final String signature;
+  final DateTime receivedAt;
+  const TrustedKeysetRow({
+    required this.id,
+    required this.sequence,
+    required this.keysetText,
+    required this.rootKeyId,
+    required this.signature,
+    required this.receivedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['sequence'] = Variable<int>(sequence);
+    map['keyset_text'] = Variable<String>(keysetText);
+    map['root_key_id'] = Variable<String>(rootKeyId);
+    map['signature'] = Variable<String>(signature);
+    map['received_at'] = Variable<DateTime>(receivedAt);
+    return map;
+  }
+
+  TrustedKeysetsCompanion toCompanion(bool nullToAbsent) {
+    return TrustedKeysetsCompanion(
+      id: Value(id),
+      sequence: Value(sequence),
+      keysetText: Value(keysetText),
+      rootKeyId: Value(rootKeyId),
+      signature: Value(signature),
+      receivedAt: Value(receivedAt),
+    );
+  }
+
+  factory TrustedKeysetRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TrustedKeysetRow(
+      id: serializer.fromJson<int>(json['id']),
+      sequence: serializer.fromJson<int>(json['sequence']),
+      keysetText: serializer.fromJson<String>(json['keysetText']),
+      rootKeyId: serializer.fromJson<String>(json['rootKeyId']),
+      signature: serializer.fromJson<String>(json['signature']),
+      receivedAt: serializer.fromJson<DateTime>(json['receivedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'sequence': serializer.toJson<int>(sequence),
+      'keysetText': serializer.toJson<String>(keysetText),
+      'rootKeyId': serializer.toJson<String>(rootKeyId),
+      'signature': serializer.toJson<String>(signature),
+      'receivedAt': serializer.toJson<DateTime>(receivedAt),
+    };
+  }
+
+  TrustedKeysetRow copyWith({
+    int? id,
+    int? sequence,
+    String? keysetText,
+    String? rootKeyId,
+    String? signature,
+    DateTime? receivedAt,
+  }) => TrustedKeysetRow(
+    id: id ?? this.id,
+    sequence: sequence ?? this.sequence,
+    keysetText: keysetText ?? this.keysetText,
+    rootKeyId: rootKeyId ?? this.rootKeyId,
+    signature: signature ?? this.signature,
+    receivedAt: receivedAt ?? this.receivedAt,
+  );
+  TrustedKeysetRow copyWithCompanion(TrustedKeysetsCompanion data) {
+    return TrustedKeysetRow(
+      id: data.id.present ? data.id.value : this.id,
+      sequence: data.sequence.present ? data.sequence.value : this.sequence,
+      keysetText: data.keysetText.present
+          ? data.keysetText.value
+          : this.keysetText,
+      rootKeyId: data.rootKeyId.present ? data.rootKeyId.value : this.rootKeyId,
+      signature: data.signature.present ? data.signature.value : this.signature,
+      receivedAt: data.receivedAt.present
+          ? data.receivedAt.value
+          : this.receivedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrustedKeysetRow(')
+          ..write('id: $id, ')
+          ..write('sequence: $sequence, ')
+          ..write('keysetText: $keysetText, ')
+          ..write('rootKeyId: $rootKeyId, ')
+          ..write('signature: $signature, ')
+          ..write('receivedAt: $receivedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, sequence, keysetText, rootKeyId, signature, receivedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TrustedKeysetRow &&
+          other.id == this.id &&
+          other.sequence == this.sequence &&
+          other.keysetText == this.keysetText &&
+          other.rootKeyId == this.rootKeyId &&
+          other.signature == this.signature &&
+          other.receivedAt == this.receivedAt);
+}
+
+class TrustedKeysetsCompanion extends UpdateCompanion<TrustedKeysetRow> {
+  final Value<int> id;
+  final Value<int> sequence;
+  final Value<String> keysetText;
+  final Value<String> rootKeyId;
+  final Value<String> signature;
+  final Value<DateTime> receivedAt;
+  const TrustedKeysetsCompanion({
+    this.id = const Value.absent(),
+    this.sequence = const Value.absent(),
+    this.keysetText = const Value.absent(),
+    this.rootKeyId = const Value.absent(),
+    this.signature = const Value.absent(),
+    this.receivedAt = const Value.absent(),
+  });
+  TrustedKeysetsCompanion.insert({
+    this.id = const Value.absent(),
+    required int sequence,
+    required String keysetText,
+    required String rootKeyId,
+    required String signature,
+    required DateTime receivedAt,
+  }) : sequence = Value(sequence),
+       keysetText = Value(keysetText),
+       rootKeyId = Value(rootKeyId),
+       signature = Value(signature),
+       receivedAt = Value(receivedAt);
+  static Insertable<TrustedKeysetRow> custom({
+    Expression<int>? id,
+    Expression<int>? sequence,
+    Expression<String>? keysetText,
+    Expression<String>? rootKeyId,
+    Expression<String>? signature,
+    Expression<DateTime>? receivedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (sequence != null) 'sequence': sequence,
+      if (keysetText != null) 'keyset_text': keysetText,
+      if (rootKeyId != null) 'root_key_id': rootKeyId,
+      if (signature != null) 'signature': signature,
+      if (receivedAt != null) 'received_at': receivedAt,
+    });
+  }
+
+  TrustedKeysetsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? sequence,
+    Value<String>? keysetText,
+    Value<String>? rootKeyId,
+    Value<String>? signature,
+    Value<DateTime>? receivedAt,
+  }) {
+    return TrustedKeysetsCompanion(
+      id: id ?? this.id,
+      sequence: sequence ?? this.sequence,
+      keysetText: keysetText ?? this.keysetText,
+      rootKeyId: rootKeyId ?? this.rootKeyId,
+      signature: signature ?? this.signature,
+      receivedAt: receivedAt ?? this.receivedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (sequence.present) {
+      map['sequence'] = Variable<int>(sequence.value);
+    }
+    if (keysetText.present) {
+      map['keyset_text'] = Variable<String>(keysetText.value);
+    }
+    if (rootKeyId.present) {
+      map['root_key_id'] = Variable<String>(rootKeyId.value);
+    }
+    if (signature.present) {
+      map['signature'] = Variable<String>(signature.value);
+    }
+    if (receivedAt.present) {
+      map['received_at'] = Variable<DateTime>(receivedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrustedKeysetsCompanion(')
+          ..write('id: $id, ')
+          ..write('sequence: $sequence, ')
+          ..write('keysetText: $keysetText, ')
+          ..write('rootKeyId: $rootKeyId, ')
+          ..write('signature: $signature, ')
+          ..write('receivedAt: $receivedAt')
           ..write(')'))
         .toString();
   }
@@ -8096,12 +8559,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $AccessEventOutboxTable(this);
   late final $InstalledBasemapsTable installedBasemaps =
       $InstalledBasemapsTable(this);
+  late final $TrustedKeysetsTable trustedKeysets = $TrustedKeysetsTable(this);
   late final LocalMetaDao localMetaDao = LocalMetaDao(this as AppDatabase);
   late final SyncStateDao syncStateDao = SyncStateDao(this as AppDatabase);
   late final OfflineDao offlineDao = OfflineDao(this as AppDatabase);
   late final ReportsDao reportsDao = ReportsDao(this as AppDatabase);
   late final SensitiveDao sensitiveDao = SensitiveDao(this as AppDatabase);
   late final BasemapDao basemapDao = BasemapDao(this as AppDatabase);
+  late final TrustDao trustDao = TrustDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -8121,6 +8586,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     sensitiveFiles,
     accessEventOutbox,
     installedBasemaps,
+    trustedKeysets,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -12143,6 +12609,7 @@ typedef $$InstalledBasemapsTableCreateCompanionBuilder =
       required DateTime builtAt,
       required DateTime renewAfter,
       required DateTime installedAt,
+      Value<String?> signatureKeyId,
       Value<int> rowid,
     });
 typedef $$InstalledBasemapsTableUpdateCompanionBuilder =
@@ -12157,6 +12624,7 @@ typedef $$InstalledBasemapsTableUpdateCompanionBuilder =
       Value<DateTime> builtAt,
       Value<DateTime> renewAfter,
       Value<DateTime> installedAt,
+      Value<String?> signatureKeyId,
       Value<int> rowid,
     });
 
@@ -12216,6 +12684,11 @@ class $$InstalledBasemapsTableFilterComposer
 
   ColumnFilters<DateTime> get installedAt => $composableBuilder(
     column: $table.installedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get signatureKeyId => $composableBuilder(
+    column: $table.signatureKeyId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -12278,6 +12751,11 @@ class $$InstalledBasemapsTableOrderingComposer
     column: $table.installedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get signatureKeyId => $composableBuilder(
+    column: $table.signatureKeyId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$InstalledBasemapsTableAnnotationComposer
@@ -12328,6 +12806,11 @@ class $$InstalledBasemapsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get installedAt => $composableBuilder(
     column: $table.installedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get signatureKeyId => $composableBuilder(
+    column: $table.signatureKeyId,
     builder: (column) => column,
   );
 }
@@ -12382,6 +12865,7 @@ class $$InstalledBasemapsTableTableManager
                 Value<DateTime> builtAt = const Value.absent(),
                 Value<DateTime> renewAfter = const Value.absent(),
                 Value<DateTime> installedAt = const Value.absent(),
+                Value<String?> signatureKeyId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => InstalledBasemapsCompanion(
                 packId: packId,
@@ -12394,6 +12878,7 @@ class $$InstalledBasemapsTableTableManager
                 builtAt: builtAt,
                 renewAfter: renewAfter,
                 installedAt: installedAt,
+                signatureKeyId: signatureKeyId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -12408,6 +12893,7 @@ class $$InstalledBasemapsTableTableManager
                 required DateTime builtAt,
                 required DateTime renewAfter,
                 required DateTime installedAt,
+                Value<String?> signatureKeyId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => InstalledBasemapsCompanion.insert(
                 packId: packId,
@@ -12420,6 +12906,7 @@ class $$InstalledBasemapsTableTableManager
                 builtAt: builtAt,
                 renewAfter: renewAfter,
                 installedAt: installedAt,
+                signatureKeyId: signatureKeyId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -12462,6 +12949,238 @@ typedef $$InstalledBasemapsTableProcessedTableManager =
       InstalledBasemapRow,
       PrefetchHooks Function()
     >;
+typedef $$TrustedKeysetsTableCreateCompanionBuilder =
+    TrustedKeysetsCompanion Function({
+      Value<int> id,
+      required int sequence,
+      required String keysetText,
+      required String rootKeyId,
+      required String signature,
+      required DateTime receivedAt,
+    });
+typedef $$TrustedKeysetsTableUpdateCompanionBuilder =
+    TrustedKeysetsCompanion Function({
+      Value<int> id,
+      Value<int> sequence,
+      Value<String> keysetText,
+      Value<String> rootKeyId,
+      Value<String> signature,
+      Value<DateTime> receivedAt,
+    });
+
+class $$TrustedKeysetsTableFilterComposer
+    extends Composer<_$AppDatabase, $TrustedKeysetsTable> {
+  $$TrustedKeysetsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sequence => $composableBuilder(
+    column: $table.sequence,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get keysetText => $composableBuilder(
+    column: $table.keysetText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rootKeyId => $composableBuilder(
+    column: $table.rootKeyId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get signature => $composableBuilder(
+    column: $table.signature,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get receivedAt => $composableBuilder(
+    column: $table.receivedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$TrustedKeysetsTableOrderingComposer
+    extends Composer<_$AppDatabase, $TrustedKeysetsTable> {
+  $$TrustedKeysetsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sequence => $composableBuilder(
+    column: $table.sequence,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get keysetText => $composableBuilder(
+    column: $table.keysetText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rootKeyId => $composableBuilder(
+    column: $table.rootKeyId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get signature => $composableBuilder(
+    column: $table.signature,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get receivedAt => $composableBuilder(
+    column: $table.receivedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TrustedKeysetsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TrustedKeysetsTable> {
+  $$TrustedKeysetsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get sequence =>
+      $composableBuilder(column: $table.sequence, builder: (column) => column);
+
+  GeneratedColumn<String> get keysetText => $composableBuilder(
+    column: $table.keysetText,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get rootKeyId =>
+      $composableBuilder(column: $table.rootKeyId, builder: (column) => column);
+
+  GeneratedColumn<String> get signature =>
+      $composableBuilder(column: $table.signature, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get receivedAt => $composableBuilder(
+    column: $table.receivedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$TrustedKeysetsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TrustedKeysetsTable,
+          TrustedKeysetRow,
+          $$TrustedKeysetsTableFilterComposer,
+          $$TrustedKeysetsTableOrderingComposer,
+          $$TrustedKeysetsTableAnnotationComposer,
+          $$TrustedKeysetsTableCreateCompanionBuilder,
+          $$TrustedKeysetsTableUpdateCompanionBuilder,
+          (
+            TrustedKeysetRow,
+            BaseReferences<
+              _$AppDatabase,
+              $TrustedKeysetsTable,
+              TrustedKeysetRow
+            >,
+          ),
+          TrustedKeysetRow,
+          PrefetchHooks Function()
+        > {
+  $$TrustedKeysetsTableTableManager(
+    _$AppDatabase db,
+    $TrustedKeysetsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TrustedKeysetsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TrustedKeysetsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TrustedKeysetsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> sequence = const Value.absent(),
+                Value<String> keysetText = const Value.absent(),
+                Value<String> rootKeyId = const Value.absent(),
+                Value<String> signature = const Value.absent(),
+                Value<DateTime> receivedAt = const Value.absent(),
+              }) => TrustedKeysetsCompanion(
+                id: id,
+                sequence: sequence,
+                keysetText: keysetText,
+                rootKeyId: rootKeyId,
+                signature: signature,
+                receivedAt: receivedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int sequence,
+                required String keysetText,
+                required String rootKeyId,
+                required String signature,
+                required DateTime receivedAt,
+              }) => TrustedKeysetsCompanion.insert(
+                id: id,
+                sequence: sequence,
+                keysetText: keysetText,
+                rootKeyId: rootKeyId,
+                signature: signature,
+                receivedAt: receivedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$TrustedKeysetsTable, TrustedKeysetRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $TrustedKeysetsTable,
+                    TrustedKeysetRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TrustedKeysetsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TrustedKeysetsTable,
+      TrustedKeysetRow,
+      $$TrustedKeysetsTableFilterComposer,
+      $$TrustedKeysetsTableOrderingComposer,
+      $$TrustedKeysetsTableAnnotationComposer,
+      $$TrustedKeysetsTableCreateCompanionBuilder,
+      $$TrustedKeysetsTableUpdateCompanionBuilder,
+      (
+        TrustedKeysetRow,
+        BaseReferences<_$AppDatabase, $TrustedKeysetsTable, TrustedKeysetRow>,
+      ),
+      TrustedKeysetRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -12494,4 +13213,6 @@ class $AppDatabaseManager {
       $$AccessEventOutboxTableTableManager(_db, _db.accessEventOutbox);
   $$InstalledBasemapsTableTableManager get installedBasemaps =>
       $$InstalledBasemapsTableTableManager(_db, _db.installedBasemaps);
+  $$TrustedKeysetsTableTableManager get trustedKeysets =>
+      $$TrustedKeysetsTableTableManager(_db, _db.trustedKeysets);
 }

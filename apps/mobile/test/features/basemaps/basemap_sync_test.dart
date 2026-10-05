@@ -1,11 +1,13 @@
 import 'dart:io';
 
 import 'package:drift/native.dart';
+import 'package:etare_ops/src/core/security/trusted_keys.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/features/basemaps/application/basemap_sync.dart';
 import 'package:etare_ops/src/features/basemaps/data/basemap_store.dart';
 import 'package:etare_ops/src/features/sync/application/enrollment_service.dart';
 import 'package:etare_ops/src/features/sync/application/sync_service.dart';
+import 'package:etare_ops/src/features/sync/application/trust_store.dart';
 import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
 import 'package:etare_ops/src/features/sync/data/sync_api.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -59,13 +61,12 @@ void main() {
       reports: database.reportsDao,
       state: database.syncStateDao,
       identities: identities,
-      trustedKeys: server.trustedKeys,
+      trust: TrustStore(embedded: server.trustedKeys, dao: database.trustDao),
       // Seuil du Wi-Fi abaissé à 16 octets pour les essais.
       basemaps: BasemapSync(
         api: api,
         dao: database.basemapDao,
         store: store,
-        trustedKeys: server.trustedKeys,
         clock: () => server.serverClock,
         largeThresholdBytes: 16,
         budgetBytes: 200,
@@ -246,5 +247,39 @@ void main() {
     expect(report.installed, 0);
     expect(Directory(p.join(root.path, 'basemaps')).existsSync(), isFalse);
     expect(server.basemapReceipts, isEmpty);
+  });
+
+  test('clé de publication révoquée (SEC-04) : le fond installé est revérifié '
+      'avec sa signature renouvelée, sans rien retélécharger', () async {
+    server
+      ..publishBasemap(basemapOf(1))
+      ..publishKeyset(1, {
+        server.publicationKeyId: KeyStatus.active,
+        server.catalogKeyId: KeyStatus.active,
+      });
+    await sync();
+    final old = server.publicationKeyId;
+    expect((await database.basemapDao.all()).single.signatureKeyId, old);
+    final downloads = server.downloadedFiles.length;
+    final requests = server.basemapRequests.length;
+
+    final fresh = await server.addKey(KeyPurpose.publication);
+    server
+      ..publicationKeyId = fresh
+      ..publishKeyset(2, {
+        old: KeyStatus.revoked,
+        fresh: KeyStatus.active,
+        server.catalogKeyId: KeyStatus.active,
+      });
+    final report = await sync();
+
+    expect(report.failures, isEmpty);
+    expect(report.installed, 0);
+    expect(server.basemapRequests.length, requests + 1);
+    expect(server.downloadedFiles.length, downloads);
+    expect((await database.basemapDao.all()).single.signatureKeyId, fresh);
+    // Revérifié une fois pour toutes.
+    await sync();
+    expect(server.basemapRequests.length, requests + 1);
   });
 }

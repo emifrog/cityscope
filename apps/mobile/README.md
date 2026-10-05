@@ -42,7 +42,7 @@ flutter pub get
 | `API_BASE_URL` | `http://10.0.2.2:3000/api/v1` | API produit |
 | `AUTH_URL` | `http://10.0.2.2:54321/auth/v1` | Supabase Auth (GoTrue) |
 | `AUTH_PUBLISHABLE_KEY` | *(vide)* | clé **publishable** Supabase (publique par conception) |
-| `TRUSTED_SIGNING_KEYS` | *(vide)* | clés publiques serveur approuvées : `publication:<id>:<base64>;catalog:<id>:<base64>` (obligatoires hors `dev` ; sans elles, pas de synchronisation) |
+| `TRUSTED_SIGNING_KEYS` | *(vide)* | clés publiques approuvées : `root:<id>:<base64>` (clé racine des jeux de clés, obligatoire hors `dev`), puis `publication:<id>:<base64>;catalog:<id>:<base64>` pour le premier contact (SEC-04, ADR-027) |
 
 La configuration est validée au démarrage : si elle est invalide (clé
 absente, URL incorrecte, HTTP hors `dev`, clé **secrète** / `service_role`
@@ -333,6 +333,22 @@ Principes :
    sites retirés le sont quand même, l'accueil et « Compte et tablette »
    invitent à la mise à jour (schéma local v4, `required_app_version`).
    `AppInfo.version` doit suivre la version de `pubspec.yaml` (test).
+7. Jeu de clés (SEC-04, ADR-027, depuis la 0.4.0) :
+   - avant chaque catalogue, la tablette lit le jeu de clés signé par la
+     clé racine embarquée, et refuse un numéro plus ancien que le sien ou un
+     jeu différent sous le même numéro ;
+   - elle ne fait ensuite confiance qu'aux clés du jeu. Une clé `retired`
+     vaut encore pour ce qu'elle a signé, jamais pour un catalogue ; une
+     clé `revoked` ne vaut plus rien ;
+   - le jeu est conservé (table `trusted_keyset`, schéma local v8) et
+     revérifié à chaque lecture ; il survit à la révocation, pour qu'un
+     ancien jeu ne puisse pas revenir ;
+   - après une révocation, une version installée est revérifiée avec sa
+     signature renouvelée, sans retélécharger ses fichiers. Un fond de carte
+     l'est aussi, et les sites sensibles ouverts sont refermés ;
+   - le numéro du jeu part dans chaque accusé ;
+   - un serveur sans jeu (404) laisse la tablette sur les clés de sa
+     configuration.
 
 ## 8 ter. Documents et dossier ETARE en PDF (DOC-01)
 

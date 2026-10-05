@@ -12,6 +12,7 @@ import 'package:etare_ops/src/features/reports/application/report_providers.dart
 import 'package:etare_ops/src/features/sync/application/enrollment_service.dart';
 import 'package:etare_ops/src/features/sync/application/sync_providers.dart';
 import 'package:etare_ops/src/features/sync/application/sync_service.dart';
+import 'package:etare_ops/src/features/sync/application/trust_store.dart';
 import 'package:etare_ops/src/features/sync/background/background_scheduler.dart';
 import 'package:etare_ops/src/features/sync/background/background_sync.dart';
 import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
@@ -164,7 +165,10 @@ void main() {
               reports: database.reportsDao,
               state: database.syncStateDao,
               identities: identities,
-              trustedKeys: server.trustedKeys,
+              trust: TrustStore(
+                embedded: server.trustedKeys,
+                dao: database.trustDao,
+              ),
               clock: () => now,
             ),
           ),

@@ -38,4 +38,10 @@ class BasemapDao extends DatabaseAccessor<AppDatabase> with _$BasemapDaoMixin {
   )..where((row) => row.packId.equals(packId))).go();
 
   Future<void> purgeAll() => delete(installedBasemaps).go();
+
+  /// Manifeste revérifié avec une signature renouvelée (SEC-04).
+  Future<void> updateSignatureKey(String packId, String keyId) =>
+      (update(installedBasemaps)..where((t) => t.packId.equals(packId))).write(
+        InstalledBasemapsCompanion(signatureKeyId: Value(keyId)),
+      );
 }

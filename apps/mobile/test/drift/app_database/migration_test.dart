@@ -14,6 +14,7 @@ import 'generated/schema_v4.dart' as v4;
 import 'generated/schema_v5.dart' as v5;
 import 'generated/schema_v6.dart' as v6;
 import 'generated/schema_v7.dart' as v7;
+import 'generated/schema_v8.dart' as v8;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -283,6 +284,59 @@ void main() {
             await newDb.select(newDb.localMeta).get(),
           );
           expect(await newDb.select(newDb.installedBasemaps).get(), isEmpty);
+        },
+      );
+    },
+  );
+
+  test(
+    'la migration v7 → v8 garde les fonds installés, sans jeu de clés',
+    () async {
+      const oldBasemaps = [
+        v7.InstalledBasemapsData(
+          packId: 'pack-1',
+          sectorId: 'sector-1',
+          sectorName: 'CIS Nice Centre',
+          version: 2,
+          manifestHash: 'hash',
+          manifestText: '{}',
+          totalBytes: 4096,
+          builtAt: '2026-10-05T08:00:00.000Z',
+          renewAfter: '2027-04-05T08:00:00.000Z',
+          installedAt: '2026-10-05T09:00:00.000Z',
+        ),
+      ];
+      // La clé qui l'a signé est inconnue : le manifeste sera revérifié.
+      const expectedBasemaps = [
+        v8.InstalledBasemapsData(
+          packId: 'pack-1',
+          sectorId: 'sector-1',
+          sectorName: 'CIS Nice Centre',
+          version: 2,
+          manifestHash: 'hash',
+          manifestText: '{}',
+          totalBytes: 4096,
+          builtAt: '2026-10-05T08:00:00.000Z',
+          renewAfter: '2027-04-05T08:00:00.000Z',
+          installedAt: '2026-10-05T09:00:00.000Z',
+        ),
+      ];
+
+      await verifier.testWithDataIntegrity(
+        oldVersion: 7,
+        newVersion: 8,
+        createOld: v7.DatabaseAtV7.new,
+        createNew: v8.DatabaseAtV8.new,
+        openTestedDatabase: AppDatabase.new,
+        createItems: (batch, oldDb) {
+          batch.insertAll(oldDb.installedBasemaps, oldBasemaps);
+        },
+        validateItems: (newDb) async {
+          expect(
+            expectedBasemaps,
+            await newDb.select(newDb.installedBasemaps).get(),
+          );
+          expect(await newDb.select(newDb.trustedKeyset).get(), isEmpty);
         },
       );
     },

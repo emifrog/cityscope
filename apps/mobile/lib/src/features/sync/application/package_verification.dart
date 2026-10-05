@@ -23,6 +23,9 @@ final class SyncIntegrityException implements Exception {
 /// Paquet ou lecteur trop récent pour cette application (SYN-02).
 const readerTooOldCode = 'READER_TOO_OLD';
 
+/// Catalogue ou jeu de clés d'un format plus récent : mise à jour requise.
+const appUpdateRequiredCode = 'APP_UPDATE_REQUIRED';
+
 /// Paquet dont la signature, le manifeste et le fichier de données ont été
 /// vérifiés contre l'entrée du catalogue signé.
 @immutable

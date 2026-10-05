@@ -10,6 +10,9 @@ abstract final class SignatureContexts {
   static const deviceRequest = 'etare.device-request.v1';
   static const enrollment = 'etare.enrollment.v1';
   static const basemap = 'etare.basemap.v1';
+
+  /// Jeu de clés signé par la clé racine (SEC-04, ADR-027).
+  static const keyset = 'etare.keyset.v1';
 }
 
 /// SHA-256 d'un corps vide (requêtes GET signées).

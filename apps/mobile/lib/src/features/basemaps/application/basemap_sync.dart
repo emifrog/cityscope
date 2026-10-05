@@ -80,7 +80,6 @@ final class BasemapSync {
     required this._api,
     required this._dao,
     required this._store,
-    required this._trustedKeys,
     this._clock = DateTime.now,
     this._largeThresholdBytes = backgroundDownloadBudgetBytes,
     this._budgetBytes = basemapDeviceBudgetBytes,
@@ -91,16 +90,17 @@ final class BasemapSync {
   final SyncApi _api;
   final BasemapDao _dao;
   final BasemapStore _store;
-  final TrustedKeys _trustedKeys;
   final DateTime Function() _clock;
   final int _largeThresholdBytes;
   final int _budgetBytes;
 
   /// [allowLarge] : synchronisation en Wi-Fi (tâche Android sur réseau non
   /// limité) ; sinon un fond de plus de 50 Mo à télécharger est reporté.
+  /// [trustedKeys] : clés reconnues pour ce passage (jeu de clés relu).
   Future<BasemapSyncReport> synchronize(
     DeviceCredentials device,
     List<CatalogBasemap> wanted, {
+    required TrustedKeys trustedKeys,
     required bool allowLarge,
     void Function(BasemapProgress progress)? onProgress,
   }) async {
@@ -128,7 +128,11 @@ final class BasemapSync {
     var interrupted = false;
     final failures = <BasemapFailure>[];
     for (final entry in wanted) {
-      if (held.containsKey(entry.packId)) continue;
+      final current = held[entry.packId];
+      if (current != null) {
+        await _reverify(device, entry, current, trustedKeys, failures);
+        continue;
+      }
       final others = held.values
           .where((row) => row.sectorId != entry.sectorId)
           .fold(0, (total, row) => total + row.totalBytes);
@@ -137,7 +141,13 @@ final class BasemapSync {
         continue;
       }
       try {
-        final row = await _install(device, entry, allowLarge, onProgress);
+        final row = await _install(
+          device,
+          entry,
+          trustedKeys,
+          allowLarge,
+          onProgress,
+        );
         held
           ..removeWhere((_, old) => old.sectorId == entry.sectorId)
           ..[entry.packId] = row;
@@ -188,13 +198,54 @@ final class BasemapSync {
     await _store.purgeAll();
   }
 
+  /// Fond déjà installé dont la clé de signature n'est plus reconnue (ou
+  /// inconnue, installé avant la v8) : le manifeste, identique par empreinte,
+  /// est revérifié avec sa signature renouvelée, sans rien retélécharger.
+  /// En cas d'échec le fond reste affiché : le catalogue signé atteste déjà
+  /// son empreinte, la vérification sera retentée au contact suivant.
+  Future<void> _reverify(
+    DeviceCredentials device,
+    CatalogBasemap entry,
+    InstalledBasemapRow row,
+    TrustedKeys trustedKeys,
+    List<BasemapFailure> failures,
+  ) async {
+    final keyId = row.signatureKeyId;
+    if (keyId != null &&
+        trustedKeys.find(keyId, KeyPurpose.publication) != null) {
+      return;
+    }
+    try {
+      final (_, _, signature) = await _verifiedManifest(
+        device,
+        entry,
+        trustedKeys,
+      );
+      await _dao.updateSignatureKey(row.packId, signature.keyId);
+    } on SyncIntegrityException catch (error) {
+      failures.add(BasemapFailure(entry.sectorName, error.code));
+    } on ApiException catch (error) {
+      if (error.code == ApiErrorCode.deviceRevoked ||
+          error.code == ApiErrorCode.deviceNotEnrolled ||
+          error.code == ApiErrorCode.deviceProofInvalid) {
+        rethrow;
+      }
+      failures.add(BasemapFailure(entry.sectorName, error.code.wireValue));
+    }
+  }
+
   Future<InstalledBasemapRow> _install(
     DeviceCredentials device,
     CatalogBasemap entry,
+    TrustedKeys trustedKeys,
     bool allowLarge,
     void Function(BasemapProgress progress)? onProgress,
   ) async {
-    final (manifest, text) = await _verifiedManifest(device, entry);
+    final (manifest, text, signature) = await _verifiedManifest(
+      device,
+      entry,
+      trustedKeys,
+    );
     final incoming = await _store.incoming(entry.packId, entry.manifestHash);
     final remaining = manifest.totalBytes - incoming.partialLength;
     if (!allowLarge && remaining > _largeThresholdBytes) {
@@ -282,6 +333,7 @@ final class BasemapSync {
       builtAt: manifest.builtAt,
       renewAfter: manifest.renewAfter,
       installedAt: _clock().toUtc(),
+      signatureKeyId: signature.keyId,
     );
     await _dao.install(
       InstalledBasemapsCompanion(
@@ -295,6 +347,7 @@ final class BasemapSync {
         builtAt: Value(row.builtAt),
         renewAfter: Value(row.renewAfter),
         installedAt: Value(row.installedAt),
+        signatureKeyId: Value(row.signatureKeyId),
       ),
     );
     // L'ancienne version du secteur a quitté l'index : ses fichiers suivent.
@@ -306,13 +359,14 @@ final class BasemapSync {
 
   /// Manifeste signé par la clé des publications, conforme au catalogue
   /// signé (empreinte), émis pour ce SIS et ce fond.
-  Future<(BasemapManifest, String)> _verifiedManifest(
+  Future<(BasemapManifest, String, SignatureEnvelope)> _verifiedManifest(
     DeviceCredentials device,
     CatalogBasemap entry,
+    TrustedKeys trustedKeys,
   ) async {
     final payload = await _api.basemap(device, entry.packId);
     final valid = await verifyServerSignature(
-      trustedKeys: _trustedKeys,
+      trustedKeys: trustedKeys,
       purpose: KeyPurpose.publication,
       envelope: payload.signature,
       text: signedText(SignatureContexts.basemap, payload.text),
@@ -334,6 +388,6 @@ final class BasemapSync {
         manifest.tenantId != device.identity.tenantId) {
       throw const SyncIntegrityException('BASEMAP_MISMATCH');
     }
-    return (manifest, payload.text);
+    return (manifest, payload.text, payload.signature);
   }
 }

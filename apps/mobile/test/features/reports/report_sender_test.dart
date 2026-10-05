@@ -10,6 +10,7 @@ import 'package:etare_ops/src/features/reports/data/photo_picker.dart';
 import 'package:etare_ops/src/features/reports/domain/field_report.dart';
 import 'package:etare_ops/src/features/sync/application/enrollment_service.dart';
 import 'package:etare_ops/src/features/sync/application/sync_service.dart';
+import 'package:etare_ops/src/features/sync/application/trust_store.dart';
 import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
 import 'package:etare_ops/src/features/sync/data/sync_api.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -54,7 +55,7 @@ void main() {
       reports: database.reportsDao,
       state: database.syncStateDao,
       identities: identities,
-      trustedKeys: server.trustedKeys,
+      trust: TrustStore(embedded: server.trustedKeys, dao: database.trustDao),
       clock: () => server.serverClock,
     );
     await EnrollmentService(

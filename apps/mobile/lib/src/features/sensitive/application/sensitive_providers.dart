@@ -17,7 +17,7 @@ final sensitiveSiteServiceProvider = Provider<SensitiveSiteService>(
     api: ref.watch(syncApiProvider),
     dao: ref.watch(appDatabaseProvider).sensitiveDao,
     identities: ref.watch(deviceIdentityStoreProvider),
-    trustedKeys: ref.watch(appConfigProvider).trustedKeys,
+    trust: ref.watch(trustStoreProvider),
     codes: ref.watch(localCodeStoreProvider),
     clock: ref.watch(clockProvider),
   ),
