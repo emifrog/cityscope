@@ -245,6 +245,19 @@ from (values
 ) as b (tenant_id, membership_id, role_code, scope_type, scope_id)
 join app.role r on r.code = b.role_code and r.tenant_id is null;
 
+-- -----------------------------------------------------------------------------
+-- Sectors of SDIS DEMO 06 (PER-01): groups of sites by commune, used for the
+-- perimeters of terminals and members (nobody is limited in the seed).
+-- -----------------------------------------------------------------------------
+insert into app.sector (id, tenant_id, name, code, description) values
+  ('0600001a-0000-4000-8000-000000000001', '06000000-0000-4000-8000-000000000000', 'CIS Nice Centre', 'NICE-C',
+   'Premier appel du centre de Nice (démo).'),
+  ('0600001a-0000-4000-8000-000000000002', '06000000-0000-4000-8000-000000000000', 'CIS Antibes', 'ANTIBES',
+   'Premier appel d''Antibes (démo).');
+insert into app.sector_commune (tenant_id, sector_id, insee_code, label) values
+  ('06000000-0000-4000-8000-000000000000', '0600001a-0000-4000-8000-000000000001', '06088', 'Nice'),
+  ('06000000-0000-4000-8000-000000000000', '0600001a-0000-4000-8000-000000000002', '06004', 'Antibes');
+
 insert into app.platform_admin (user_id, reason)
 values ('00000000-0000-4000-b000-000000000009', 'Compte de démonstration de l''exploitation plateforme (local).');
 

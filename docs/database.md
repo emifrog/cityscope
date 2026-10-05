@@ -6,30 +6,32 @@ pas exposé par la Data API Supabase (`supabase/config.toml` → `api.schemas`),
 
 ## Migrations
 
-| Fichier                                            | Contenu                                                                                                                                                                                                                            |
-| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `…0100_foundation.sql`                             | extensions (schéma `extensions`), schéma `app`, rôles applicatifs, accesseurs de contexte, triggers génériques                                                                                                                     |
-| `…0200_tenancy_and_rbac.sql`                       | `tenant`, `user_account`, `membership`, `role`, `permission`, `role_binding`, `platform_admin`, `has_permission`, `begin_request`, `my_memberships`                                                                                |
-| `…0300_audit.sql`                                  | `audit_event` (ajout seul), trigger d’audit générique, `record_audit_event`                                                                                                                                                        |
-| `…0400_site_referential.sql`                       | `address`, `site`, `building`, `level`, `asset`, `plan`, `plan_revision`, `zone`                                                                                                                                                   |
-| `…0500_operational_objects_and_documents.sql`      | catalogues `object_type` / `risk_type` (+ données initiales du modèle §12), `operational_object`, `risk_occurrence`, `document`, `document_version`                                                                                |
-| `…0600_etare_publication.sql`                      | `etare`, `etare_revision`, `etare_revision_contributor`, `approval`, `publication` + gardes                                                                                                                                        |
-| `…0700_jobs.sql`                                   | file de tâches `job` et fonctions `enqueue/claim/heartbeat/complete/fail`                                                                                                                                                          |
-| `…0800_storage_supabase.sql`                       | seule migration spécifique Supabase : bucket privé `etare-assets` (gardée)                                                                                                                                                         |
-| `20260930084922_publication_access_hardening.sql`  | lecture OPS limitée aux publications actives, références au même site, métadonnées publiées immuables                                                                                                                              |
-| `20260930085355_revision_authorship.sql`           | attribution des contributions par trigger, contrôle de l’auteur et du soumetteur, modification d’un brouillon réservée aux rédacteurs                                                                                              |
-| `20260930120000_role_timeouts.sql`                 | délais `statement` / `idle in transaction` / `lock` portés par les rôles applicatifs (indépendants du pooler)                                                                                                                      |
-| `20261001000100_referential_editing.sql`           | Sprint 1 : `site_edit` (auteurs des données de travail), contributeurs collectés à la soumission, `site_classification`, `contact`, `external_identifier`, index de recherche                                                      |
-| `20261001000200_document_uploads.sql`              | Sprint 1 : clé de quarantaine et verdict de contrôle des `asset`, verdict réservé au worker et définitif, fonctions `worker_*_asset_verification`                                                                                  |
-| `20261001000300_member_administration.sql`         | Sprint 1 : `admin_add_member`, `admin_update_member` (anti-escalade, dernier administrateur), `holds_with_second_factor`, unicité des seules liaisons de rôle actives                                                              |
-| `20261002000100_operational_object_geometry.sql`   | Sprint 2 : objet toujours placé (carte ou plan), géométrie conforme au type (point, ligne, surface), propriétés typées des types clés (PEI, réserve, portail, voie engins…)                                                        |
-| `20261003000100_plan_placement_and_risks.sql`      | Sprint 3 : placement sur plan (fond courant, dans l’image, niveau du plan, zone déduite), portée zone ⊂ niveau ⊂ bâtiment, champs et libellé des risques, codes nationaux réservés                                                 |
-| `20261003000200_etare_workflow.sql`                | Sprint 3 : `member_name` (noms des membres du SIS pour le workflow), fabrication des publications par le worker (`worker_start/complete/fail_publication`)                                                                         |
-| `20261003000400_publication_build_consistency.sql` | Correctifs du 30/09/2026 : fencing de la fabrication par le bail du travail (`lock_publication_job`), PDF immuable (`publication.pdf_storage_key`), baux expirés sans effet, échec définitif d’un travail propagé à la publication |
-| `20261003000300_publication_pdf.sql`               | Sprint 3 : `worker_publication_assets` (clés de stockage des fonds de plans contrôlés d’une publication, pour le PDF)                                                                                                              |
-| `20261004000100_offline_distribution.sql`          | Sprint 4 : manifeste signé (`publication.manifest_signature`), terminaux (`device`), génération du catalogue par SIS, état et publications des terminaux, fonctions `admin_*_device`, `enroll_device`, `sync_*`                    |
-| `20261005000100_field_reports.sql`                 | Sprint 5 : signalements terrain (`field_report`, `field_report_photo`), permission `field_report:review`, fonctions `sync_*report*` des terminaux, photos de signalement exclues des auteurs des données de travail                |
-| `20261004000200_object_photos.sql`                 | Sprint 4 : photos des objets (`object_photo`) : image contrôlée du même site, rattachement immuable, archivage définitif, jamais supprimée                                                                                         |
+| Fichier                                            | Contenu                                                                                                                                                                                                                                      |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `…0100_foundation.sql`                             | extensions (schéma `extensions`), schéma `app`, rôles applicatifs, accesseurs de contexte, triggers génériques                                                                                                                               |
+| `…0200_tenancy_and_rbac.sql`                       | `tenant`, `user_account`, `membership`, `role`, `permission`, `role_binding`, `platform_admin`, `has_permission`, `begin_request`, `my_memberships`                                                                                          |
+| `…0300_audit.sql`                                  | `audit_event` (ajout seul), trigger d’audit générique, `record_audit_event`                                                                                                                                                                  |
+| `…0400_site_referential.sql`                       | `address`, `site`, `building`, `level`, `asset`, `plan`, `plan_revision`, `zone`                                                                                                                                                             |
+| `…0500_operational_objects_and_documents.sql`      | catalogues `object_type` / `risk_type` (+ données initiales du modèle §12), `operational_object`, `risk_occurrence`, `document`, `document_version`                                                                                          |
+| `…0600_etare_publication.sql`                      | `etare`, `etare_revision`, `etare_revision_contributor`, `approval`, `publication` + gardes                                                                                                                                                  |
+| `…0700_jobs.sql`                                   | file de tâches `job` et fonctions `enqueue/claim/heartbeat/complete/fail`                                                                                                                                                                    |
+| `…0800_storage_supabase.sql`                       | seule migration spécifique Supabase : bucket privé `etare-assets` (gardée)                                                                                                                                                                   |
+| `20260930084922_publication_access_hardening.sql`  | lecture OPS limitée aux publications actives, références au même site, métadonnées publiées immuables                                                                                                                                        |
+| `20260930085355_revision_authorship.sql`           | attribution des contributions par trigger, contrôle de l’auteur et du soumetteur, modification d’un brouillon réservée aux rédacteurs                                                                                                        |
+| `20260930120000_role_timeouts.sql`                 | délais `statement` / `idle in transaction` / `lock` portés par les rôles applicatifs (indépendants du pooler)                                                                                                                                |
+| `20261001000100_referential_editing.sql`           | Sprint 1 : `site_edit` (auteurs des données de travail), contributeurs collectés à la soumission, `site_classification`, `contact`, `external_identifier`, index de recherche                                                                |
+| `20261001000200_document_uploads.sql`              | Sprint 1 : clé de quarantaine et verdict de contrôle des `asset`, verdict réservé au worker et définitif, fonctions `worker_*_asset_verification`                                                                                            |
+| `20261001000300_member_administration.sql`         | Sprint 1 : `admin_add_member`, `admin_update_member` (anti-escalade, dernier administrateur), `holds_with_second_factor`, unicité des seules liaisons de rôle actives                                                                        |
+| `20261002000100_operational_object_geometry.sql`   | Sprint 2 : objet toujours placé (carte ou plan), géométrie conforme au type (point, ligne, surface), propriétés typées des types clés (PEI, réserve, portail, voie engins…)                                                                  |
+| `20261003000100_plan_placement_and_risks.sql`      | Sprint 3 : placement sur plan (fond courant, dans l’image, niveau du plan, zone déduite), portée zone ⊂ niveau ⊂ bâtiment, champs et libellé des risques, codes nationaux réservés                                                           |
+| `20261003000200_etare_workflow.sql`                | Sprint 3 : `member_name` (noms des membres du SIS pour le workflow), fabrication des publications par le worker (`worker_start/complete/fail_publication`)                                                                                   |
+| `20261003000400_publication_build_consistency.sql` | Correctifs du 30/09/2026 : fencing de la fabrication par le bail du travail (`lock_publication_job`), PDF immuable (`publication.pdf_storage_key`), baux expirés sans effet, échec définitif d’un travail propagé à la publication           |
+| `20261003000300_publication_pdf.sql`               | Sprint 3 : `worker_publication_assets` (clés de stockage des fonds de plans contrôlés d’une publication, pour le PDF)                                                                                                                        |
+| `20261004000100_offline_distribution.sql`          | Sprint 4 : manifeste signé (`publication.manifest_signature`), terminaux (`device`), génération du catalogue par SIS, état et publications des terminaux, fonctions `admin_*_device`, `enroll_device`, `sync_*`                              |
+| `20261005000100_field_reports.sql`                 | Sprint 5 : signalements terrain (`field_report`, `field_report_photo`), permission `field_report:review`, fonctions `sync_*report*` des terminaux, photos de signalement exclues des auteurs des données de travail                          |
+| `20261004000200_object_photos.sql`                 | Sprint 4 : photos des objets (`object_photo`) : image contrôlée du même site, rattachement immuable, archivage définitif, jamais supprimée                                                                                                   |
+| `20261014000100_etare_layout.sql`                  | Sprint 10 : sections masquées par le SIS (`etare_layout_settings`, `update_etare_layout_settings`, `catalog:manage`, audité), figées dans l’instantané soumis                                                                                |
+| `20261014000200_sectors.sql`                       | Sprint 10 : `sector`, `sector_commune`, `sector_site`, portée « secteur » de `has_permission`, `holds_permission_on_part`, affectation des terminaux (`device.scope`, `device_sector`), catalogue à l’intersection et retraits « périmètre » |
 
 ## Correspondance avec les documents de cadrage
 
@@ -53,8 +55,10 @@ Ajoutés au Sprint 1 : `site_classification` (classifications datées, historiqu
 (audience explicite, interne par défaut), `external_identifier` (clés SIG/SGO/DECI, uniques par système
 dans le SIS), `site_edit` (auteurs des modifications de chaque site).
 
-Pas encore créés : `organization`, `sector`, `scenario`, `contribution`, `field_report`, `device`,
-synchronisation, `access_event`, intégrations.
+Ajoutés au Sprint 10 : `sector` (groupes de sites par commune et site par site, plutôt qu’une géométrie),
+`device_sector` (affectation des terminaux, à la place de `sync_subscription`).
+
+Pas encore créés : `organization`, `scenario`, `access_event`, intégrations.
 
 ## Règles structurantes
 
@@ -130,8 +134,9 @@ raisons des disparitions (`withdrawals`) pour les sites que le terminal détient
 
 Voir ADR-015. Le worker écrit la signature Ed25519 du manifeste avec le résultat de la fabrication
 (`worker_complete_publication`) ; elle ne change plus ensuite (`tg_publication_signature_guard`). Une
-publication est **distribuable** si elle est publiée, signée, d’un site non sensible et lisible par
-l’utilisateur (`distributable_publication`).
+publication est **distribuable** à un terminal si elle est publiée, signée, d’un site non sensible, dans
+le périmètre du terminal et lisible par l’utilisateur (`distributable_publication(publication, terminal)`,
+Sprint 10).
 
 - `device` : terminal d’un SIS, `pending` (code d’enrôlement haché, échéance) → `active` (clé publique,
   plateforme, enrôleur) → `revoked` (date, auteur, motif). Jamais supprimé ; enrôlement et révocation
@@ -274,6 +279,38 @@ position ; le trigger `zone_reattach` (création, déplacement, archivage ou ré
 rattache de nouveau les objets et risques placés sur ce fond et retire une zone archivée aux risques sans
 position. Un élément placé tire toujours sa zone de sa position. Un risque peut aussi être situé sur la carte
 (`risk_occurrence.geom`, point ou polygone, MET-02). Voir le test `190_zone_consistency`.
+
+## Secteurs et périmètres
+
+Voir ADR-025 (DEC-04) et le test `260_sectors`.
+
+- **Secteur** (`sector`) : groupe nommé de sites d’un SIS, actif ou archivé, nom unique parmi les secteurs
+  actifs. Il contient :
+  - les sites de ses communes (`sector_commune`, code INSEE de l’adresse, sites futurs compris) ;
+  - les sites ajoutés un à un (`sector_site`).
+
+  `site_in_sector` répond pour un site et un secteur actif.
+
+- **Membres** : une liaison de rôle de portée `sector` vaut pour les sites du secteur dans
+  `has_permission`. Une adhésion partage un seul périmètre entre ses rôles :
+  - `admin_set_member_perimeter` le fixe ;
+  - `admin_update_member` le conserve quand les rôles changent (`rebind_member` garde les liaisons
+    inchangées, révoque les autres, crée les manquantes) ;
+  - l’administration du SIS n’est jamais limitée (`ETSCP`) ;
+  - `holds_permission_on_part` laisse passer l’API, et la RLS ne montre que la part du SIS.
+- **Terminaux** :
+  - `device.scope` vaut `tenant` (tout le SIS, explicitement) ou `sectors` (`device_sector`) ;
+  - `admin_set_device_perimeter` le change ;
+  - `device_covers_site` répond pour un site.
+- **Catalogue** (`sync_catalog`) :
+  - il contient l’intersection du périmètre du terminal et de celui de la personne ;
+  - un site détenu qui en sort est annoncé `perimeter`, avec le motif « Hors des secteurs de cette
+    tablette », « Hors de votre périmètre » ou site devenu sensible.
+- **Génération** : toute composition ou affectation fait avancer la génération du catalogue
+  (`touch_distribution_generation`).
+- **Archivage** : un secteur encore affecté à des membres ou des terminaux n’est pas archivé (`ETSCU`).
+- **Audit** : compositions et périmètres sont audités (`sector.composition`, `member.perimeter`,
+  `device.perimeter`).
 
 ## Habilitations des membres
 

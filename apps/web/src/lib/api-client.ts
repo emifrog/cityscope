@@ -75,6 +75,12 @@ import {
   type DeviceEnrollmentCode,
   type DeviceList,
   type DeviceRevoke,
+  type DevicePerimeterInput,
+  type MemberPerimeterInput,
+  type Sector,
+  type SectorCommuneList,
+  type SectorList,
+  type SectorSave,
   type Member,
   type MemberInvitation,
   type MemberInvite,
@@ -783,6 +789,41 @@ export const api = {
       ifMatch: version,
     }),
 
+  setMemberPerimeter: (
+    options: ApiCallOptions,
+    id: string,
+    version: number,
+    input: MemberPerimeterInput,
+  ): Promise<Member> =>
+    call(endpoints.setMemberPerimeter.response, pathOf(endpoints.setMemberPerimeter.path, { id }), options, {
+      method: 'PUT',
+      body: input,
+      ifMatch: version,
+    }),
+
+  // ---------------------------------------------------------------- sectors (PER-01)
+  listSectors: (options: ApiCallOptions): Promise<SectorList> =>
+    call(endpoints.listSectors.response, endpoints.listSectors.path, options),
+
+  listSectorCommunes: (options: ApiCallOptions): Promise<SectorCommuneList> =>
+    call(endpoints.listSectorCommunes.response, endpoints.listSectorCommunes.path, options),
+
+  createSector: (options: ApiCallOptions, input: SectorSave): Promise<Sector> =>
+    call(endpoints.createSector.response, endpoints.createSector.path, options, { method: 'POST', body: input }),
+
+  updateSector: (options: ApiCallOptions, id: string, version: number, input: SectorSave): Promise<Sector> =>
+    call(endpoints.updateSector.response, pathOf(endpoints.updateSector.path, { id }), options, {
+      method: 'PUT',
+      body: input,
+      ifMatch: version,
+    }),
+
+  archiveSector: (options: ApiCallOptions, id: string, version: number): Promise<SectorList> =>
+    call(endpoints.archiveSector.response, pathOf(endpoints.archiveSector.path, { id }), options, {
+      method: 'POST',
+      ifMatch: version,
+    }),
+
   // ---------------------------------------------------------------- terminals (ADMIN-02)
   listDevices: (options: ApiCallOptions): Promise<DeviceList> =>
     call(endpoints.listDevices.response, endpoints.listDevices.path, options),
@@ -794,6 +835,18 @@ export const api = {
   renewDeviceEnrollment: (options: ApiCallOptions, id: string, version: number): Promise<DeviceEnrollmentCode> =>
     call(endpoints.renewDeviceEnrollment.response, pathOf(endpoints.renewDeviceEnrollment.path, { id }), options, {
       method: 'POST',
+      ifMatch: version,
+    }),
+
+  setDevicePerimeter: (
+    options: ApiCallOptions,
+    id: string,
+    version: number,
+    input: DevicePerimeterInput,
+  ): Promise<Device> =>
+    call(endpoints.setDevicePerimeter.response, pathOf(endpoints.setDevicePerimeter.path, { id }), options, {
+      method: 'PUT',
+      body: input,
       ifMatch: version,
     }),
 

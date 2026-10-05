@@ -1,6 +1,7 @@
 import {
   syncCatalogSchema,
   type DeviceCreate,
+  type DevicePerimeterInput,
   type DeviceEnroll,
   type DeviceEnrollment,
   type DeviceEnrollmentCode,
@@ -104,10 +105,26 @@ export async function createDevice(
   input: DeviceCreate,
 ): Promise<DeviceEnrollmentCode> {
   const { code, hash, expiresAt } = await newEnrollmentCode(deps);
-  const device = await inTenant(deps.sessions, context, 'device:manage', (session) =>
-    session.devices.create(input.name, hash, expiresAt),
-  );
+  const device = await inTenant(deps.sessions, context, 'device:manage', async (session) => {
+    const created = await session.devices.create(input.name, hash, expiresAt);
+    // The whole SIS unless sectors are named (PER-01, screen 11).
+    const sectors = input.sector_ids ?? [];
+    return sectors.length > 0 ? session.devices.setPerimeter(created.id, created.row_version, sectors) : created;
+  });
   return { device, enrollment_code: formatEnrollmentCode(code), expires_at: expiresAt.toISOString() };
+}
+
+/** Assigns a terminal to sectors, or to the whole SIS; it follows at its next contact (PER-01). */
+export async function setDevicePerimeter(
+  sessions: SessionFactory,
+  context: RequestContext,
+  id: string,
+  expectedVersion: number,
+  input: DevicePerimeterInput,
+): Promise<Device> {
+  return inTenant(sessions, context, 'device:manage', (session) =>
+    session.devices.setPerimeter(id, expectedVersion, input.sector_ids),
+  );
 }
 
 export async function renewDeviceEnrollment(

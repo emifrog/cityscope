@@ -6,15 +6,24 @@ import { AddressSearch } from '@/components/address-search';
 import { PageHeader } from '@/components/page-header';
 import { api } from '@/lib/api-client';
 import { queryKeys, useApiMutation, usePermissions } from '@/lib/queries';
+import { useTenant } from '@/providers/tenant-provider';
 import { SiteForm } from '../site-form';
 
 export function NewSite() {
   const router = useRouter();
   const permissions = usePermissions();
+  const { activeTenant } = useTenant();
   const create = useApiMutation(api.createSite, (tenantId) => [queryKeys.sites(tenantId)]);
 
   if (!permissions.has('site:write')) {
     return <Alert tone="important">Votre rôle ne permet pas de créer de site.</Alert>;
+  }
+  if (activeTenant?.limited) {
+    return (
+      <Alert tone="important">
+        Votre accès est limité à des secteurs : la création d’un site relève d’un membre ayant accès à tout le SIS.
+      </Alert>
+    );
   }
 
   return (

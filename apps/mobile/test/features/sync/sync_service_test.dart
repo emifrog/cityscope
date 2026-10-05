@@ -193,6 +193,34 @@ void main() {
   });
 
   test(
+    'retire un site sorti du périmètre, avec un avis lisible (PER-01)',
+    () async {
+      server
+        ..publish(publicationOf(siteA, 1))
+        ..publish(publicationOf(siteB, 1, name: 'Collège'));
+      await sync();
+      server.withdraw(
+        siteB,
+        reason: 'Hors des secteurs de cette tablette.',
+        kind: 'perimeter',
+      );
+
+      final report = await sync();
+
+      expect(report.removed, 1);
+      expect((await installed()).keys, [siteA]);
+      final notices = await database.offlineDao.watchRemovalNotices().first;
+      expect(notices.map((n) => (n.siteId, n.label, n.reason)), [
+        (
+          siteB,
+          'Retiré de votre périmètre',
+          'Hors des secteurs de cette tablette.',
+        ),
+      ]);
+    },
+  );
+
+  test(
     'refuse un catalogue qui n’est pas signé par la clé de catalogue',
     () async {
       server

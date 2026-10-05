@@ -28,6 +28,7 @@ const member: Member = {
   account_status: 'active',
   roles: ['READER'],
   site_roles: [],
+  perimeter: null,
   is_self: false,
   last_sign_in_at: null,
   second_factor: false,

@@ -12,6 +12,7 @@ import {
 } from '@etare/domain';
 import { isoDateTimeSchema, sha256Schema, uuidSchema } from '@etare/schemas';
 import { z } from 'zod';
+import { namedRefSchema } from './sectors';
 
 /** Headers of a request signed by an enrolled terminal (OFF-04, architecture §19). */
 export const DEVICE_ID_HEADER = 'x-device-id';
@@ -47,6 +48,10 @@ export const deviceSchema = z
     catalog_generation: z.number().int().nullable(),
     installed_generation: z.number().int().nullable(),
     installed_sites: z.number().int().nonnegative(),
+    /** Synchronisation profile (PER-01, screen 11): the whole SIS, explicitly, or sectors. */
+    perimeter: z
+      .object({ scope: z.enum(['tenant', 'sectors']), sectors: z.array(namedRefSchema) })
+      .meta({ id: 'DevicePerimeterState' }),
     created_at: isoDateTimeSchema,
     row_version: z.number().int().positive(),
   })
@@ -67,7 +72,11 @@ export const deviceListSchema = z
 export type DeviceList = z.infer<typeof deviceListSchema>;
 
 export const deviceCreateSchema = z
-  .object({ name: z.string().trim().min(1, 'Nom du terminal obligatoire.').max(100) })
+  .object({
+    name: z.string().trim().min(1, 'Nom du terminal obligatoire.').max(100),
+    /** Sectors of the terminal; none (or absent): the whole SIS. */
+    sector_ids: z.array(uuidSchema).max(50).optional(),
+  })
   .meta({ id: 'DeviceCreate' });
 export type DeviceCreate = z.infer<typeof deviceCreateSchema>;
 
@@ -165,8 +174,11 @@ export const catalogWithdrawalSchema = z
   .object({
     site_id: uuidSchema,
     site_name: z.string(),
-    /** `withdrawn`: the version in force was withdrawn; `archived`: the site and its dossier were archived. */
-    kind: z.enum(['withdrawn', 'archived']),
+    /**
+     * `withdrawn`: the version in force was withdrawn; `archived`: the site and its dossier were archived;
+     * `perimeter`: out of the sectors of the terminal or of the perimeter of the person (PER-01).
+     */
+    kind: z.enum(['withdrawn', 'archived', 'perimeter']),
     at: isoDateTimeSchema,
     reason: z.string(),
   })

@@ -169,7 +169,7 @@ class _Enrolled extends ConsumerWidget {
         if (ref.watch(removalNoticesProvider).value case final notices?
             when notices.isNotEmpty) ...[
           const SizedBox(height: 12),
-          Text('Retirés par le SIS', style: textTheme.titleSmall),
+          Text('Sites retirés de la tablette', style: textTheme.titleSmall),
           for (final notice in notices.take(3))
             Padding(
               padding: const EdgeInsets.only(top: 4),

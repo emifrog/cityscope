@@ -1,6 +1,7 @@
 import { MEMBERSHIP_STATUSES, ROLES, TENANT_WIDE_ROLES } from '@etare/domain';
 import { isoDateTimeSchema, uuidSchema } from '@etare/schemas';
 import { z } from 'zod';
+import { namedRefSchema } from './sectors';
 
 const roleSchema = z.enum(ROLES);
 const tenantWideRolesSchema = z
@@ -18,8 +19,10 @@ export const memberSchema = z
     account_status: z.enum(['active', 'disabled', 'pending']),
     /** Roles over the whole SIS. */
     roles: z.array(roleSchema),
-    /** Roles limited to a site (e.g. EXPLOITANT); managed with the operator portal. */
+    /** Roles limited to a site (EXPLOITANT); managed with the operator portal. */
     site_roles: z.array(z.object({ role: roleSchema, site_id: uuidSchema, site_name: z.string().nullable() })),
+    /** Perimeter of the roles above (PER-01): null for the whole SIS, otherwise sectors and sites. */
+    perimeter: z.object({ sectors: z.array(namedRefSchema), sites: z.array(namedRefSchema) }).nullable(),
     /** The member is the caller: their own roles and status cannot be changed here. */
     is_self: z.boolean(),
     /** Null: the person never signed in (invitation not accepted yet). */
@@ -39,6 +42,9 @@ export const memberInviteSchema = z
     email: z.email('Adresse e-mail invalide.').max(254),
     display_name: z.string().trim().min(1).max(200).nullable().optional(),
     roles: tenantWideRolesSchema.min(1, 'Choisissez au moins un rôle.'),
+    /** Limits the roles to sectors and sites from the start (PER-01); none: the whole SIS. */
+    sector_ids: z.array(uuidSchema).max(50).optional(),
+    site_ids: z.array(uuidSchema).max(150).optional(),
   })
   .meta({ id: 'MemberInvite' });
 export type MemberInvite = z.infer<typeof memberInviteSchema>;
@@ -54,7 +60,7 @@ export type MemberInvitation = z.infer<typeof memberInvitationSchema>;
 
 export const memberUpdateSchema = z
   .object({
-    /** Replaces the roles over the whole SIS; site-limited roles are left untouched. */
+    /** Replaces the roles, within the perimeter of the member; exploitant roles are left untouched. */
     roles: tenantWideRolesSchema.optional(),
     status: z.enum(['active', 'suspended']).optional(),
   })

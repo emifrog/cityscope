@@ -157,12 +157,12 @@ select throws_ok(
   '42501', null, 'the signature of a built publication never changes'
 );
 select is(
-  (select app.distributable_publication(jsonb_populate_record(p, '{"sensitivity": "high"}')) from app.publication p
+  (select app.distributable_publication(jsonb_populate_record(p, '{"sensitivity": "high"}'), '06000010-0000-4000-8000-000000000120') from app.publication p
    where p.id = '0600009f-0000-4000-8000-000000000120'),
   false, 'a sensitive site is not distributed offline (Sprint 4)'
 );
 select is(
-  (select app.distributable_publication(jsonb_populate_record(p, '{"manifest_signature": null}')) from app.publication p
+  (select app.distributable_publication(jsonb_populate_record(p, '{"manifest_signature": null}'), '06000010-0000-4000-8000-000000000120') from app.publication p
    where p.id = '0600009f-0000-4000-8000-000000000120'),
   false, 'an unsigned publication is not distributed offline'
 );

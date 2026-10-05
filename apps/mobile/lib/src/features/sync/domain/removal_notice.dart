@@ -3,9 +3,10 @@ import 'dart:convert';
 import 'package:etare_ops/src/core/json/json_reader.dart';
 import 'package:flutter/foundation.dart';
 
-/// Raison pour laquelle un site détenu par la tablette en disparaît (MET-04),
-/// telle que le catalogue signé l'indique : version retirée par un validateur
-/// ou site archivé, quand et pourquoi.
+/// Raison pour laquelle un site détenu par la tablette en disparaît, telle
+/// que le catalogue signé l'indique : version retirée par un validateur ou
+/// site archivé (MET-04), site sorti du périmètre de la tablette ou de
+/// l'agent (PER-01), quand et pourquoi.
 @immutable
 final class RemovalNotice {
   const RemovalNotice({
@@ -17,10 +18,9 @@ final class RemovalNotice {
   });
 
   factory RemovalNotice.fromJson(JsonMap json) {
+    // Un motif inconnu (serveur plus récent) reste lisible : le site est retiré
+    // quand même, l'avis le dit sans détailler.
     final kind = json.requireString('kind');
-    if (kind != 'withdrawn' && kind != 'archived') {
-      throw FormatException('« kind » inattendu : $kind');
-    }
     return RemovalNotice(
       siteId: json.requireString('site_id'),
       siteName: json.requireString('site_name'),
@@ -33,15 +33,19 @@ final class RemovalNotice {
   final String siteId;
   final String siteName;
 
-  /// `withdrawn` (version retirée) ou `archived` (site archivé).
+  /// `withdrawn` (version retirée), `archived` (site archivé) ou
+  /// `perimeter` (hors du périmètre de la tablette ou de l'agent).
   final String kind;
   final DateTime at;
   final String reason;
 
   /// Libellé court pour l'agent.
-  String get label => kind == 'archived'
-      ? 'Site archivé par le SIS'
-      : 'Version retirée par le SIS';
+  String get label => switch (kind) {
+    'archived' => 'Site archivé par le SIS',
+    'withdrawn' => 'Version retirée par le SIS',
+    'perimeter' => 'Retiré de votre périmètre',
+    _ => 'Retiré de la tablette',
+  };
 
   JsonMap toJson() => {
     'site_id': siteId,

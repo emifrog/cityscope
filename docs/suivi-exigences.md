@@ -43,7 +43,7 @@ pilote**. Les chemins de tests sont relatifs à la racine du dépôt.
 | OFF-04 — révocation d’un terminal                      | P0    | Implémenté  | `offline-distribution.test.ts`, pgTAP `120`, `sync_service_test.dart` (purge)                                            | effective au premier contact réseau ; hors réseau, l’autorisation locale expire après 7 jours                                                        |
 | OFF-05 — politique de rétention                        | P1    | À faire     | —                                                                                                                        | MVP+                                                                                                                                                 |
 | PORTAL-01 à 03 — portail exploitant                    | P0    | Implémenté  | `tests/integration/portal-*.test.ts`, pgTAP `150` à `180`                                                                | report manuel des propositions acceptées ; notifications des équipes du SIS et recette exploitant à venir (ADR-019, ADR-020)                         |
-| ADMIN-01 — RBAC et périmètres                          | P0    | Partiel     | `tests/integration/members.test.ts`, `rbac-parity.test.ts`, pgTAP `80`                                                   | rôles, membres, second facteur imposé, sessions, codes de secours ; secteurs et sensibilité non opérationnels                                        |
+| ADMIN-01 — RBAC et périmètres                          | P0    | Partiel     | `tests/integration/members.test.ts`, `offline-distribution.test.ts`, pgTAP `80`, `260_sectors`                           | rôles, membres, second facteur, sessions, codes de secours ; secteurs et périmètres (Sprint 10) ; sites sensibles : PER-02                           |
 | ADMIN-02 — terminaux                                   | P0    | Implémenté  | `offline-distribution.test.ts`, pgTAP `120`                                                                              | déclaration, code d’enrôlement (limité en débit), inventaire, état, révocation                                                                       |
 | ADMIN-03 — catalogues configurables                    | P1    | Partiel     | `plan-items.test.ts`                                                                                                     | risques configurables par le SIS ; objets non                                                                                                        |
 | ADMIN-04 — exports et rapports                         | P1    | Partiel     | —                                                                                                                        | PDF ETARE ; pas d’export CSV                                                                                                                         |
@@ -76,8 +76,9 @@ Défauts relevés par le [bilan d’alignement](bilan-alignement-2026-09-30.md),
   téléchargement, reprise) ; restent le réseau dégradé réel, la volumétrie d’un SIS et l’usage terrain.
 - Clés de signature de la distribution lues dans l’environnement : gestionnaire de secrets ou KMS à
   brancher.
-- Secteurs : modèle décidé le 3 octobre 2026 (ADR-025 : groupes de sites affectés aux tablettes et aux
-  membres), pas encore opérationnel, ni pour le back-office ni pour la distribution (PER-01).
+- Secteurs : livrés au Sprint 10 (PER-01, ADR-025) pour le back-office et la distribution (communes et sites,
+  tablettes et membres affectés, catalogue à l’intersection, retrait motivé) ; à éprouver sur un parc pilote
+  (volumétrie, CAP-01).
 - Consultation terrain : carte de contexte absente ; fond retenu le 3 octobre 2026 (ADR-024 : Plan IGN
   vectoriel par secteur), fiche de droits à valider par le référent SIG (CAR-01 à CAR-03) ; PDF et
   documents « à la demande » lus dans l’application (DOC-01, DOC-02).

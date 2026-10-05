@@ -11,7 +11,8 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 import type { RequestSession, SessionFactory } from './ports';
 import { stubSession } from './testing';
-import { getMe, getSite, listSites, requirePermission } from './use-cases';
+import { createSite } from './referential';
+import { getMe, getSite, inTenant, listSites, requirePermission } from './use-cases';
 
 const tenantId = '06000000-0000-4000-8000-000000000000';
 const context: RequestContext = {
@@ -63,6 +64,44 @@ describe('listSites', () => {
     const { sessions, sites } = fakeSessions(['READER']);
     await expect(listSites(sessions, context, { limit: 10 })).resolves.toEqual({ items: [], next_cursor: null });
     expect(sites.list).toHaveBeenCalledWith({ limit: 10 });
+  });
+});
+
+describe('members limited to part of the SIS (PER-01)', () => {
+  /** No permission over the whole SIS; site:read held on sectors only. */
+  function partSessions(held: readonly string[]) {
+    const holdsOnPart = vi.fn(async (permission: string) => held.includes(permission));
+    const sites = { list: vi.fn(async () => ({ items: [], next_cursor: null })), create: vi.fn() };
+    const sessions: SessionFactory = {
+      run: async <T>(ctx: RequestContext, work: (session: RequestSession) => Promise<T>) =>
+        work(
+          stubSession(
+            { userId: 'u', tenantId: ctx.tenantId, permissions: new Set() },
+            { sites, identity: { holdsOnPart, holdsWithSecondFactor: async () => false } },
+          ),
+        ),
+    };
+    return { sessions, sites, holdsOnPart };
+  }
+
+  it('let in a member holding the permission on sectors: row-level security shows their part', async () => {
+    const { sessions, sites } = partSessions(['site:read']);
+    await expect(listSites(sessions, context, { limit: 10 })).resolves.toEqual({ items: [], next_cursor: null });
+    expect(sites.list).toHaveBeenCalled();
+  });
+
+  it('never for the administration of the SIS, held over the whole SIS only', async () => {
+    const { sessions, holdsOnPart } = partSessions(['member:manage']);
+    await expect(inTenant(sessions, context, 'member:manage', async () => 'done')).rejects.toBeInstanceOf(AccessDenied);
+    expect(holdsOnPart).not.toHaveBeenCalled();
+  });
+
+  it('nor to create a site, which would belong to no sector yet', async () => {
+    const { sessions, sites } = partSessions(['site:write']);
+    await expect(
+      createSite(sessions, context, { name: 'Nouveau', site_type: 'erp', status: 'draft', sensitivity: 'normal' }),
+    ).rejects.toBeInstanceOf(AccessDenied);
+    expect(sites.create).not.toHaveBeenCalled();
   });
 });
 

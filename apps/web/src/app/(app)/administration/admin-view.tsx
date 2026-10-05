@@ -13,10 +13,12 @@ import { DevicesAdmin } from './devices-admin';
 import { MembersAdmin } from './members-admin';
 import { NotificationsAdmin } from './notifications-admin';
 import { RiskCatalogAdmin } from './risk-catalog-admin';
+import { SectorsAdmin } from './sectors-admin';
 import { SettingsAdmin } from './settings-admin';
 
 const TABS: readonly { key: string; label: string; permission: Permission }[] = [
   { key: 'membres', label: 'Membres', permission: 'member:manage' },
+  { key: 'secteurs', label: 'Secteurs', permission: 'member:manage' },
   { key: 'terminaux', label: 'Terminaux', permission: 'device:manage' },
   { key: 'risques', label: 'Catalogue des risques', permission: 'catalog:manage' },
   { key: 'notifications', label: 'Notifications', permission: 'member:manage' },
@@ -47,11 +49,13 @@ export function AdminView() {
     <>
       <PageHeader
         title="Administration"
-        description="Membres du SIS et rôles, terminaux et synchronisation, catalogue des risques, notifications et paramètres du SIS."
+        description="Membres du SIS et rôles, secteurs, terminaux et synchronisation, catalogue des risques, notifications et paramètres du SIS."
       />
       <TabLinks tabs={tabs} active={tab.key} param="onglet" basePath="/administration" />
       {tab.key === 'membres' ? (
         <MembersAdmin />
+      ) : tab.key === 'secteurs' ? (
+        <SectorsAdmin />
       ) : tab.key === 'terminaux' ? (
         <DevicesAdmin />
       ) : tab.key === 'notifications' ? (

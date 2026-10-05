@@ -372,6 +372,128 @@ describe('offline distribution', () => {
     expect(isAppVersionBelow(item?.app_version ?? null, list.min_app_version)).toBe(true);
   });
 
+  it('serves the intersection of the sectors of the terminal and of the perimeter of the agent (PER-01)', async () => {
+    const catalogOf = async () =>
+      syncCatalogSchema.parse(
+        JSON.parse(
+          endpoints.getSyncCatalog.response.parse(await (await device.request('GET', '/sync/catalog')).json()).catalog,
+        ),
+      );
+    const deviceVersion = async () =>
+      endpoints.listDevices.response
+        .parse(await (await admin06('GET', '/devices')).json())
+        .items.find((item) => item.id === device.deviceId)?.row_version;
+    const assign = async (sectorIds: string[]) =>
+      admin06('PUT', `/devices/${device.deviceId}/perimeter`, { sector_ids: sectorIds }, await deviceVersion());
+
+    // A sector holding the published site, added by hand (its address has no INSEE code).
+    expect(await codeOf(await ops06('POST', '/sectors', { name: 'Interdit', communes: [], site_ids: [] }))).toBe(
+      'FORBIDDEN',
+    );
+    const created = await admin06('POST', '/sectors', {
+      name: `Secteur intégration ${Date.now()}`,
+      communes: [],
+      site_ids: [siteId],
+    });
+    expect(created.status).toBe(201);
+    const sector = endpoints.createSector.response.parse(await created.json());
+    expect(sector).toMatchObject({ site_count: 1, device_count: 0 });
+    const antibes = endpoints.listSectors.response
+      .parse(await (await admin06('GET', '/sectors')).json())
+      .items.find((item) => item.name === 'CIS Antibes');
+
+    // Terminal assigned elsewhere: the site leaves it at the next contact, with its reason.
+    const elsewhere = await assign([antibes?.id ?? '']);
+    expect(endpoints.setDevicePerimeter.response.parse(await elsewhere.json()).perimeter).toMatchObject({
+      scope: 'sectors',
+      sectors: [{ name: 'CIS Antibes' }],
+    });
+    let catalog = await catalogOf();
+    expect(catalog.publications.map((item) => item.site_id)).not.toContain(siteId);
+    expect(catalog.withdrawals.find((item) => item.site_id === siteId)).toMatchObject({
+      kind: 'perimeter',
+      reason: 'Hors des secteurs de cette tablette.',
+    });
+    expect((await device.request('GET', `/sync/publications/${publicationId}`)).status).toBe(404);
+
+    await assign([sector.id]);
+    catalog = await catalogOf();
+    expect(catalog.publications.map((item) => item.site_id)).toContain(siteId);
+
+    // The agent limited to another sector: the intersection is empty for this site.
+    const members = endpoints.listMembers.response.parse(await (await admin06('GET', '/members')).json()).items;
+    const ops = members.find((member) => member.email === 'ops06@demo.etare.test');
+    const limited = await admin06(
+      'PUT',
+      `/members/${ops?.id}/perimeter`,
+      { sector_ids: [antibes?.id], site_ids: [] },
+      ops?.row_version,
+    );
+    expect(limited.status).toBe(200);
+    const limitedMember = endpoints.setMemberPerimeter.response.parse(await limited.json());
+    expect(limitedMember.perimeter?.sectors.map((item) => item.name)).toEqual(['CIS Antibes']);
+    try {
+      catalog = await catalogOf();
+      expect(catalog.publications.map((item) => item.site_id)).not.toContain(siteId);
+      expect(catalog.withdrawals.find((item) => item.site_id === siteId)).toMatchObject({
+        kind: 'perimeter',
+        reason: 'Hors de votre périmètre.',
+      });
+      // A member limited to sectors creates no site: it would belong to none.
+      expect((await ops06('GET', '/me')).status).toBe(200);
+    } finally {
+      const restored = await admin06(
+        'PUT',
+        `/members/${ops?.id}/perimeter`,
+        { sector_ids: [], site_ids: [] },
+        limitedMember.row_version,
+      );
+      expect(endpoints.setMemberPerimeter.response.parse(await restored.json()).perimeter).toBeNull();
+    }
+
+    // A sector still assigned is not archived; once the terminal holds the whole SIS again, it is.
+    const listed = endpoints.listSectors.response.parse(await (await admin06('GET', '/sectors')).json());
+    const current = listed.items.find((item) => item.id === sector.id);
+    expect(current).toMatchObject({ device_count: 1 });
+    expect(await codeOf(await admin06('POST', `/sectors/${sector.id}/archive`, undefined, current?.row_version))).toBe(
+      'CONFLICT',
+    );
+    await assign([]);
+    expect((await admin06('POST', `/sectors/${sector.id}/archive`, undefined, current?.row_version)).status).toBe(200);
+    expect((await catalogOf()).publications.map((item) => item.site_id)).toContain(siteId);
+  });
+
+  it('shows a member limited to a sector the sites of that sector only, in the back-office (PER-01)', async () => {
+    const reader = as(await signIn('lecteur06@demo.etare.test'), TENANT_06);
+    const nice = endpoints.listSectors.response
+      .parse(await (await admin06('GET', '/sectors')).json())
+      .items.find((item) => item.name === 'CIS Nice Centre');
+    const members = endpoints.listMembers.response.parse(await (await admin06('GET', '/members')).json()).items;
+    const member = members.find((item) => item.email === 'lecteur06@demo.etare.test');
+    const limited = endpoints.setMemberPerimeter.response.parse(
+      await (
+        await admin06(
+          'PUT',
+          `/members/${member?.id}/perimeter`,
+          { sector_ids: [nice?.id], site_ids: [] },
+          member?.row_version,
+        )
+      ).json(),
+    );
+    try {
+      const me = endpoints.getMe.response.parse(await (await reader('GET', '/me')).json());
+      expect(me.memberships.find((item) => item.tenant_id === TENANT_06)?.limited).toBe(true);
+      const sites = endpoints.listSites.response.parse(await (await reader('GET', '/sites?limit=100')).json());
+      // The EHPAD of Nice (commune of the sector), not the warehouse of Antibes nor the site of this test.
+      expect(sites.items.map((site) => site.id)).toContain('06000002-0000-4000-8000-000000000001');
+      expect(sites.items.map((site) => site.id)).not.toContain('06000002-0000-4000-8000-000000000002');
+      expect(sites.items.map((site) => site.id)).not.toContain(siteId);
+      expect((await reader('GET', `/sites/${siteId}`)).status).toBe(404);
+    } finally {
+      await admin06('PUT', `/members/${member?.id}/perimeter`, { sector_ids: [], site_ids: [] }, limited.row_version);
+    }
+  });
+
   it('refuses requests not signed by the terminal for this very path, or from another SIS', async () => {
     const replayed = await device.request('GET', `/sync/publications/${publicationId}`, undefined, {
       signedPath: '/sync/catalog',

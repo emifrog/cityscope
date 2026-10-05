@@ -26,7 +26,9 @@ import { z } from 'zod';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { MEMBERSHIP_STATUS_LABELS, ROLE_DESCRIPTIONS, ROLE_LABELS } from '@/components/labels';
 import { api } from '@/lib/api-client';
+import { SitePicker } from '@/components/site-picker';
 import { queryKeys, useApiMutation, useMembers } from '@/lib/queries';
+import { SectorChoice, type SectorSelection } from './sector-choice';
 
 const signInFormat = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeZone: 'Europe/Paris' });
 
@@ -46,6 +48,111 @@ function AccessCell({ member }: { member: Member }) {
       ) : (
         <Badge tone="neutral">Sans double authentification</Badge>
       )}
+    </div>
+  );
+}
+
+/** "Tout le SIS" or the sectors and sites the roles are limited to (PER-01). */
+function PerimeterBadge({ member }: { member: Member }) {
+  if (member.roles.length === 0) return null;
+  if (!member.perimeter) return <Badge tone="neutral">Tout le SIS</Badge>;
+  const parts = [
+    ...member.perimeter.sectors.map((sector) => sector.name),
+    ...(member.perimeter.sites.length > 0 ? [`${member.perimeter.sites.length} site(s)`] : []),
+  ];
+  return <Badge tone="info">Limité à : {parts.join(', ')}</Badge>;
+}
+
+interface PerimeterValue {
+  readonly sectors: SectorSelection;
+  readonly sites: ReadonlyMap<string, string>;
+}
+
+const WHOLE_PERIMETER: PerimeterValue = { sectors: { whole: true, sectorIds: [] }, sites: new Map() };
+
+const perimeterInput = (value: PerimeterValue) =>
+  value.sectors.whole
+    ? { sector_ids: [], site_ids: [] }
+    : { sector_ids: [...value.sectors.sectorIds], site_ids: [...value.sites.keys()] };
+
+const perimeterIncomplete = (value: PerimeterValue) =>
+  !value.sectors.whole && value.sectors.sectorIds.length === 0 && value.sites.size === 0;
+
+/** Whole SIS, or sectors and sites: every role of the member shares that perimeter. */
+function PerimeterChoice({
+  name,
+  value,
+  onChange,
+  administrator,
+}: {
+  name: string;
+  value: PerimeterValue;
+  onChange: (next: PerimeterValue) => void;
+  administrator: boolean;
+}) {
+  if (administrator) {
+    return (
+      <p className="text-sm text-muted">
+        L’administration du SIS s’exerce sur tout le SIS : retirez ce rôle pour limiter la personne à des secteurs.
+      </p>
+    );
+  }
+  return (
+    <SectorChoice
+      name={name}
+      wholeLabel="Tout le SIS"
+      limitedLabel="Des secteurs ou des sites"
+      value={value.sectors}
+      onChange={(sectors) => onChange({ ...value, sectors })}
+    >
+      <SitePicker
+        legend="Sites ajoutés un à un"
+        selected={value.sites}
+        onChange={(sites) => onChange({ ...value, sites })}
+      />
+    </SectorChoice>
+  );
+}
+
+function MemberPerimeterForm({ member, onDone }: { member: Member; onDone: () => void }) {
+  const [value, setValue] = useState<PerimeterValue>(
+    member.perimeter
+      ? {
+          sectors: { whole: false, sectorIds: member.perimeter.sectors.map((sector) => sector.id) },
+          sites: new Map(member.perimeter.sites.map((site) => [site.id, site.name])),
+        }
+      : WHOLE_PERIMETER,
+  );
+  const save = useApiMutation(
+    (options, input: { sector_ids: string[]; site_ids: string[] }) =>
+      api.setMemberPerimeter(options, member.id, member.row_version, input),
+    (tenantId) => [queryKeys.members(tenantId), queryKeys.sectors(tenantId)],
+  );
+  return (
+    <div className="max-w-2xl space-y-3">
+      {save.error ? <ApiErrorAlert error={save.error} /> : null}
+      <PerimeterChoice
+        name={`perimeter-${member.id}`}
+        value={value}
+        onChange={setValue}
+        administrator={member.roles.includes('SIS_ADMIN')}
+      />
+      <p className="text-xs text-muted">
+        Tous les rôles de la personne suivent ce périmètre, au back-office comme sur les tablettes ; ce qui en sort est
+        retiré des tablettes à leur prochaine synchronisation.
+      </p>
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          disabled={save.isPending || perimeterIncomplete(value) || member.roles.includes('SIS_ADMIN')}
+          onClick={() => save.mutate(perimeterInput(value), { onSuccess: onDone })}
+        >
+          {save.isPending ? 'Enregistrement…' : 'Enregistrer le périmètre'}
+        </Button>
+        <Button size="sm" variant="secondary" onClick={onDone}>
+          Annuler
+        </Button>
+      </div>
     </div>
   );
 }
@@ -94,6 +201,7 @@ function RoleChoices({
 }
 
 function InviteForm({ onClose }: { onClose: (result: MemberInvitation | null) => void }) {
+  const [perimeter, setPerimeter] = useState<PerimeterValue>(WHOLE_PERIMETER);
   const invite = useApiMutation(
     (options, input: MemberInvite) => api.inviteMember(options, input),
     (tenantId) => [queryKeys.members(tenantId)],
@@ -120,6 +228,7 @@ function InviteForm({ onClose }: { onClose: (result: MemberInvitation | null) =>
             email: values.email.trim(),
             display_name: values.display_name.trim() || null,
             roles: values.roles,
+            ...(values.roles.includes('SIS_ADMIN') ? {} : perimeterInput(perimeter)),
           },
           { onSuccess: (result) => onClose(result) },
         ),
@@ -148,8 +257,20 @@ function InviteForm({ onClose }: { onClose: (result: MemberInvitation | null) =>
           Les exploitants sont rattachés à leurs sites depuis le portail exploitant (à venir).
         </p>
       </div>
+      <div className="md:col-span-2">
+        <PerimeterChoice
+          name="invite-perimeter"
+          value={perimeter}
+          onChange={setPerimeter}
+          administrator={selectedRoles.includes('SIS_ADMIN')}
+        />
+      </div>
       <div className="flex gap-2 md:col-span-2">
-        <Button type="submit" size="sm" disabled={invite.isPending}>
+        <Button
+          type="submit"
+          size="sm"
+          disabled={invite.isPending || (!selectedRoles.includes('SIS_ADMIN') && perimeterIncomplete(perimeter))}
+        >
           {invite.isPending ? 'Envoi…' : 'Inviter'}
         </Button>
         <Button type="button" size="sm" variant="secondary" onClick={() => onClose(null)}>
@@ -162,6 +283,7 @@ function InviteForm({ onClose }: { onClose: (result: MemberInvitation | null) =>
 
 function MemberRow({ member }: { member: Member }) {
   const [editing, setEditing] = useState(false);
+  const [limiting, setLimiting] = useState(false);
   const [roles, setRoles] = useState<TenantWideRole[]>(() =>
     member.roles.filter((role): role is TenantWideRole => (TENANT_WIDE_ROLES as readonly string[]).includes(role)),
   );
@@ -204,6 +326,9 @@ function MemberRow({ member }: { member: Member }) {
               <span className="text-xs text-muted">Aucun rôle</span>
             ) : null}
           </div>
+          <div className="mt-1">
+            <PerimeterBadge member={member} />
+          </div>
         </TableCell>
         <TableCell>
           <AccessCell member={member} />
@@ -219,6 +344,11 @@ function MemberRow({ member }: { member: Member }) {
               <Button size="sm" variant="ghost" onClick={() => setEditing((open) => !open)} aria-expanded={editing}>
                 Rôles
               </Button>
+              {member.roles.length > 0 ? (
+                <Button size="sm" variant="ghost" onClick={() => setLimiting((open) => !open)} aria-expanded={limiting}>
+                  Périmètre
+                </Button>
+              ) : null}
               <Button
                 size="sm"
                 variant="ghost"
@@ -236,6 +366,13 @@ function MemberRow({ member }: { member: Member }) {
           )}
         </TableCell>
       </TableRow>
+      {limiting ? (
+        <TableRow>
+          <TableCell colSpan={5} className="bg-subtle/40">
+            <MemberPerimeterForm member={member} onDone={() => setLimiting(false)} />
+          </TableCell>
+        </TableRow>
+      ) : null}
       {confirmReset ? (
         <TableRow>
           <TableCell colSpan={5} className="bg-subtle/40">

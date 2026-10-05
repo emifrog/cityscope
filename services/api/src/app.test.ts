@@ -66,6 +66,7 @@ function sessions(roles: Role[]): SessionFactory & { contexts: RequestContext[] 
                     tenant_name: 'SDIS DEMO 06',
                     roles,
                     second_factor_required: false,
+                    limited: false,
                   },
                 ],
               }),

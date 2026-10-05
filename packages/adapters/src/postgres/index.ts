@@ -3,6 +3,7 @@ export * from './asset-verification-store';
 export * from './building-repository';
 export * from './cursor';
 export * from './device-repository';
+export * from './sector-repository';
 export * from './document-repository';
 export * from './etare-repository';
 export * from './file-lifecycle-store';

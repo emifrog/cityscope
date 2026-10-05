@@ -1,5 +1,11 @@
 import type { MemberRepository } from '@etare/application';
-import { memberSchema, type Member, type MemberInvite, type MemberUpdate } from '@etare/contracts';
+import {
+  memberSchema,
+  type Member,
+  type MemberInvite,
+  type MemberPerimeterInput,
+  type MemberUpdate,
+} from '@etare/contracts';
 import type { PoolClient } from './pool';
 import { toIso } from './versioned';
 
@@ -12,6 +18,7 @@ interface MemberRow {
   account_status: string;
   roles: string[];
   site_roles: { role: string; site_id: string; site_name: string | null }[];
+  perimeter: { sectors: { id: string; name: string }[]; sites: { id: string; name: string }[] } | null;
   is_self: boolean;
   last_sign_in_at: Date | null;
   second_factor: boolean | null;
@@ -24,12 +31,22 @@ const MEMBER_SELECT = `
   select m.id, m.user_id, u.email::text as email, u.display_name, m.status, u.status as account_status,
          m.row_version, m.created_at, m.user_id = app.current_user_id() as is_self,
          ids.last_sign_in_at, ids.second_factor,
-         coalesce(array_agg(distinct r.code) filter (where b.scope_type = 'tenant'), '{}') as roles,
+         coalesce(array_agg(distinct r.code) filter (where r.code <> 'EXPLOITANT'), '{}') as roles,
          coalesce(
            jsonb_agg(distinct jsonb_build_object('role', r.code, 'site_id', b.scope_id, 'site_name', s.name))
-             filter (where b.scope_type = 'site'),
+             filter (where b.scope_type = 'site' and r.code = 'EXPLOITANT'),
            '[]'
-         ) as site_roles
+         ) as site_roles,
+         -- The roles share one perimeter (PER-01): null for the whole SIS.
+         case
+           when coalesce(bool_or(b.scope_type = 'tenant'), false)
+             or not coalesce(bool_or(b.scope_type <> 'tenant' and r.code <> 'EXPLOITANT'), false) then null
+           else jsonb_build_object(
+             'sectors', coalesce(jsonb_agg(distinct jsonb_build_object('id', sc.id, 'name', sc.name))
+                                   filter (where b.scope_type = 'sector'), '[]'),
+             'sites', coalesce(jsonb_agg(distinct jsonb_build_object('id', s.id, 'name', coalesce(s.name, 'Site')))
+                                 filter (where b.scope_type = 'site' and r.code <> 'EXPLOITANT'), '[]'))
+         end as perimeter
   from app.membership m
   join app.user_account u on u.id = m.user_id
   left join app.member_identity_states() ids on ids.user_id = m.user_id
@@ -37,6 +54,7 @@ const MEMBER_SELECT = `
     on b.membership_id = m.id and b.revoked_at is null and (b.valid_until is null or b.valid_until > now())
   left join app.role r on r.id = b.role_id
   left join app.site s on s.id = b.scope_id and b.scope_type = 'site'
+  left join app.sector sc on sc.id = b.scope_id and b.scope_type = 'sector'
   where m.tenant_id = app.current_tenant_id()`;
 
 const toMember = (row: MemberRow): Member =>
@@ -79,6 +97,16 @@ export class PostgresMemberRepository implements MemberRepository {
       expectedVersion,
       patch.roles ?? null,
       patch.status ?? null,
+    ]);
+    return this.get(id);
+  }
+
+  async setPerimeter(id: string, expectedVersion: number, input: MemberPerimeterInput): Promise<Member | null> {
+    await this.client.query('select app.admin_set_member_perimeter($1, $2, $3::uuid[], $4::uuid[])', [
+      id,
+      expectedVersion,
+      input.sector_ids,
+      input.site_ids,
     ]);
     return this.get(id);
   }

@@ -102,6 +102,13 @@ import {
   updateDocument,
   updateLevel,
   updateMember,
+  setMemberPerimeter,
+  setDevicePerimeter,
+  listSectors,
+  listSectorCommunes,
+  createSector,
+  updateSector,
+  archiveSector,
   updatePlan,
   updateSiteObject,
   updateObjectPhoto,
@@ -890,6 +897,47 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     return respond(c, endpoints.updateMember, await updateMember(deps.sessions, context, idOf(c), version, patch));
   });
 
+  app.put(routerPath(endpoints.setMemberPerimeter.path), async (c) => {
+    const context = await requestContext(c, endpoints.setMemberPerimeter);
+    const version = expectedVersion(c);
+    const input = await readBody(c, endpoints.setMemberPerimeter.body);
+    return respond(
+      c,
+      endpoints.setMemberPerimeter,
+      await setMemberPerimeter(deps.sessions, context, idOf(c), version, input),
+    );
+  });
+
+  // ---------------------------------------------------------------- sectors (PER-01, ADR-025)
+  app.get(routerPath(endpoints.listSectors.path), async (c) => {
+    const context = await requestContext(c, endpoints.listSectors);
+    return respond(c, endpoints.listSectors, await listSectors(deps.sessions, context));
+  });
+
+  app.get(routerPath(endpoints.listSectorCommunes.path), async (c) => {
+    const context = await requestContext(c, endpoints.listSectorCommunes);
+    return respond(c, endpoints.listSectorCommunes, await listSectorCommunes(deps.sessions, context));
+  });
+
+  app.post(routerPath(endpoints.createSector.path), async (c) => {
+    const context = await requestContext(c, endpoints.createSector);
+    const input = await readBody(c, endpoints.createSector.body);
+    return respond(c, endpoints.createSector, await createSector(deps.sessions, context, input));
+  });
+
+  app.put(routerPath(endpoints.updateSector.path), async (c) => {
+    const context = await requestContext(c, endpoints.updateSector);
+    const version = expectedVersion(c);
+    const input = await readBody(c, endpoints.updateSector.body);
+    return respond(c, endpoints.updateSector, await updateSector(deps.sessions, context, idOf(c), version, input));
+  });
+
+  app.post(routerPath(endpoints.archiveSector.path), async (c) => {
+    const context = await requestContext(c, endpoints.archiveSector);
+    const version = expectedVersion(c);
+    return respond(c, endpoints.archiveSector, await archiveSector(deps.sessions, context, idOf(c), version));
+  });
+
   // ---------------------------------------------------------------- exploitant access (POR-01, ADR-019)
   app.get(routerPath(endpoints.listPortalInvitations.path), async (c) => {
     const context = await requestContext(c, endpoints.listPortalInvitations);
@@ -1007,6 +1055,17 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     const context = await requestContext(c, endpoints.createDevice);
     const input = await readBody(c, endpoints.createDevice.body);
     return respond(c, endpoints.createDevice, await createDevice(deps, context, input));
+  });
+
+  app.put(routerPath(endpoints.setDevicePerimeter.path), async (c) => {
+    const context = await requestContext(c, endpoints.setDevicePerimeter);
+    const version = expectedVersion(c);
+    const input = await readBody(c, endpoints.setDevicePerimeter.body);
+    return respond(
+      c,
+      endpoints.setDevicePerimeter,
+      await setDevicePerimeter(deps.sessions, context, idOf(c), version, input),
+    );
   });
 
   app.post(routerPath(endpoints.renewDeviceEnrollment.path), async (c) => {

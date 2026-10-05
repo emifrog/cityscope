@@ -36,6 +36,8 @@ export const membershipSchema = z
     roles: z.array(roleSchema),
     /** The SIS requires the second factor of this member for every access outside a terminal. */
     second_factor_required: z.boolean(),
+    /** The member is limited to sectors or sites (PER-01): what needs the whole SIS is refused. */
+    limited: z.boolean(),
   })
   .meta({ id: 'Membership' });
 export type Membership = z.infer<typeof membershipSchema>;

@@ -36,8 +36,9 @@ async function visibleSite(session: RequestSession, siteId: string): Promise<Sit
 }
 
 // ------------------------------------------------------------------ sites
+/** A new site belongs to no sector yet: its creation needs the whole SIS (PER-01). */
 export function createSite(sessions: SessionFactory, context: Ctx, input: SiteCreate): Promise<SiteDetail> {
-  return inTenant(sessions, context, 'site:write', (session) => session.sites.create(input));
+  return inTenant(sessions, context, 'site:write', (session) => session.sites.create(input), { wholeTenant: true });
 }
 
 export function updateSite(

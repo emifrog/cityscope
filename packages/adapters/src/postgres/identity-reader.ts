@@ -17,6 +17,7 @@ interface MembershipRow {
   tenant_name: string;
   roles: string[];
   second_factor_required: boolean;
+  limited: boolean;
 }
 
 export class PostgresIdentityReader implements IdentityReader {
@@ -32,7 +33,7 @@ export class PostgresIdentityReader implements IdentityReader {
     if (!row) throw new Unauthenticated('Compte inconnu ou désactivé.');
 
     const memberships = await this.client.query<MembershipRow>(
-      'select tenant_id, tenant_slug, tenant_name, roles, second_factor_required from app.my_memberships()',
+      'select tenant_id, tenant_slug, tenant_name, roles, second_factor_required, limited from app.my_memberships()',
     );
     return {
       user: {
@@ -48,8 +49,16 @@ export class PostgresIdentityReader implements IdentityReader {
         tenant_name: m.tenant_name,
         roles: m.roles.filter(isRole),
         second_factor_required: m.second_factor_required,
+        limited: m.limited,
       })),
     };
+  }
+
+  async holdsOnPart(permission: Permission): Promise<boolean> {
+    const { rows } = await this.client.query<{ held: boolean }>('select app.holds_permission_on_part($1) as held', [
+      permission,
+    ]);
+    return rows[0]?.held ?? false;
   }
 
   async holdsWithSecondFactor(permission: Permission): Promise<boolean> {

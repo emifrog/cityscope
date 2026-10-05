@@ -34,6 +34,8 @@ interface DeviceRow {
   catalog_generation: string | null;
   installed_generation: string | null;
   installed_sites: number;
+  scope: 'tenant' | 'sectors';
+  sectors: { id: string; name: string }[];
   created_at: Date;
   row_version: number;
 }
@@ -45,6 +47,10 @@ const DEVICE_SELECT = `
          s.app_version, app.member_name(s.last_user_id) as last_user_name, s.last_seen_at, s.last_sync_at,
          s.last_status, s.last_error_code, s.catalog_generation, s.installed_generation,
          (select count(*)::int from app.device_publication p where p.device_id = d.id) as installed_sites,
+         d.scope,
+         coalesce((select jsonb_agg(jsonb_build_object('id', sc.id, 'name', sc.name) order by lower(sc.name), sc.id)
+                   from app.device_sector ds join app.sector sc on sc.id = ds.sector_id
+                   where ds.device_id = d.id), '[]') as sectors,
          d.created_at, d.row_version
   from app.device d
   left join app.device_sync_state s on s.device_id = d.id
@@ -73,6 +79,7 @@ function toDevice(row: DeviceRow, now: Date): Device {
     catalog_generation: generation(row.catalog_generation),
     installed_generation: generation(row.installed_generation),
     installed_sites: row.installed_sites,
+    perimeter: { scope: row.scope, sectors: row.sectors },
     created_at: row.created_at.toISOString(),
     row_version: row.row_version,
   } satisfies Device);
@@ -128,6 +135,15 @@ export class PostgresDeviceRepository implements DeviceRepository {
     const device = await this.get(id);
     if (!device) throw new Error('Terminal not readable after its change.');
     return device;
+  }
+
+  async setPerimeter(id: string, expectedVersion: number, sectorIds: readonly string[]): Promise<Device> {
+    await this.client.query('select app.admin_set_device_perimeter($1, $2, $3::uuid[])', [
+      id,
+      expectedVersion,
+      sectorIds,
+    ]);
+    return this.required(id);
   }
 
   async create(name: string, codeHash: string, expiresAt: Date): Promise<Device> {

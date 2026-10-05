@@ -44,15 +44,30 @@ void main() {
       expect(decodeRemovalNotices(text).single.reason, 'Motif a');
       expect(decodeRemovalNotices('pas du json'), isEmpty);
       expect(decodeRemovalNotices(null), isEmpty);
+      // Un motif inconnu (serveur plus récent) ne bloque pas la synchronisation.
       expect(
-        () => RemovalNotice.fromJson(const {
+        RemovalNotice.fromJson(const {
           'site_id': 'x',
           'site_name': 'X',
           'kind': 'autre',
           'at': '2026-10-01T00:00:00Z',
           'reason': 'r',
-        }),
+        }).label,
+        'Retiré de la tablette',
+      );
+      expect(
+        () =>
+            RemovalNotice.fromJson(const {'site_id': 'x', 'kind': 'perimeter'}),
         throwsFormatException,
+      );
+    });
+
+    test('site sorti du périmètre de la tablette ou de l’agent (PER-01)', () {
+      final perimeter = notice('a', 5, kind: 'perimeter');
+      expect(perimeter.label, 'Retiré de votre périmètre');
+      expect(
+        decodeRemovalNotices(encodeRemovalNotices([perimeter])).single.kind,
+        'perimeter',
       );
     });
   });

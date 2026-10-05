@@ -21,4 +21,5 @@ export * from './publication-build';
 export * from './ports';
 export * from './referential';
 export * from './risks';
+export * from './sectors';
 export * from './use-cases';

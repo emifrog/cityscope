@@ -31,6 +31,7 @@ import { PostgresMemberRepository } from './member-repository';
 import { PostgresOperationalObjectRepository } from './operational-object-repository';
 import { PostgresPlanRepository } from './plan-repository';
 import { PostgresRiskRepository } from './risk-repository';
+import { PostgresSectorRepository } from './sector-repository';
 import { PostgresZoneRepository } from './zone-repository';
 import { sqlState, type Pool, type PoolClient } from './pool';
 import { PostgresAuditRecorder, PostgresJobScheduler } from './request-services';
@@ -89,6 +90,7 @@ export class PostgresSessionFactory implements SessionFactory {
         risks: new PostgresRiskRepository(client),
         etare: new PostgresEtareRepository(client),
         devices: new PostgresDeviceRepository(client),
+        sectors: new PostgresSectorRepository(client),
         fieldReports: new PostgresFieldReportRepository(client),
         portal: new PostgresPortalAccessRepository(client),
         contributions: new PostgresContributionRepository(client),
@@ -151,6 +153,7 @@ const UNIQUE_MESSAGES: Readonly<Record<string, string>> = {
   etare_revision_open_uq: 'Une révision est déjà en cours pour ce site (brouillon ou en attente de validation).',
   device_name_uq: 'Un terminal actif ou en attente porte déjà ce nom dans votre SIS.',
   device_public_key_uq: 'Cette clé de terminal est déjà enrôlée : réinstallez l’application.',
+  sector_name_uq: 'Un secteur actif porte déjà ce nom dans votre SIS.',
 };
 
 /** Messages of the placement rules (plans, scope of objects and risks). */
@@ -253,6 +256,20 @@ export function translateDatabaseError(error: unknown): unknown {
       return new NotFound('Membre introuvable dans votre SIS.');
     case 'ETD04':
       return new NotFound('Terminal introuvable dans votre SIS.');
+    case 'ETS04':
+      return new NotFound('Secteur introuvable dans votre SIS.');
+    case 'ETS12':
+      return new PreconditionFailed('Ce secteur a été modifié entre-temps : rechargez la liste.');
+    case 'ETS09':
+      return new Conflict('Ce secteur est archivé.');
+    case 'ETSCU':
+      return new Conflict(
+        'Des membres ou des terminaux sont encore affectés à ce secteur : affectez-les ailleurs avant de l’archiver.',
+      );
+    case 'ETSCP':
+      return new InvalidInput(
+        'L’administration du SIS s’exerce sur tout le SIS : elle ne se limite pas à des secteurs.',
+      );
     case 'ETD12':
       return new PreconditionFailed('Ce terminal a été modifié entre-temps : rechargez la liste.');
     case 'ETD09':

@@ -21,6 +21,7 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
     identity: {
       me: unstubbed('identity.me'),
       holdsWithSecondFactor: unstubbed('identity.holdsWithSecondFactor'),
+      holdsOnPart: async () => false,
       ...overrides.identity,
     },
     account: {
@@ -133,10 +134,18 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       updateLayoutSettings: unstubbed('etare.updateLayoutSettings'),
       ...overrides.etare,
     },
+    sectors: {
+      list: unstubbed('sectors.list'),
+      communes: unstubbed('sectors.communes'),
+      save: unstubbed('sectors.save'),
+      archive: unstubbed('sectors.archive'),
+      ...overrides.sectors,
+    },
     members: {
       list: unstubbed('members.list'),
       add: unstubbed('members.add'),
       update: unstubbed('members.update'),
+      setPerimeter: unstubbed('members.setPerimeter'),
       resetSecondFactor: unstubbed('members.resetSecondFactor'),
       ...overrides.members,
     },
@@ -144,6 +153,7 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       list: unstubbed('devices.list'),
       get: unstubbed('devices.get'),
       create: unstubbed('devices.create'),
+      setPerimeter: unstubbed('devices.setPerimeter'),
       renewCode: unstubbed('devices.renewCode'),
       revoke: unstubbed('devices.revoke'),
       enroll: unstubbed('devices.enroll'),

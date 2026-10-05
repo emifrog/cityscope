@@ -1,6 +1,6 @@
-import type { Member, MemberInvitation, MemberInvite, MemberUpdate } from '@etare/contracts';
+import type { Member, MemberInvitation, MemberInvite, MemberPerimeterInput, MemberUpdate } from '@etare/contracts';
 import { ServiceUnavailable, type RequestContext } from '@etare/domain';
-import type { IdentityProvisioner, SessionFactory } from './ports';
+import type { IdentityProvisioner, RequestSession, SessionFactory } from './ports';
 import { found, inTenant } from './use-cases';
 
 export interface MemberDependencies {
@@ -12,6 +12,17 @@ export interface MemberDependencies {
 /** member:manage is privileged: the second factor is required (MFA_REQUIRED otherwise). */
 export async function listMembers(sessions: SessionFactory, context: RequestContext): Promise<Member[]> {
   return inTenant(sessions, context, 'member:manage', (session) => session.members.list());
+}
+
+/** Limits a member invited with a perimeter, in the transaction that attaches them (PER-01). */
+async function withPerimeter(session: RequestSession, member: Member, input: MemberInvite): Promise<Member> {
+  const sectors = input.sector_ids ?? [];
+  const sites = input.site_ids ?? [];
+  if (sectors.length === 0 && sites.length === 0) return member;
+  return found(
+    await session.members.setPerimeter(member.id, member.row_version, { sector_ids: sectors, site_ids: sites }),
+    'Membre introuvable.',
+  );
 }
 
 /**
@@ -26,8 +37,9 @@ export async function inviteMember(
 ): Promise<MemberInvitation> {
   const attached = await inTenant(deps.sessions, context, 'member:manage', async (session) => {
     const member = await session.members.add(input, null);
-    if (member) await session.audit.record('member.invite', 'membership', member.id, { invitation_sent: false });
-    return member;
+    if (!member) return null;
+    await session.audit.record('member.invite', 'membership', member.id, { invitation_sent: false });
+    return withPerimeter(session, member, input);
   });
   if (attached) return { member: attached, invitation: 'existing_account' };
 
@@ -38,7 +50,7 @@ export async function inviteMember(
     await session.audit.record('member.invite', 'membership', created.id, {
       invitation_sent: identity.invitationSent,
     });
-    return created;
+    return withPerimeter(session, created, input);
   });
   return { member, invitation: identity.invitationSent ? 'sent' : 'existing_account' };
 }
@@ -55,6 +67,19 @@ export async function resetMemberSecondFactor(
 ): Promise<Member> {
   return inTenant(sessions, context, 'member:manage', async (session) =>
     found(await session.members.resetSecondFactor(id, expectedVersion), 'Membre introuvable.'),
+  );
+}
+
+/** Limits the roles of a member to sectors and sites, or gives them the whole SIS back (PER-01). */
+export async function setMemberPerimeter(
+  sessions: SessionFactory,
+  context: RequestContext,
+  id: string,
+  expectedVersion: number,
+  input: MemberPerimeterInput,
+): Promise<Member> {
+  return inTenant(sessions, context, 'member:manage', async (session) =>
+    found(await session.members.setPerimeter(id, expectedVersion, input), 'Membre introuvable.'),
   );
 }
 

@@ -25,6 +25,7 @@ import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { DEVICE_STATE_LABELS, SYNC_RECEIPT_STATUS_LABELS } from '@/components/labels';
 import { api } from '@/lib/api-client';
 import { queryKeys, useApiMutation, useDevices } from '@/lib/queries';
+import { SectorChoice, type SectorSelection } from './sector-choice';
 
 const dateTime = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Europe/Paris' });
 const formatDate = (value: string | null) => (value ? dateTime.format(new Date(value)) : '—');
@@ -63,32 +64,94 @@ function EnrollmentCode({ result, onClose }: { result: DeviceEnrollmentCode; onC
   );
 }
 
+const WHOLE_SIS: SectorSelection = { whole: true, sectorIds: [] };
+
+/** "Tout le SIS" or the names of the sectors of a terminal (maquette, screen 11). */
+function perimeterLabel(device: Device): string {
+  return device.perimeter.scope === 'tenant'
+    ? 'Tout le SIS'
+    : device.perimeter.sectors.map((sector) => sector.name).join(', ') || 'Aucun secteur actif';
+}
+
 function CreateDevice({ onCreated }: { onCreated: (result: DeviceEnrollmentCode) => void }) {
   const [name, setName] = useState('');
+  const [perimeter, setPerimeter] = useState<SectorSelection>(WHOLE_SIS);
   const create = useApiMutation(
-    (options, input: { name: string }) => api.createDevice(options, input),
-    (tenantId) => [queryKeys.devices(tenantId)],
+    (options, input: { name: string; sector_ids: string[] }) => api.createDevice(options, input),
+    (tenantId) => [queryKeys.devices(tenantId), queryKeys.sectors(tenantId)],
   );
+  const incomplete = !perimeter.whole && perimeter.sectorIds.length === 0;
   return (
     <form
       noValidate
-      className="flex flex-wrap items-end gap-3"
+      className="space-y-3"
       onSubmit={(event) => {
         event.preventDefault();
-        create.mutate({ name: name.trim() }, { onSuccess: (result) => onCreated(result) });
+        create.mutate(
+          { name: name.trim(), sector_ids: perimeter.whole ? [] : [...perimeter.sectorIds] },
+          { onSuccess: (result) => onCreated(result) },
+        );
       }}
     >
-      {create.error ? (
-        <div className="w-full">
-          <ApiErrorAlert error={create.error} />
-        </div>
-      ) : null}
+      {create.error ? <ApiErrorAlert error={create.error} /> : null}
       <Field label="Nom du terminal" htmlFor="device-name" hint="Ex. TABLETTE FPT01 — CIS Nice Centre">
         <Input id="device-name" value={name} maxLength={100} onChange={(event) => setName(event.target.value)} />
       </Field>
-      <Button type="submit" size="sm" disabled={create.isPending || name.trim().length === 0}>
+      <SectorChoice
+        name="device-perimeter-new"
+        wholeLabel="Tout le SIS"
+        limitedLabel="Des secteurs"
+        value={perimeter}
+        onChange={setPerimeter}
+      />
+      <Button type="submit" size="sm" disabled={create.isPending || name.trim().length === 0 || incomplete}>
         {create.isPending ? 'Création…' : 'Créer et obtenir un code'}
       </Button>
+    </form>
+  );
+}
+
+/** Assigns the terminal to sectors or to the whole SIS; it follows at its next contact. */
+function PerimeterForm({ device, onDone }: { device: Device; onDone: () => void }) {
+  const [perimeter, setPerimeter] = useState<SectorSelection>({
+    whole: device.perimeter.scope === 'tenant',
+    sectorIds: device.perimeter.sectors.map((sector) => sector.id),
+  });
+  const save = useApiMutation(
+    (options, sectorIds: string[]) =>
+      api.setDevicePerimeter(options, device.id, device.row_version, { sector_ids: sectorIds }),
+    (tenantId) => [queryKeys.devices(tenantId), queryKeys.sectors(tenantId)],
+  );
+  const incomplete = !perimeter.whole && perimeter.sectorIds.length === 0;
+  return (
+    <form
+      noValidate
+      className="max-w-2xl space-y-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        save.mutate(perimeter.whole ? [] : [...perimeter.sectorIds], { onSuccess: onDone });
+      }}
+    >
+      {save.error ? <ApiErrorAlert error={save.error} /> : null}
+      <SectorChoice
+        name={`device-perimeter-${device.id}`}
+        wholeLabel="Tout le SIS"
+        limitedLabel="Des secteurs"
+        value={perimeter}
+        onChange={setPerimeter}
+      />
+      <p className="text-xs text-muted">
+        La tablette reçoit les sites communs à son affectation et au périmètre de l’agent connecté ; ce qui en sort est
+        retiré à sa prochaine synchronisation, avec le motif « retiré de votre périmètre ».
+      </p>
+      <div className="flex gap-2">
+        <Button type="submit" size="sm" disabled={save.isPending || incomplete}>
+          {save.isPending ? 'Enregistrement…' : 'Enregistrer l’affectation'}
+        </Button>
+        <Button type="button" size="sm" variant="secondary" onClick={onDone}>
+          Annuler
+        </Button>
+      </div>
     </form>
   );
 }
@@ -146,6 +209,7 @@ function DeviceRow({
   onCode: (result: DeviceEnrollmentCode) => void;
 }) {
   const [revoking, setRevoking] = useState(false);
+  const [assigning, setAssigning] = useState(false);
   const renew = useApiMutation(
     (options) => api.renewDeviceEnrollment(options, device.id, device.row_version),
     (tenantId) => [queryKeys.devices(tenantId)],
@@ -168,6 +232,9 @@ function DeviceRow({
               Application à mettre à jour (version {minAppVersion} exigée) : aucune nouvelle version n’est installée
             </p>
           ) : null}
+        </TableCell>
+        <TableCell>
+          <p className="text-sm">{perimeterLabel(device)}</p>
         </TableCell>
         <TableCell>
           <p className="text-sm">{device.last_user_name ?? device.enrolled_by_name ?? '—'}</p>
@@ -212,6 +279,9 @@ function DeviceRow({
                   Nouveau code
                 </Button>
               ) : null}
+              <Button size="sm" variant="ghost" onClick={() => setAssigning((open) => !open)} aria-expanded={assigning}>
+                Affectation
+              </Button>
               <Button size="sm" variant="ghost" onClick={() => setRevoking((open) => !open)} aria-expanded={revoking}>
                 Révoquer
               </Button>
@@ -221,14 +291,21 @@ function DeviceRow({
       </TableRow>
       {renew.error ? (
         <TableRow>
-          <TableCell colSpan={6}>
+          <TableCell colSpan={7}>
             <ApiErrorAlert error={renew.error} />
+          </TableCell>
+        </TableRow>
+      ) : null}
+      {assigning ? (
+        <TableRow>
+          <TableCell colSpan={7} className="bg-subtle/40">
+            <PerimeterForm device={device} onDone={() => setAssigning(false)} />
           </TableCell>
         </TableRow>
       ) : null}
       {revoking ? (
         <TableRow>
-          <TableCell colSpan={6} className="bg-subtle/40">
+          <TableCell colSpan={7} className="bg-subtle/40">
             <RevokeForm device={device} onDone={() => setRevoking(false)} />
           </TableCell>
         </TableRow>
@@ -301,7 +378,7 @@ export function DevicesAdmin() {
           {devices.data.undistributed_publications > 0 ? (
             <Alert tone="info">
               {devices.data.undistributed_publications} version(s) publiée(s) ne sont pas distribuées aux terminaux :
-              publiées avant la signature des paquets (republiez le dossier), ou site sensible (distribution à venir).
+              publiées avant la signature des paquets (republiez le dossier), ou site sensible.
             </Alert>
           ) : null}
           <Card>
@@ -325,6 +402,7 @@ export function DevicesAdmin() {
                 <TableHead>
                   <TableRow>
                     <TableHeaderCell>Terminal</TableHeaderCell>
+                    <TableHeaderCell>Affectation</TableHeaderCell>
                     <TableHeaderCell>Utilisateur</TableHeaderCell>
                     <TableHeaderCell>Dernière synchronisation</TableHeaderCell>
                     <TableHeaderCell>Paquets</TableHeaderCell>

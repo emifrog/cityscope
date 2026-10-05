@@ -72,7 +72,12 @@ import type {
   MeResponse,
   Member,
   MemberInvite,
+  MemberPerimeterInput,
   MemberUpdate,
+  Sector,
+  SectorCommuneList,
+  SectorList,
+  SectorSave,
   SiteCreate,
   SiteDetail,
   SiteListQuery,
@@ -126,6 +131,7 @@ export interface RequestSession {
   readonly risks: RiskRepository;
   readonly etare: EtareRepository;
   readonly devices: DeviceRepository;
+  readonly sectors: SectorRepository;
   readonly fieldReports: FieldReportRepository;
   readonly portal: PortalAccessRepository;
   readonly contributions: ContributionRepository;
@@ -146,6 +152,8 @@ export interface IdentityReader {
   me(): Promise<MeResponse>;
   /** True when the roles of the user would grant this permission with a second factor (aal2). */
   holdsWithSecondFactor(permission: Permission): Promise<boolean>;
+  /** True when the permission is held on part of the SIS only (sectors or sites, PER-01). */
+  holdsOnPart(permission: Permission): Promise<boolean>;
 }
 
 /**
@@ -278,6 +286,8 @@ export interface MemberRepository {
    */
   add(input: MemberInvite, identitySubject: string | null): Promise<Member | null>;
   update(id: string, expectedVersion: number, patch: MemberUpdate): Promise<Member | null>;
+  /** Limits the roles of a member to sectors and sites (both empty: the whole SIS). */
+  setPerimeter(id: string, expectedVersion: number, input: MemberPerimeterInput): Promise<Member | null>;
   /** Removes the second factor of a member (and their sessions); a new one is then required. */
   resetSecondFactor(id: string, expectedVersion: number): Promise<Member | null>;
 }
@@ -648,10 +658,22 @@ export interface NotificationRepository {
   retry(id: string): Promise<void>;
 }
 
+/** Sectors of the SIS (PER-01): administration only; writes through app.admin_* functions. */
+export interface SectorRepository {
+  list(): Promise<SectorList>;
+  communes(): Promise<SectorCommuneList['items']>;
+  /** Creates (id null) or updates a sector and replaces its communes and sites. */
+  save(id: string | null, expectedVersion: number | null, input: SectorSave): Promise<Sector>;
+  /** Archives a sector nobody uses; Conflict when members or terminals still do. */
+  archive(id: string, expectedVersion: number): Promise<void>;
+}
+
 export interface DeviceRepository {
   list(): Promise<{ items: Device[]; currentGeneration: number; undistributedPublications: number }>;
   get(id: string): Promise<Device | null>;
   create(name: string, codeHash: string, expiresAt: Date): Promise<Device>;
+  /** Assigns the terminal to sectors; none: the whole SIS (PER-01). */
+  setPerimeter(id: string, expectedVersion: number, sectorIds: readonly string[]): Promise<Device>;
   /** New code for a terminal waiting for its enrollment. */
   renewCode(id: string, expectedVersion: number, codeHash: string, expiresAt: Date): Promise<Device>;
   revoke(id: string, expectedVersion: number, reason: string): Promise<Device>;

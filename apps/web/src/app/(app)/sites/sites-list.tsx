@@ -62,7 +62,8 @@ export function SitesList() {
         title="Sites"
         description={activeTenant ? `Référentiel des sites — ${activeTenant.tenant_name}` : undefined}
         actions={
-          permissions.has('site:write') ? (
+          // A new site belongs to no sector yet: its creation needs the whole SIS (PER-01).
+          permissions.has('site:write') && !activeTenant?.limited ? (
             <Button asChild>
               <Link href="/sites/nouveau">
                 <Plus aria-hidden="true" className="size-4" />

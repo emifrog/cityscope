@@ -37,6 +37,8 @@ export const queryKeys = {
   siteRecords: (tenantId: string, id: string, kind: string) => ['tenant', tenantId, 'site', id, kind] as const,
   members: (tenantId: string) => ['tenant', tenantId, 'members'] as const,
   devices: (tenantId: string) => ['tenant', tenantId, 'devices'] as const,
+  sectors: (tenantId: string) => ['tenant', tenantId, 'sectors'] as const,
+  sectorCommunes: (tenantId: string) => ['tenant', tenantId, 'sector-communes'] as const,
   etare: (tenantId: string) => ['tenant', tenantId, 'etare'] as const,
   revision: (tenantId: string, id: string) => ['tenant', tenantId, 'etare', 'revision', id] as const,
   fieldReports: (tenantId: string) => ['tenant', tenantId, 'field-reports'] as const,
@@ -518,6 +520,28 @@ export function useDevices() {
     queryKey: queryKeys.devices(tenantId ?? 'none'),
     enabled,
     queryFn: ({ signal }) => api.listDevices({ ...options, signal }),
+    retry: false,
+  });
+}
+
+/** Sectors of the SIS (PER-01): composed by the administration, perimeter of terminals and members. */
+export function useSectors(wanted = true) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.sectors(tenantId ?? 'none'),
+    enabled: enabled && wanted,
+    queryFn: ({ signal }) => api.listSectors({ ...options, signal }),
+    retry: false,
+  });
+}
+
+/** Communes of the sites of the SIS, to compose sectors. */
+export function useSectorCommunes(wanted = true) {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.sectorCommunes(tenantId ?? 'none'),
+    enabled: enabled && wanted,
+    queryFn: ({ signal }) => api.listSectorCommunes({ ...options, signal }),
     retry: false,
   });
 }

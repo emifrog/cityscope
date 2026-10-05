@@ -69,6 +69,29 @@ hors ligne et l'identification sur tablette partagée.
 - Les fonds de carte sont découpés par secteur (ADR-024).
 - La tablette demande une nouvelle permission Android (localisation), uniquement pour la carte.
 
+## Mise en œuvre de PER-01 (Sprint 10, 5 octobre 2026)
+
+- **Secteurs** : Administration › Secteurs (`member:manage`).
+  - Composition par communes (code INSEE de l'adresse, sites futurs compris, choix du porteur du 5 octobre)
+    et par sites ajoutés un à un.
+  - Un compteur signale les sites hors de tout secteur.
+  - Un secteur encore affecté n'est pas archivé.
+- **Tablettes** : affectation explicite (tout le SIS ou secteurs) à la création et dans la liste des
+  terminaux (colonne « Affectation » de l'écran 11).
+- **Membres** :
+  - périmètre (tout le SIS, secteurs, sites) partagé par tous leurs rôles, fixé dès l'invitation ou
+    ensuite ;
+  - l'administration du SIS reste entière ;
+  - un membre limité ne crée pas de site (le site n'appartiendrait à aucun secteur) ;
+  - la RLS lui montre sa part du SIS au back-office.
+- **Catalogue signé** :
+  - intersection du terminal et de la personne ;
+  - un site sorti du périmètre est retiré au contact suivant avec le motif `perimeter` (« Retiré de votre
+    périmètre ») ;
+  - la tablette lit désormais un motif inconnu sans bloquer la synchronisation.
+- **Déploiement** : relever `MOBILE_MIN_APP_VERSION`, car une application antérieure refuse un catalogue
+  qui contient ce motif.
+
 ## Critère de réexamen
 
 Avis contraire du RSSI ou de la direction opérationnelle (durée, code, purge à l'expiration) ; tablettes
