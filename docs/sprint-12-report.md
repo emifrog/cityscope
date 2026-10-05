@@ -137,14 +137,14 @@ Trois migrations :
 
 ## Tests
 
-| Suite                              | Résultat                                                                                  |
-| ---------------------------------- | ----------------------------------------------------------------------------------------- |
-| Unitaires et composants (`vitest`) | 437 tests, 69 fichiers                                                                    |
-| Base de données (pgTAP)            | 648 tests, 34 fichiers (dont 290, 300 et 310 pour ce sprint)                              |
-| Intégration (Auth → API → RLS)     | 147 tests et 2 optionnels, 33 fichiers (dont `signing-keys` contre un vrai OpenBao)       |
-| Flutter (`flutter test`)           | 236 tests, 1 ignoré (bout en bout sur demande)                                            |
-| Banc de volumétrie                 | 10 000 sites en local ([rapport](volumetrie/cap-01.md)), 1 000 sites en CI                |
-| CI GitHub (3 jobs)                 | jobs exécutés au vert ; plusieurs jobs non attribués par les runners GitHub (voir Écarts) |
+| Suite                              | Résultat                                                                                          |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Unitaires et composants (`vitest`) | 437 tests, 69 fichiers                                                                            |
+| Base de données (pgTAP)            | 648 tests, 34 fichiers (dont 290, 300 et 310 pour ce sprint)                                      |
+| Intégration (Auth → API → RLS)     | 149 tests, 33 fichiers, dont `antivirus` (ClamAV) et `signing-keys` (OpenBao), optionnels hors CI |
+| Flutter (`flutter test`)           | 236 tests, 1 ignoré (bout en bout sur demande)                                                    |
+| Banc de volumétrie                 | 10 000 sites en local ([rapport](volumetrie/cap-01.md)), 1 000 sites en CI                        |
+| CI GitHub (3 jobs)                 | au vert sur `2df7f72` (base neuve, ClamAV, OpenBao, banc réduit) ; voir Écarts                    |
 
 En local, le test pgTAP 260 (liste exacte des sites d’un secteur) échoue toujours : la base de
 développement garde les sites d’essai des tests d’intégration. La CI part d’une base neuve.
@@ -213,13 +213,20 @@ Vérifié dans le navigateur, sur la pile locale, avec un second facteur de test
     (EXP-01) ;
   - le transfert réel des paquets vers les tablettes, sur réseau et tablette réels, reste à mesurer en R5 ;
   - le volume réel d’un fond de secteur attend le Plan IGN.
-- **CI** : tous les jobs exécutés sont au vert, mais les runners GitHub n’ont pas pris certains jobs
-  (« not acquired by Runner ») :
-  - le job Base (migrations, pgTAP, intégration ; banc réduit depuis le lot D) est passé sur le lot A,
-    pas sur les lots B et C, et attendait encore un runner pour le lot D à l’écriture de ce rapport ;
-  - le job Flutter n’a pas été pris sur les lots A et B, et il est au vert sur les lots C et D ;
-  - en local, pgTAP, l’intégration et le banc sont passés sur l’état final (migrations appliquées à la base
-    existante, sans rejeu complet : la CI le fait depuis une base neuve).
+- **CI** : au vert sur `2df7f72`, avec les migrations rejouées depuis une base neuve, pgTAP,
+  l’intégration contre ClamAV et OpenBao, et le banc réduit. Pour y arriver :
+  - les runners GitHub n’ont pas pris le job Base sur les lots B et C, ni le job Flutter sur les lots A
+    et B (« not acquired by Runner ») ; les jobs exécutés étaient au vert ;
+  - une fois le job Base exécuté, deux tests du sprint ont échoué. Ils ne réussissaient qu’en local. Ils
+    sont corrigés (`700e25e`, `2df7f72`) :
+    - le test pgTAP 310 supposait plus de deux sites dans le SIS 06 ; il crée désormais son site hors
+      périmètre ;
+    - le test de supervision laissait en file un travail `asset.verify`, que le test antivirus suivant
+      prenait à la place du sien ;
+  - en local, des échecs intermittents (503 « signature en cours de renouvellement ») venaient d’un
+    worker de développement orphelin. Lancé avant la rotation, il gardait la clé révoquée depuis, et il
+    prenait des travaux des tests. Il a été arrêté ; deux exécutions complètes en ordre aléatoire sont
+    passées ensuite.
 
 ## Dette technique
 

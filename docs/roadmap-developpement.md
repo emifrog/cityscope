@@ -92,7 +92,7 @@ Un total de tests ou un nombre de sprints ne donne pas un pourcentage fiable d�
 | Sprint 12 C — supervision   | Métriques Prometheus protégées, trace W3C jusqu'aux travaux, battements des workers, 22 alertes avec procédures, onglet Supervision du SIS                                  | Commit `8da86ff`, [ADR-028](decisions/ADR-028-supervision.md)                   |
 | Sprint 12 D — volumétrie    | Banc de 10 000 sites ; périmètres évalués par ensemble (1,6–9,8 s → 16–60 ms), recherche par trigrammes, charge 170 → 292 req/s ; version réduite en CI                     | Commit `f6bb6e8`, [rapport CAP-01](volumetrie/cap-01.md)                        |
 
-**État technique vérifié :** 437 tests TypeScript, 648 assertions SQL, 147 tests d’intégration (dont
+**État technique vérifié :** 437 tests TypeScript, 648 assertions SQL, 149 tests d’intégration (dont
 l’antivirus contre un vrai ClamAV, les e-mails dans Mailpit, la préparation des fonds de carte par le worker
 et la signature par OpenBao Transit en CI), 236 tests Flutter réussis et 1 test optionnel ignoré ; banc de
 volumétrie de 10 000 sites ; 42 migrations, 28 ADR ([rapport du Sprint 12](sprint-12-report.md)). Origine de chaque vérification et limites :
