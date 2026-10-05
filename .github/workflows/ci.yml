@@ -80,6 +80,10 @@ jobs:
           pnpm setup:local
           pnpm seed:assets
           pnpm test:integration
+      # CAP-01: the full bench (10 000 sites) is run by hand (docs/volumetrie/cap-01.md); here
+      # 1 000 sites, to keep the bench working and fail on any request in error.
+      - name: Volumetry bench, reduced (1 000 sites, no request in error)
+        run: pnpm bench:volume --sites 1000 --jobs 10000 --seconds 5
       - if: always()
         run: pnpm exec supabase stop --no-backup
 

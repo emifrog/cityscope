@@ -18,6 +18,16 @@ l’adhésion active en base (réponse 403 sinon). Un site d’un autre SIS rép
 révèlent rien). Tests : `supabase/tests/database/10_tenant_isolation.test.sql`,
 `tests/integration/vertical-slice.test.ts`.
 
+**Périmètres évalués par ensemble** (CAP-01, [volumétrie](volumetrie/cap-01.md)) :
+
+- les politiques des tables rattachées à un site lisent les sites permis une fois par instruction
+  (`app.permitted_site_ids`), selon les règles de `has_permission`. L’égalité est vérifiée par
+  `310_perimeter_sets.test.sql` ;
+- la recherche textuelle obtient par `app.site_ids_matching` les identifiants des sites correspondants du
+  SIS courant, sans tenir compte du périmètre. Cette fonction est `SECURITY DEFINER` et réservée au rôle
+  `etare_api`. L’API ne s’en sert qu’à l’intérieur d’une lecture des sites sous RLS, qui applique le
+  périmètre.
+
 ## Identités, rôles et permissions
 
 - Authentification : Supabase Auth (MVP), jetons **ES256** vérifiés par l’API via JWKS (signature,

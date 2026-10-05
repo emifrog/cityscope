@@ -48,31 +48,19 @@ export interface EtareDependencies {
 
 async function workingData(session: RequestSession, siteId: string): Promise<WorkingData> {
   const site = found(await session.sites.get(siteId), 'Site introuvable.');
-  const [
-    classifications,
-    buildings,
-    contacts,
-    plans,
-    zones,
-    objects,
-    risks,
-    documents,
-    objectTypes,
-    riskTypes,
-    hiddenSections,
-  ] = await Promise.all([
-    session.classifications.listBySite(siteId),
-    session.buildings.listBySite(siteId),
-    session.contacts.listBySite(siteId),
-    session.plans.listBySite(siteId),
-    session.zones.listBySite(siteId),
-    session.objects.listBySite(siteId),
-    session.risks.listBySite(siteId),
-    session.documents.listBySite(siteId),
-    session.objects.types(),
-    session.risks.types({ includeDeprecated: true }),
-    session.etare.layoutSettings(),
-  ]);
+  // One after the other: the session holds one connection, which runs one query at a time anyway
+  // (pg 9 refuses a query sent while another one runs).
+  const classifications = await session.classifications.listBySite(siteId);
+  const buildings = await session.buildings.listBySite(siteId);
+  const contacts = await session.contacts.listBySite(siteId);
+  const plans = await session.plans.listBySite(siteId);
+  const zones = await session.zones.listBySite(siteId);
+  const objects = await session.objects.listBySite(siteId);
+  const risks = await session.risks.listBySite(siteId);
+  const documents = await session.documents.listBySite(siteId);
+  const objectTypes = await session.objects.types();
+  const riskTypes = await session.risks.types({ includeDeprecated: true });
+  const hiddenSections = await session.etare.layoutSettings();
   return {
     site,
     classifications,

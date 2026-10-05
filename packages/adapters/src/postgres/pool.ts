@@ -9,6 +9,8 @@ export interface PoolOptions {
   readonly max?: number;
   /** An idle connection was lost (database restart, failover): the pool drops it and reconnects on demand. */
   readonly onIdleError?: (error: Error) => void;
+  /** Client-side timeout of a query (10 s by default); 0: none (maintenance and bench tools only). */
+  readonly queryTimeoutMs?: number;
 }
 
 /**
@@ -26,7 +28,7 @@ export function createPool(options: PoolOptions): pg.Pool {
     max: options.max ?? 10,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 5_000,
-    query_timeout: 10_000,
+    query_timeout: options.queryTimeoutMs ?? 10_000,
   });
   pool.on('error', (error) => options.onIdleError?.(error));
   return pool;

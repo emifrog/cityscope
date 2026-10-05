@@ -31,12 +31,28 @@ describe('vertical slice: SDIS DEMO 06 user', () => {
     expect(me.memberships[0]?.roles).toEqual(['PREVISION_EDITOR']);
   });
 
-  it('lists the sites of its SIS and sees EHPAD Les Oliviers', async () => {
-    const response = await request('/sites', { authorization: `Bearer ${editor06}`, 'x-tenant-id': TENANT_06 });
+  it('lists the sites of its SIS and finds EHPAD Les Oliviers', async () => {
+    const headers = { authorization: `Bearer ${editor06}`, 'x-tenant-id': TENANT_06 };
+    const response = await request('/sites', headers);
     expect(response.status).toBe(200);
     const page = endpoints.listSites.response.parse(await response.json());
-    expect(page.items.map((site) => site.name)).toContain('EHPAD Les Oliviers');
     expect(page.items.every((site) => site.tenant_id === TENANT_06)).toBe(true);
+    // By its name, its ETARE number or its address: through the trigram indexes from 3 characters
+    // on, by filtering the rows below (CAP-01). Never the site of the other SIS.
+    for (const q of ['Oliviers', '06-0428', 'avenue des mimosas', 'EH']) {
+      const found = endpoints.listSites.response.parse(
+        await (await request(`/sites?q=${encodeURIComponent(q)}`, headers)).json(),
+      );
+      expect(
+        found.items.map((site) => site.name),
+        q,
+      ).toContain('EHPAD Les Oliviers');
+      expect(found.items.every((site) => site.tenant_id === TENANT_06)).toBe(true);
+    }
+    const pins = endpoints.listSites.response.parse(
+      await (await request('/sites?q=Pins%20(d%C3%A9mo%2083)', headers)).json(),
+    );
+    expect(pins.items).toEqual([]);
   });
 
   it('reads the detail of EHPAD Les Oliviers with its active publication', async () => {
