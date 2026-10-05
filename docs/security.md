@@ -226,6 +226,15 @@ Jetons et clé de base dans le stockage sécurisé Android (Keystore), base SQLi
 Sprint 0, sauvegardes Android désactivées, permission `INTERNET` seule, HTTP en clair uniquement en debug
 vers l’émulateur. Voir `apps/mobile/README.md`.
 
+Depuis le Sprint 10 (ADR-025) :
+
+- **Code personnel** de chaque agent (6 chiffres) : exigé au démarrage et après 15 minutes d’inactivité ;
+  cinq erreurs déconnectent l’agent.
+- **Sites restreints ouverts à la demande** : chiffrés une seconde fois par une clé dérivée de ce code
+  (PBKDF2, secret de l’installation, AES-256-GCM), et gardés 24 h au plus.
+- **Changement d’agent** : le code et les sites sensibles du précédent sont effacés ; ses consultations
+  restent à remonter au journal.
+
 ## Secrets et Git
 
 `.env`, `.env.*` (sauf `.env.example`), `supabase/signing_keys.json`, keystores Android et
@@ -243,6 +252,8 @@ jetables (`pnpm setup:local`). Les clés de signature des environnements partag�
   hébergé ; pas de rapport des violations CSP (`report-to`).
 - Durée maximale et inactivité des sessions (`[auth.sessions]`) à régler sur le projet hébergé avec la
   DSI, sans couper la synchronisation en arrière-plan des tablettes.
-- Tablette : ni verrouillage applicatif propre (PIN, biométrie), ni attestation d’intégrité du
-  terminal, ni rotation de la clé de la base locale.
+- Tablette : code personnel livré (Sprint 10), mais un code à six chiffres reste exposé à un essai
+  exhaustif par qui détient à la fois la base et le secret de l’installation ; ni attestation
+  d’intégrité du terminal, ni rotation de la clé de la base locale ; changement d’agent hors ligne
+  impossible (connexion en ligne requise).
 - Chaînage d’empreintes / export externe du journal d’audit : à décider.

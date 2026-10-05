@@ -9,6 +9,7 @@ import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/ops/application/ops_providers.dart';
 import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
 import 'package:etare_ops/src/features/reports/application/report_providers.dart';
+import 'package:etare_ops/src/features/sensitive/application/sensitive_providers.dart';
 import 'package:etare_ops/src/features/sync/application/sync_providers.dart';
 import 'package:etare_ops/src/features/sync/domain/device_identity.dart';
 import 'package:etare_ops/src/features/sync/domain/sync_status.dart';
@@ -25,6 +26,7 @@ class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   static const searchFieldKey = Key('home.search');
+  static Key sensitiveTileKey(String siteId) => Key('home.sensitive.$siteId');
   static const accountButtonKey = Key('home.account');
   static const reportsButtonKey = Key('home.reports');
 
@@ -188,6 +190,7 @@ class _SiteSearch extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final results = ref.watch(siteResultsProvider);
+    final onDemand = ref.watch(onDemandResultsProvider).value ?? const [];
     final query = ref.watch(siteQueryProvider);
     return Column(
       children: [
@@ -210,16 +213,29 @@ class _SiteSearch extends ConsumerWidget {
         Expanded(
           child: switch (results) {
             AsyncData(value: final List<SiteSearchRow> sites)
-                when sites.isEmpty =>
+                when sites.isEmpty && onDemand.isEmpty =>
               query.isEmpty
                   ? const _Message.noSite()
                   : const _Message.noResult(),
-            AsyncData(value: final List<SiteSearchRow> sites) =>
-              ListView.separated(
-                itemCount: sites.length,
-                separatorBuilder: (context, index) => const Divider(height: 1),
-                itemBuilder: (context, index) => _SiteTile(site: sites[index]),
-              ),
+            AsyncData(value: final List<SiteSearchRow> sites) => ListView(
+              children: [
+                for (final (index, site) in sites.indexed) ...[
+                  if (index > 0) const Divider(height: 1),
+                  _SiteTile(site: site),
+                ],
+                // Sites restreints : listés seulement, ouverts un à un (PER-02).
+                if (onDemand.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+                    child: Text(
+                      'Sites sensibles — à ouvrir à la demande',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                  ),
+                  for (final site in onDemand) _SensitiveTile(site: site),
+                ],
+              ],
+            ),
             AsyncError() => const _Message.unreadable(),
             _ => const Center(child: CircularProgressIndicator()),
           },
@@ -252,6 +268,32 @@ class _SiteTile extends StatelessWidget {
       onTap: () => context.push(AppRoutes.site(site.siteId)),
     );
   }
+}
+
+class _SensitiveTile extends StatelessWidget {
+  const _SensitiveTile({required this.site});
+
+  final OnDemandSiteRow site;
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+    key: HomeScreen.sensitiveTileKey(site.siteId),
+    minVerticalPadding: 12,
+    leading: const Icon(
+      Icons.shield_outlined,
+      size: 32,
+      color: BrandColors.critical,
+    ),
+    title: Text(site.siteName, style: Theme.of(context).textTheme.titleMedium),
+    subtitle: Text(
+      [
+        if (site.etareNumber != null) 'ETARE ${site.etareNumber}',
+        'Site sensible : code demandé, réseau requis à la première ouverture',
+      ].join('\n'),
+    ),
+    trailing: const Icon(Icons.lock_outline),
+    onTap: () => context.push(AppRoutes.sensitiveSite(site.siteId)),
+  );
 }
 
 class _Message extends StatelessWidget {

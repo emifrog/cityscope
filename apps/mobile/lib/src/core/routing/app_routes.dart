@@ -13,6 +13,9 @@ abstract final class AppRoutes {
   /// Synthèse opérationnelle d'un site installé (OPS-01).
   static String site(String siteId) => '/home/site/$siteId';
 
+  /// Ouverture d'un site sensible proposé à la demande (PER-02).
+  static String sensitiveSite(String siteId) => '/home/sensitive/$siteId';
+
   /// Liste d'une entrée de la synthèse (risques, accès, eau…).
   static String section(String siteId, String section) =>
       '/home/site/$siteId/section/$section';

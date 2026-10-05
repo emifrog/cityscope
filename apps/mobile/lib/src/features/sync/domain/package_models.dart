@@ -115,6 +115,7 @@ final class SyncCatalog {
     required this.publications,
     this.minAppVersion,
     this.withdrawals = const [],
+    this.onDemand = const [],
   });
 
   factory SyncCatalog.fromJson(JsonMap json) {
@@ -143,6 +144,13 @@ final class SyncCatalog {
           CatalogEntry.fromJson(entry),
       ],
       minAppVersion: minApp,
+      // Absent des catalogues antérieurs au Sprint 10 (PER-02).
+      onDemand: json['on_demand'] == null
+          ? const []
+          : [
+              for (final entry in json.requireObjectList('on_demand'))
+                CatalogEntry.fromJson(entry),
+            ],
       // Absent des catalogues antérieurs au Sprint 8 (MET-04).
       withdrawals: json['withdrawals'] == null
           ? const []
@@ -171,6 +179,10 @@ final class SyncCatalog {
   /// Sites détenus par la tablette dont la version a été retirée ou qui ont
   /// été archivés, avec le motif (MET-04).
   final List<RemovalNotice> withdrawals;
+
+  /// Sites « restreints » proposés à la demande (PER-02) : jamais installés
+  /// en masse, ouverts un à un avec le réseau et le code de l'agent.
+  final List<CatalogEntry> onDemand;
 }
 
 /// Fichier d'un paquet, identifié par son empreinte.

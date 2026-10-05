@@ -176,6 +176,12 @@ final class FakeSyncServer {
   final Map<String, List<int>> storedObjects = {};
   int duplicateUploads = 0;
 
+  /// Sites « restreints » proposés à la demande (PER-02).
+  final Map<String, FakePublication> onDemand = {};
+
+  /// Consultations remontées par la tablette, par identifiant (journal).
+  final Map<String, Map<String, Object?>> accessEvents = {};
+
   final List<String> packageRequests = [];
   final List<String> downloadedFiles = [];
   final List<Map<String, Object?>> receipts = [];
@@ -203,9 +209,24 @@ final class FakeSyncServer {
   /// Sites retirés annoncés avec leur motif (MET-04).
   final List<Map<String, Object?>> withdrawals = [];
 
-  FakePublication _byPublicationId(String id) => catalog.values.firstWhere(
-    (publication) => publication.publicationId == id,
-  );
+  FakePublication _byPublicationId(String id) => [
+    ...catalog.values,
+    ...onDemand.values,
+  ].firstWhere((publication) => publication.publicationId == id);
+
+  Map<String, Object?> _entryOf(FakePublication publication) => {
+    'site_id': publication.siteId,
+    'publication_id': publication.publicationId,
+    'publication_number': publication.number,
+    'manifest_hash': sha256OfText(publication.manifest),
+    'published_at': serverClock.toIso8601String(),
+    'size_bytes': publication.files.values.fold<int>(
+      utf8.encode(publication.data).length,
+      (total, bytes) => total + bytes.length,
+    ),
+    'etare_number': null,
+    'site_name': publication.siteName,
+  };
 
   Future<String> _sign(SimpleKeyPair key, String context, String text) async {
     final signature = await Ed25519().sign(
@@ -256,20 +277,10 @@ final class FakeSyncServer {
         'min_app_version': minAppVersion,
         'withdrawals': withdrawals,
         'publications': [
-          for (final publication in catalog.values)
-            {
-              'site_id': publication.siteId,
-              'publication_id': publication.publicationId,
-              'publication_number': publication.number,
-              'manifest_hash': sha256OfText(publication.manifest),
-              'published_at': serverClock.toIso8601String(),
-              'size_bytes': publication.files.values.fold<int>(
-                utf8.encode(publication.data).length,
-                (total, bytes) => total + bytes.length,
-              ),
-              'etare_number': null,
-              'site_name': publication.siteName,
-            },
+          for (final publication in catalog.values) _entryOf(publication),
+        ],
+        'on_demand': [
+          for (final publication in onDemand.values) _entryOf(publication),
         ],
       });
       final key = signCatalogWithPublicationKey ? _publicationKey : _catalogKey;
@@ -302,7 +313,20 @@ final class FakeSyncServer {
           ),
         },
         'data': publication.data,
+        'access_expires_at': onDemand.containsKey(publication.siteId)
+            ? serverClock.add(const Duration(hours: 24)).toIso8601String()
+            : null,
       });
+    }
+
+    if (path.endsWith('/sync/access-events') && options.method == 'POST') {
+      final body = jsonDecode(rawBody!) as Map<String, Object?>;
+      final events = (body['events']! as List<Object?>)
+          .cast<Map<String, Object?>>();
+      for (final event in events) {
+        accessEvents[event['client_event_id']! as String] = event;
+      }
+      return _json(200, {'received': events.length});
     }
 
     final downloads = RegExp(r'/sync/publications/([^/]+)/downloads$')
@@ -311,9 +335,10 @@ final class FakeSyncServer {
       final body = jsonDecode(rawBody!) as Map<String, Object?>;
       final hashes = (body['sha256']! as List<Object?>).cast<String>();
       // Comme l'API : rien pour une version qui n'est plus distribuée.
-      final distributed = catalog.values.any(
-        (publication) => publication.publicationId == downloads.group(1),
-      );
+      final distributed = [
+        ...catalog.values,
+        ...onDemand.values,
+      ].any((publication) => publication.publicationId == downloads.group(1));
       return _json(200, {
         'files': [
           if (distributed)
@@ -460,7 +485,7 @@ final class FakeSyncServer {
         reason: 'hors ligne (simulé)',
       );
     }
-    for (final publication in catalog.values) {
+    for (final publication in [...catalog.values, ...onDemand.values]) {
       for (final bytes in [
         ...publication.files.values,
         ...publication.optionalFiles.values,

@@ -13,6 +13,7 @@ import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/data/local/daos/offline_dao.dart';
 import 'package:etare_ops/src/data/local/daos/reports_dao.dart';
 import 'package:etare_ops/src/data/local/daos/sync_state_dao.dart';
+import 'package:etare_ops/src/features/sync/application/package_verification.dart';
 import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
 import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
 import 'package:etare_ops/src/features/sync/data/sync_api.dart';
@@ -22,16 +23,8 @@ import 'package:etare_ops/src/features/sync/domain/signed_content.dart';
 import 'package:etare_ops/src/features/sync/domain/sync_plan.dart';
 import 'package:flutter/foundation.dart';
 
-/// Contenu refusé à la vérification : il n'est jamais installé.
-final class SyncIntegrityException implements Exception {
-  const SyncIntegrityException(this.code);
-
-  /// Code stable remonté dans l'accusé (ex. MANIFEST_SIGNATURE_INVALID).
-  final String code;
-
-  @override
-  String toString() => 'SyncIntegrityException($code)';
-}
+export 'package:etare_ops/src/features/sync/application/package_verification.dart'
+    show SyncIntegrityException;
 
 /// Étape en cours, pour l'affichage de la progression (OFF-01).
 enum SyncStep { catalog, downloading, installing, receipt }
@@ -383,6 +376,7 @@ final class SyncService {
         install: prepared,
         removeSites: plan.toRemove,
         notices: _noticesOf(catalog, plan),
+        onDemand: catalog.onDemand,
         generation: catalog.generation,
         serverTime: catalog.issuedAt,
         authorizedUserId: catalog.authorizedUserId,
@@ -444,6 +438,7 @@ final class SyncService {
         install: const [],
         removeSites: plan.toRemove,
         notices: _noticesOf(catalog, plan),
+        onDemand: catalog.onDemand,
         generation: catalog.generation,
         serverTime: catalog.issuedAt,
         authorizedUserId: catalog.authorizedUserId,
@@ -521,41 +516,14 @@ final class SyncService {
     bool Function(int bytes) reserve,
   ) async {
     final package = await _api.package(device, entry.publicationId);
-    final signatureValid = await verifyServerSignature(
+    final verified = await verifyPackage(
       trustedKeys: _trustedKeys,
-      purpose: KeyPurpose.publication,
-      envelope: package.signature,
-      text: signedText(SignatureContexts.manifest, package.manifest),
+      package: package,
+      entry: entry,
+      tenantId: device.identity.tenantId,
     );
-    if (!signatureValid) {
-      throw const SyncIntegrityException('MANIFEST_SIGNATURE_INVALID');
-    }
-    if (sha256OfText(package.manifest) != entry.manifestHash) {
-      throw const SyncIntegrityException('MANIFEST_HASH_MISMATCH');
-    }
-    final PublicationManifest manifest;
-    try {
-      manifest = PublicationManifest.fromJson(
-        asJsonMap(jsonDecode(package.manifest)),
-      );
-    } on NewerFormatException {
-      throw const SyncIntegrityException(_readerTooOld);
-    } on FormatException {
-      throw const SyncIntegrityException('MANIFEST_INVALID');
-    }
-    if (manifest.tenantId != device.identity.tenantId ||
-        manifest.siteId != entry.siteId ||
-        manifest.publicationId != entry.publicationId) {
-      throw const SyncIntegrityException('MANIFEST_MISMATCH');
-    }
-    if (compareVersions(manifest.minReaderVersion, AppInfo.readerVersion) > 0) {
-      throw const SyncIntegrityException(_readerTooOld);
-    }
-    final dataBytes = utf8.encode(package.data);
-    if (sha256Hex(dataBytes) != manifest.data.sha256 ||
-        dataBytes.length != manifest.data.sizeBytes) {
-      throw const SyncIntegrityException('DATA_HASH_MISMATCH');
-    }
+    final manifest = verified.manifest;
+    final dataBytes = verified.dataBytes;
     final search = _searchRecord(package.data, entry);
     onBytes(dataBytes.length, dataBytes.length);
 
@@ -744,7 +712,7 @@ final class SyncService {
 
   /// Codes remontés dans l'accusé quand l'application est trop ancienne.
   static const _updateRequired = 'APP_UPDATE_REQUIRED';
-  static const _readerTooOld = 'READER_TOO_OLD';
+  static const _readerTooOld = readerTooOldCode;
 
   static String _integrityMessage(String code) => switch (code) {
     'TRUSTED_KEYS_MISSING' =>

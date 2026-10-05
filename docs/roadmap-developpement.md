@@ -257,9 +257,12 @@ non exposés, pas de notification des équipes du SIS ; recette avec un exploita
       filtrer le catalogue signé, retirer localement ce qui n’est plus autorisé.
       **Livré au Sprint 10** : secteurs par communes et sites, tablettes et membres affectés, catalogue à
       l’intersection, retrait motivé « périmètre » sur la tablette (ADR-025).
-- [ ] **PER-02 — Sites sensibles :** règles d’accès, audit des consultations/exports, exclusion des
+- [x] **PER-02 — Sites sensibles :** règles d’accès, audit des consultations/exports, exclusion des
       téléchargements massifs, durée locale adaptée et authentification avant consultation selon DEC-04.
       Maintenir l’exclusion actuelle tant que cette politique n’est pas implémentée et testée.
+      **Livré au Sprint 10** : habilitation nominative datée, sites restreints à la demande (code, 24 h,
+      chiffrés), élevés jamais sur tablette, journal des consultations ; code personnel et verrouillage
+      d’inactivité sur la tablette (ADR-025). À confirmer par le RSSI.
 - [ ] **CAR-01 — Prototype IGN sur matériel :** un pack représentatif, attribution visible, couverture
       et zoom bornés, ouverture après redémarrage sans réseau, en respectant DEC-02.
 - [ ] **CAR-02 — Carte locale OPS :** sites et objets depuis la publication, ouverture de fiche,
@@ -431,7 +434,7 @@ Les exigences transverses hors de cette table sont couvertes par R0/R4 et la sec
 | PORTAL-01 | P0       | Invitation exploitant par site           | Implémenté  | Sprint 7 (ADR-019) ; R5 : recette avec un exploitant pilote                                   |
 | PORTAL-02 | P0       | Proposition sans publication directe     | Implémenté  | Sprint 7 : conflit explicite, report manuel dans les données de travail                       |
 | PORTAL-03 | P0       | Documents et photos exploitants          | Implémenté  | Sprint 7 : pièces contrôlées (antivirus), documents partagés par le SIS                       |
-| ADMIN-01  | P0       | Rôles et périmètres                      | Partiel     | Sprint 10 : secteurs et périmètres (PER-01) ; règles des sites sensibles (PER-02)             |
+| ADMIN-01  | P0       | Rôles et périmètres                      | Implémenté  | Sprint 10 (PER-01, PER-02) ; R5 : recette avec un parc et des sites sensibles pilotes         |
 | ADMIN-02  | P0       | Terminaux                                | Implémenté  | Sprint 9 : codes limités en débit (SEC-03) ; R4 SEC-05 ; R5 inventaire/enrôlement/révocation  |
 | ADMIN-03  | P1       | Catalogues configurables                 | Partiel     | R6 : objets/icônes/champs/valeurs ; risques déjà livrés                                       |
 | ADMIN-04  | P1       | Exports et rapports                      | Partiel     | R6 : CSV/rapports ; PDF déjà livré ; DEC-06                                                   |

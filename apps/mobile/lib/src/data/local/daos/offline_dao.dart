@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/data/local/tables.dart';
+import 'package:etare_ops/src/features/sync/domain/package_models.dart';
 import 'package:etare_ops/src/features/sync/domain/removal_notice.dart';
 import 'package:flutter/foundation.dart';
 
@@ -96,6 +97,7 @@ final class ActivationRecord {
     this.keepBlobs = const {},
     this.requiredAppVersion,
     this.notices = const [],
+    this.onDemand,
   });
 
   final List<InstallRecord> install;
@@ -122,6 +124,10 @@ final class ActivationRecord {
 
   /// Raisons des retraits de ce jeu (MET-04), conservées pour l'agent.
   final List<RemovalNotice> notices;
+
+  /// Sites restreints proposés à la demande par le catalogue (PER-02) ; null
+  /// laisse la liste inchangée.
+  final List<CatalogEntry>? onDemand;
 }
 
 /// Clé `local_meta` des avis de retrait conservés (MET-04).
@@ -280,6 +286,9 @@ class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
     for (final siteId in activation.removeSites) {
       await _removeSite(siteId);
     }
+    if (activation.onDemand case final onDemand?) {
+      await attachedDatabase.sensitiveDao.replaceOnDemand(onDemand);
+    }
     // Raisons des retraits, dans la même transaction : un site réinstallé
     // n'a plus d'avis.
     final meta = attachedDatabase.localMetaDao;
@@ -417,6 +426,7 @@ class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
   /// Revocation (OFF-04) : efface tout le contenu hors ligne et l'état.
   Future<void> purgeAll() async {
     await transaction(() async {
+      await attachedDatabase.sensitiveDao.purgeAll();
       await attachedDatabase.localMetaDao.removeValue(removalNoticesKey);
       await delete(publicationFiles).go();
       await delete(installedPublications).go();

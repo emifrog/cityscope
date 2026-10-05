@@ -303,3 +303,96 @@ class FieldReportPhotos extends Table {
   @override
   Set<Column<Object>> get primaryKey => {clientReportId, position};
 }
+
+/// Sites « restreints » proposés à la demande par le dernier catalogue signé
+/// (PER-02, ADR-025) : jamais installés en masse, seulement listés.
+@DataClassName('OnDemandSiteRow')
+class OnDemandSites extends Table {
+  TextColumn get siteId => text()();
+
+  TextColumn get publicationId => text()();
+
+  IntColumn get publicationNumber => integer()();
+
+  TextColumn get manifestHash => text()();
+
+  TextColumn get siteName => text()();
+
+  TextColumn get etareNumber => text().nullable()();
+
+  /// Taille des fichiers obligatoires annoncée par le catalogue.
+  IntColumn get sizeBytes => integer()();
+
+  DateTimeColumn get publishedAt => dateTime()();
+
+  /// Nom et numéro ETARE normalisés pour la recherche locale.
+  TextColumn get searchText => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {siteId};
+}
+
+/// Site sensible ouvert à la demande (PER-02) : son contenu est chiffré par
+/// une clé propre, elle-même chiffrée par une clé dérivée du code de l'agent.
+/// Consultable 24 h au plus, effacé ensuite.
+@DataClassName('SensitiveSiteRow')
+class SensitiveSites extends Table {
+  TextColumn get siteId => text()();
+
+  TextColumn get publicationId => text()();
+
+  IntColumn get publicationNumber => integer()();
+
+  /// Agent qui l'a ouvert (sujet de son jeton) : lui seul peut le rouvrir.
+  TextColumn get userId => text()();
+
+  TextColumn get siteName => text()();
+
+  DateTimeColumn get openedAt => dateTime()();
+
+  DateTimeColumn get expiresAt => dateTime()();
+
+  /// Clé du site chiffrée par la clé du code (nonce, chiffré, étiquette).
+  BlobColumn get wrappedKey => blob()();
+
+  /// Fichier de données vérifié (data/site.json), chiffré par la clé du site.
+  BlobColumn get dataCipher => blob()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {siteId};
+}
+
+/// Fichiers obligatoires d'un site sensible ouvert, chiffrés par sa clé.
+@DataClassName('SensitiveFileRow')
+class SensitiveFiles extends Table {
+  TextColumn get siteId => text()();
+
+  TextColumn get sha256 => text()();
+
+  TextColumn get path => text()();
+
+  TextColumn get mediaType => text()();
+
+  BlobColumn get cipher => blob()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {siteId, sha256};
+}
+
+/// Consultations hors ligne d'un site sensible, à remonter au contact
+/// suivant (journal, PER-02) ; renvoyées sans doublon grâce à leur identifiant.
+@DataClassName('AccessEventRow')
+class AccessEventOutbox extends Table {
+  TextColumn get clientEventId => text()();
+
+  TextColumn get userId => text()();
+
+  TextColumn get siteId => text()();
+
+  TextColumn get publicationId => text()();
+
+  DateTimeColumn get occurredAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {clientEventId};
+}

@@ -8,6 +8,7 @@ import 'package:etare_ops/src/core/logging/app_logger.dart';
 import 'package:etare_ops/src/core/network/dio_factory.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/reports/application/report_providers.dart';
+import 'package:etare_ops/src/features/sensitive/application/sensitive_providers.dart';
 import 'package:etare_ops/src/features/sync/application/enrollment_service.dart';
 import 'package:etare_ops/src/features/sync/application/sync_service.dart';
 import 'package:etare_ops/src/features/sync/background/background_scheduler.dart';
@@ -199,6 +200,8 @@ class SyncController extends Notifier<SyncRunState> {
         } else {
           outbox.sendInBackground();
         }
+        // Sites sensibles expirés effacés, consultations remontées (PER-02).
+        await afterSyncSensitive(ref);
       }
     } on SyncSuperseded {
       // Gelé ou arrêté trop longtemps : un autre moteur a repris la main.

@@ -116,6 +116,29 @@ hors ligne et l'identification sur tablette partagée.
 - **PDF d'un site sensible** : réservé à ses rôles du back-office et, pour un site restreint, aux
   personnes habilitées.
 
+## Mise en œuvre de PER-02, sur la tablette (Sprint 10, 5 octobre 2026)
+
+- **Code personnel** :
+  - six chiffres par agent (choix du porteur du 5 octobre), choisi à la connexion ;
+  - exigé au démarrage et après 15 minutes d'inactivité ;
+  - verrou au-dessus de toute la navigation ;
+  - cinq erreurs déconnectent l'agent, sans rien effacer d'installé.
+- **Sites restreints** :
+  - proposés par le catalogue, jamais installés en masse ;
+  - ouverts avec le réseau et le code, vérifiés comme une synchronisation ;
+  - chiffrés par une clé propre au site, elle-même chiffrée par la clé du code ;
+  - le code est redemandé à chaque ouverture ; effacés après 24 h, à la révocation, au changement
+    d'agent ou au retrait de l'habilitation ;
+  - une horloge reculée avant l'ouverture rend le site expiré.
+- **Journal** : chaque consultation est remontée au contact suivant.
+- **Application** : version 0.2.0. Au déploiement, `MOBILE_MIN_APP_VERSION` passe à 0.2.0, car une
+  version antérieure refuse un catalogue qui contient le motif `perimeter`.
+- **Limites** :
+  - changer d'agent demande une connexion en ligne ;
+  - un code à six chiffres reste exposé à un essai exhaustif par qui détient à la fois la base et le
+    secret de l'installation ;
+  - l'identification forte de chaque agent relève de SEC-05.
+
 ## Critère de réexamen
 
 Avis contraire du RSSI ou de la direction opérationnelle (durée, code, purge à l'expiration) ; tablettes

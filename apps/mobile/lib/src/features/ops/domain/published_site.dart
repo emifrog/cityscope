@@ -683,6 +683,38 @@ final class PublishedSite {
   final Map<String, Map<String, FieldDefinition>> objectFields;
   final Map<String, Map<String, FieldDefinition>> riskFields;
 
+  /// Copie sans les documents « à la demande » : un site sensible ouvert ne
+  /// garde que ses fichiers obligatoires, chiffrés par son code (PER-02).
+  PublishedSite withInstalledDocumentsOnly() => PublishedSite(
+    publicationId: publicationId,
+    publicationNumber: publicationNumber,
+    siteId: siteId,
+    name: name,
+    siteType: siteType,
+    classifications: classifications,
+    buildings: buildings,
+    contacts: contacts,
+    plans: plans,
+    zones: zones,
+    objects: objects,
+    risks: risks,
+    documents: [
+      for (final document in documents)
+        if (document.essential) document,
+    ],
+    objectFields: objectFields,
+    riskFields: riskFields,
+    revisionNo: revisionNo,
+    approvedBy: approvedBy,
+    approvedAt: approvedAt,
+    publishedAt: publishedAt,
+    shortName: shortName,
+    etareNumber: etareNumber,
+    address: address,
+    location: location,
+    layoutSections: layoutSections,
+  );
+
   /// Documents proposés sur la tablette : essentiels (installés) puis « à la
   /// demande » (DOC-02).
   List<SiteDocument> get tabletDocuments => [

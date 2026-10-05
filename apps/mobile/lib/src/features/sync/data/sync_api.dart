@@ -53,11 +53,16 @@ final class PackagePayload {
     required this.manifest,
     required this.signature,
     required this.data,
+    this.accessExpiresAt,
   });
 
   final String manifest;
   final SignatureEnvelope signature;
   final String data;
+
+  /// Fin de la consultation locale d'un site sensible ouvert à la demande
+  /// (24 h, PER-02) ; null pour les autres.
+  final DateTime? accessExpiresAt;
 }
 
 /// Client des points d'accès `/sync/*` (ADR-015). Chaque requête est signée
@@ -146,7 +151,25 @@ final class SyncApi {
       manifest: json.requireString('manifest'),
       signature: SignatureEnvelope.fromJson(json.requireObject('signature')),
       data: json.requireString('data'),
+      accessExpiresAt: DateTime.tryParse(
+        json.optionalString('access_expires_at') ?? '',
+      )?.toUtc(),
     );
+  }
+
+  /// Remonte des consultations hors ligne de sites sensibles (journal,
+  /// idempotent par identifiant) ; renvoie le nombre reçu.
+  Future<int> submitAccessEvents(
+    DeviceCredentials device,
+    List<JsonMap> events,
+  ) async {
+    final json = await _signed(
+      device,
+      'POST',
+      '/sync/access-events',
+      body: {'events': events},
+    );
+    return json.requireInt('received');
   }
 
   /// URL temporaires des fichiers demandés, par empreinte.

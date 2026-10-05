@@ -5517,6 +5517,1925 @@ class FieldReportPhotosCompanion extends UpdateCompanion<FieldReportPhotoRow> {
   }
 }
 
+class $OnDemandSitesTable extends OnDemandSites
+    with TableInfo<$OnDemandSitesTable, OnDemandSiteRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $OnDemandSitesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _siteIdMeta = const VerificationMeta('siteId');
+  @override
+  late final GeneratedColumn<String> siteId = GeneratedColumn<String>(
+    'site_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _publicationIdMeta = const VerificationMeta(
+    'publicationId',
+  );
+  @override
+  late final GeneratedColumn<String> publicationId = GeneratedColumn<String>(
+    'publication_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _publicationNumberMeta = const VerificationMeta(
+    'publicationNumber',
+  );
+  @override
+  late final GeneratedColumn<int> publicationNumber = GeneratedColumn<int>(
+    'publication_number',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _manifestHashMeta = const VerificationMeta(
+    'manifestHash',
+  );
+  @override
+  late final GeneratedColumn<String> manifestHash = GeneratedColumn<String>(
+    'manifest_hash',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _siteNameMeta = const VerificationMeta(
+    'siteName',
+  );
+  @override
+  late final GeneratedColumn<String> siteName = GeneratedColumn<String>(
+    'site_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _etareNumberMeta = const VerificationMeta(
+    'etareNumber',
+  );
+  @override
+  late final GeneratedColumn<String> etareNumber = GeneratedColumn<String>(
+    'etare_number',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sizeBytesMeta = const VerificationMeta(
+    'sizeBytes',
+  );
+  @override
+  late final GeneratedColumn<int> sizeBytes = GeneratedColumn<int>(
+    'size_bytes',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _publishedAtMeta = const VerificationMeta(
+    'publishedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> publishedAt = GeneratedColumn<DateTime>(
+    'published_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _searchTextMeta = const VerificationMeta(
+    'searchText',
+  );
+  @override
+  late final GeneratedColumn<String> searchText = GeneratedColumn<String>(
+    'search_text',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    siteId,
+    publicationId,
+    publicationNumber,
+    manifestHash,
+    siteName,
+    etareNumber,
+    sizeBytes,
+    publishedAt,
+    searchText,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'on_demand_sites';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<OnDemandSiteRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('site_id')) {
+      context.handle(
+        _siteIdMeta,
+        siteId.isAcceptableOrUnknown(data['site_id']!, _siteIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_siteIdMeta);
+    }
+    if (data.containsKey('publication_id')) {
+      context.handle(
+        _publicationIdMeta,
+        publicationId.isAcceptableOrUnknown(
+          data['publication_id']!,
+          _publicationIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_publicationIdMeta);
+    }
+    if (data.containsKey('publication_number')) {
+      context.handle(
+        _publicationNumberMeta,
+        publicationNumber.isAcceptableOrUnknown(
+          data['publication_number']!,
+          _publicationNumberMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_publicationNumberMeta);
+    }
+    if (data.containsKey('manifest_hash')) {
+      context.handle(
+        _manifestHashMeta,
+        manifestHash.isAcceptableOrUnknown(
+          data['manifest_hash']!,
+          _manifestHashMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_manifestHashMeta);
+    }
+    if (data.containsKey('site_name')) {
+      context.handle(
+        _siteNameMeta,
+        siteName.isAcceptableOrUnknown(data['site_name']!, _siteNameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_siteNameMeta);
+    }
+    if (data.containsKey('etare_number')) {
+      context.handle(
+        _etareNumberMeta,
+        etareNumber.isAcceptableOrUnknown(
+          data['etare_number']!,
+          _etareNumberMeta,
+        ),
+      );
+    }
+    if (data.containsKey('size_bytes')) {
+      context.handle(
+        _sizeBytesMeta,
+        sizeBytes.isAcceptableOrUnknown(data['size_bytes']!, _sizeBytesMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sizeBytesMeta);
+    }
+    if (data.containsKey('published_at')) {
+      context.handle(
+        _publishedAtMeta,
+        publishedAt.isAcceptableOrUnknown(
+          data['published_at']!,
+          _publishedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_publishedAtMeta);
+    }
+    if (data.containsKey('search_text')) {
+      context.handle(
+        _searchTextMeta,
+        searchText.isAcceptableOrUnknown(data['search_text']!, _searchTextMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_searchTextMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {siteId};
+  @override
+  OnDemandSiteRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return OnDemandSiteRow(
+      siteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}site_id'],
+      )!,
+      publicationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}publication_id'],
+      )!,
+      publicationNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}publication_number'],
+      )!,
+      manifestHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}manifest_hash'],
+      )!,
+      siteName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}site_name'],
+      )!,
+      etareNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}etare_number'],
+      ),
+      sizeBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}size_bytes'],
+      )!,
+      publishedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}published_at'],
+      )!,
+      searchText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}search_text'],
+      )!,
+    );
+  }
+
+  @override
+  $OnDemandSitesTable createAlias(String alias) {
+    return $OnDemandSitesTable(attachedDatabase, alias);
+  }
+}
+
+class OnDemandSiteRow extends DataClass implements Insertable<OnDemandSiteRow> {
+  final String siteId;
+  final String publicationId;
+  final int publicationNumber;
+  final String manifestHash;
+  final String siteName;
+  final String? etareNumber;
+
+  /// Taille des fichiers obligatoires annoncée par le catalogue.
+  final int sizeBytes;
+  final DateTime publishedAt;
+
+  /// Nom et numéro ETARE normalisés pour la recherche locale.
+  final String searchText;
+  const OnDemandSiteRow({
+    required this.siteId,
+    required this.publicationId,
+    required this.publicationNumber,
+    required this.manifestHash,
+    required this.siteName,
+    this.etareNumber,
+    required this.sizeBytes,
+    required this.publishedAt,
+    required this.searchText,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['site_id'] = Variable<String>(siteId);
+    map['publication_id'] = Variable<String>(publicationId);
+    map['publication_number'] = Variable<int>(publicationNumber);
+    map['manifest_hash'] = Variable<String>(manifestHash);
+    map['site_name'] = Variable<String>(siteName);
+    if (!nullToAbsent || etareNumber != null) {
+      map['etare_number'] = Variable<String>(etareNumber);
+    }
+    map['size_bytes'] = Variable<int>(sizeBytes);
+    map['published_at'] = Variable<DateTime>(publishedAt);
+    map['search_text'] = Variable<String>(searchText);
+    return map;
+  }
+
+  OnDemandSitesCompanion toCompanion(bool nullToAbsent) {
+    return OnDemandSitesCompanion(
+      siteId: Value(siteId),
+      publicationId: Value(publicationId),
+      publicationNumber: Value(publicationNumber),
+      manifestHash: Value(manifestHash),
+      siteName: Value(siteName),
+      etareNumber: etareNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(etareNumber),
+      sizeBytes: Value(sizeBytes),
+      publishedAt: Value(publishedAt),
+      searchText: Value(searchText),
+    );
+  }
+
+  factory OnDemandSiteRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return OnDemandSiteRow(
+      siteId: serializer.fromJson<String>(json['siteId']),
+      publicationId: serializer.fromJson<String>(json['publicationId']),
+      publicationNumber: serializer.fromJson<int>(json['publicationNumber']),
+      manifestHash: serializer.fromJson<String>(json['manifestHash']),
+      siteName: serializer.fromJson<String>(json['siteName']),
+      etareNumber: serializer.fromJson<String?>(json['etareNumber']),
+      sizeBytes: serializer.fromJson<int>(json['sizeBytes']),
+      publishedAt: serializer.fromJson<DateTime>(json['publishedAt']),
+      searchText: serializer.fromJson<String>(json['searchText']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'siteId': serializer.toJson<String>(siteId),
+      'publicationId': serializer.toJson<String>(publicationId),
+      'publicationNumber': serializer.toJson<int>(publicationNumber),
+      'manifestHash': serializer.toJson<String>(manifestHash),
+      'siteName': serializer.toJson<String>(siteName),
+      'etareNumber': serializer.toJson<String?>(etareNumber),
+      'sizeBytes': serializer.toJson<int>(sizeBytes),
+      'publishedAt': serializer.toJson<DateTime>(publishedAt),
+      'searchText': serializer.toJson<String>(searchText),
+    };
+  }
+
+  OnDemandSiteRow copyWith({
+    String? siteId,
+    String? publicationId,
+    int? publicationNumber,
+    String? manifestHash,
+    String? siteName,
+    Value<String?> etareNumber = const Value.absent(),
+    int? sizeBytes,
+    DateTime? publishedAt,
+    String? searchText,
+  }) => OnDemandSiteRow(
+    siteId: siteId ?? this.siteId,
+    publicationId: publicationId ?? this.publicationId,
+    publicationNumber: publicationNumber ?? this.publicationNumber,
+    manifestHash: manifestHash ?? this.manifestHash,
+    siteName: siteName ?? this.siteName,
+    etareNumber: etareNumber.present ? etareNumber.value : this.etareNumber,
+    sizeBytes: sizeBytes ?? this.sizeBytes,
+    publishedAt: publishedAt ?? this.publishedAt,
+    searchText: searchText ?? this.searchText,
+  );
+  OnDemandSiteRow copyWithCompanion(OnDemandSitesCompanion data) {
+    return OnDemandSiteRow(
+      siteId: data.siteId.present ? data.siteId.value : this.siteId,
+      publicationId: data.publicationId.present
+          ? data.publicationId.value
+          : this.publicationId,
+      publicationNumber: data.publicationNumber.present
+          ? data.publicationNumber.value
+          : this.publicationNumber,
+      manifestHash: data.manifestHash.present
+          ? data.manifestHash.value
+          : this.manifestHash,
+      siteName: data.siteName.present ? data.siteName.value : this.siteName,
+      etareNumber: data.etareNumber.present
+          ? data.etareNumber.value
+          : this.etareNumber,
+      sizeBytes: data.sizeBytes.present ? data.sizeBytes.value : this.sizeBytes,
+      publishedAt: data.publishedAt.present
+          ? data.publishedAt.value
+          : this.publishedAt,
+      searchText: data.searchText.present
+          ? data.searchText.value
+          : this.searchText,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OnDemandSiteRow(')
+          ..write('siteId: $siteId, ')
+          ..write('publicationId: $publicationId, ')
+          ..write('publicationNumber: $publicationNumber, ')
+          ..write('manifestHash: $manifestHash, ')
+          ..write('siteName: $siteName, ')
+          ..write('etareNumber: $etareNumber, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('publishedAt: $publishedAt, ')
+          ..write('searchText: $searchText')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    siteId,
+    publicationId,
+    publicationNumber,
+    manifestHash,
+    siteName,
+    etareNumber,
+    sizeBytes,
+    publishedAt,
+    searchText,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is OnDemandSiteRow &&
+          other.siteId == this.siteId &&
+          other.publicationId == this.publicationId &&
+          other.publicationNumber == this.publicationNumber &&
+          other.manifestHash == this.manifestHash &&
+          other.siteName == this.siteName &&
+          other.etareNumber == this.etareNumber &&
+          other.sizeBytes == this.sizeBytes &&
+          other.publishedAt == this.publishedAt &&
+          other.searchText == this.searchText);
+}
+
+class OnDemandSitesCompanion extends UpdateCompanion<OnDemandSiteRow> {
+  final Value<String> siteId;
+  final Value<String> publicationId;
+  final Value<int> publicationNumber;
+  final Value<String> manifestHash;
+  final Value<String> siteName;
+  final Value<String?> etareNumber;
+  final Value<int> sizeBytes;
+  final Value<DateTime> publishedAt;
+  final Value<String> searchText;
+  final Value<int> rowid;
+  const OnDemandSitesCompanion({
+    this.siteId = const Value.absent(),
+    this.publicationId = const Value.absent(),
+    this.publicationNumber = const Value.absent(),
+    this.manifestHash = const Value.absent(),
+    this.siteName = const Value.absent(),
+    this.etareNumber = const Value.absent(),
+    this.sizeBytes = const Value.absent(),
+    this.publishedAt = const Value.absent(),
+    this.searchText = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  OnDemandSitesCompanion.insert({
+    required String siteId,
+    required String publicationId,
+    required int publicationNumber,
+    required String manifestHash,
+    required String siteName,
+    this.etareNumber = const Value.absent(),
+    required int sizeBytes,
+    required DateTime publishedAt,
+    required String searchText,
+    this.rowid = const Value.absent(),
+  }) : siteId = Value(siteId),
+       publicationId = Value(publicationId),
+       publicationNumber = Value(publicationNumber),
+       manifestHash = Value(manifestHash),
+       siteName = Value(siteName),
+       sizeBytes = Value(sizeBytes),
+       publishedAt = Value(publishedAt),
+       searchText = Value(searchText);
+  static Insertable<OnDemandSiteRow> custom({
+    Expression<String>? siteId,
+    Expression<String>? publicationId,
+    Expression<int>? publicationNumber,
+    Expression<String>? manifestHash,
+    Expression<String>? siteName,
+    Expression<String>? etareNumber,
+    Expression<int>? sizeBytes,
+    Expression<DateTime>? publishedAt,
+    Expression<String>? searchText,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (siteId != null) 'site_id': siteId,
+      if (publicationId != null) 'publication_id': publicationId,
+      if (publicationNumber != null) 'publication_number': publicationNumber,
+      if (manifestHash != null) 'manifest_hash': manifestHash,
+      if (siteName != null) 'site_name': siteName,
+      if (etareNumber != null) 'etare_number': etareNumber,
+      if (sizeBytes != null) 'size_bytes': sizeBytes,
+      if (publishedAt != null) 'published_at': publishedAt,
+      if (searchText != null) 'search_text': searchText,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  OnDemandSitesCompanion copyWith({
+    Value<String>? siteId,
+    Value<String>? publicationId,
+    Value<int>? publicationNumber,
+    Value<String>? manifestHash,
+    Value<String>? siteName,
+    Value<String?>? etareNumber,
+    Value<int>? sizeBytes,
+    Value<DateTime>? publishedAt,
+    Value<String>? searchText,
+    Value<int>? rowid,
+  }) {
+    return OnDemandSitesCompanion(
+      siteId: siteId ?? this.siteId,
+      publicationId: publicationId ?? this.publicationId,
+      publicationNumber: publicationNumber ?? this.publicationNumber,
+      manifestHash: manifestHash ?? this.manifestHash,
+      siteName: siteName ?? this.siteName,
+      etareNumber: etareNumber ?? this.etareNumber,
+      sizeBytes: sizeBytes ?? this.sizeBytes,
+      publishedAt: publishedAt ?? this.publishedAt,
+      searchText: searchText ?? this.searchText,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (siteId.present) {
+      map['site_id'] = Variable<String>(siteId.value);
+    }
+    if (publicationId.present) {
+      map['publication_id'] = Variable<String>(publicationId.value);
+    }
+    if (publicationNumber.present) {
+      map['publication_number'] = Variable<int>(publicationNumber.value);
+    }
+    if (manifestHash.present) {
+      map['manifest_hash'] = Variable<String>(manifestHash.value);
+    }
+    if (siteName.present) {
+      map['site_name'] = Variable<String>(siteName.value);
+    }
+    if (etareNumber.present) {
+      map['etare_number'] = Variable<String>(etareNumber.value);
+    }
+    if (sizeBytes.present) {
+      map['size_bytes'] = Variable<int>(sizeBytes.value);
+    }
+    if (publishedAt.present) {
+      map['published_at'] = Variable<DateTime>(publishedAt.value);
+    }
+    if (searchText.present) {
+      map['search_text'] = Variable<String>(searchText.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OnDemandSitesCompanion(')
+          ..write('siteId: $siteId, ')
+          ..write('publicationId: $publicationId, ')
+          ..write('publicationNumber: $publicationNumber, ')
+          ..write('manifestHash: $manifestHash, ')
+          ..write('siteName: $siteName, ')
+          ..write('etareNumber: $etareNumber, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('publishedAt: $publishedAt, ')
+          ..write('searchText: $searchText, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SensitiveSitesTable extends SensitiveSites
+    with TableInfo<$SensitiveSitesTable, SensitiveSiteRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SensitiveSitesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _siteIdMeta = const VerificationMeta('siteId');
+  @override
+  late final GeneratedColumn<String> siteId = GeneratedColumn<String>(
+    'site_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _publicationIdMeta = const VerificationMeta(
+    'publicationId',
+  );
+  @override
+  late final GeneratedColumn<String> publicationId = GeneratedColumn<String>(
+    'publication_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _publicationNumberMeta = const VerificationMeta(
+    'publicationNumber',
+  );
+  @override
+  late final GeneratedColumn<int> publicationNumber = GeneratedColumn<int>(
+    'publication_number',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<String> userId = GeneratedColumn<String>(
+    'user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _siteNameMeta = const VerificationMeta(
+    'siteName',
+  );
+  @override
+  late final GeneratedColumn<String> siteName = GeneratedColumn<String>(
+    'site_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _openedAtMeta = const VerificationMeta(
+    'openedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> openedAt = GeneratedColumn<DateTime>(
+    'opened_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _expiresAtMeta = const VerificationMeta(
+    'expiresAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> expiresAt = GeneratedColumn<DateTime>(
+    'expires_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _wrappedKeyMeta = const VerificationMeta(
+    'wrappedKey',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> wrappedKey = GeneratedColumn<Uint8List>(
+    'wrapped_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dataCipherMeta = const VerificationMeta(
+    'dataCipher',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> dataCipher = GeneratedColumn<Uint8List>(
+    'data_cipher',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    siteId,
+    publicationId,
+    publicationNumber,
+    userId,
+    siteName,
+    openedAt,
+    expiresAt,
+    wrappedKey,
+    dataCipher,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sensitive_sites';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SensitiveSiteRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('site_id')) {
+      context.handle(
+        _siteIdMeta,
+        siteId.isAcceptableOrUnknown(data['site_id']!, _siteIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_siteIdMeta);
+    }
+    if (data.containsKey('publication_id')) {
+      context.handle(
+        _publicationIdMeta,
+        publicationId.isAcceptableOrUnknown(
+          data['publication_id']!,
+          _publicationIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_publicationIdMeta);
+    }
+    if (data.containsKey('publication_number')) {
+      context.handle(
+        _publicationNumberMeta,
+        publicationNumber.isAcceptableOrUnknown(
+          data['publication_number']!,
+          _publicationNumberMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_publicationNumberMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(
+        _userIdMeta,
+        userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_userIdMeta);
+    }
+    if (data.containsKey('site_name')) {
+      context.handle(
+        _siteNameMeta,
+        siteName.isAcceptableOrUnknown(data['site_name']!, _siteNameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_siteNameMeta);
+    }
+    if (data.containsKey('opened_at')) {
+      context.handle(
+        _openedAtMeta,
+        openedAt.isAcceptableOrUnknown(data['opened_at']!, _openedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_openedAtMeta);
+    }
+    if (data.containsKey('expires_at')) {
+      context.handle(
+        _expiresAtMeta,
+        expiresAt.isAcceptableOrUnknown(data['expires_at']!, _expiresAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_expiresAtMeta);
+    }
+    if (data.containsKey('wrapped_key')) {
+      context.handle(
+        _wrappedKeyMeta,
+        wrappedKey.isAcceptableOrUnknown(data['wrapped_key']!, _wrappedKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_wrappedKeyMeta);
+    }
+    if (data.containsKey('data_cipher')) {
+      context.handle(
+        _dataCipherMeta,
+        dataCipher.isAcceptableOrUnknown(data['data_cipher']!, _dataCipherMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dataCipherMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {siteId};
+  @override
+  SensitiveSiteRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SensitiveSiteRow(
+      siteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}site_id'],
+      )!,
+      publicationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}publication_id'],
+      )!,
+      publicationNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}publication_number'],
+      )!,
+      userId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}user_id'],
+      )!,
+      siteName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}site_name'],
+      )!,
+      openedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}opened_at'],
+      )!,
+      expiresAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}expires_at'],
+      )!,
+      wrappedKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}wrapped_key'],
+      )!,
+      dataCipher: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}data_cipher'],
+      )!,
+    );
+  }
+
+  @override
+  $SensitiveSitesTable createAlias(String alias) {
+    return $SensitiveSitesTable(attachedDatabase, alias);
+  }
+}
+
+class SensitiveSiteRow extends DataClass
+    implements Insertable<SensitiveSiteRow> {
+  final String siteId;
+  final String publicationId;
+  final int publicationNumber;
+
+  /// Agent qui l'a ouvert (sujet de son jeton) : lui seul peut le rouvrir.
+  final String userId;
+  final String siteName;
+  final DateTime openedAt;
+  final DateTime expiresAt;
+
+  /// Clé du site chiffrée par la clé du code (nonce, chiffré, étiquette).
+  final Uint8List wrappedKey;
+
+  /// Fichier de données vérifié (data/site.json), chiffré par la clé du site.
+  final Uint8List dataCipher;
+  const SensitiveSiteRow({
+    required this.siteId,
+    required this.publicationId,
+    required this.publicationNumber,
+    required this.userId,
+    required this.siteName,
+    required this.openedAt,
+    required this.expiresAt,
+    required this.wrappedKey,
+    required this.dataCipher,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['site_id'] = Variable<String>(siteId);
+    map['publication_id'] = Variable<String>(publicationId);
+    map['publication_number'] = Variable<int>(publicationNumber);
+    map['user_id'] = Variable<String>(userId);
+    map['site_name'] = Variable<String>(siteName);
+    map['opened_at'] = Variable<DateTime>(openedAt);
+    map['expires_at'] = Variable<DateTime>(expiresAt);
+    map['wrapped_key'] = Variable<Uint8List>(wrappedKey);
+    map['data_cipher'] = Variable<Uint8List>(dataCipher);
+    return map;
+  }
+
+  SensitiveSitesCompanion toCompanion(bool nullToAbsent) {
+    return SensitiveSitesCompanion(
+      siteId: Value(siteId),
+      publicationId: Value(publicationId),
+      publicationNumber: Value(publicationNumber),
+      userId: Value(userId),
+      siteName: Value(siteName),
+      openedAt: Value(openedAt),
+      expiresAt: Value(expiresAt),
+      wrappedKey: Value(wrappedKey),
+      dataCipher: Value(dataCipher),
+    );
+  }
+
+  factory SensitiveSiteRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SensitiveSiteRow(
+      siteId: serializer.fromJson<String>(json['siteId']),
+      publicationId: serializer.fromJson<String>(json['publicationId']),
+      publicationNumber: serializer.fromJson<int>(json['publicationNumber']),
+      userId: serializer.fromJson<String>(json['userId']),
+      siteName: serializer.fromJson<String>(json['siteName']),
+      openedAt: serializer.fromJson<DateTime>(json['openedAt']),
+      expiresAt: serializer.fromJson<DateTime>(json['expiresAt']),
+      wrappedKey: serializer.fromJson<Uint8List>(json['wrappedKey']),
+      dataCipher: serializer.fromJson<Uint8List>(json['dataCipher']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'siteId': serializer.toJson<String>(siteId),
+      'publicationId': serializer.toJson<String>(publicationId),
+      'publicationNumber': serializer.toJson<int>(publicationNumber),
+      'userId': serializer.toJson<String>(userId),
+      'siteName': serializer.toJson<String>(siteName),
+      'openedAt': serializer.toJson<DateTime>(openedAt),
+      'expiresAt': serializer.toJson<DateTime>(expiresAt),
+      'wrappedKey': serializer.toJson<Uint8List>(wrappedKey),
+      'dataCipher': serializer.toJson<Uint8List>(dataCipher),
+    };
+  }
+
+  SensitiveSiteRow copyWith({
+    String? siteId,
+    String? publicationId,
+    int? publicationNumber,
+    String? userId,
+    String? siteName,
+    DateTime? openedAt,
+    DateTime? expiresAt,
+    Uint8List? wrappedKey,
+    Uint8List? dataCipher,
+  }) => SensitiveSiteRow(
+    siteId: siteId ?? this.siteId,
+    publicationId: publicationId ?? this.publicationId,
+    publicationNumber: publicationNumber ?? this.publicationNumber,
+    userId: userId ?? this.userId,
+    siteName: siteName ?? this.siteName,
+    openedAt: openedAt ?? this.openedAt,
+    expiresAt: expiresAt ?? this.expiresAt,
+    wrappedKey: wrappedKey ?? this.wrappedKey,
+    dataCipher: dataCipher ?? this.dataCipher,
+  );
+  SensitiveSiteRow copyWithCompanion(SensitiveSitesCompanion data) {
+    return SensitiveSiteRow(
+      siteId: data.siteId.present ? data.siteId.value : this.siteId,
+      publicationId: data.publicationId.present
+          ? data.publicationId.value
+          : this.publicationId,
+      publicationNumber: data.publicationNumber.present
+          ? data.publicationNumber.value
+          : this.publicationNumber,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      siteName: data.siteName.present ? data.siteName.value : this.siteName,
+      openedAt: data.openedAt.present ? data.openedAt.value : this.openedAt,
+      expiresAt: data.expiresAt.present ? data.expiresAt.value : this.expiresAt,
+      wrappedKey: data.wrappedKey.present
+          ? data.wrappedKey.value
+          : this.wrappedKey,
+      dataCipher: data.dataCipher.present
+          ? data.dataCipher.value
+          : this.dataCipher,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SensitiveSiteRow(')
+          ..write('siteId: $siteId, ')
+          ..write('publicationId: $publicationId, ')
+          ..write('publicationNumber: $publicationNumber, ')
+          ..write('userId: $userId, ')
+          ..write('siteName: $siteName, ')
+          ..write('openedAt: $openedAt, ')
+          ..write('expiresAt: $expiresAt, ')
+          ..write('wrappedKey: $wrappedKey, ')
+          ..write('dataCipher: $dataCipher')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    siteId,
+    publicationId,
+    publicationNumber,
+    userId,
+    siteName,
+    openedAt,
+    expiresAt,
+    $driftBlobEquality.hash(wrappedKey),
+    $driftBlobEquality.hash(dataCipher),
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SensitiveSiteRow &&
+          other.siteId == this.siteId &&
+          other.publicationId == this.publicationId &&
+          other.publicationNumber == this.publicationNumber &&
+          other.userId == this.userId &&
+          other.siteName == this.siteName &&
+          other.openedAt == this.openedAt &&
+          other.expiresAt == this.expiresAt &&
+          $driftBlobEquality.equals(other.wrappedKey, this.wrappedKey) &&
+          $driftBlobEquality.equals(other.dataCipher, this.dataCipher));
+}
+
+class SensitiveSitesCompanion extends UpdateCompanion<SensitiveSiteRow> {
+  final Value<String> siteId;
+  final Value<String> publicationId;
+  final Value<int> publicationNumber;
+  final Value<String> userId;
+  final Value<String> siteName;
+  final Value<DateTime> openedAt;
+  final Value<DateTime> expiresAt;
+  final Value<Uint8List> wrappedKey;
+  final Value<Uint8List> dataCipher;
+  final Value<int> rowid;
+  const SensitiveSitesCompanion({
+    this.siteId = const Value.absent(),
+    this.publicationId = const Value.absent(),
+    this.publicationNumber = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.siteName = const Value.absent(),
+    this.openedAt = const Value.absent(),
+    this.expiresAt = const Value.absent(),
+    this.wrappedKey = const Value.absent(),
+    this.dataCipher = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SensitiveSitesCompanion.insert({
+    required String siteId,
+    required String publicationId,
+    required int publicationNumber,
+    required String userId,
+    required String siteName,
+    required DateTime openedAt,
+    required DateTime expiresAt,
+    required Uint8List wrappedKey,
+    required Uint8List dataCipher,
+    this.rowid = const Value.absent(),
+  }) : siteId = Value(siteId),
+       publicationId = Value(publicationId),
+       publicationNumber = Value(publicationNumber),
+       userId = Value(userId),
+       siteName = Value(siteName),
+       openedAt = Value(openedAt),
+       expiresAt = Value(expiresAt),
+       wrappedKey = Value(wrappedKey),
+       dataCipher = Value(dataCipher);
+  static Insertable<SensitiveSiteRow> custom({
+    Expression<String>? siteId,
+    Expression<String>? publicationId,
+    Expression<int>? publicationNumber,
+    Expression<String>? userId,
+    Expression<String>? siteName,
+    Expression<DateTime>? openedAt,
+    Expression<DateTime>? expiresAt,
+    Expression<Uint8List>? wrappedKey,
+    Expression<Uint8List>? dataCipher,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (siteId != null) 'site_id': siteId,
+      if (publicationId != null) 'publication_id': publicationId,
+      if (publicationNumber != null) 'publication_number': publicationNumber,
+      if (userId != null) 'user_id': userId,
+      if (siteName != null) 'site_name': siteName,
+      if (openedAt != null) 'opened_at': openedAt,
+      if (expiresAt != null) 'expires_at': expiresAt,
+      if (wrappedKey != null) 'wrapped_key': wrappedKey,
+      if (dataCipher != null) 'data_cipher': dataCipher,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SensitiveSitesCompanion copyWith({
+    Value<String>? siteId,
+    Value<String>? publicationId,
+    Value<int>? publicationNumber,
+    Value<String>? userId,
+    Value<String>? siteName,
+    Value<DateTime>? openedAt,
+    Value<DateTime>? expiresAt,
+    Value<Uint8List>? wrappedKey,
+    Value<Uint8List>? dataCipher,
+    Value<int>? rowid,
+  }) {
+    return SensitiveSitesCompanion(
+      siteId: siteId ?? this.siteId,
+      publicationId: publicationId ?? this.publicationId,
+      publicationNumber: publicationNumber ?? this.publicationNumber,
+      userId: userId ?? this.userId,
+      siteName: siteName ?? this.siteName,
+      openedAt: openedAt ?? this.openedAt,
+      expiresAt: expiresAt ?? this.expiresAt,
+      wrappedKey: wrappedKey ?? this.wrappedKey,
+      dataCipher: dataCipher ?? this.dataCipher,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (siteId.present) {
+      map['site_id'] = Variable<String>(siteId.value);
+    }
+    if (publicationId.present) {
+      map['publication_id'] = Variable<String>(publicationId.value);
+    }
+    if (publicationNumber.present) {
+      map['publication_number'] = Variable<int>(publicationNumber.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<String>(userId.value);
+    }
+    if (siteName.present) {
+      map['site_name'] = Variable<String>(siteName.value);
+    }
+    if (openedAt.present) {
+      map['opened_at'] = Variable<DateTime>(openedAt.value);
+    }
+    if (expiresAt.present) {
+      map['expires_at'] = Variable<DateTime>(expiresAt.value);
+    }
+    if (wrappedKey.present) {
+      map['wrapped_key'] = Variable<Uint8List>(wrappedKey.value);
+    }
+    if (dataCipher.present) {
+      map['data_cipher'] = Variable<Uint8List>(dataCipher.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SensitiveSitesCompanion(')
+          ..write('siteId: $siteId, ')
+          ..write('publicationId: $publicationId, ')
+          ..write('publicationNumber: $publicationNumber, ')
+          ..write('userId: $userId, ')
+          ..write('siteName: $siteName, ')
+          ..write('openedAt: $openedAt, ')
+          ..write('expiresAt: $expiresAt, ')
+          ..write('wrappedKey: $wrappedKey, ')
+          ..write('dataCipher: $dataCipher, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SensitiveFilesTable extends SensitiveFiles
+    with TableInfo<$SensitiveFilesTable, SensitiveFileRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SensitiveFilesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _siteIdMeta = const VerificationMeta('siteId');
+  @override
+  late final GeneratedColumn<String> siteId = GeneratedColumn<String>(
+    'site_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sha256Meta = const VerificationMeta('sha256');
+  @override
+  late final GeneratedColumn<String> sha256 = GeneratedColumn<String>(
+    'sha256',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pathMeta = const VerificationMeta('path');
+  @override
+  late final GeneratedColumn<String> path = GeneratedColumn<String>(
+    'path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _mediaTypeMeta = const VerificationMeta(
+    'mediaType',
+  );
+  @override
+  late final GeneratedColumn<String> mediaType = GeneratedColumn<String>(
+    'media_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cipherMeta = const VerificationMeta('cipher');
+  @override
+  late final GeneratedColumn<Uint8List> cipher = GeneratedColumn<Uint8List>(
+    'cipher',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    siteId,
+    sha256,
+    path,
+    mediaType,
+    cipher,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sensitive_files';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SensitiveFileRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('site_id')) {
+      context.handle(
+        _siteIdMeta,
+        siteId.isAcceptableOrUnknown(data['site_id']!, _siteIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_siteIdMeta);
+    }
+    if (data.containsKey('sha256')) {
+      context.handle(
+        _sha256Meta,
+        sha256.isAcceptableOrUnknown(data['sha256']!, _sha256Meta),
+      );
+    } else if (isInserting) {
+      context.missing(_sha256Meta);
+    }
+    if (data.containsKey('path')) {
+      context.handle(
+        _pathMeta,
+        path.isAcceptableOrUnknown(data['path']!, _pathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pathMeta);
+    }
+    if (data.containsKey('media_type')) {
+      context.handle(
+        _mediaTypeMeta,
+        mediaType.isAcceptableOrUnknown(data['media_type']!, _mediaTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_mediaTypeMeta);
+    }
+    if (data.containsKey('cipher')) {
+      context.handle(
+        _cipherMeta,
+        cipher.isAcceptableOrUnknown(data['cipher']!, _cipherMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cipherMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {siteId, sha256};
+  @override
+  SensitiveFileRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SensitiveFileRow(
+      siteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}site_id'],
+      )!,
+      sha256: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sha256'],
+      )!,
+      path: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}path'],
+      )!,
+      mediaType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}media_type'],
+      )!,
+      cipher: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}cipher'],
+      )!,
+    );
+  }
+
+  @override
+  $SensitiveFilesTable createAlias(String alias) {
+    return $SensitiveFilesTable(attachedDatabase, alias);
+  }
+}
+
+class SensitiveFileRow extends DataClass
+    implements Insertable<SensitiveFileRow> {
+  final String siteId;
+  final String sha256;
+  final String path;
+  final String mediaType;
+  final Uint8List cipher;
+  const SensitiveFileRow({
+    required this.siteId,
+    required this.sha256,
+    required this.path,
+    required this.mediaType,
+    required this.cipher,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['site_id'] = Variable<String>(siteId);
+    map['sha256'] = Variable<String>(sha256);
+    map['path'] = Variable<String>(path);
+    map['media_type'] = Variable<String>(mediaType);
+    map['cipher'] = Variable<Uint8List>(cipher);
+    return map;
+  }
+
+  SensitiveFilesCompanion toCompanion(bool nullToAbsent) {
+    return SensitiveFilesCompanion(
+      siteId: Value(siteId),
+      sha256: Value(sha256),
+      path: Value(path),
+      mediaType: Value(mediaType),
+      cipher: Value(cipher),
+    );
+  }
+
+  factory SensitiveFileRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SensitiveFileRow(
+      siteId: serializer.fromJson<String>(json['siteId']),
+      sha256: serializer.fromJson<String>(json['sha256']),
+      path: serializer.fromJson<String>(json['path']),
+      mediaType: serializer.fromJson<String>(json['mediaType']),
+      cipher: serializer.fromJson<Uint8List>(json['cipher']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'siteId': serializer.toJson<String>(siteId),
+      'sha256': serializer.toJson<String>(sha256),
+      'path': serializer.toJson<String>(path),
+      'mediaType': serializer.toJson<String>(mediaType),
+      'cipher': serializer.toJson<Uint8List>(cipher),
+    };
+  }
+
+  SensitiveFileRow copyWith({
+    String? siteId,
+    String? sha256,
+    String? path,
+    String? mediaType,
+    Uint8List? cipher,
+  }) => SensitiveFileRow(
+    siteId: siteId ?? this.siteId,
+    sha256: sha256 ?? this.sha256,
+    path: path ?? this.path,
+    mediaType: mediaType ?? this.mediaType,
+    cipher: cipher ?? this.cipher,
+  );
+  SensitiveFileRow copyWithCompanion(SensitiveFilesCompanion data) {
+    return SensitiveFileRow(
+      siteId: data.siteId.present ? data.siteId.value : this.siteId,
+      sha256: data.sha256.present ? data.sha256.value : this.sha256,
+      path: data.path.present ? data.path.value : this.path,
+      mediaType: data.mediaType.present ? data.mediaType.value : this.mediaType,
+      cipher: data.cipher.present ? data.cipher.value : this.cipher,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SensitiveFileRow(')
+          ..write('siteId: $siteId, ')
+          ..write('sha256: $sha256, ')
+          ..write('path: $path, ')
+          ..write('mediaType: $mediaType, ')
+          ..write('cipher: $cipher')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    siteId,
+    sha256,
+    path,
+    mediaType,
+    $driftBlobEquality.hash(cipher),
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SensitiveFileRow &&
+          other.siteId == this.siteId &&
+          other.sha256 == this.sha256 &&
+          other.path == this.path &&
+          other.mediaType == this.mediaType &&
+          $driftBlobEquality.equals(other.cipher, this.cipher));
+}
+
+class SensitiveFilesCompanion extends UpdateCompanion<SensitiveFileRow> {
+  final Value<String> siteId;
+  final Value<String> sha256;
+  final Value<String> path;
+  final Value<String> mediaType;
+  final Value<Uint8List> cipher;
+  final Value<int> rowid;
+  const SensitiveFilesCompanion({
+    this.siteId = const Value.absent(),
+    this.sha256 = const Value.absent(),
+    this.path = const Value.absent(),
+    this.mediaType = const Value.absent(),
+    this.cipher = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SensitiveFilesCompanion.insert({
+    required String siteId,
+    required String sha256,
+    required String path,
+    required String mediaType,
+    required Uint8List cipher,
+    this.rowid = const Value.absent(),
+  }) : siteId = Value(siteId),
+       sha256 = Value(sha256),
+       path = Value(path),
+       mediaType = Value(mediaType),
+       cipher = Value(cipher);
+  static Insertable<SensitiveFileRow> custom({
+    Expression<String>? siteId,
+    Expression<String>? sha256,
+    Expression<String>? path,
+    Expression<String>? mediaType,
+    Expression<Uint8List>? cipher,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (siteId != null) 'site_id': siteId,
+      if (sha256 != null) 'sha256': sha256,
+      if (path != null) 'path': path,
+      if (mediaType != null) 'media_type': mediaType,
+      if (cipher != null) 'cipher': cipher,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SensitiveFilesCompanion copyWith({
+    Value<String>? siteId,
+    Value<String>? sha256,
+    Value<String>? path,
+    Value<String>? mediaType,
+    Value<Uint8List>? cipher,
+    Value<int>? rowid,
+  }) {
+    return SensitiveFilesCompanion(
+      siteId: siteId ?? this.siteId,
+      sha256: sha256 ?? this.sha256,
+      path: path ?? this.path,
+      mediaType: mediaType ?? this.mediaType,
+      cipher: cipher ?? this.cipher,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (siteId.present) {
+      map['site_id'] = Variable<String>(siteId.value);
+    }
+    if (sha256.present) {
+      map['sha256'] = Variable<String>(sha256.value);
+    }
+    if (path.present) {
+      map['path'] = Variable<String>(path.value);
+    }
+    if (mediaType.present) {
+      map['media_type'] = Variable<String>(mediaType.value);
+    }
+    if (cipher.present) {
+      map['cipher'] = Variable<Uint8List>(cipher.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SensitiveFilesCompanion(')
+          ..write('siteId: $siteId, ')
+          ..write('sha256: $sha256, ')
+          ..write('path: $path, ')
+          ..write('mediaType: $mediaType, ')
+          ..write('cipher: $cipher, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $AccessEventOutboxTable extends AccessEventOutbox
+    with TableInfo<$AccessEventOutboxTable, AccessEventRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AccessEventOutboxTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _clientEventIdMeta = const VerificationMeta(
+    'clientEventId',
+  );
+  @override
+  late final GeneratedColumn<String> clientEventId = GeneratedColumn<String>(
+    'client_event_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<String> userId = GeneratedColumn<String>(
+    'user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _siteIdMeta = const VerificationMeta('siteId');
+  @override
+  late final GeneratedColumn<String> siteId = GeneratedColumn<String>(
+    'site_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _publicationIdMeta = const VerificationMeta(
+    'publicationId',
+  );
+  @override
+  late final GeneratedColumn<String> publicationId = GeneratedColumn<String>(
+    'publication_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _occurredAtMeta = const VerificationMeta(
+    'occurredAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> occurredAt = GeneratedColumn<DateTime>(
+    'occurred_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    clientEventId,
+    userId,
+    siteId,
+    publicationId,
+    occurredAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'access_event_outbox';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AccessEventRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('client_event_id')) {
+      context.handle(
+        _clientEventIdMeta,
+        clientEventId.isAcceptableOrUnknown(
+          data['client_event_id']!,
+          _clientEventIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_clientEventIdMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(
+        _userIdMeta,
+        userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_userIdMeta);
+    }
+    if (data.containsKey('site_id')) {
+      context.handle(
+        _siteIdMeta,
+        siteId.isAcceptableOrUnknown(data['site_id']!, _siteIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_siteIdMeta);
+    }
+    if (data.containsKey('publication_id')) {
+      context.handle(
+        _publicationIdMeta,
+        publicationId.isAcceptableOrUnknown(
+          data['publication_id']!,
+          _publicationIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_publicationIdMeta);
+    }
+    if (data.containsKey('occurred_at')) {
+      context.handle(
+        _occurredAtMeta,
+        occurredAt.isAcceptableOrUnknown(data['occurred_at']!, _occurredAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_occurredAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {clientEventId};
+  @override
+  AccessEventRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AccessEventRow(
+      clientEventId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}client_event_id'],
+      )!,
+      userId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}user_id'],
+      )!,
+      siteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}site_id'],
+      )!,
+      publicationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}publication_id'],
+      )!,
+      occurredAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}occurred_at'],
+      )!,
+    );
+  }
+
+  @override
+  $AccessEventOutboxTable createAlias(String alias) {
+    return $AccessEventOutboxTable(attachedDatabase, alias);
+  }
+}
+
+class AccessEventRow extends DataClass implements Insertable<AccessEventRow> {
+  final String clientEventId;
+  final String userId;
+  final String siteId;
+  final String publicationId;
+  final DateTime occurredAt;
+  const AccessEventRow({
+    required this.clientEventId,
+    required this.userId,
+    required this.siteId,
+    required this.publicationId,
+    required this.occurredAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['client_event_id'] = Variable<String>(clientEventId);
+    map['user_id'] = Variable<String>(userId);
+    map['site_id'] = Variable<String>(siteId);
+    map['publication_id'] = Variable<String>(publicationId);
+    map['occurred_at'] = Variable<DateTime>(occurredAt);
+    return map;
+  }
+
+  AccessEventOutboxCompanion toCompanion(bool nullToAbsent) {
+    return AccessEventOutboxCompanion(
+      clientEventId: Value(clientEventId),
+      userId: Value(userId),
+      siteId: Value(siteId),
+      publicationId: Value(publicationId),
+      occurredAt: Value(occurredAt),
+    );
+  }
+
+  factory AccessEventRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AccessEventRow(
+      clientEventId: serializer.fromJson<String>(json['clientEventId']),
+      userId: serializer.fromJson<String>(json['userId']),
+      siteId: serializer.fromJson<String>(json['siteId']),
+      publicationId: serializer.fromJson<String>(json['publicationId']),
+      occurredAt: serializer.fromJson<DateTime>(json['occurredAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'clientEventId': serializer.toJson<String>(clientEventId),
+      'userId': serializer.toJson<String>(userId),
+      'siteId': serializer.toJson<String>(siteId),
+      'publicationId': serializer.toJson<String>(publicationId),
+      'occurredAt': serializer.toJson<DateTime>(occurredAt),
+    };
+  }
+
+  AccessEventRow copyWith({
+    String? clientEventId,
+    String? userId,
+    String? siteId,
+    String? publicationId,
+    DateTime? occurredAt,
+  }) => AccessEventRow(
+    clientEventId: clientEventId ?? this.clientEventId,
+    userId: userId ?? this.userId,
+    siteId: siteId ?? this.siteId,
+    publicationId: publicationId ?? this.publicationId,
+    occurredAt: occurredAt ?? this.occurredAt,
+  );
+  AccessEventRow copyWithCompanion(AccessEventOutboxCompanion data) {
+    return AccessEventRow(
+      clientEventId: data.clientEventId.present
+          ? data.clientEventId.value
+          : this.clientEventId,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      siteId: data.siteId.present ? data.siteId.value : this.siteId,
+      publicationId: data.publicationId.present
+          ? data.publicationId.value
+          : this.publicationId,
+      occurredAt: data.occurredAt.present
+          ? data.occurredAt.value
+          : this.occurredAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AccessEventRow(')
+          ..write('clientEventId: $clientEventId, ')
+          ..write('userId: $userId, ')
+          ..write('siteId: $siteId, ')
+          ..write('publicationId: $publicationId, ')
+          ..write('occurredAt: $occurredAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(clientEventId, userId, siteId, publicationId, occurredAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AccessEventRow &&
+          other.clientEventId == this.clientEventId &&
+          other.userId == this.userId &&
+          other.siteId == this.siteId &&
+          other.publicationId == this.publicationId &&
+          other.occurredAt == this.occurredAt);
+}
+
+class AccessEventOutboxCompanion extends UpdateCompanion<AccessEventRow> {
+  final Value<String> clientEventId;
+  final Value<String> userId;
+  final Value<String> siteId;
+  final Value<String> publicationId;
+  final Value<DateTime> occurredAt;
+  final Value<int> rowid;
+  const AccessEventOutboxCompanion({
+    this.clientEventId = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.siteId = const Value.absent(),
+    this.publicationId = const Value.absent(),
+    this.occurredAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AccessEventOutboxCompanion.insert({
+    required String clientEventId,
+    required String userId,
+    required String siteId,
+    required String publicationId,
+    required DateTime occurredAt,
+    this.rowid = const Value.absent(),
+  }) : clientEventId = Value(clientEventId),
+       userId = Value(userId),
+       siteId = Value(siteId),
+       publicationId = Value(publicationId),
+       occurredAt = Value(occurredAt);
+  static Insertable<AccessEventRow> custom({
+    Expression<String>? clientEventId,
+    Expression<String>? userId,
+    Expression<String>? siteId,
+    Expression<String>? publicationId,
+    Expression<DateTime>? occurredAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (clientEventId != null) 'client_event_id': clientEventId,
+      if (userId != null) 'user_id': userId,
+      if (siteId != null) 'site_id': siteId,
+      if (publicationId != null) 'publication_id': publicationId,
+      if (occurredAt != null) 'occurred_at': occurredAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AccessEventOutboxCompanion copyWith({
+    Value<String>? clientEventId,
+    Value<String>? userId,
+    Value<String>? siteId,
+    Value<String>? publicationId,
+    Value<DateTime>? occurredAt,
+    Value<int>? rowid,
+  }) {
+    return AccessEventOutboxCompanion(
+      clientEventId: clientEventId ?? this.clientEventId,
+      userId: userId ?? this.userId,
+      siteId: siteId ?? this.siteId,
+      publicationId: publicationId ?? this.publicationId,
+      occurredAt: occurredAt ?? this.occurredAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (clientEventId.present) {
+      map['client_event_id'] = Variable<String>(clientEventId.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<String>(userId.value);
+    }
+    if (siteId.present) {
+      map['site_id'] = Variable<String>(siteId.value);
+    }
+    if (publicationId.present) {
+      map['publication_id'] = Variable<String>(publicationId.value);
+    }
+    if (occurredAt.present) {
+      map['occurred_at'] = Variable<DateTime>(occurredAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AccessEventOutboxCompanion(')
+          ..write('clientEventId: $clientEventId, ')
+          ..write('userId: $userId, ')
+          ..write('siteId: $siteId, ')
+          ..write('publicationId: $publicationId, ')
+          ..write('occurredAt: $occurredAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5533,10 +7452,16 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $FieldReportsTable fieldReports = $FieldReportsTable(this);
   late final $FieldReportPhotosTable fieldReportPhotos =
       $FieldReportPhotosTable(this);
+  late final $OnDemandSitesTable onDemandSites = $OnDemandSitesTable(this);
+  late final $SensitiveSitesTable sensitiveSites = $SensitiveSitesTable(this);
+  late final $SensitiveFilesTable sensitiveFiles = $SensitiveFilesTable(this);
+  late final $AccessEventOutboxTable accessEventOutbox =
+      $AccessEventOutboxTable(this);
   late final LocalMetaDao localMetaDao = LocalMetaDao(this as AppDatabase);
   late final SyncStateDao syncStateDao = SyncStateDao(this as AppDatabase);
   late final OfflineDao offlineDao = OfflineDao(this as AppDatabase);
   late final ReportsDao reportsDao = ReportsDao(this as AppDatabase);
+  late final SensitiveDao sensitiveDao = SensitiveDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5551,6 +7476,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     siteSearch,
     fieldReports,
     fieldReportPhotos,
+    onDemandSites,
+    sensitiveSites,
+    sensitiveFiles,
+    accessEventOutbox,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -8526,6 +10455,1041 @@ typedef $$FieldReportPhotosTableProcessedTableManager =
       FieldReportPhotoRow,
       PrefetchHooks Function({bool clientReportId})
     >;
+typedef $$OnDemandSitesTableCreateCompanionBuilder =
+    OnDemandSitesCompanion Function({
+      required String siteId,
+      required String publicationId,
+      required int publicationNumber,
+      required String manifestHash,
+      required String siteName,
+      Value<String?> etareNumber,
+      required int sizeBytes,
+      required DateTime publishedAt,
+      required String searchText,
+      Value<int> rowid,
+    });
+typedef $$OnDemandSitesTableUpdateCompanionBuilder =
+    OnDemandSitesCompanion Function({
+      Value<String> siteId,
+      Value<String> publicationId,
+      Value<int> publicationNumber,
+      Value<String> manifestHash,
+      Value<String> siteName,
+      Value<String?> etareNumber,
+      Value<int> sizeBytes,
+      Value<DateTime> publishedAt,
+      Value<String> searchText,
+      Value<int> rowid,
+    });
+
+class $$OnDemandSitesTableFilterComposer
+    extends Composer<_$AppDatabase, $OnDemandSitesTable> {
+  $$OnDemandSitesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get siteId => $composableBuilder(
+    column: $table.siteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get publicationId => $composableBuilder(
+    column: $table.publicationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get publicationNumber => $composableBuilder(
+    column: $table.publicationNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get manifestHash => $composableBuilder(
+    column: $table.manifestHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get siteName => $composableBuilder(
+    column: $table.siteName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get etareNumber => $composableBuilder(
+    column: $table.etareNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get publishedAt => $composableBuilder(
+    column: $table.publishedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get searchText => $composableBuilder(
+    column: $table.searchText,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$OnDemandSitesTableOrderingComposer
+    extends Composer<_$AppDatabase, $OnDemandSitesTable> {
+  $$OnDemandSitesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get siteId => $composableBuilder(
+    column: $table.siteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get publicationId => $composableBuilder(
+    column: $table.publicationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get publicationNumber => $composableBuilder(
+    column: $table.publicationNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get manifestHash => $composableBuilder(
+    column: $table.manifestHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get siteName => $composableBuilder(
+    column: $table.siteName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get etareNumber => $composableBuilder(
+    column: $table.etareNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get publishedAt => $composableBuilder(
+    column: $table.publishedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get searchText => $composableBuilder(
+    column: $table.searchText,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$OnDemandSitesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $OnDemandSitesTable> {
+  $$OnDemandSitesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get siteId =>
+      $composableBuilder(column: $table.siteId, builder: (column) => column);
+
+  GeneratedColumn<String> get publicationId => $composableBuilder(
+    column: $table.publicationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get publicationNumber => $composableBuilder(
+    column: $table.publicationNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get manifestHash => $composableBuilder(
+    column: $table.manifestHash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get siteName =>
+      $composableBuilder(column: $table.siteName, builder: (column) => column);
+
+  GeneratedColumn<String> get etareNumber => $composableBuilder(
+    column: $table.etareNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get sizeBytes =>
+      $composableBuilder(column: $table.sizeBytes, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get publishedAt => $composableBuilder(
+    column: $table.publishedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get searchText => $composableBuilder(
+    column: $table.searchText,
+    builder: (column) => column,
+  );
+}
+
+class $$OnDemandSitesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $OnDemandSitesTable,
+          OnDemandSiteRow,
+          $$OnDemandSitesTableFilterComposer,
+          $$OnDemandSitesTableOrderingComposer,
+          $$OnDemandSitesTableAnnotationComposer,
+          $$OnDemandSitesTableCreateCompanionBuilder,
+          $$OnDemandSitesTableUpdateCompanionBuilder,
+          (
+            OnDemandSiteRow,
+            BaseReferences<_$AppDatabase, $OnDemandSitesTable, OnDemandSiteRow>,
+          ),
+          OnDemandSiteRow,
+          PrefetchHooks Function()
+        > {
+  $$OnDemandSitesTableTableManager(_$AppDatabase db, $OnDemandSitesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$OnDemandSitesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$OnDemandSitesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$OnDemandSitesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> siteId = const Value.absent(),
+                Value<String> publicationId = const Value.absent(),
+                Value<int> publicationNumber = const Value.absent(),
+                Value<String> manifestHash = const Value.absent(),
+                Value<String> siteName = const Value.absent(),
+                Value<String?> etareNumber = const Value.absent(),
+                Value<int> sizeBytes = const Value.absent(),
+                Value<DateTime> publishedAt = const Value.absent(),
+                Value<String> searchText = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => OnDemandSitesCompanion(
+                siteId: siteId,
+                publicationId: publicationId,
+                publicationNumber: publicationNumber,
+                manifestHash: manifestHash,
+                siteName: siteName,
+                etareNumber: etareNumber,
+                sizeBytes: sizeBytes,
+                publishedAt: publishedAt,
+                searchText: searchText,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String siteId,
+                required String publicationId,
+                required int publicationNumber,
+                required String manifestHash,
+                required String siteName,
+                Value<String?> etareNumber = const Value.absent(),
+                required int sizeBytes,
+                required DateTime publishedAt,
+                required String searchText,
+                Value<int> rowid = const Value.absent(),
+              }) => OnDemandSitesCompanion.insert(
+                siteId: siteId,
+                publicationId: publicationId,
+                publicationNumber: publicationNumber,
+                manifestHash: manifestHash,
+                siteName: siteName,
+                etareNumber: etareNumber,
+                sizeBytes: sizeBytes,
+                publishedAt: publishedAt,
+                searchText: searchText,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$OnDemandSitesTable, OnDemandSiteRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $OnDemandSitesTable,
+                    OnDemandSiteRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$OnDemandSitesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $OnDemandSitesTable,
+      OnDemandSiteRow,
+      $$OnDemandSitesTableFilterComposer,
+      $$OnDemandSitesTableOrderingComposer,
+      $$OnDemandSitesTableAnnotationComposer,
+      $$OnDemandSitesTableCreateCompanionBuilder,
+      $$OnDemandSitesTableUpdateCompanionBuilder,
+      (
+        OnDemandSiteRow,
+        BaseReferences<_$AppDatabase, $OnDemandSitesTable, OnDemandSiteRow>,
+      ),
+      OnDemandSiteRow,
+      PrefetchHooks Function()
+    >;
+typedef $$SensitiveSitesTableCreateCompanionBuilder =
+    SensitiveSitesCompanion Function({
+      required String siteId,
+      required String publicationId,
+      required int publicationNumber,
+      required String userId,
+      required String siteName,
+      required DateTime openedAt,
+      required DateTime expiresAt,
+      required Uint8List wrappedKey,
+      required Uint8List dataCipher,
+      Value<int> rowid,
+    });
+typedef $$SensitiveSitesTableUpdateCompanionBuilder =
+    SensitiveSitesCompanion Function({
+      Value<String> siteId,
+      Value<String> publicationId,
+      Value<int> publicationNumber,
+      Value<String> userId,
+      Value<String> siteName,
+      Value<DateTime> openedAt,
+      Value<DateTime> expiresAt,
+      Value<Uint8List> wrappedKey,
+      Value<Uint8List> dataCipher,
+      Value<int> rowid,
+    });
+
+class $$SensitiveSitesTableFilterComposer
+    extends Composer<_$AppDatabase, $SensitiveSitesTable> {
+  $$SensitiveSitesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get siteId => $composableBuilder(
+    column: $table.siteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get publicationId => $composableBuilder(
+    column: $table.publicationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get publicationNumber => $composableBuilder(
+    column: $table.publicationNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get siteName => $composableBuilder(
+    column: $table.siteName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get openedAt => $composableBuilder(
+    column: $table.openedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get expiresAt => $composableBuilder(
+    column: $table.expiresAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get wrappedKey => $composableBuilder(
+    column: $table.wrappedKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get dataCipher => $composableBuilder(
+    column: $table.dataCipher,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SensitiveSitesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SensitiveSitesTable> {
+  $$SensitiveSitesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get siteId => $composableBuilder(
+    column: $table.siteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get publicationId => $composableBuilder(
+    column: $table.publicationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get publicationNumber => $composableBuilder(
+    column: $table.publicationNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get siteName => $composableBuilder(
+    column: $table.siteName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get openedAt => $composableBuilder(
+    column: $table.openedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get expiresAt => $composableBuilder(
+    column: $table.expiresAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get wrappedKey => $composableBuilder(
+    column: $table.wrappedKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get dataCipher => $composableBuilder(
+    column: $table.dataCipher,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SensitiveSitesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SensitiveSitesTable> {
+  $$SensitiveSitesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get siteId =>
+      $composableBuilder(column: $table.siteId, builder: (column) => column);
+
+  GeneratedColumn<String> get publicationId => $composableBuilder(
+    column: $table.publicationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get publicationNumber => $composableBuilder(
+    column: $table.publicationNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
+
+  GeneratedColumn<String> get siteName =>
+      $composableBuilder(column: $table.siteName, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get openedAt =>
+      $composableBuilder(column: $table.openedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get expiresAt =>
+      $composableBuilder(column: $table.expiresAt, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get wrappedKey => $composableBuilder(
+    column: $table.wrappedKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<Uint8List> get dataCipher => $composableBuilder(
+    column: $table.dataCipher,
+    builder: (column) => column,
+  );
+}
+
+class $$SensitiveSitesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SensitiveSitesTable,
+          SensitiveSiteRow,
+          $$SensitiveSitesTableFilterComposer,
+          $$SensitiveSitesTableOrderingComposer,
+          $$SensitiveSitesTableAnnotationComposer,
+          $$SensitiveSitesTableCreateCompanionBuilder,
+          $$SensitiveSitesTableUpdateCompanionBuilder,
+          (
+            SensitiveSiteRow,
+            BaseReferences<
+              _$AppDatabase,
+              $SensitiveSitesTable,
+              SensitiveSiteRow
+            >,
+          ),
+          SensitiveSiteRow,
+          PrefetchHooks Function()
+        > {
+  $$SensitiveSitesTableTableManager(
+    _$AppDatabase db,
+    $SensitiveSitesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SensitiveSitesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SensitiveSitesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SensitiveSitesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> siteId = const Value.absent(),
+                Value<String> publicationId = const Value.absent(),
+                Value<int> publicationNumber = const Value.absent(),
+                Value<String> userId = const Value.absent(),
+                Value<String> siteName = const Value.absent(),
+                Value<DateTime> openedAt = const Value.absent(),
+                Value<DateTime> expiresAt = const Value.absent(),
+                Value<Uint8List> wrappedKey = const Value.absent(),
+                Value<Uint8List> dataCipher = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SensitiveSitesCompanion(
+                siteId: siteId,
+                publicationId: publicationId,
+                publicationNumber: publicationNumber,
+                userId: userId,
+                siteName: siteName,
+                openedAt: openedAt,
+                expiresAt: expiresAt,
+                wrappedKey: wrappedKey,
+                dataCipher: dataCipher,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String siteId,
+                required String publicationId,
+                required int publicationNumber,
+                required String userId,
+                required String siteName,
+                required DateTime openedAt,
+                required DateTime expiresAt,
+                required Uint8List wrappedKey,
+                required Uint8List dataCipher,
+                Value<int> rowid = const Value.absent(),
+              }) => SensitiveSitesCompanion.insert(
+                siteId: siteId,
+                publicationId: publicationId,
+                publicationNumber: publicationNumber,
+                userId: userId,
+                siteName: siteName,
+                openedAt: openedAt,
+                expiresAt: expiresAt,
+                wrappedKey: wrappedKey,
+                dataCipher: dataCipher,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$SensitiveSitesTable, SensitiveSiteRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $SensitiveSitesTable,
+                    SensitiveSiteRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SensitiveSitesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SensitiveSitesTable,
+      SensitiveSiteRow,
+      $$SensitiveSitesTableFilterComposer,
+      $$SensitiveSitesTableOrderingComposer,
+      $$SensitiveSitesTableAnnotationComposer,
+      $$SensitiveSitesTableCreateCompanionBuilder,
+      $$SensitiveSitesTableUpdateCompanionBuilder,
+      (
+        SensitiveSiteRow,
+        BaseReferences<_$AppDatabase, $SensitiveSitesTable, SensitiveSiteRow>,
+      ),
+      SensitiveSiteRow,
+      PrefetchHooks Function()
+    >;
+typedef $$SensitiveFilesTableCreateCompanionBuilder =
+    SensitiveFilesCompanion Function({
+      required String siteId,
+      required String sha256,
+      required String path,
+      required String mediaType,
+      required Uint8List cipher,
+      Value<int> rowid,
+    });
+typedef $$SensitiveFilesTableUpdateCompanionBuilder =
+    SensitiveFilesCompanion Function({
+      Value<String> siteId,
+      Value<String> sha256,
+      Value<String> path,
+      Value<String> mediaType,
+      Value<Uint8List> cipher,
+      Value<int> rowid,
+    });
+
+class $$SensitiveFilesTableFilterComposer
+    extends Composer<_$AppDatabase, $SensitiveFilesTable> {
+  $$SensitiveFilesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get siteId => $composableBuilder(
+    column: $table.siteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sha256 => $composableBuilder(
+    column: $table.sha256,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mediaType => $composableBuilder(
+    column: $table.mediaType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get cipher => $composableBuilder(
+    column: $table.cipher,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SensitiveFilesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SensitiveFilesTable> {
+  $$SensitiveFilesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get siteId => $composableBuilder(
+    column: $table.siteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sha256 => $composableBuilder(
+    column: $table.sha256,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mediaType => $composableBuilder(
+    column: $table.mediaType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get cipher => $composableBuilder(
+    column: $table.cipher,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SensitiveFilesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SensitiveFilesTable> {
+  $$SensitiveFilesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get siteId =>
+      $composableBuilder(column: $table.siteId, builder: (column) => column);
+
+  GeneratedColumn<String> get sha256 =>
+      $composableBuilder(column: $table.sha256, builder: (column) => column);
+
+  GeneratedColumn<String> get path =>
+      $composableBuilder(column: $table.path, builder: (column) => column);
+
+  GeneratedColumn<String> get mediaType =>
+      $composableBuilder(column: $table.mediaType, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get cipher =>
+      $composableBuilder(column: $table.cipher, builder: (column) => column);
+}
+
+class $$SensitiveFilesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SensitiveFilesTable,
+          SensitiveFileRow,
+          $$SensitiveFilesTableFilterComposer,
+          $$SensitiveFilesTableOrderingComposer,
+          $$SensitiveFilesTableAnnotationComposer,
+          $$SensitiveFilesTableCreateCompanionBuilder,
+          $$SensitiveFilesTableUpdateCompanionBuilder,
+          (
+            SensitiveFileRow,
+            BaseReferences<
+              _$AppDatabase,
+              $SensitiveFilesTable,
+              SensitiveFileRow
+            >,
+          ),
+          SensitiveFileRow,
+          PrefetchHooks Function()
+        > {
+  $$SensitiveFilesTableTableManager(
+    _$AppDatabase db,
+    $SensitiveFilesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SensitiveFilesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SensitiveFilesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SensitiveFilesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> siteId = const Value.absent(),
+                Value<String> sha256 = const Value.absent(),
+                Value<String> path = const Value.absent(),
+                Value<String> mediaType = const Value.absent(),
+                Value<Uint8List> cipher = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SensitiveFilesCompanion(
+                siteId: siteId,
+                sha256: sha256,
+                path: path,
+                mediaType: mediaType,
+                cipher: cipher,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String siteId,
+                required String sha256,
+                required String path,
+                required String mediaType,
+                required Uint8List cipher,
+                Value<int> rowid = const Value.absent(),
+              }) => SensitiveFilesCompanion.insert(
+                siteId: siteId,
+                sha256: sha256,
+                path: path,
+                mediaType: mediaType,
+                cipher: cipher,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$SensitiveFilesTable, SensitiveFileRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $SensitiveFilesTable,
+                    SensitiveFileRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SensitiveFilesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SensitiveFilesTable,
+      SensitiveFileRow,
+      $$SensitiveFilesTableFilterComposer,
+      $$SensitiveFilesTableOrderingComposer,
+      $$SensitiveFilesTableAnnotationComposer,
+      $$SensitiveFilesTableCreateCompanionBuilder,
+      $$SensitiveFilesTableUpdateCompanionBuilder,
+      (
+        SensitiveFileRow,
+        BaseReferences<_$AppDatabase, $SensitiveFilesTable, SensitiveFileRow>,
+      ),
+      SensitiveFileRow,
+      PrefetchHooks Function()
+    >;
+typedef $$AccessEventOutboxTableCreateCompanionBuilder =
+    AccessEventOutboxCompanion Function({
+      required String clientEventId,
+      required String userId,
+      required String siteId,
+      required String publicationId,
+      required DateTime occurredAt,
+      Value<int> rowid,
+    });
+typedef $$AccessEventOutboxTableUpdateCompanionBuilder =
+    AccessEventOutboxCompanion Function({
+      Value<String> clientEventId,
+      Value<String> userId,
+      Value<String> siteId,
+      Value<String> publicationId,
+      Value<DateTime> occurredAt,
+      Value<int> rowid,
+    });
+
+class $$AccessEventOutboxTableFilterComposer
+    extends Composer<_$AppDatabase, $AccessEventOutboxTable> {
+  $$AccessEventOutboxTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get clientEventId => $composableBuilder(
+    column: $table.clientEventId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get siteId => $composableBuilder(
+    column: $table.siteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get publicationId => $composableBuilder(
+    column: $table.publicationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$AccessEventOutboxTableOrderingComposer
+    extends Composer<_$AppDatabase, $AccessEventOutboxTable> {
+  $$AccessEventOutboxTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get clientEventId => $composableBuilder(
+    column: $table.clientEventId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get siteId => $composableBuilder(
+    column: $table.siteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get publicationId => $composableBuilder(
+    column: $table.publicationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AccessEventOutboxTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AccessEventOutboxTable> {
+  $$AccessEventOutboxTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get clientEventId => $composableBuilder(
+    column: $table.clientEventId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
+
+  GeneratedColumn<String> get siteId =>
+      $composableBuilder(column: $table.siteId, builder: (column) => column);
+
+  GeneratedColumn<String> get publicationId => $composableBuilder(
+    column: $table.publicationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => column,
+  );
+}
+
+class $$AccessEventOutboxTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AccessEventOutboxTable,
+          AccessEventRow,
+          $$AccessEventOutboxTableFilterComposer,
+          $$AccessEventOutboxTableOrderingComposer,
+          $$AccessEventOutboxTableAnnotationComposer,
+          $$AccessEventOutboxTableCreateCompanionBuilder,
+          $$AccessEventOutboxTableUpdateCompanionBuilder,
+          (
+            AccessEventRow,
+            BaseReferences<
+              _$AppDatabase,
+              $AccessEventOutboxTable,
+              AccessEventRow
+            >,
+          ),
+          AccessEventRow,
+          PrefetchHooks Function()
+        > {
+  $$AccessEventOutboxTableTableManager(
+    _$AppDatabase db,
+    $AccessEventOutboxTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AccessEventOutboxTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AccessEventOutboxTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AccessEventOutboxTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> clientEventId = const Value.absent(),
+                Value<String> userId = const Value.absent(),
+                Value<String> siteId = const Value.absent(),
+                Value<String> publicationId = const Value.absent(),
+                Value<DateTime> occurredAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AccessEventOutboxCompanion(
+                clientEventId: clientEventId,
+                userId: userId,
+                siteId: siteId,
+                publicationId: publicationId,
+                occurredAt: occurredAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String clientEventId,
+                required String userId,
+                required String siteId,
+                required String publicationId,
+                required DateTime occurredAt,
+                Value<int> rowid = const Value.absent(),
+              }) => AccessEventOutboxCompanion.insert(
+                clientEventId: clientEventId,
+                userId: userId,
+                siteId: siteId,
+                publicationId: publicationId,
+                occurredAt: occurredAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$AccessEventOutboxTable, AccessEventRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $AccessEventOutboxTable,
+                    AccessEventRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AccessEventOutboxTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AccessEventOutboxTable,
+      AccessEventRow,
+      $$AccessEventOutboxTableFilterComposer,
+      $$AccessEventOutboxTableOrderingComposer,
+      $$AccessEventOutboxTableAnnotationComposer,
+      $$AccessEventOutboxTableCreateCompanionBuilder,
+      $$AccessEventOutboxTableUpdateCompanionBuilder,
+      (
+        AccessEventRow,
+        BaseReferences<_$AppDatabase, $AccessEventOutboxTable, AccessEventRow>,
+      ),
+      AccessEventRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -8548,4 +11512,12 @@ class $AppDatabaseManager {
       $$FieldReportsTableTableManager(_db, _db.fieldReports);
   $$FieldReportPhotosTableTableManager get fieldReportPhotos =>
       $$FieldReportPhotosTableTableManager(_db, _db.fieldReportPhotos);
+  $$OnDemandSitesTableTableManager get onDemandSites =>
+      $$OnDemandSitesTableTableManager(_db, _db.onDemandSites);
+  $$SensitiveSitesTableTableManager get sensitiveSites =>
+      $$SensitiveSitesTableTableManager(_db, _db.sensitiveSites);
+  $$SensitiveFilesTableTableManager get sensitiveFiles =>
+      $$SensitiveFilesTableTableManager(_db, _db.sensitiveFiles);
+  $$AccessEventOutboxTableTableManager get accessEventOutbox =>
+      $$AccessEventOutboxTableTableManager(_db, _db.accessEventOutbox);
 }

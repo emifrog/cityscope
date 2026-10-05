@@ -6,6 +6,7 @@ import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/data/local/daos/offline_dao.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/ops/domain/published_site.dart';
+import 'package:etare_ops/src/features/sensitive/application/sensitive_providers.dart';
 import 'package:etare_ops/src/features/sync/application/sync_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -46,6 +47,11 @@ final publishedSiteProvider = FutureProvider.family<PublishedSite?, String>((
   ref,
   siteId,
 ) async {
+  // Site sensible déverrouillé par le code : lu en mémoire (PER-02).
+  final unlocked = ref.watch(
+    unlockedSitesProvider.select((sites) => sites[siteId]),
+  );
+  if (unlocked != null) return unlocked.site;
   // Une nouvelle installation remplace le contenu : relire après chaque
   // synchronisation.
   ref.watch(syncStatusProvider.select((status) => status.value?.lastSyncAt));
@@ -58,6 +64,10 @@ final etarePdfProvider = FutureProvider.family<String?, String>((
   ref,
   siteId,
 ) async {
+  if (ref.watch(unlockedSitesProvider.select((sites) => sites[siteId])) !=
+      null) {
+    return ref.read(sensitiveSiteServiceProvider).etarePdf(siteId);
+  }
   ref.watch(syncStatusProvider.select((status) => status.value?.lastSyncAt));
   final dao = ref.watch(appDatabaseProvider).offlineDao;
   final installed = await dao.installedSite(siteId);
@@ -66,7 +76,19 @@ final etarePdfProvider = FutureProvider.family<String?, String>((
   return files.where((file) => file.path == 'etare.pdf').firstOrNull?.sha256;
 });
 
-/// Contenu d'un fichier installé (plan, PDF, photo), par empreinte.
-final installedFileProvider = FutureProvider.family<Uint8List?, String>(
-  (ref, sha256) => ref.watch(appDatabaseProvider).offlineDao.blob(sha256),
-);
+/// Contenu d'un fichier installé (plan, PDF, photo), par empreinte ; celui
+/// d'un site sensible déverrouillé est déchiffré en mémoire (PER-02).
+final installedFileProvider = FutureProvider.family<Uint8List?, String>((
+  ref,
+  sha256,
+) async {
+  final unlocked = ref.watch(unlockedSitesProvider).values;
+  if (unlocked.isNotEmpty) {
+    final service = ref.read(sensitiveSiteServiceProvider);
+    for (final site in unlocked) {
+      final bytes = await service.file(site, sha256);
+      if (bytes != null) return bytes;
+    }
+  }
+  return ref.watch(appDatabaseProvider).offlineDao.blob(sha256);
+});

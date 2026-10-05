@@ -1,6 +1,7 @@
 import 'package:etare_ops/src/core/routing/app_router.dart';
 import 'package:etare_ops/src/core/theme/app_theme.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
+import 'package:etare_ops/src/features/lock/presentation/lock_gate.dart';
 import 'package:etare_ops/src/features/sync/background/background_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -24,6 +25,9 @@ class EtareOpsApp extends ConsumerWidget {
       supportedLocales: const [Locale('fr', 'FR')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       routerConfig: ref.watch(routerProvider),
+      // Verrou applicatif au-dessus de toute la navigation (ADR-025).
+      builder: (context, child) =>
+          LockGate(child: child ?? const SizedBox.shrink()),
     );
   }
 }

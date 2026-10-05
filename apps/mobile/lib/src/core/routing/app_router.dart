@@ -9,6 +9,7 @@ import 'package:etare_ops/src/features/ops/presentation/section_screen.dart';
 import 'package:etare_ops/src/features/ops/presentation/site_screen.dart';
 import 'package:etare_ops/src/features/reports/presentation/my_reports_screen.dart';
 import 'package:etare_ops/src/features/reports/presentation/report_form_screen.dart';
+import 'package:etare_ops/src/features/sensitive/presentation/sensitive_site_screen.dart';
 import 'package:etare_ops/src/features/startup/presentation/splash_screen.dart';
 import 'package:etare_ops/src/features/sync/presentation/enrollment_screen.dart';
 import 'package:flutter/foundation.dart';
@@ -76,6 +77,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'reports',
             builder: (context, state) => const MyReportsScreen(),
+          ),
+          GoRoute(
+            path: 'sensitive/:siteId',
+            builder: (context, state) =>
+                SensitiveSiteScreen(siteId: state.pathParameters['siteId']!),
           ),
           GoRoute(
             path: 'site/:siteId',

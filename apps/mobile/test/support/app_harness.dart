@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:etare_ops/src/core/di/providers.dart';
+import 'package:etare_ops/src/core/security/local_code.dart';
 import 'package:etare_ops/src/core/storage/secure_store.dart';
 import 'package:etare_ops/src/features/account/application/account_providers.dart';
 import 'package:etare_ops/src/features/account/domain/account_repository.dart';
@@ -9,6 +10,7 @@ import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/auth/domain/auth_failure.dart';
 import 'package:etare_ops/src/features/auth/domain/auth_repository.dart';
 import 'package:etare_ops/src/features/auth/domain/auth_session.dart';
+import 'package:etare_ops/src/features/lock/application/lock_controller.dart';
 import 'package:etare_ops/src/features/sync/application/sync_providers.dart';
 import 'package:etare_ops/src/features/sync/domain/sync_status.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -69,13 +71,28 @@ const testAccount = UserAccount(
   ],
 );
 
-/// Surcharges communes : aucun accès réseau ni base réelle.
+/// Verrou ouvert, pour les tests qui ne portent pas sur lui.
+class OpenLockController extends LockController {
+  @override
+  AppLockState build() {
+    final userId = ref.watch(
+      authControllerProvider.select((state) => state.value?.user.id),
+    );
+    return AppLockState(
+      userId == null ? LockPhase.inactive : LockPhase.unlocked,
+    );
+  }
+}
+
+/// Surcharges communes : aucun accès réseau ni base réelle. [lock] : le
+/// verrou applicatif réel (code à choisir, puis exigé) ; ouvert sinon.
 List<Override> appOverrides({
   required ScriptedAuthRepository authRepository,
   bool signedIn = false,
   UserAccount account = testAccount,
   bool stubSyncStatus = true,
   bool stubAccount = true,
+  bool lock = false,
 }) {
   final store = InMemorySecureStore({
     if (signedIn)
@@ -103,5 +120,17 @@ List<Override> appOverrides({
       syncStatusProvider.overrideWith(
         (ref) => Stream<SyncStatus>.value(SyncStatus.initial),
       ),
+    if (lock)
+      localCodeStoreProvider.overrideWith(
+        (ref) => LocalCodeStore(
+          ref.watch(secureStoreProvider),
+          iterations: 200,
+          // Sans isolat : le temps simulé des tests d'interface le permet.
+          derive: (password, salt, rounds) async =>
+              pbkdf2Sha256(password, salt, rounds),
+        ),
+      )
+    else
+      lockControllerProvider.overrideWith(OpenLockController.new),
   ];
 }

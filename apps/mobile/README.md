@@ -255,6 +255,30 @@ Principes :
 - Les clés `sb_secret_…` / JWT `service_role` sont refusées à la
   configuration.
 
+## 7 bis. Code personnel et sites sensibles (PER-02, ADR-025)
+
+- **Code personnel** :
+  - six chiffres, choisis par chaque agent à sa connexion sur la tablette, saisis sur un pavé à grosses
+    touches (aucun clavier système) ;
+  - exigé au démarrage et après 15 minutes d'inactivité ;
+  - verrou posé au-dessus de toute la navigation, documents ouverts compris ;
+  - cinq erreurs déconnectent l'agent, qui se reconnecte en ligne ; rien d'installé n'est effacé ;
+  - rien du code n'est gardé : un sel, un vérificateur et le compte des essais, dans le stockage sécurisé.
+    La clé est dérivée par PBKDF2-HMAC-SHA-256 (100 000 tours, dans un isolat) et mêlée à un secret de
+    l'installation.
+- **Sites « restreints »** :
+  - listés par le catalogue signé (`on_demand`), jamais installés en masse ;
+  - ouverts un à un, avec le réseau et le code ; le paquet est vérifié comme une synchronisation ;
+  - le contenu est chiffré (AES-256-GCM) par une clé propre au site, elle-même chiffrée par la clé du
+    code ;
+  - le code est redemandé à chaque ouverture ; le site est effacé après 24 h, à la révocation, au
+    changement d'agent ou au retrait de l'habilitation ;
+  - les documents « à la demande » d'un site sensible ne sont pas proposés.
+- **Journal** : chaque consultation d'un site sensible est mise en file chiffrée, puis remontée au
+  journal du SIS après la synchronisation suivante (`POST /sync/access-events`, idempotent).
+- **Limite connue** : qui détient à la fois la base et le secret de l'installation (stockage sécurisé
+  Android) peut essayer le million de codes possibles ; la durée de 24 h borne l'exposition.
+
 ## 8. Hors ligne : enrôlement et synchronisation (ADR-015, ADR-016)
 
 1. L'administrateur du SIS déclare la tablette (web, onglet « Terminaux ») et
@@ -329,8 +353,8 @@ du réseau pour l'obtenir. Les documents « jamais » restent au back-office.
 - Cartographie et géolocalisation (la caméra sert aux photos des signalements,
   par l’application appareil photo du système, sans permission).
 - Client API généré depuis l'OpenAPI (client manuel provisoire).
-- Verrouillage applicatif (PIN/biométrie), épinglage de certificats,
-  détection root/jailbreak.
+- ~~Verrouillage applicatif~~ : code personnel livré au Sprint 10 (section 7 bis) ;
+  restent l'épinglage de certificats et la détection root/jailbreak (à arbitrer, SEC-05).
 - Signature release (la variante release est signée avec la clé de debug),
   icône et nom définitifs, thème sombre.
 - À la déconnexion, les jetons sont effacés ; le cache chiffré, le SIS sélectionné
