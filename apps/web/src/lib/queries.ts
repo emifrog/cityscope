@@ -38,6 +38,7 @@ export const queryKeys = {
   members: (tenantId: string) => ['tenant', tenantId, 'members'] as const,
   devices: (tenantId: string) => ['tenant', tenantId, 'devices'] as const,
   sectors: (tenantId: string) => ['tenant', tenantId, 'sectors'] as const,
+  basemaps: (tenantId: string) => ['tenant', tenantId, 'basemaps'] as const,
   accessEvents: (tenantId: string) => ['tenant', tenantId, 'access-events'] as const,
   sectorCommunes: (tenantId: string) => ['tenant', tenantId, 'sector-communes'] as const,
   etare: (tenantId: string) => ['tenant', tenantId, 'etare'] as const,
@@ -533,6 +534,24 @@ export function useSectors(wanted = true) {
     enabled: enabled && wanted,
     queryFn: ({ signal }) => api.listSectors({ ...options, signal }),
     retry: false,
+  });
+}
+
+/**
+ * Base maps of the tablets (ADR-024), sector by sector. Refreshed while a preparation is queued
+ * or running, so the administration sees it end without reloading.
+ */
+export function useBasemaps() {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.basemaps(tenantId ?? 'none'),
+    enabled,
+    queryFn: ({ signal }) => api.getBasemapOverview({ ...options, signal }),
+    retry: false,
+    refetchInterval: (query) =>
+      query.state.data?.sectors.some((state) => state.latest && ['queued', 'building'].includes(state.latest.status))
+        ? 5_000
+        : false,
   });
 }
 

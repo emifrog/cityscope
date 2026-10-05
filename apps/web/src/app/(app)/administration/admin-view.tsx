@@ -10,6 +10,7 @@ import { usePermissions } from '@/lib/queries';
 import { useSession } from '@/providers/session-provider';
 import { useTenant } from '@/providers/tenant-provider';
 import { AccessJournalAdmin } from './access-journal-admin';
+import { BasemapsAdmin } from './basemaps-admin';
 import { DevicesAdmin } from './devices-admin';
 import { MembersAdmin } from './members-admin';
 import { NotificationsAdmin } from './notifications-admin';
@@ -21,6 +22,7 @@ const TABS: readonly { key: string; label: string; permission: Permission }[] = 
   { key: 'membres', label: 'Membres', permission: 'member:manage' },
   { key: 'secteurs', label: 'Secteurs', permission: 'member:manage' },
   { key: 'terminaux', label: 'Terminaux', permission: 'device:manage' },
+  { key: 'fonds', label: 'Fonds de carte', permission: 'device:manage' },
   { key: 'risques', label: 'Catalogue des risques', permission: 'catalog:manage' },
   { key: 'notifications', label: 'Notifications', permission: 'member:manage' },
   { key: 'journal', label: 'Journal des sites sensibles', permission: 'audit:read' },
@@ -51,7 +53,7 @@ export function AdminView() {
     <>
       <PageHeader
         title="Administration"
-        description="Membres du SIS et rôles, secteurs, terminaux et synchronisation, catalogue des risques, notifications et paramètres du SIS."
+        description="Membres du SIS et rôles, secteurs, terminaux et synchronisation, fonds de carte des tablettes, catalogue des risques, notifications et paramètres du SIS."
       />
       <TabLinks tabs={tabs} active={tab.key} param="onglet" basePath="/administration" />
       {tab.key === 'membres' ? (
@@ -60,6 +62,8 @@ export function AdminView() {
         <SectorsAdmin />
       ) : tab.key === 'terminaux' ? (
         <DevicesAdmin />
+      ) : tab.key === 'fonds' ? (
+        <BasemapsAdmin />
       ) : tab.key === 'notifications' ? (
         <NotificationsAdmin />
       ) : tab.key === 'journal' ? (

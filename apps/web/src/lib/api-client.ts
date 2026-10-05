@@ -79,6 +79,7 @@ import {
   type MemberPerimeterInput,
   type MemberSensitiveAccessInput,
   type AccessEventList,
+  type BasemapOverview,
   type AccessEventListQuery,
   type Sector,
   type SectorCommuneList,
@@ -823,6 +824,20 @@ export const api = {
 
   listAccessEvents: (options: ApiCallOptions, query: Partial<AccessEventListQuery> = {}): Promise<AccessEventList> =>
     call(endpoints.listAccessEvents.response, endpoints.listAccessEvents.path, options, { query }),
+
+  // ---------------------------------------------------------------- base maps of the tablets (ADR-024)
+  getBasemapOverview: (options: ApiCallOptions): Promise<BasemapOverview> =>
+    call(endpoints.getBasemapOverview.response, endpoints.getBasemapOverview.path, options),
+
+  requestBasemapBuild: (options: ApiCallOptions, sectorId: string): Promise<BasemapOverview> =>
+    call(
+      endpoints.requestBasemapBuild.response,
+      pathOf(endpoints.requestBasemapBuild.path, { id: sectorId }),
+      options,
+      {
+        method: 'POST',
+      },
+    ),
 
   // ---------------------------------------------------------------- sectors (PER-01)
   listSectors: (options: ApiCallOptions): Promise<SectorList> =>

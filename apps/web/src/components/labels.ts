@@ -255,6 +255,23 @@ export const ACCESS_ACTION_LABELS: Readonly<Record<'view' | 'export' | 'download
   download_offline: 'Ouverture à la demande sur tablette',
 };
 
+/** Offline rights of the source of the base maps (ADR-024). */
+export const BASEMAP_RIGHTS_LABELS: Readonly<Record<'approved' | 'unverified' | 'forbidden', string>> = {
+  approved: 'Droits hors ligne validés',
+  unverified: 'Droits hors ligne à valider',
+  forbidden: 'Hors ligne interdit',
+};
+
+/** Why a base map was prepared. */
+export const BASEMAP_REASON_LABELS: Readonly<Record<'initial' | 'coverage' | 'source' | 'renewal' | 'manual', string>> =
+  {
+    initial: 'premier fond',
+    coverage: 'sites modifiés',
+    source: 'nouvelle source',
+    renewal: 'renouvellement semestriel',
+    manual: 'demande de l’administration',
+  };
+
 export const CHANGE_LABELS: Readonly<Record<'added' | 'removed' | 'modified', string>> = {
   added: 'Ajout',
   removed: 'Suppression',
