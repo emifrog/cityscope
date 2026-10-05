@@ -127,10 +127,15 @@ describe('supervision (EXP-03)', () => {
     const expected = `${trace.slice(0, 8)}-${trace.slice(8, 12)}-${trace.slice(12, 16)}-${trace.slice(16, 20)}-${trace.slice(20)}`;
     expect(confirmed.headers.get('x-trace-id')).toBe(expected);
     const jobId = endpoints.confirmUpload.response.parse(await confirmed.json()).job_id;
-    const { rows } = await adminPool.query<{ correlation_id: string }>(
-      'select correlation_id from app.job where id = $1',
-      [jobId],
-    );
-    expect(rows[0]?.correlation_id).toBe(expected);
+    try {
+      const { rows } = await adminPool.query<{ correlation_id: string }>(
+        'select correlation_id from app.job where id = $1',
+        [jobId],
+      );
+      expect(rows[0]?.correlation_id).toBe(expected);
+    } finally {
+      // No job left in the queue: the next test files claim from the same queue with their own workers.
+      await adminPool.query('delete from app.job where id = $1', [jobId]);
+    }
   });
 });

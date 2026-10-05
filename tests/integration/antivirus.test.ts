@@ -18,7 +18,7 @@ import { createApiApp, createApiDependencies } from '@etare/api';
 import { API_BASE_PATH, endpoints } from '@etare/contracts';
 import { HandlerRegistry, assetVerificationHandler, createWorker } from '@etare/worker';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { EHPAD_ID, TENANT_06, requireEnv, signIn } from './helpers';
+import { EHPAD_ID, TENANT_06, drain, requireEnv, signIn } from './helpers';
 
 const antivirusUrl = process.env['ANTIVIRUS_URL'];
 
@@ -92,7 +92,8 @@ describe.skipIf(!antivirusUrl)('antivirus (ClamAV)', () => {
       headers: { authorization: `Bearer ${token}`, 'x-tenant-id': TENANT_06, 'x-client-platform': 'web' },
     });
     expect(confirmed.status).toBe(202);
-    await worker.runOnce();
+    // The whole queue: a job left by an earlier test file may come first.
+    await drain(worker);
 
     const admin = createPool({
       connectionString: requireEnv('LOCAL_DATABASE_ADMIN_URL'),
