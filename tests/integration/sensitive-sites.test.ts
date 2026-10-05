@@ -19,7 +19,7 @@ import { createApiApp, createApiDependencies } from '@etare/api';
 import { API_BASE_PATH, endpoints, syncCatalogSchema, type EtareRevision } from '@etare/contracts';
 import { HandlerRegistry, createWorker, publicationBuildHandler } from '@etare/worker';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { TENANT_06, authApi, requireEnv, signIn, withSecondFactor } from './helpers';
+import { TENANT_06, authApi, drain, requireEnv, signIn, withSecondFactor } from './helpers';
 import { Terminal } from './terminal';
 
 const app = createApiApp(createApiDependencies(process.env));
@@ -130,7 +130,8 @@ beforeAll(async () => {
     publish: true,
   });
   expect(decided.status).toBe(200);
-  await worker.runOnce();
+  // Jobs left by earlier files never hide the build of this publication.
+  await drain(worker);
   const overview = endpoints.getSiteEtare.response.parse(
     await (await editor06('GET', `/sites/${siteId}/etare`)).json(),
   );

@@ -106,7 +106,13 @@ final class FakeBasemap {
     this.extra = const {},
     this.manifestVersion = 1,
     this.tenant = tenantId,
+    this.bounds = const [7.18, 43.66, 7.32, 43.75],
+    this.center = const [7.2518, 43.7079],
   });
+
+  /// Emprise (ouest, sud, est, nord) et centre annoncés par le manifeste.
+  final List<double> bounds;
+  final List<double> center;
 
   final String packId;
   final String sectorId;
@@ -163,8 +169,8 @@ final class FakeBasemap {
     'built_at': '2026-10-01T08:00:00.000Z',
     'renew_after': '2027-04-01T08:00:00.000Z',
     'coverage': {
-      'bounds': [7.18, 43.66, 7.32, 43.75],
-      'center': [7.2518, 43.7079],
+      'bounds': bounds,
+      'center': center,
       'general_max_zoom': 14,
       'detail_max_zoom': 18,
       'detail_radius_m': 500,

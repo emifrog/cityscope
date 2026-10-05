@@ -20,6 +20,10 @@ abstract final class AppRoutes {
   static String section(String siteId, String section) =>
       '/home/site/$siteId/section/$section';
 
+  /// Carte locale (CAR-02), éventuellement centrée sur un site installé.
+  static String map({String? siteId}) =>
+      siteId == null ? '/home/map' : '/home/map?site=$siteId';
+
   /// Signalements de l'agent et suite donnée (OPS-04).
   static const reports = '/home/reports';
 

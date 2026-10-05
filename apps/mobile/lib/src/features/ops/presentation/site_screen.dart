@@ -23,6 +23,7 @@ class SiteScreen extends ConsumerWidget {
   static Key tileKey(OpsSection section) => Key('site.tile.${section.name}');
   static const reportButtonKey = Key('site.report');
   static const etarePdfKey = Key('site.etarePdf');
+  static const mapKey = Key('site.map');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => OpsScaffold(
@@ -99,6 +100,17 @@ class _Synthesis extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _EtarePdfTile(site: site),
+        if (site.location != null)
+          ListTile(
+            key: SiteScreen.mapKey,
+            leading: const Icon(Icons.map_outlined),
+            title: const Text('Situer sur la carte'),
+            subtitle: const Text(
+              'Fond hors ligne du secteur, points extérieurs',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(AppRoutes.map(siteId: site.siteId)),
+          ),
         for (final section in OpsSection.others)
           if (site.shows(section) && site.countOf(section) > 0)
             ListTile(

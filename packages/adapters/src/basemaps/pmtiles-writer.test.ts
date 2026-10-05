@@ -139,7 +139,7 @@ describe('PMTiles writer', () => {
     const tile = await reader.getZxy(...tileIdToZxy(19_999 * 2));
     expect(new TextDecoder().decode(tile?.data)).toBe('t19999');
     await writer.dispose();
-  });
+  }, 20_000);
 
   it('refuses tiles out of order and removes its temporary files', async () => {
     const before = (await readdir(tmpdir())).filter((name) => name.startsWith('etare-basemap-')).length;

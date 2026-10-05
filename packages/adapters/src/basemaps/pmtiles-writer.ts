@@ -163,6 +163,10 @@ class PmtilesArchiveWriter implements BasemapArchiveWriter {
   private readonly entries: Entry[] = [];
   private readonly contents = new Map<string, { offset: number; length: number }>();
   private written = 0;
+  /** Tile data not yet on disk: written by blocks, not one system call per tile. */
+  private pending: Uint8Array[] = [];
+  private pendingBytes = 0;
+  private flushed = 0;
   private lastId = -1;
   private addressed = 0;
   private finished = false;
@@ -191,9 +195,11 @@ class PmtilesArchiveWriter implements BasemapArchiveWriter {
     let stored = this.contents.get(hash);
     if (!stored) {
       stored = { offset: this.written, length: compressed.byteLength };
-      await this.data.write(compressed, 0, compressed.byteLength, this.written);
+      this.pending.push(compressed);
+      this.pendingBytes += compressed.byteLength;
       this.written += compressed.byteLength;
       this.contents.set(hash, stored);
+      if (this.pendingBytes >= COPY_CHUNK_BYTES) await this.flush();
     }
     const last = this.entries.at(-1);
     if (
@@ -210,8 +216,18 @@ class PmtilesArchiveWriter implements BasemapArchiveWriter {
     this.lastId = tileId;
   }
 
+  private async flush(): Promise<void> {
+    if (this.pendingBytes === 0) return;
+    const block = Buffer.concat(this.pending, this.pendingBytes);
+    await this.data.write(block, 0, block.byteLength, this.flushed);
+    this.flushed += block.byteLength;
+    this.pending = [];
+    this.pendingBytes = 0;
+  }
+
   async finish(header: BasemapArchiveHeader): Promise<BasemapArchive> {
     if (this.finished) throw new Error('Archive already finished.');
+    await this.flush();
     this.finished = true;
     const { root, leaves } = optimizeDirectories(this.entries);
     const metadata = gzipSync(Buffer.from(JSON.stringify(header.metadata), 'utf8'));

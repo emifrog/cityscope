@@ -9,13 +9,43 @@ language sql as $$
                                 'bbbbbbbb-0000-4000-8000-000000000280', p_origin)
 $$;
 
--- Seed: sectors CIS Nice Centre (…1a-…01, EHPAD published, located) and CIS Antibes (…1a-…02,
+-- A test sector (…1a-…280) holding the EHPAD (published, located); seeded sector CIS Antibes (…1a-…02,
 -- warehouse located, nothing published). Members: admin (…01), editor (…02), OPS (…04).
-select plan(26);
+select plan(27);
 
--- Coverage: extent of the located sites, detail around the distributed ones.
+-- Start from no base map, whatever the local stack holds (the transaction is rolled back).
+delete from app.device_basemap;
+delete from app.basemap_pack;
+-- A sector of its own, holding the EHPAD only (the local stack may hold other sites in Nice).
+insert into app.sector (id, tenant_id, name) values
+  ('0600001a-0000-4000-8000-000000000280', '06000000-0000-4000-8000-000000000000', 'Secteur pgTAP carte');
+insert into app.sector_site (tenant_id, sector_id, site_id) values
+  ('06000000-0000-4000-8000-000000000000', '0600001a-0000-4000-8000-000000000280', '06000002-0000-4000-8000-000000000001');
+
+-- Coverage: extent of the located sites, detail around the distributed ones (signed version).
 select is(
-  (app.basemap_coverage('0600001a-0000-4000-8000-000000000001') -> 'detail') -> 0,
+  jsonb_array_length(app.basemap_coverage('0600001a-0000-4000-8000-000000000280') -> 'detail'),
+  0,
+  'a version without signature is not distributed: no detail area'
+);
+-- A signed version of the EHPAD supersedes the seeded one (built by the worker in real life).
+insert into app.publication (id, tenant_id, site_id, etare_id, revision_id, approval_id, requested_by)
+values ('0600009f-0000-4000-8000-000000000280', '06000000-0000-4000-8000-000000000000',
+        '06000002-0000-4000-8000-000000000001', '0600000c-0000-4000-8000-000000000001',
+        '0600000d-0000-4000-8000-000000000001', '0600000e-0000-4000-8000-000000000001',
+        '00000000-0000-4000-b000-000000000003');
+update app.publication set status = 'building' where id = '0600009f-0000-4000-8000-000000000280';
+update app.publication
+set status = 'ready', payload = '{}'::jsonb,
+    manifest = jsonb_build_object('data_file', 'data/site.json', 'files', '[]'::jsonb),
+    manifest_hash = repeat('9', 64),
+    manifest_signature = jsonb_build_object('algorithm', 'Ed25519', 'key_id', 'ed25519-test', 'signature', repeat('A', 86) || '==')
+where id = '0600009f-0000-4000-8000-000000000280';
+update app.publication set status = 'superseded', superseded_at = now() where id = '0600000f-0000-4000-8000-000000000001';
+update app.publication set status = 'published', published_at = now(), published_by = '00000000-0000-4000-b000-000000000003'
+where id = '0600009f-0000-4000-8000-000000000280';
+select is(
+  (app.basemap_coverage('0600001a-0000-4000-8000-000000000280') -> 'detail') -> 0,
   '[7.25180, 43.70790]'::jsonb,
   'the published site of the sector marks a detail area'
 );
@@ -26,7 +56,7 @@ select is(
 );
 update app.site set sensitivity = 'restricted' where id = '06000002-0000-4000-8000-000000000001';
 select is(
-  jsonb_array_length(app.basemap_coverage('0600001a-0000-4000-8000-000000000001') -> 'detail'),
+  jsonb_array_length(app.basemap_coverage('0600001a-0000-4000-8000-000000000280') -> 'detail'),
   0,
   'a sensitive site never marks a detail area (it would point it out)'
 );
@@ -43,7 +73,7 @@ insert into app.device (id, tenant_id, name, status, platform, public_key, enrol
 update app.device set scope = 'sectors' where id = '06000010-0000-4000-8000-000000000281';
 insert into app.device_sector (tenant_id, device_id, sector_id)
 values ('06000000-0000-4000-8000-000000000000', '06000010-0000-4000-8000-000000000281', '0600001a-0000-4000-8000-000000000002');
-select ok(app.basemap_sector_eligible('0600001a-0000-4000-8000-000000000001'), 'a sector received by a terminal gets a base map');
+select ok(app.basemap_sector_eligible('0600001a-0000-4000-8000-000000000280'), 'a sector received by a terminal gets a base map');
 
 -- Planning by the worker, with the configured source.
 set local role etare_worker;
@@ -51,7 +81,7 @@ select cmp_ok(app.worker_plan_basemaps('synthetic'), '>=', 2, 'the worker plans 
 reset role;
 select is(
   (select count(*) from app.job j join app.basemap_pack b on j.idempotency_key = 'basemap.build:' || b.id::text
-   where b.sector_id = '0600001a-0000-4000-8000-000000000001' and j.status = 'queued'),
+   where b.sector_id = '0600001a-0000-4000-8000-000000000280' and j.status = 'queued'),
   1::bigint,
   'each preparation is a job of the queue'
 );
@@ -59,14 +89,14 @@ set local role etare_worker;
 select is(app.worker_plan_basemaps('synthetic'), 0, 'a preparation already queued is not planned twice');
 reset role;
 select id as pack from app.basemap_pack
-where sector_id = '0600001a-0000-4000-8000-000000000001' and status = 'queued' \gset
+where sector_id = '0600001a-0000-4000-8000-000000000280' and status = 'queued' \gset
 
 -- Administration: device:manage, a request keeps the preparation already queued.
 set local role etare_api;
 select pg_temp.act_as('00000000-0000-4000-a000-000000000002');
 select throws_ok($$ select app.basemap_overview() $$, '42501', null, 'an editor does not see the base maps');
 select pg_temp.act_as('00000000-0000-4000-a000-000000000001');
-select is(app.request_basemap_build('0600001a-0000-4000-8000-000000000001', 'synthetic'), :'pack'::uuid,
+select is(app.request_basemap_build('0600001a-0000-4000-8000-000000000280', 'synthetic'), :'pack'::uuid,
   'a request keeps the preparation already queued');
 select throws_ok($$ select app.request_basemap_build('83000000-0000-4000-8000-00000000001a', 'synthetic') $$,
   'ETB04', null, 'a sector of another SIS is unknown');
@@ -108,14 +138,14 @@ select pg_temp.act_as('00000000-0000-4000-a000-000000000004', 'aal1', 'mobile');
 select is(
   (select e ->> 'sector_name' from jsonb_array_elements(app.sync_basemaps('06000010-0000-4000-8000-000000000280')) e
    where e ->> 'pack_id' = :'pack'),
-  'CIS Nice Centre',
+  'Secteur pgTAP carte',
   'a terminal of the whole SIS receives the base map of every sector'
 );
 select is(
   (select count(*) from jsonb_array_elements(app.sync_basemaps('06000010-0000-4000-8000-000000000281')) e
    where e ->> 'pack_id' = :'pack'),
   0::bigint,
-  'a terminal limited to Antibes never receives the base map of Nice'
+  'a terminal limited to Antibes never receives the base map of another sector'
 );
 select is((select manifest_hash from app.sync_basemap('06000010-0000-4000-8000-000000000280', :'pack')), repeat('b', 64),
   'the signed manifest is served as completed');
@@ -135,20 +165,20 @@ select is(app.sync_basemap_receipt('06000010-0000-4000-8000-000000000280', array
 select pg_temp.act_as('00000000-0000-4000-a000-000000000001');
 select is(
   (select (e -> 'devices' ->> 'installed')::int from jsonb_array_elements(app.basemap_overview()) e
-   where e #>> '{sector,id}' = '0600001a-0000-4000-8000-000000000001'),
+   where e #>> '{sector,id}' = '0600001a-0000-4000-8000-000000000280'),
   1,
   'the administration sees which terminals are up to date'
 );
 
 -- A failed preparation waits a day, then its objects are removed.
-select app.request_basemap_build('0600001a-0000-4000-8000-000000000001', 'synthetic') as second \gset
+select app.request_basemap_build('0600001a-0000-4000-8000-000000000280', 'synthetic') as second \gset
 reset role;
 set local role etare_worker;
 select ok(app.worker_fail_basemap(:'second', '06000000-0000-4000-8000-000000000000', 'TOO_LARGE', 'Fond trop volumineux.'),
   'a refused preparation fails visibly');
 reset role;
 select is(
-  (select count(*) from app.basemap_pack where sector_id = '0600001a-0000-4000-8000-000000000001' and status = 'ready'),
+  (select count(*) from app.basemap_pack where sector_id = '0600001a-0000-4000-8000-000000000280' and status = 'ready'),
   1::bigint,
   'the base map in force stays on the tablets'
 );

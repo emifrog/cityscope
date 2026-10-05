@@ -4,7 +4,7 @@ description: "Application opérationnelle (OPS) ETARE numérique — squelette S
 publish_to: 'none'
 
 # versionName+versionCode (Android) / CFBundleShortVersionString+CFBundleVersion (iOS).
-version: 0.2.0+2
+version: 0.3.0+3
 
 environment:
   sdk: ^3.13.4
@@ -44,6 +44,12 @@ dependencies:
   pdfrx: ^2.6.5
   # Synchronisation en arrière-plan (Android WorkManager), Flutter Community, MIT.
   workmanager: ^0.10.10
+  # Carte locale hors ligne (MapLibre Native, lecture des PMTiles), maplibre.org,
+  # BSD-3-Clause (ADR-024).
+  maplibre_gl: ^0.27.1
+  # Autorisation de localiser l'agent sur la carte (position jamais transmise),
+  # Baseflow, MIT.
+  permission_handler: ^12.0.1
 
 dev_dependencies:
   build_runner: ^2.16.1
@@ -68,3 +74,8 @@ flutter:
   # Logos FireScape générés par `pnpm brand:assets` (originaux dans assets/brand/ à la racine).
   assets:
     - assets/brand/
+    # Glyphes Noto Sans (licence OFL 1.1, assets/map/glyphs/OFL.txt) des
+    # libellés de la carte : embarqués, la carte n'appelle aucun serveur.
+    - assets/map/glyphs/NotoSans-Regular/
+    - assets/map/glyphs/NotoSans-Medium/
+    - assets/map/glyphs/NotoSans-Italic/

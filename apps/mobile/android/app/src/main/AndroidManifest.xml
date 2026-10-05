@@ -1,9 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Seule permission demandée : accès réseau (API produit + authentification).
-         Pas de localisation ni de contacts. Les photos des signalements passent par
-         l'application appareil photo du système (intention IMAGE_CAPTURE) ou le
-         sélecteur de photos : aucune permission caméra ni stockage. -->
+    <!-- Permissions : accès réseau (API produit + authentification) et
+         localisation pendant l'utilisation, demandée au premier « Me situer » sur
+         la carte (CAR-02) : la position est affichée sur la tablette, jamais
+         transmise (ADR-025). Pas de contacts. Les photos des signalements passent
+         par l'application appareil photo du système (intention IMAGE_CAPTURE) ou
+         le sélecteur de photos : aucune permission caméra ni stockage. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <!-- Sécurité :
          - allowBackup=false + règles d'exclusion : jetons, clé et base chiffrée

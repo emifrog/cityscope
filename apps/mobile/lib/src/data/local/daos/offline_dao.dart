@@ -7,6 +7,26 @@ import 'package:flutter/foundation.dart';
 
 part 'offline_dao.g.dart';
 
+/// Site installé et sa position (carte locale, CAR-02).
+@immutable
+final class SiteLocation {
+  const SiteLocation({
+    required this.siteId,
+    required this.name,
+    required this.etareNumber,
+    required this.addressLabel,
+    required this.lon,
+    required this.lat,
+  });
+
+  final String siteId;
+  final String name;
+  final String? etareNumber;
+  final String? addressLabel;
+  final double lon;
+  final double lat;
+}
+
 /// Fichier d'une version à installer.
 @immutable
 final class FileRecord {
@@ -460,6 +480,34 @@ class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
 extension OfflineSearch on OfflineDao {
   /// Sites dont le texte normalisé contient TOUS les mots de [tokens],
   /// triés par nom ; tous les sites si [tokens] est vide.
+  /// Sites installés localisés, pour la carte (CAR-02) : position lue dans
+  /// les données publiées vérifiées, sans charger chaque fiche.
+  Stream<List<SiteLocation>> watchSiteLocations() =>
+      customSelect(
+        'SELECT s.site_id AS site_id, s.name AS name, '
+        's.etare_number AS etare_number, s.address_label AS address_label, '
+        r"json_extract(d.data_text, '$.data.site.location.coordinates[0]') "
+        'AS lon, '
+        r"json_extract(d.data_text, '$.data.site.location.coordinates[1]') "
+        'AS lat '
+        'FROM site_search s JOIN site_data d ON d.site_id = s.site_id '
+        'ORDER BY lower(s.name)',
+        readsFrom: {siteSearch, siteData},
+      ).watch().map(
+        (rows) => [
+          for (final row in rows)
+            if (row.data['lon'] is num && row.data['lat'] is num)
+              SiteLocation(
+                siteId: row.read<String>('site_id'),
+                name: row.read<String>('name'),
+                etareNumber: row.readNullable<String>('etare_number'),
+                addressLabel: row.readNullable<String>('address_label'),
+                lon: (row.data['lon']! as num).toDouble(),
+                lat: (row.data['lat']! as num).toDouble(),
+              ),
+        ],
+      );
+
   Stream<List<SiteSearchRow>> watchSites(List<String> tokens) {
     final query = select(siteSearch);
     for (final token in tokens) {

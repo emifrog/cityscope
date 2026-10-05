@@ -29,6 +29,7 @@ class HomeScreen extends ConsumerStatefulWidget {
   static Key sensitiveTileKey(String siteId) => Key('home.sensitive.$siteId');
   static const accountButtonKey = Key('home.account');
   static const reportsButtonKey = Key('home.reports');
+  static const mapButtonKey = Key('home.map');
 
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
@@ -85,6 +86,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       appBar: AppBar(
         title: const Text(Brand.productName),
         actions: [
+          IconButton(
+            key: HomeScreen.mapButtonKey,
+            tooltip: 'Carte',
+            onPressed: () => context.push(AppRoutes.map()),
+            icon: const Icon(Icons.map_outlined),
+          ),
           const _ReportsButton(),
           IconButton(
             key: HomeScreen.accountButtonKey,

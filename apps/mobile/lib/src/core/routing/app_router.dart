@@ -3,6 +3,7 @@ import 'package:etare_ops/src/features/account/presentation/account_screen.dart'
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/auth/presentation/login_screen.dart';
 import 'package:etare_ops/src/features/home/presentation/home_screen.dart';
+import 'package:etare_ops/src/features/map/presentation/map_screen.dart';
 import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
 import 'package:etare_ops/src/features/ops/presentation/plan_screen.dart';
 import 'package:etare_ops/src/features/ops/presentation/section_screen.dart';
@@ -77,6 +78,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'reports',
             builder: (context, state) => const MyReportsScreen(),
+          ),
+          GoRoute(
+            path: 'map',
+            builder: (context, state) =>
+                MapScreen(siteId: state.uri.queryParameters['site']),
           ),
           GoRoute(
             path: 'sensitive/:siteId',

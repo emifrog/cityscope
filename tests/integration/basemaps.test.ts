@@ -9,9 +9,12 @@
 import { createHash } from 'node:crypto';
 import {
   Ed25519Signer,
+  PdfLibEtareRenderer,
   PmtilesArchiveFactory,
   PostgresBasemapBuildStore,
   PostgresJobQueue,
+  PostgresPublicationBuildStore,
+  SharpImageResizer,
   SupabaseObjectStorage,
   SyntheticBasemapSource,
   createLogger,
@@ -25,11 +28,12 @@ import {
   endpoints,
   syncCatalogSchema,
   type BasemapManifest,
+  type EtareRevision,
 } from '@etare/contracts';
 import { signedText } from '@etare/domain';
-import { HandlerRegistry, basemapBuildHandler, createWorker } from '@etare/worker';
+import { HandlerRegistry, basemapBuildHandler, createWorker, publicationBuildHandler } from '@etare/worker';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { EHPAD_ID, TENANT_06, authApi, requireEnv, signIn, withSecondFactor } from './helpers';
+import { TENANT_06, authApi, drain, requireEnv, signIn, withSecondFactor } from './helpers';
 import { Terminal } from './terminal';
 
 const app = createApiApp(createApiDependencies({ ...process.env, BASEMAP_SOURCE: 'synthetic' }));
@@ -40,14 +44,25 @@ const workerPool = createPool({
   applicationName: 'integration-basemaps',
 });
 const sha256 = async (content: string | Uint8Array) => createHash('sha256').update(content).digest('hex');
+const objects = SupabaseObjectStorage.fromSecretKey(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SECRET_KEY'));
 const worker = createWorker({
   queue: new PostgresJobQueue(workerPool, 'integration-basemaps'),
   registry: new HandlerRegistry([
+    publicationBuildHandler({
+      store: new PostgresPublicationBuildStore(workerPool),
+      tools: {
+        sha256,
+        byteLength: (text) => Buffer.byteLength(text, 'utf8'),
+        now: () => new Date(),
+        signer: publicationKey,
+      },
+      artifacts: { renderer: new PdfLibEtareRenderer(), objects, sha256Bytes: sha256, images: new SharpImageResizer() },
+    }),
     basemapBuildHandler({
       store: new PostgresBasemapBuildStore(workerPool),
       source: new SyntheticBasemapSource(),
       archives: new PmtilesArchiveFactory(),
-      objects: SupabaseObjectStorage.fromSecretKey(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SECRET_KEY')),
+      objects,
       signer: publicationKey,
       sha256,
       utf8: (text) => new TextEncoder().encode(text),
@@ -81,6 +96,7 @@ const codeOf = async (response: Response) => ((await response.json()) as { error
 let admin06: Call;
 let ops06: Call;
 let adminFactor: { token: string; factorId: string } | undefined;
+let validatorFactor: { token: string; factorId: string } | undefined;
 let sectorId = '';
 let device: Terminal;
 
@@ -109,21 +125,51 @@ async function build(): Promise<void> {
 }
 
 beforeAll(async () => {
-  const [adminToken, opsToken] = await Promise.all([
+  const [adminToken, opsToken, editorToken, validatorToken] = await Promise.all([
     signIn('admin.sis06@demo.etare.test'),
     signIn('ops06@demo.etare.test'),
+    signIn('redacteur06@demo.etare.test'),
+    signIn('validateur06@demo.etare.test'),
   ]);
   adminFactor = await withSecondFactor(adminToken);
   admin06 = as(adminFactor.token);
   ops06 = as(opsToken);
+  validatorFactor = await withSecondFactor(validatorToken);
+  const editor06 = as(editorToken);
+  const validator06 = as(validatorFactor.token);
 
-  // A sector holding the published EHPAD (located, distributed), and a tablet assigned to it.
+  // A site published and signed for the test: a detail area of the base map.
+  const site = await editor06('POST', '/sites', {
+    name: `Site carte ${Date.now()}`,
+    site_type: 'erp',
+    status: 'active',
+    location: { type: 'Point', coordinates: [7.2611, 43.7032] },
+  });
+  expect(site.status).toBe(201);
+  const siteId = ((await site.json()) as { id: string }).id;
+  const draft = endpoints.createRevision.response.parse(
+    await (await editor06('POST', `/sites/${siteId}/etare/revisions`, { change_summary: 'Carte' })).json(),
+  );
+  const submitted: EtareRevision = endpoints.submitRevision.response.parse(
+    await (
+      await editor06('POST', `/etare-revisions/${draft.id}/submit`, { change_summary: 'Carte' }, draft.row_version)
+    ).json(),
+  );
+  const decided = await validator06('POST', `/etare-revisions/${draft.id}/decision`, {
+    decision: 'approved',
+    revision_hash: submitted.content_hash,
+    publish: true,
+  });
+  expect(decided.status).toBe(200);
+  await drain(worker);
+
+  // A sector holding this site, and a tablet assigned to it.
   const created = await admin06('POST', '/sectors', {
     name: `Secteur carte ${Date.now()}`,
     code: null,
     description: null,
     communes: [],
-    site_ids: [EHPAD_ID],
+    site_ids: [siteId],
   });
   expect(created.status).toBe(201);
   sectorId = endpoints.createSector.response.parse(await created.json()).id;
@@ -145,7 +191,9 @@ afterAll(async () => {
       .items.find((item) => item.id === sectorId);
     if (sector) await admin06('POST', `/sectors/${sectorId}/archive`, undefined, sector.row_version);
   }
-  if (adminFactor) await authApi(`/factors/${adminFactor.factorId}`, { method: 'DELETE', token: adminFactor.token });
+  for (const factor of [adminFactor, validatorFactor]) {
+    if (factor) await authApi(`/factors/${factor.factorId}`, { method: 'DELETE', token: factor.token });
+  }
   await workerPool.end();
 });
 
@@ -201,7 +249,7 @@ describe('offline base maps (ADR-024)', () => {
     ).toBe(true);
     manifest = basemapManifestSchema.parse(JSON.parse(served.manifest));
     expect(manifest.source).toMatchObject({ id: 'synthetic', synthetic: true });
-    expect(manifest.coverage.detail_points).toEqual([[7.2518, 43.7079]]);
+    expect(manifest.coverage.detail_points).toEqual([[7.2611, 43.7032]]);
     expect(manifest.files.map((file) => file.path)).toEqual(['tiles.pmtiles', 'style.json']);
   });
 
