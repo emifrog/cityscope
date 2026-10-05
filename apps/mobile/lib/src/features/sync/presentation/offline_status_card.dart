@@ -337,6 +337,9 @@ class _Progress extends StatelessWidget {
             '${progress.siteName == null ? '' : ' : ${progress.siteName}'}',
       SyncStep.installing => 'Installation…',
       SyncStep.receipt => 'Accusé de réception…',
+      SyncStep.basemaps =>
+        'Fond de carte'
+            '${progress.siteName == null ? '' : ' : ${progress.siteName}'}',
     };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

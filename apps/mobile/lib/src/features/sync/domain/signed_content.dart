@@ -9,6 +9,7 @@ abstract final class SignatureContexts {
   static const catalog = 'etare.catalog.v1';
   static const deviceRequest = 'etare.device-request.v1';
   static const enrollment = 'etare.enrollment.v1';
+  static const basemap = 'etare.basemap.v1';
 }
 
 /// SHA-256 d'un corps vide (requêtes GET signées).

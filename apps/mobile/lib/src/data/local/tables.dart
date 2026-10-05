@@ -396,3 +396,35 @@ class AccessEventOutbox extends Table {
   @override
   Set<Column<Object>> get primaryKey => {clientEventId};
 }
+
+/// Fonds de carte installés (CAR-02, ADR-024) : le manifeste signé, vérifié à
+/// l'installation ; les fichiers sont dans le dossier des fonds, hors de la
+/// base chiffrée (donnée publique lue par plage). Un fond appartient à la
+/// tablette, quel que soit l'agent.
+@DataClassName('InstalledBasemapRow')
+class InstalledBasemaps extends Table {
+  TextColumn get packId => text()();
+
+  TextColumn get sectorId => text()();
+
+  TextColumn get sectorName => text()();
+
+  IntColumn get version => integer()();
+
+  TextColumn get manifestHash => text()();
+
+  /// Manifeste signé tel que reçu (emprise, source, fichiers).
+  TextColumn get manifestText => text()();
+
+  IntColumn get totalBytes => integer()();
+
+  DateTimeColumn get builtAt => dateTime()();
+
+  /// Renouvellement semestriel prévu (date du fond, distincte de l'ETARE).
+  DateTimeColumn get renewAfter => dateTime()();
+
+  DateTimeColumn get installedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {packId};
+}

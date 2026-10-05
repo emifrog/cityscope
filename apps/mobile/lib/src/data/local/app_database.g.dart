@@ -7436,6 +7436,643 @@ class AccessEventOutboxCompanion extends UpdateCompanion<AccessEventRow> {
   }
 }
 
+class $InstalledBasemapsTable extends InstalledBasemaps
+    with TableInfo<$InstalledBasemapsTable, InstalledBasemapRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $InstalledBasemapsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _packIdMeta = const VerificationMeta('packId');
+  @override
+  late final GeneratedColumn<String> packId = GeneratedColumn<String>(
+    'pack_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sectorIdMeta = const VerificationMeta(
+    'sectorId',
+  );
+  @override
+  late final GeneratedColumn<String> sectorId = GeneratedColumn<String>(
+    'sector_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sectorNameMeta = const VerificationMeta(
+    'sectorName',
+  );
+  @override
+  late final GeneratedColumn<String> sectorName = GeneratedColumn<String>(
+    'sector_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _manifestHashMeta = const VerificationMeta(
+    'manifestHash',
+  );
+  @override
+  late final GeneratedColumn<String> manifestHash = GeneratedColumn<String>(
+    'manifest_hash',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _manifestTextMeta = const VerificationMeta(
+    'manifestText',
+  );
+  @override
+  late final GeneratedColumn<String> manifestText = GeneratedColumn<String>(
+    'manifest_text',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _totalBytesMeta = const VerificationMeta(
+    'totalBytes',
+  );
+  @override
+  late final GeneratedColumn<int> totalBytes = GeneratedColumn<int>(
+    'total_bytes',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _builtAtMeta = const VerificationMeta(
+    'builtAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> builtAt = GeneratedColumn<DateTime>(
+    'built_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _renewAfterMeta = const VerificationMeta(
+    'renewAfter',
+  );
+  @override
+  late final GeneratedColumn<DateTime> renewAfter = GeneratedColumn<DateTime>(
+    'renew_after',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _installedAtMeta = const VerificationMeta(
+    'installedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> installedAt = GeneratedColumn<DateTime>(
+    'installed_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    packId,
+    sectorId,
+    sectorName,
+    version,
+    manifestHash,
+    manifestText,
+    totalBytes,
+    builtAt,
+    renewAfter,
+    installedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'installed_basemaps';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<InstalledBasemapRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('pack_id')) {
+      context.handle(
+        _packIdMeta,
+        packId.isAcceptableOrUnknown(data['pack_id']!, _packIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_packIdMeta);
+    }
+    if (data.containsKey('sector_id')) {
+      context.handle(
+        _sectorIdMeta,
+        sectorId.isAcceptableOrUnknown(data['sector_id']!, _sectorIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sectorIdMeta);
+    }
+    if (data.containsKey('sector_name')) {
+      context.handle(
+        _sectorNameMeta,
+        sectorName.isAcceptableOrUnknown(data['sector_name']!, _sectorNameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sectorNameMeta);
+    }
+    if (data.containsKey('version')) {
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_versionMeta);
+    }
+    if (data.containsKey('manifest_hash')) {
+      context.handle(
+        _manifestHashMeta,
+        manifestHash.isAcceptableOrUnknown(
+          data['manifest_hash']!,
+          _manifestHashMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_manifestHashMeta);
+    }
+    if (data.containsKey('manifest_text')) {
+      context.handle(
+        _manifestTextMeta,
+        manifestText.isAcceptableOrUnknown(
+          data['manifest_text']!,
+          _manifestTextMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_manifestTextMeta);
+    }
+    if (data.containsKey('total_bytes')) {
+      context.handle(
+        _totalBytesMeta,
+        totalBytes.isAcceptableOrUnknown(data['total_bytes']!, _totalBytesMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_totalBytesMeta);
+    }
+    if (data.containsKey('built_at')) {
+      context.handle(
+        _builtAtMeta,
+        builtAt.isAcceptableOrUnknown(data['built_at']!, _builtAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_builtAtMeta);
+    }
+    if (data.containsKey('renew_after')) {
+      context.handle(
+        _renewAfterMeta,
+        renewAfter.isAcceptableOrUnknown(data['renew_after']!, _renewAfterMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_renewAfterMeta);
+    }
+    if (data.containsKey('installed_at')) {
+      context.handle(
+        _installedAtMeta,
+        installedAt.isAcceptableOrUnknown(
+          data['installed_at']!,
+          _installedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_installedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {packId};
+  @override
+  InstalledBasemapRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return InstalledBasemapRow(
+      packId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pack_id'],
+      )!,
+      sectorId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sector_id'],
+      )!,
+      sectorName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sector_name'],
+      )!,
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version'],
+      )!,
+      manifestHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}manifest_hash'],
+      )!,
+      manifestText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}manifest_text'],
+      )!,
+      totalBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}total_bytes'],
+      )!,
+      builtAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}built_at'],
+      )!,
+      renewAfter: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}renew_after'],
+      )!,
+      installedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}installed_at'],
+      )!,
+    );
+  }
+
+  @override
+  $InstalledBasemapsTable createAlias(String alias) {
+    return $InstalledBasemapsTable(attachedDatabase, alias);
+  }
+}
+
+class InstalledBasemapRow extends DataClass
+    implements Insertable<InstalledBasemapRow> {
+  final String packId;
+  final String sectorId;
+  final String sectorName;
+  final int version;
+  final String manifestHash;
+
+  /// Manifeste signé tel que reçu (emprise, source, fichiers).
+  final String manifestText;
+  final int totalBytes;
+  final DateTime builtAt;
+
+  /// Renouvellement semestriel prévu (date du fond, distincte de l'ETARE).
+  final DateTime renewAfter;
+  final DateTime installedAt;
+  const InstalledBasemapRow({
+    required this.packId,
+    required this.sectorId,
+    required this.sectorName,
+    required this.version,
+    required this.manifestHash,
+    required this.manifestText,
+    required this.totalBytes,
+    required this.builtAt,
+    required this.renewAfter,
+    required this.installedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['pack_id'] = Variable<String>(packId);
+    map['sector_id'] = Variable<String>(sectorId);
+    map['sector_name'] = Variable<String>(sectorName);
+    map['version'] = Variable<int>(version);
+    map['manifest_hash'] = Variable<String>(manifestHash);
+    map['manifest_text'] = Variable<String>(manifestText);
+    map['total_bytes'] = Variable<int>(totalBytes);
+    map['built_at'] = Variable<DateTime>(builtAt);
+    map['renew_after'] = Variable<DateTime>(renewAfter);
+    map['installed_at'] = Variable<DateTime>(installedAt);
+    return map;
+  }
+
+  InstalledBasemapsCompanion toCompanion(bool nullToAbsent) {
+    return InstalledBasemapsCompanion(
+      packId: Value(packId),
+      sectorId: Value(sectorId),
+      sectorName: Value(sectorName),
+      version: Value(version),
+      manifestHash: Value(manifestHash),
+      manifestText: Value(manifestText),
+      totalBytes: Value(totalBytes),
+      builtAt: Value(builtAt),
+      renewAfter: Value(renewAfter),
+      installedAt: Value(installedAt),
+    );
+  }
+
+  factory InstalledBasemapRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return InstalledBasemapRow(
+      packId: serializer.fromJson<String>(json['packId']),
+      sectorId: serializer.fromJson<String>(json['sectorId']),
+      sectorName: serializer.fromJson<String>(json['sectorName']),
+      version: serializer.fromJson<int>(json['version']),
+      manifestHash: serializer.fromJson<String>(json['manifestHash']),
+      manifestText: serializer.fromJson<String>(json['manifestText']),
+      totalBytes: serializer.fromJson<int>(json['totalBytes']),
+      builtAt: serializer.fromJson<DateTime>(json['builtAt']),
+      renewAfter: serializer.fromJson<DateTime>(json['renewAfter']),
+      installedAt: serializer.fromJson<DateTime>(json['installedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'packId': serializer.toJson<String>(packId),
+      'sectorId': serializer.toJson<String>(sectorId),
+      'sectorName': serializer.toJson<String>(sectorName),
+      'version': serializer.toJson<int>(version),
+      'manifestHash': serializer.toJson<String>(manifestHash),
+      'manifestText': serializer.toJson<String>(manifestText),
+      'totalBytes': serializer.toJson<int>(totalBytes),
+      'builtAt': serializer.toJson<DateTime>(builtAt),
+      'renewAfter': serializer.toJson<DateTime>(renewAfter),
+      'installedAt': serializer.toJson<DateTime>(installedAt),
+    };
+  }
+
+  InstalledBasemapRow copyWith({
+    String? packId,
+    String? sectorId,
+    String? sectorName,
+    int? version,
+    String? manifestHash,
+    String? manifestText,
+    int? totalBytes,
+    DateTime? builtAt,
+    DateTime? renewAfter,
+    DateTime? installedAt,
+  }) => InstalledBasemapRow(
+    packId: packId ?? this.packId,
+    sectorId: sectorId ?? this.sectorId,
+    sectorName: sectorName ?? this.sectorName,
+    version: version ?? this.version,
+    manifestHash: manifestHash ?? this.manifestHash,
+    manifestText: manifestText ?? this.manifestText,
+    totalBytes: totalBytes ?? this.totalBytes,
+    builtAt: builtAt ?? this.builtAt,
+    renewAfter: renewAfter ?? this.renewAfter,
+    installedAt: installedAt ?? this.installedAt,
+  );
+  InstalledBasemapRow copyWithCompanion(InstalledBasemapsCompanion data) {
+    return InstalledBasemapRow(
+      packId: data.packId.present ? data.packId.value : this.packId,
+      sectorId: data.sectorId.present ? data.sectorId.value : this.sectorId,
+      sectorName: data.sectorName.present
+          ? data.sectorName.value
+          : this.sectorName,
+      version: data.version.present ? data.version.value : this.version,
+      manifestHash: data.manifestHash.present
+          ? data.manifestHash.value
+          : this.manifestHash,
+      manifestText: data.manifestText.present
+          ? data.manifestText.value
+          : this.manifestText,
+      totalBytes: data.totalBytes.present
+          ? data.totalBytes.value
+          : this.totalBytes,
+      builtAt: data.builtAt.present ? data.builtAt.value : this.builtAt,
+      renewAfter: data.renewAfter.present
+          ? data.renewAfter.value
+          : this.renewAfter,
+      installedAt: data.installedAt.present
+          ? data.installedAt.value
+          : this.installedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InstalledBasemapRow(')
+          ..write('packId: $packId, ')
+          ..write('sectorId: $sectorId, ')
+          ..write('sectorName: $sectorName, ')
+          ..write('version: $version, ')
+          ..write('manifestHash: $manifestHash, ')
+          ..write('manifestText: $manifestText, ')
+          ..write('totalBytes: $totalBytes, ')
+          ..write('builtAt: $builtAt, ')
+          ..write('renewAfter: $renewAfter, ')
+          ..write('installedAt: $installedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    packId,
+    sectorId,
+    sectorName,
+    version,
+    manifestHash,
+    manifestText,
+    totalBytes,
+    builtAt,
+    renewAfter,
+    installedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is InstalledBasemapRow &&
+          other.packId == this.packId &&
+          other.sectorId == this.sectorId &&
+          other.sectorName == this.sectorName &&
+          other.version == this.version &&
+          other.manifestHash == this.manifestHash &&
+          other.manifestText == this.manifestText &&
+          other.totalBytes == this.totalBytes &&
+          other.builtAt == this.builtAt &&
+          other.renewAfter == this.renewAfter &&
+          other.installedAt == this.installedAt);
+}
+
+class InstalledBasemapsCompanion extends UpdateCompanion<InstalledBasemapRow> {
+  final Value<String> packId;
+  final Value<String> sectorId;
+  final Value<String> sectorName;
+  final Value<int> version;
+  final Value<String> manifestHash;
+  final Value<String> manifestText;
+  final Value<int> totalBytes;
+  final Value<DateTime> builtAt;
+  final Value<DateTime> renewAfter;
+  final Value<DateTime> installedAt;
+  final Value<int> rowid;
+  const InstalledBasemapsCompanion({
+    this.packId = const Value.absent(),
+    this.sectorId = const Value.absent(),
+    this.sectorName = const Value.absent(),
+    this.version = const Value.absent(),
+    this.manifestHash = const Value.absent(),
+    this.manifestText = const Value.absent(),
+    this.totalBytes = const Value.absent(),
+    this.builtAt = const Value.absent(),
+    this.renewAfter = const Value.absent(),
+    this.installedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  InstalledBasemapsCompanion.insert({
+    required String packId,
+    required String sectorId,
+    required String sectorName,
+    required int version,
+    required String manifestHash,
+    required String manifestText,
+    required int totalBytes,
+    required DateTime builtAt,
+    required DateTime renewAfter,
+    required DateTime installedAt,
+    this.rowid = const Value.absent(),
+  }) : packId = Value(packId),
+       sectorId = Value(sectorId),
+       sectorName = Value(sectorName),
+       version = Value(version),
+       manifestHash = Value(manifestHash),
+       manifestText = Value(manifestText),
+       totalBytes = Value(totalBytes),
+       builtAt = Value(builtAt),
+       renewAfter = Value(renewAfter),
+       installedAt = Value(installedAt);
+  static Insertable<InstalledBasemapRow> custom({
+    Expression<String>? packId,
+    Expression<String>? sectorId,
+    Expression<String>? sectorName,
+    Expression<int>? version,
+    Expression<String>? manifestHash,
+    Expression<String>? manifestText,
+    Expression<int>? totalBytes,
+    Expression<DateTime>? builtAt,
+    Expression<DateTime>? renewAfter,
+    Expression<DateTime>? installedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (packId != null) 'pack_id': packId,
+      if (sectorId != null) 'sector_id': sectorId,
+      if (sectorName != null) 'sector_name': sectorName,
+      if (version != null) 'version': version,
+      if (manifestHash != null) 'manifest_hash': manifestHash,
+      if (manifestText != null) 'manifest_text': manifestText,
+      if (totalBytes != null) 'total_bytes': totalBytes,
+      if (builtAt != null) 'built_at': builtAt,
+      if (renewAfter != null) 'renew_after': renewAfter,
+      if (installedAt != null) 'installed_at': installedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  InstalledBasemapsCompanion copyWith({
+    Value<String>? packId,
+    Value<String>? sectorId,
+    Value<String>? sectorName,
+    Value<int>? version,
+    Value<String>? manifestHash,
+    Value<String>? manifestText,
+    Value<int>? totalBytes,
+    Value<DateTime>? builtAt,
+    Value<DateTime>? renewAfter,
+    Value<DateTime>? installedAt,
+    Value<int>? rowid,
+  }) {
+    return InstalledBasemapsCompanion(
+      packId: packId ?? this.packId,
+      sectorId: sectorId ?? this.sectorId,
+      sectorName: sectorName ?? this.sectorName,
+      version: version ?? this.version,
+      manifestHash: manifestHash ?? this.manifestHash,
+      manifestText: manifestText ?? this.manifestText,
+      totalBytes: totalBytes ?? this.totalBytes,
+      builtAt: builtAt ?? this.builtAt,
+      renewAfter: renewAfter ?? this.renewAfter,
+      installedAt: installedAt ?? this.installedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (packId.present) {
+      map['pack_id'] = Variable<String>(packId.value);
+    }
+    if (sectorId.present) {
+      map['sector_id'] = Variable<String>(sectorId.value);
+    }
+    if (sectorName.present) {
+      map['sector_name'] = Variable<String>(sectorName.value);
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (manifestHash.present) {
+      map['manifest_hash'] = Variable<String>(manifestHash.value);
+    }
+    if (manifestText.present) {
+      map['manifest_text'] = Variable<String>(manifestText.value);
+    }
+    if (totalBytes.present) {
+      map['total_bytes'] = Variable<int>(totalBytes.value);
+    }
+    if (builtAt.present) {
+      map['built_at'] = Variable<DateTime>(builtAt.value);
+    }
+    if (renewAfter.present) {
+      map['renew_after'] = Variable<DateTime>(renewAfter.value);
+    }
+    if (installedAt.present) {
+      map['installed_at'] = Variable<DateTime>(installedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InstalledBasemapsCompanion(')
+          ..write('packId: $packId, ')
+          ..write('sectorId: $sectorId, ')
+          ..write('sectorName: $sectorName, ')
+          ..write('version: $version, ')
+          ..write('manifestHash: $manifestHash, ')
+          ..write('manifestText: $manifestText, ')
+          ..write('totalBytes: $totalBytes, ')
+          ..write('builtAt: $builtAt, ')
+          ..write('renewAfter: $renewAfter, ')
+          ..write('installedAt: $installedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -7457,11 +8094,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SensitiveFilesTable sensitiveFiles = $SensitiveFilesTable(this);
   late final $AccessEventOutboxTable accessEventOutbox =
       $AccessEventOutboxTable(this);
+  late final $InstalledBasemapsTable installedBasemaps =
+      $InstalledBasemapsTable(this);
   late final LocalMetaDao localMetaDao = LocalMetaDao(this as AppDatabase);
   late final SyncStateDao syncStateDao = SyncStateDao(this as AppDatabase);
   late final OfflineDao offlineDao = OfflineDao(this as AppDatabase);
   late final ReportsDao reportsDao = ReportsDao(this as AppDatabase);
   late final SensitiveDao sensitiveDao = SensitiveDao(this as AppDatabase);
+  late final BasemapDao basemapDao = BasemapDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -7480,6 +8120,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     sensitiveSites,
     sensitiveFiles,
     accessEventOutbox,
+    installedBasemaps,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -11490,6 +12131,337 @@ typedef $$AccessEventOutboxTableProcessedTableManager =
       AccessEventRow,
       PrefetchHooks Function()
     >;
+typedef $$InstalledBasemapsTableCreateCompanionBuilder =
+    InstalledBasemapsCompanion Function({
+      required String packId,
+      required String sectorId,
+      required String sectorName,
+      required int version,
+      required String manifestHash,
+      required String manifestText,
+      required int totalBytes,
+      required DateTime builtAt,
+      required DateTime renewAfter,
+      required DateTime installedAt,
+      Value<int> rowid,
+    });
+typedef $$InstalledBasemapsTableUpdateCompanionBuilder =
+    InstalledBasemapsCompanion Function({
+      Value<String> packId,
+      Value<String> sectorId,
+      Value<String> sectorName,
+      Value<int> version,
+      Value<String> manifestHash,
+      Value<String> manifestText,
+      Value<int> totalBytes,
+      Value<DateTime> builtAt,
+      Value<DateTime> renewAfter,
+      Value<DateTime> installedAt,
+      Value<int> rowid,
+    });
+
+class $$InstalledBasemapsTableFilterComposer
+    extends Composer<_$AppDatabase, $InstalledBasemapsTable> {
+  $$InstalledBasemapsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get packId => $composableBuilder(
+    column: $table.packId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sectorId => $composableBuilder(
+    column: $table.sectorId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sectorName => $composableBuilder(
+    column: $table.sectorName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get manifestHash => $composableBuilder(
+    column: $table.manifestHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get manifestText => $composableBuilder(
+    column: $table.manifestText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get totalBytes => $composableBuilder(
+    column: $table.totalBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get builtAt => $composableBuilder(
+    column: $table.builtAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get renewAfter => $composableBuilder(
+    column: $table.renewAfter,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get installedAt => $composableBuilder(
+    column: $table.installedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$InstalledBasemapsTableOrderingComposer
+    extends Composer<_$AppDatabase, $InstalledBasemapsTable> {
+  $$InstalledBasemapsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get packId => $composableBuilder(
+    column: $table.packId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sectorId => $composableBuilder(
+    column: $table.sectorId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sectorName => $composableBuilder(
+    column: $table.sectorName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get manifestHash => $composableBuilder(
+    column: $table.manifestHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get manifestText => $composableBuilder(
+    column: $table.manifestText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get totalBytes => $composableBuilder(
+    column: $table.totalBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get builtAt => $composableBuilder(
+    column: $table.builtAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get renewAfter => $composableBuilder(
+    column: $table.renewAfter,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get installedAt => $composableBuilder(
+    column: $table.installedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$InstalledBasemapsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $InstalledBasemapsTable> {
+  $$InstalledBasemapsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get packId =>
+      $composableBuilder(column: $table.packId, builder: (column) => column);
+
+  GeneratedColumn<String> get sectorId =>
+      $composableBuilder(column: $table.sectorId, builder: (column) => column);
+
+  GeneratedColumn<String> get sectorName => $composableBuilder(
+    column: $table.sectorName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<String> get manifestHash => $composableBuilder(
+    column: $table.manifestHash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get manifestText => $composableBuilder(
+    column: $table.manifestText,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get totalBytes => $composableBuilder(
+    column: $table.totalBytes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get builtAt =>
+      $composableBuilder(column: $table.builtAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get renewAfter => $composableBuilder(
+    column: $table.renewAfter,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get installedAt => $composableBuilder(
+    column: $table.installedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$InstalledBasemapsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $InstalledBasemapsTable,
+          InstalledBasemapRow,
+          $$InstalledBasemapsTableFilterComposer,
+          $$InstalledBasemapsTableOrderingComposer,
+          $$InstalledBasemapsTableAnnotationComposer,
+          $$InstalledBasemapsTableCreateCompanionBuilder,
+          $$InstalledBasemapsTableUpdateCompanionBuilder,
+          (
+            InstalledBasemapRow,
+            BaseReferences<
+              _$AppDatabase,
+              $InstalledBasemapsTable,
+              InstalledBasemapRow
+            >,
+          ),
+          InstalledBasemapRow,
+          PrefetchHooks Function()
+        > {
+  $$InstalledBasemapsTableTableManager(
+    _$AppDatabase db,
+    $InstalledBasemapsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$InstalledBasemapsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$InstalledBasemapsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$InstalledBasemapsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> packId = const Value.absent(),
+                Value<String> sectorId = const Value.absent(),
+                Value<String> sectorName = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<String> manifestHash = const Value.absent(),
+                Value<String> manifestText = const Value.absent(),
+                Value<int> totalBytes = const Value.absent(),
+                Value<DateTime> builtAt = const Value.absent(),
+                Value<DateTime> renewAfter = const Value.absent(),
+                Value<DateTime> installedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => InstalledBasemapsCompanion(
+                packId: packId,
+                sectorId: sectorId,
+                sectorName: sectorName,
+                version: version,
+                manifestHash: manifestHash,
+                manifestText: manifestText,
+                totalBytes: totalBytes,
+                builtAt: builtAt,
+                renewAfter: renewAfter,
+                installedAt: installedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String packId,
+                required String sectorId,
+                required String sectorName,
+                required int version,
+                required String manifestHash,
+                required String manifestText,
+                required int totalBytes,
+                required DateTime builtAt,
+                required DateTime renewAfter,
+                required DateTime installedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => InstalledBasemapsCompanion.insert(
+                packId: packId,
+                sectorId: sectorId,
+                sectorName: sectorName,
+                version: version,
+                manifestHash: manifestHash,
+                manifestText: manifestText,
+                totalBytes: totalBytes,
+                builtAt: builtAt,
+                renewAfter: renewAfter,
+                installedAt: installedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$InstalledBasemapsTable, InstalledBasemapRow>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $InstalledBasemapsTable,
+                    InstalledBasemapRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$InstalledBasemapsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $InstalledBasemapsTable,
+      InstalledBasemapRow,
+      $$InstalledBasemapsTableFilterComposer,
+      $$InstalledBasemapsTableOrderingComposer,
+      $$InstalledBasemapsTableAnnotationComposer,
+      $$InstalledBasemapsTableCreateCompanionBuilder,
+      $$InstalledBasemapsTableUpdateCompanionBuilder,
+      (
+        InstalledBasemapRow,
+        BaseReferences<
+          _$AppDatabase,
+          $InstalledBasemapsTable,
+          InstalledBasemapRow
+        >,
+      ),
+      InstalledBasemapRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -11520,4 +12492,6 @@ class $AppDatabaseManager {
       $$SensitiveFilesTableTableManager(_db, _db.sensitiveFiles);
   $$AccessEventOutboxTableTableManager get accessEventOutbox =>
       $$AccessEventOutboxTableTableManager(_db, _db.accessEventOutbox);
+  $$InstalledBasemapsTableTableManager get installedBasemaps =>
+      $$InstalledBasemapsTableTableManager(_db, _db.installedBasemaps);
 }

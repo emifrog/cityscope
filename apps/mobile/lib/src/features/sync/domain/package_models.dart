@@ -1,4 +1,5 @@
 import 'package:etare_ops/src/core/json/json_reader.dart';
+import 'package:etare_ops/src/features/basemaps/domain/basemap_models.dart';
 import 'package:etare_ops/src/features/sync/domain/removal_notice.dart';
 import 'package:flutter/foundation.dart';
 
@@ -116,6 +117,7 @@ final class SyncCatalog {
     this.minAppVersion,
     this.withdrawals = const [],
     this.onDemand = const [],
+    this.basemaps = const [],
   });
 
   factory SyncCatalog.fromJson(JsonMap json) {
@@ -158,6 +160,13 @@ final class SyncCatalog {
               for (final entry in json.requireObjectList('withdrawals'))
                 RemovalNotice.fromJson(entry),
             ],
+      // Absent des catalogues antérieurs au Sprint 11 (ADR-024).
+      basemaps: json['basemaps'] == null
+          ? const []
+          : [
+              for (final entry in json.requireObjectList('basemaps'))
+                CatalogBasemap.fromJson(entry),
+            ],
     );
   }
 
@@ -183,6 +192,9 @@ final class SyncCatalog {
   /// Sites « restreints » proposés à la demande (PER-02) : jamais installés
   /// en masse, ouverts un à un avec le réseau et le code de l'agent.
   final List<CatalogEntry> onDemand;
+
+  /// Fonds de carte en vigueur pour les secteurs de la tablette (ADR-024).
+  final List<CatalogBasemap> basemaps;
 }
 
 /// Fichier d'un paquet, identifié par son empreinte.

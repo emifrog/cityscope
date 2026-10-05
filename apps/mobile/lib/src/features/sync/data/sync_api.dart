@@ -157,6 +157,54 @@ final class SyncApi {
     );
   }
 
+  /// Manifeste signé d'un fond de carte en vigueur (ADR-024).
+  Future<SignedPayload> basemap(DeviceCredentials device, String packId) async {
+    final json = await _signed(device, 'GET', '/sync/basemaps/$packId');
+    return SignedPayload(
+      json.requireString('manifest'),
+      SignatureEnvelope.fromJson(json.requireObject('signature')),
+    );
+  }
+
+  /// URL temporaires des parties d'un fond, par empreinte.
+  Future<Map<String, Uri>> basemapDownloadUrls(
+    DeviceCredentials device,
+    String packId,
+    List<String> hashes,
+  ) async {
+    final urls = <String, Uri>{};
+    for (var start = 0; start < hashes.length; start += 500) {
+      final chunk = hashes.sublist(
+        start,
+        start + 500 > hashes.length ? hashes.length : start + 500,
+      );
+      final json = await _signed(
+        device,
+        'POST',
+        '/sync/basemaps/$packId/downloads',
+        body: {'sha256': chunk},
+      );
+      for (final file in json.requireObjectList('files')) {
+        final url = Uri.tryParse(file.requireString('url'));
+        if (url != null) urls[file.requireString('sha256')] = url;
+      }
+    }
+    return urls;
+  }
+
+  /// Fonds complets sur la tablette (l'administration voit qui est à jour).
+  Future<void> basemapReceipt(
+    DeviceCredentials device,
+    List<String> installed,
+  ) async {
+    await _signed(
+      device,
+      'POST',
+      '/sync/basemaps/receipts',
+      body: {'installed': installed},
+    );
+  }
+
   /// Remonte des consultations hors ligne de sites sensibles (journal,
   /// idempotent par identifiant) ; renvoie le nombre reçu.
   Future<int> submitAccessEvents(

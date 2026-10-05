@@ -13,6 +13,7 @@ import 'generated/schema_v3.dart' as v3;
 import 'generated/schema_v4.dart' as v4;
 import 'generated/schema_v5.dart' as v5;
 import 'generated/schema_v6.dart' as v6;
+import 'generated/schema_v7.dart' as v7;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -252,6 +253,36 @@ void main() {
           );
           expect(await newDb.select(newDb.onDemandSites).get(), isEmpty);
           expect(await newDb.select(newDb.sensitiveSites).get(), isEmpty);
+        },
+      );
+    },
+  );
+
+  test(
+    'la migration v6 → v7 conserve les préférences, sans fond de carte',
+    () async {
+      const oldLocalMetaData = [
+        v6.LocalMetaData(key: 'active_tenant_id', value: 'tenant-06'),
+      ];
+      const expectedNewLocalMetaData = [
+        v7.LocalMetaData(key: 'active_tenant_id', value: 'tenant-06'),
+      ];
+
+      await verifier.testWithDataIntegrity(
+        oldVersion: 6,
+        newVersion: 7,
+        createOld: v6.DatabaseAtV6.new,
+        createNew: v7.DatabaseAtV7.new,
+        openTestedDatabase: AppDatabase.new,
+        createItems: (batch, oldDb) {
+          batch.insertAll(oldDb.localMeta, oldLocalMetaData);
+        },
+        validateItems: (newDb) async {
+          expect(
+            expectedNewLocalMetaData,
+            await newDb.select(newDb.localMeta).get(),
+          );
+          expect(await newDb.select(newDb.installedBasemaps).get(), isEmpty);
         },
       );
     },

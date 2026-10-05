@@ -7,6 +7,7 @@ import 'package:etare_ops/src/core/errors/error_messages.dart';
 import 'package:etare_ops/src/core/logging/app_logger.dart';
 import 'package:etare_ops/src/core/network/dio_factory.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
+import 'package:etare_ops/src/features/basemaps/application/basemap_providers.dart';
 import 'package:etare_ops/src/features/reports/application/report_providers.dart';
 import 'package:etare_ops/src/features/sensitive/application/sensitive_providers.dart';
 import 'package:etare_ops/src/features/sync/application/enrollment_service.dart';
@@ -74,6 +75,7 @@ final syncServiceProvider = Provider<SyncService>((ref) {
     state: database.syncStateDao,
     identities: ref.watch(deviceIdentityStoreProvider),
     trustedKeys: ref.watch(appConfigProvider).trustedKeys,
+    basemaps: ref.watch(basemapSyncProvider),
     clock: ref.watch(clockProvider),
   );
 });
@@ -184,11 +186,13 @@ class SyncController extends Notifier<SyncRunState> {
                 ? ref.read(backgroundDownloadBudgetProvider)
                 : null,
             holdsLease: () => leases.tryAcquireLease(_owner, clock(), leaseTtl),
+            // Fonds de carte de plus de 50 Mo : en Wi-Fi seulement (ADR-024).
+            allowLargeBasemaps: trigger == SyncTrigger.unmetered,
           );
       if (report is SyncPurged) ref.invalidate(deviceIdentityProvider);
       state = SyncRunFinished(report);
-      if (report case SyncCompleted(:final deferredBytes)
-          when deferredBytes > 0) {
+      if (report case SyncCompleted(:final deferredBytes, :final basemaps)
+          when deferredBytes > 0 || (basemaps?.deferredBytes ?? 0) > 0) {
         // Trop lourd pour le réseau mobile : la suite attend le Wi-Fi.
         await ref.read(backgroundSchedulerProvider).scheduleUnmetered();
       }

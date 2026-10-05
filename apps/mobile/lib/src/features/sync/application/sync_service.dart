@@ -13,6 +13,7 @@ import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/data/local/daos/offline_dao.dart';
 import 'package:etare_ops/src/data/local/daos/reports_dao.dart';
 import 'package:etare_ops/src/data/local/daos/sync_state_dao.dart';
+import 'package:etare_ops/src/features/basemaps/application/basemap_sync.dart';
 import 'package:etare_ops/src/features/sync/application/package_verification.dart';
 import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
 import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
@@ -27,7 +28,7 @@ export 'package:etare_ops/src/features/sync/application/package_verification.dar
     show SyncIntegrityException;
 
 /// Étape en cours, pour l'affichage de la progression (OFF-01).
-enum SyncStep { catalog, downloading, installing, receipt }
+enum SyncStep { catalog, downloading, installing, receipt, basemaps }
 
 @immutable
 final class SyncProgress {
@@ -89,6 +90,7 @@ final class SyncCompleted extends SyncReport {
     required this.downloadedBytes,
     required this.interrupted,
     this.deferredBytes = 0,
+    this.basemaps,
   });
 
   final int installed;
@@ -104,6 +106,10 @@ final class SyncCompleted extends SyncReport {
   /// dépassaient le budget de téléchargement (synchronisation en arrière-plan,
   /// SYN-01) ; 0 si rien n'a été reporté.
   final int deferredBytes;
+
+  /// Passage sur les fonds de carte (ADR-024) ; null s'il n'a pas eu lieu.
+  /// Il ne rend jamais la synchronisation des ETARE incomplète.
+  final BasemapSyncReport? basemaps;
 
   bool get complete => failures.isEmpty && !interrupted && deferredBytes == 0;
 }
@@ -149,6 +155,7 @@ final class SyncService {
     required this._state,
     required this._identities,
     required this._trustedKeys,
+    this._basemaps,
     this._clock = DateTime.now,
   });
 
@@ -160,6 +167,9 @@ final class SyncService {
   final SyncStateDao _state;
   final DeviceIdentityStore _identities;
   final TrustedKeys _trustedKeys;
+
+  /// Fonds de carte de la tablette (ADR-024) ; null : pas de carte.
+  final BasemapSync? _basemaps;
   final DateTime Function() _clock;
 
   DateTime get _now => _clock().toUtc();
@@ -167,6 +177,9 @@ final class SyncService {
   /// Confirme, juste avant d'activer, que ce moteur mène toujours la
   /// synchronisation (bail partagé entre moteurs, SYN-01).
   Future<bool> Function()? _holdsLease;
+
+  /// Synchronisation en Wi-Fi : les fonds de plus de 50 Mo sont téléchargés.
+  bool _allowLargeBasemaps = false;
 
   Future<void> _activate(ActivationRecord activation) async {
     final holdsLease = _holdsLease;
@@ -185,8 +198,10 @@ final class SyncService {
     void Function(SyncProgress progress)? onProgress,
     int? maxDownloadBytes,
     Future<bool> Function()? holdsLease,
+    bool allowLargeBasemaps = false,
   }) async {
     _holdsLease = holdsLease;
+    _allowLargeBasemaps = allowLargeBasemaps;
     final identity = await _identities.read();
     if (identity == null) return const SyncNotEnrolled();
     if (!_trustedKeys.has(KeyPurpose.publication) ||
@@ -268,10 +283,12 @@ final class SyncService {
     }
   }
 
-  /// Révocation (OFF-04) : données installées, état et identité effacés.
+  /// Révocation (OFF-04) : données installées, fonds de carte, état et
+  /// identité effacés.
   Future<void> purge() async {
     await _reports.purgeAll();
     await _offline.purgeAll();
+    await _basemaps?.purge();
     await _identities.clear();
   }
 
@@ -408,6 +425,9 @@ final class SyncService {
           : failures.firstOrNull?.code ??
                 (deferredBytes > 0 ? 'DOWNLOAD_DEFERRED' : null),
     );
+    final basemaps = interrupted
+        ? null
+        : await _synchronizeBasemaps(device, catalog, onProgress);
     return SyncCompleted(
       installed: prepared.length,
       removed: plan.toRemove.length,
@@ -416,7 +436,45 @@ final class SyncService {
       downloadedBytes: downloadedBytes,
       interrupted: interrupted,
       deferredBytes: deferredBytes,
+      basemaps: basemaps,
     );
+  }
+
+  /// Fonds de carte du catalogue, après les ETARE (ADR-024) : un incident
+  /// sur un fond ne remet jamais en cause les fiches installées.
+  Future<BasemapSyncReport?> _synchronizeBasemaps(
+    DeviceCredentials device,
+    SyncCatalog catalog,
+    void Function(SyncProgress progress) onProgress,
+  ) async {
+    final basemaps = _basemaps;
+    if (basemaps == null) return null;
+    try {
+      return await basemaps.synchronize(
+        device,
+        catalog.basemaps,
+        allowLarge: _allowLargeBasemaps,
+        onProgress: (progress) => onProgress(
+          SyncProgress(
+            step: SyncStep.basemaps,
+            doneBytes: progress.doneBytes,
+            totalBytes: progress.totalBytes,
+            siteName: progress.sectorName,
+          ),
+        ),
+      );
+    } on ApiException catch (error) {
+      if (error.code == ApiErrorCode.deviceRevoked ||
+          error.code == ApiErrorCode.deviceNotEnrolled ||
+          error.code == ApiErrorCode.deviceProofInvalid) {
+        rethrow;
+      }
+      _logger.warning('Fonds de carte non synchronisés.', error: error);
+      return null;
+    } on Object catch (error) {
+      _logger.warning('Fonds de carte non synchronisés.', error: error);
+      return null;
+    }
   }
 
   /// Application trop ancienne pour ce catalogue (SYN-02, architecture §12) :

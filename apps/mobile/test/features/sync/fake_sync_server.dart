@@ -92,6 +92,115 @@ final class FakePublication {
   });
 }
 
+/// Fond de carte d'un secteur, tel que le serveur le distribue (ADR-024) :
+/// fichier des tuiles en parties de [partSize] octets, style, pictogrammes.
+final class FakeBasemap {
+  FakeBasemap({
+    required this.packId,
+    required this.sectorId,
+    required this.sectorName,
+    required this.version,
+    required this.tiles,
+    this.partSize = 4,
+    this.style = '{"version":8,"sources":{}}',
+    this.extra = const {},
+    this.manifestVersion = 1,
+    this.tenant = tenantId,
+  });
+
+  final String packId;
+  final String sectorId;
+  final String sectorName;
+  final int version;
+  final List<int> tiles;
+  final int partSize;
+  final String style;
+
+  /// Autres fichiers (pictogrammes), par nom.
+  final Map<String, List<int>> extra;
+  final int manifestVersion;
+  final String tenant;
+
+  late final List<List<int>> parts = [
+    for (var start = 0; start < tiles.length; start += partSize)
+      tiles.sublist(
+        start,
+        start + partSize > tiles.length ? tiles.length : start + partSize,
+      ),
+  ];
+
+  late final Map<String, List<int>> smallFiles = {
+    'style.json': utf8.encode(style),
+    ...extra,
+  };
+
+  /// Tout ce que le stockage sert pour ce fond, par empreinte.
+  late final Map<String, List<int>> objects = {
+    for (final part in parts) sha256Hex(part): part,
+    for (final bytes in smallFiles.values) sha256Hex(bytes): bytes,
+  };
+
+  int get totalBytes =>
+      tiles.length +
+      smallFiles.values.fold<int>(0, (total, bytes) => total + bytes.length);
+
+  late final String manifest = jsonEncode({
+    'manifest_version': manifestVersion,
+    'kind': 'basemap',
+    'pack_id': packId,
+    'tenant_id': tenant,
+    'sector_id': sectorId,
+    'sector_name': sectorName,
+    'version': version,
+    'source': {
+      'id': 'synthetic',
+      'product': 'Fond d’essai synthétique',
+      'attribution': 'Fond d’essai FireScape — aucune donnée IGN',
+      'licence_name': 'Essai',
+      'licence_url': 'https://example.org/licence',
+      'synthetic': true,
+    },
+    'built_at': '2026-10-01T08:00:00.000Z',
+    'renew_after': '2027-04-01T08:00:00.000Z',
+    'coverage': {
+      'bounds': [7.18, 43.66, 7.32, 43.75],
+      'center': [7.2518, 43.7079],
+      'general_max_zoom': 14,
+      'detail_max_zoom': 18,
+      'detail_radius_m': 500,
+      'detail_points': [
+        [7.2518, 43.7079],
+      ],
+    },
+    'tiles': 'tiles.pmtiles',
+    'style': 'style.json',
+    'tile_count': 42,
+    'total_bytes': totalBytes,
+    'files': [
+      {
+        'path': 'tiles.pmtiles',
+        'sha256': sha256Hex(tiles),
+        'size_bytes': tiles.length,
+        'media_type': 'application/vnd.pmtiles',
+        'parts': [
+          for (final part in parts)
+            {'sha256': sha256Hex(part), 'size_bytes': part.length},
+        ],
+      },
+      for (final MapEntry(:key, :value) in smallFiles.entries)
+        {
+          'path': key,
+          'sha256': sha256Hex(value),
+          'size_bytes': value.length,
+          'media_type': key.endsWith('.png') ? 'image/png' : 'application/json',
+          'parts': [
+            {'sha256': sha256Hex(value), 'size_bytes': value.length},
+          ],
+        },
+    ],
+  });
+}
+
 /// Signalement reçu par le serveur simulé (OPS-04).
 final class FakeReport {
   FakeReport({required this.id, required this.body, required this.photos});
@@ -181,6 +290,19 @@ final class FakeSyncServer {
 
   /// Consultations remontées par la tablette, par identifiant (journal).
   final Map<String, Map<String, Object?>> accessEvents = {};
+
+  /// Fonds de carte en vigueur, par secteur (ADR-024).
+  final Map<String, FakeBasemap> basemaps = {};
+
+  /// Fond servi avec une signature faite par une autre clé.
+  bool signBasemapWithCatalogKey = false;
+  final List<String> basemapRequests = [];
+  final List<List<String>> basemapReceipts = [];
+
+  void publishBasemap(FakeBasemap basemap) {
+    basemaps[basemap.sectorId] = basemap;
+    generation++;
+  }
 
   final List<String> packageRequests = [];
   final List<String> downloadedFiles = [];
@@ -282,6 +404,19 @@ final class FakeSyncServer {
         'on_demand': [
           for (final publication in onDemand.values) _entryOf(publication),
         ],
+        'basemaps': [
+          for (final basemap in basemaps.values)
+            {
+              'pack_id': basemap.packId,
+              'sector_id': basemap.sectorId,
+              'sector_name': basemap.sectorName,
+              'version': basemap.version,
+              'manifest_hash': sha256OfText(basemap.manifest),
+              'total_bytes': basemap.totalBytes,
+              'built_at': '2026-10-01T08:00:00.000Z',
+              'renew_after': '2027-04-01T08:00:00.000Z',
+            },
+        ],
       });
       final key = signCatalogWithPublicationKey ? _publicationKey : _catalogKey;
       return _json(200, {
@@ -316,6 +451,61 @@ final class FakeSyncServer {
         'access_expires_at': onDemand.containsKey(publication.siteId)
             ? serverClock.add(const Duration(hours: 24)).toIso8601String()
             : null,
+      });
+    }
+
+    if (path.endsWith('/sync/basemaps/receipts') && options.method == 'POST') {
+      final body = jsonDecode(rawBody!) as Map<String, Object?>;
+      final installed = (body['installed']! as List<Object?>).cast<String>();
+      basemapReceipts.add(installed);
+      return _json(200, {
+        'received_at': serverClock.toIso8601String(),
+        'installed': installed.length,
+      });
+    }
+
+    final basemap = RegExp(r'/sync/basemaps/([^/]+)$').firstMatch(path);
+    if (basemap != null && options.method == 'GET') {
+      final served = basemaps.values
+          .where((candidate) => candidate.packId == basemap.group(1))
+          .firstOrNull;
+      if (served == null) return _error(404, 'NOT_FOUND');
+      basemapRequests.add(served.packId);
+      return _json(200, {
+        'manifest': served.manifest,
+        'signature': {
+          'algorithm': 'Ed25519',
+          'key_id': 'pub-test',
+          'signature': await _sign(
+            signBasemapWithCatalogKey ? _catalogKey : _publicationKey,
+            SignatureContexts.basemap,
+            served.manifest,
+          ),
+        },
+      });
+    }
+
+    final basemapDownloads = RegExp(r'/sync/basemaps/([^/]+)/downloads$')
+        .firstMatch(path);
+    if (basemapDownloads != null) {
+      final body = jsonDecode(rawBody!) as Map<String, Object?>;
+      final hashes = (body['sha256']! as List<Object?>).cast<String>();
+      final served = basemaps.values
+          .where((candidate) => candidate.packId == basemapDownloads.group(1))
+          .firstOrNull;
+      return _json(200, {
+        'files': [
+          if (served != null)
+            for (final hash in hashes)
+              if (served.objects.containsKey(hash))
+                {
+                  'sha256': hash,
+                  'url': 'https://storage.test/$hash',
+                  'expires_at': serverClock
+                      .add(const Duration(minutes: 5))
+                      .toIso8601String(),
+                },
+        ],
       });
     }
 
@@ -498,6 +688,16 @@ final class FakeSyncServer {
               : bytes;
           return ResponseBody.fromBytes(Uint8List.fromList(served), 200);
         }
+      }
+    }
+    for (final basemap in basemaps.values) {
+      final bytes = basemap.objects[hash];
+      if (bytes != null) {
+        downloadedFiles.add(hash);
+        final served = corruptedFiles.contains(hash)
+            ? [bytes.first ^ 0xff, ...bytes.skip(1)]
+            : bytes;
+        return ResponseBody.fromBytes(Uint8List.fromList(served), 200);
       }
     }
     return ResponseBody.fromString('', 404);

@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:etare_ops/src/data/local/daos/basemap_dao.dart';
 import 'package:etare_ops/src/data/local/daos/local_meta_dao.dart';
 import 'package:etare_ops/src/data/local/daos/offline_dao.dart';
 import 'package:etare_ops/src/data/local/daos/reports_dao.dart';
@@ -28,15 +29,23 @@ part 'app_database.g.dart';
     SensitiveSites,
     SensitiveFiles,
     AccessEventOutbox,
+    InstalledBasemaps,
   ],
-  daos: [LocalMetaDao, SyncStateDao, OfflineDao, ReportsDao, SensitiveDao],
+  daos: [
+    LocalMetaDao,
+    SyncStateDao,
+    OfflineDao,
+    ReportsDao,
+    SensitiveDao,
+    BasemapDao,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   /// Incrémenter à chaque évolution du schéma, puis :
   /// `dart run drift_dev make-migrations` (instantané + tests générés).
-  static const currentSchemaVersion = 6;
+  static const currentSchemaVersion = 7;
 
   @override
   int get schemaVersion => currentSchemaVersion;
@@ -49,6 +58,7 @@ class AppDatabase extends _$AppDatabase {
     4: _migrateToV4,
     5: _migrateToV5,
     6: _migrateToV6,
+    7: _migrateToV7,
   };
 
   /// v2 (Sprint 4) : contenu hors ligne installé et état de synchronisation
@@ -97,6 +107,11 @@ class AppDatabase extends _$AppDatabase {
     await m.createTable(db.sensitiveSites);
     await m.createTable(db.sensitiveFiles);
     await m.createTable(db.accessEventOutbox);
+  }
+
+  /// v7 (Sprint 11) : fonds de carte installés, un par secteur (ADR-024).
+  static Future<void> _migrateToV7(Migrator m, AppDatabase db) async {
+    await m.createTable(db.installedBasemaps);
   }
 
   @override
