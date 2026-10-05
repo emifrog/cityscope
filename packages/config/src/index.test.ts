@@ -48,13 +48,74 @@ describe('environment parsing', () => {
   });
 });
 
-describe('signing keys (ADR-015)', () => {
+/** What a shared environment needs for its key set (SEC-04). */
+const KEYSET = { DISTRIBUTION_KEYSET_FILE: '/run/secrets/keyset.json', DISTRIBUTION_ROOT_KEYS: 'root:r:k' };
+
+describe('signing keys (ADR-015, SEC-04)', () => {
   const api = { DATABASE_URL: 'postgresql://etare_api:pw@db:5432/etare', SUPABASE_URL: 'https://auth.example.org' };
   const worker = { WORKER_DATABASE_URL: 'postgresql://etare_worker:pw@db:5432/etare' };
 
   it('are optional in development: distribution is simply off', () => {
-    expect(readApiEnv(api).catalogSigningKey).toBeNull();
-    expect(readWorkerEnv(worker).publicationSigningKey).toBeNull();
+    expect(readApiEnv(api).catalogSigning).toBeNull();
+    expect(readWorkerEnv(worker).publicationSigning).toBeNull();
+    expect(readApiEnv(api).keyset).toBeNull();
+  });
+
+  it('come from the environment, a secret file or a Transit key, one source at a time', () => {
+    expect(readApiEnv({ ...api, CATALOG_SIGNING_KEY: 'k' }).catalogSigning).toEqual({
+      kind: 'environment',
+      value: 'k',
+    });
+    expect(readWorkerEnv({ ...worker, PUBLICATION_SIGNING_KEY_FILE: '/run/secrets/p' }).publicationSigning).toEqual({
+      kind: 'file',
+      path: '/run/secrets/p',
+    });
+    expect(
+      readApiEnv({
+        ...api,
+        CATALOG_SIGNING_TRANSIT_KEY: 'etare-catalog',
+        SIGNING_TRANSIT_URL: 'http://127.0.0.1:8200',
+        SIGNING_TRANSIT_TOKEN_FILE: '/run/bao/token',
+      }).catalogSigning,
+    ).toEqual({
+      kind: 'transit',
+      url: 'http://127.0.0.1:8200',
+      mount: 'transit',
+      key: 'etare-catalog',
+      tokenFile: '/run/bao/token',
+      namespace: null,
+    });
+    expect(() => readApiEnv({ ...api, CATALOG_SIGNING_KEY: 'k', CATALOG_SIGNING_KEY_FILE: '/f' })).toThrow(/Only one/);
+    expect(() => readApiEnv({ ...api, CATALOG_SIGNING_TRANSIT_KEY: 'etare-catalog' })).toThrow(/SIGNING_TRANSIT_URL/);
+  });
+
+  it('never come from the environment in shared environments, and a Transit engine needs https', () => {
+    for (const appEnv of ['staging', 'production']) {
+      expect(() => readApiEnv({ ...api, ...KEYSET, APP_ENV: appEnv, CATALOG_SIGNING_KEY: 'k' })).toThrow(
+        /reserved to development and tests/,
+      );
+      expect(() =>
+        readApiEnv({
+          ...api,
+          ...KEYSET,
+          APP_ENV: appEnv,
+          CATALOG_SIGNING_TRANSIT_KEY: 'etare-catalog',
+          SIGNING_TRANSIT_URL: 'http://bao.internal:8200',
+          SIGNING_TRANSIT_TOKEN_FILE: '/run/bao/token',
+        }),
+      ).toThrow(/https/);
+    }
+  });
+
+  it('need a key set checked by root keys in shared environments', () => {
+    const shared = { ...api, APP_ENV: 'staging', CATALOG_SIGNING_KEY_FILE: '/run/secrets/c' };
+    expect(() => readApiEnv(shared)).toThrow(/DISTRIBUTION_KEYSET_FILE/);
+    expect(() => readApiEnv({ ...shared, DISTRIBUTION_KEYSET_FILE: '/k' })).toThrow(/DISTRIBUTION_ROOT_KEYS/);
+    expect(readApiEnv({ ...shared, ...KEYSET }).keyset).toEqual({
+      source: { kind: 'file', path: '/run/secrets/keyset.json' },
+      rootKeys: 'root:r:k',
+    });
+    expect(() => readApiEnv({ ...api, DISTRIBUTION_KEYSET: '{}', DISTRIBUTION_KEYSET_FILE: '/k' })).toThrow(/Only one/);
   });
 
   it('announce an optional minimum application version (SYN-02)', () => {
@@ -65,19 +126,30 @@ describe('signing keys (ADR-015)', () => {
 
   it('are mandatory in shared environments', () => {
     for (const appEnv of ['staging', 'production']) {
-      expect(() => readApiEnv({ ...api, APP_ENV: appEnv })).toThrow(/CATALOG_SIGNING_KEY/);
-      expect(() => readWorkerEnv({ ...worker, APP_ENV: appEnv })).toThrow(/PUBLICATION_SIGNING_KEY/);
-      expect(readApiEnv({ ...api, APP_ENV: appEnv, CATALOG_SIGNING_KEY: 'k' }).catalogSigningKey).toBe('k');
+      expect(() => readApiEnv({ ...api, ...KEYSET, APP_ENV: appEnv })).toThrow(/CATALOG_SIGNING_KEY_FILE/);
+      expect(() => readWorkerEnv({ ...worker, ...KEYSET, APP_ENV: appEnv })).toThrow(/PUBLICATION_SIGNING_KEY_FILE/);
       expect(
-        readWorkerEnv({ ...worker, APP_ENV: appEnv, PUBLICATION_SIGNING_KEY: 'k', ANTIVIRUS_URL: 'tcp://clamav:3310' })
-          .publicationSigningKey,
-      ).toBe('k');
+        readApiEnv({ ...api, ...KEYSET, APP_ENV: appEnv, CATALOG_SIGNING_KEY_FILE: '/run/secrets/c' }).catalogSigning,
+      ).toEqual({ kind: 'file', path: '/run/secrets/c' });
+      expect(
+        readWorkerEnv({
+          ...worker,
+          ...KEYSET,
+          APP_ENV: appEnv,
+          PUBLICATION_SIGNING_KEY_FILE: '/run/secrets/p',
+          ANTIVIRUS_URL: 'tcp://clamav:3310',
+        }).publicationSigning,
+      ).toEqual({ kind: 'file', path: '/run/secrets/p' });
     }
   });
 });
 
 describe('antivirus (SEC-01)', () => {
-  const worker = { WORKER_DATABASE_URL: 'postgresql://etare_worker:pw@db:5432/etare', PUBLICATION_SIGNING_KEY: 'k' };
+  const worker = {
+    WORKER_DATABASE_URL: 'postgresql://etare_worker:pw@db:5432/etare',
+    PUBLICATION_SIGNING_KEY_FILE: '/run/secrets/p',
+    ...KEYSET,
+  };
 
   it('is optional in development only, where files are checked without it', () => {
     expect(readWorkerEnv(worker).antivirusUrl).toBeNull();
@@ -118,7 +190,12 @@ describe('base maps of the tablets (ADR-024)', () => {
     SUPABASE_URL: 'http://127.0.0.1:54321',
     DATABASE_URL: 'postgresql://etare_api:pw@127.0.0.1:54322/postgres',
   };
-  const keys = { PUBLICATION_SIGNING_KEY: 'k', ANTIVIRUS_URL: 'tcp://av:3310', CATALOG_SIGNING_KEY: 'k' };
+  const keys = {
+    PUBLICATION_SIGNING_KEY_FILE: '/run/secrets/p',
+    ANTIVIRUS_URL: 'tcp://av:3310',
+    CATALOG_SIGNING_KEY_FILE: '/run/secrets/c',
+    ...KEYSET,
+  };
 
   it('use the synthetic test map in development, none in shared environments unless chosen', () => {
     expect(readWorkerEnv(worker).basemap).toEqual({ source: 'synthetic', contact: null, requestsPerSecond: 4 });

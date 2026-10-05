@@ -24,4 +24,5 @@ export * from './ports';
 export * from './referential';
 export * from './risks';
 export * from './sectors';
+export * from './signatures';
 export * from './use-cases';

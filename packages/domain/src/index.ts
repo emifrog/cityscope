@@ -9,6 +9,7 @@ export * from './etare-layout';
 export * from './errors';
 export * from './field-reports';
 export * from './files';
+export * from './keyset';
 export * from './objects';
 export * from './portal';
 export * from './site';

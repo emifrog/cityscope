@@ -4,7 +4,7 @@ export * from './auth/token-verifier';
 export * from './basemaps';
 export * from './cartography/ign';
 export * from './cartography/ign-geocoder';
-export * from './crypto/ed25519';
+export * from './crypto';
 export * from './images/sharp-resizer';
 export * from './logging/logger';
 export * from './mail/smtp';

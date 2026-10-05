@@ -29,6 +29,7 @@
     "contracts:check": "tsx scripts/generate-openapi.ts --check",
     "cartography:check": "tsx scripts/check-cartography.ts",
     "brand:assets": "tsx scripts/brand-assets.ts",
+    "keys": "tsx scripts/keys.ts",
     "setup:local": "tsx scripts/setup-local.ts",
     "integration": "tsx scripts/integration.ts",
     "db:push:integration": "supabase db push --linked"

@@ -7,7 +7,7 @@ import {
   verify,
   type KeyObject,
 } from 'node:crypto';
-import type { ContentSigner, DeviceSignatureVerifier } from '@etare/application';
+import type { DeviceSignatureVerifier, IdentifiedSigner } from '@etare/application';
 import type { Signature } from '@etare/contracts';
 import { SIGNATURE_ALGORITHM, isEd25519PublicKey, signedText, type SignatureContext } from '@etare/domain';
 
@@ -24,11 +24,13 @@ export function keyIdOf(publicKey: string): string {
 }
 
 /**
- * Ed25519 signer of distributed content. The private key comes from the
- * environment (PKCS#8 DER in base64) and stays in this process: the worker
- * holds the publication key, the API the catalogue key (ADR-015).
+ * Ed25519 signer of distributed content holding its private key in this process:
+ * the worker holds the publication key, the API the catalogue key (ADR-015). The
+ * key comes from a secret file mounted by the host, or from the environment in
+ * development and tests (SEC-04, ADR-027); a Transit engine keeps it out of the
+ * process altogether (`TransitSigner`).
  */
-export class Ed25519Signer implements ContentSigner {
+export class Ed25519Signer implements IdentifiedSigner {
   readonly keyId: string;
   readonly publicKey: string;
 
@@ -37,6 +39,7 @@ export class Ed25519Signer implements ContentSigner {
     this.keyId = keyIdOf(this.publicKey);
   }
 
+  /** PKCS#8 DER in base64 (the form of the environment variables). */
   static fromPkcs8(base64: string): Ed25519Signer {
     let key: KeyObject;
     try {
@@ -44,25 +47,48 @@ export class Ed25519Signer implements ContentSigner {
     } catch {
       throw new Error('Signing key: PKCS#8 DER in base64 expected.');
     }
+    return Ed25519Signer.of(key);
+  }
+
+  /** Content of a secret file: PEM (`openssl genpkey -algorithm ed25519`) or PKCS#8 DER in base64. */
+  static fromSecret(text: string): Ed25519Signer {
+    const trimmed = text.trim();
+    if (!trimmed.startsWith('-----BEGIN')) return Ed25519Signer.fromPkcs8(trimmed);
+    let key: KeyObject;
+    try {
+      key = createPrivateKey({ key: trimmed, format: 'pem' });
+    } catch {
+      throw new Error('Signing key: PEM private key expected.');
+    }
+    return Ed25519Signer.of(key);
+  }
+
+  private static of(key: KeyObject): Ed25519Signer {
     if (key.asymmetricKeyType !== 'ed25519') throw new Error('Signing key: an Ed25519 key is expected.');
     return new Ed25519Signer(key);
   }
 
-  /** New key pair; returns the private key to store (PKCS#8 DER, base64). Local development and tests. */
-  static generate(): { signer: Ed25519Signer; privateKey: string } {
+  /** New key pair; returns the private key to store (PKCS#8 DER in base64, and PEM). */
+  static generate(): { signer: Ed25519Signer; privateKey: string; privateKeyPem: string } {
     const { privateKey } = generateKeyPairSync('ed25519');
     return {
       signer: new Ed25519Signer(privateKey),
       privateKey: privateKey.export({ format: 'der', type: 'pkcs8' }).toString('base64'),
+      privateKeyPem: privateKey.export({ format: 'pem', type: 'pkcs8' }).toString(),
     };
   }
 
-  sign(context: SignatureContext, content: string): Signature {
+  /** Synchronous signature, for local tools (key set ceremony) and tests. */
+  signNow(context: SignatureContext, content: string): Signature {
     return {
       algorithm: SIGNATURE_ALGORITHM,
       key_id: this.keyId,
       signature: sign(null, Buffer.from(signedText(context, content), 'utf8'), this.key).toString('base64'),
     };
+  }
+
+  async sign(context: SignatureContext, content: string): Promise<Signature> {
+    return this.signNow(context, content);
   }
 }
 

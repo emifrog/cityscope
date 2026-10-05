@@ -150,7 +150,8 @@ function objects(order: string[] = []) {
 
 const signer = {
   keyId: 'publication-test',
-  sign: (context: SignatureContext, content: string): Signature => ({
+  publicKey: 'publication-test-key',
+  sign: async (context: SignatureContext, content: string): Promise<Signature> => ({
     algorithm: 'Ed25519',
     key_id: 'publication-test',
     signature: fakeHash(`${context}\n${content}`),

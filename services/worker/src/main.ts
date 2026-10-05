@@ -3,7 +3,7 @@ import { hostname } from 'node:os';
 import { BASEMAP_BUILD_JOB, antivirusNotConfigured } from '@etare/application';
 import { ClamAvScanner, parseClamAvUrl } from '@etare/adapters/antivirus';
 import { PmtilesArchiveFactory, basemapTileSource } from '@etare/adapters/basemaps';
-import { Ed25519Signer } from '@etare/adapters/crypto';
+import { loadKeyset, openSigner, verifyEd25519 } from '@etare/adapters/crypto';
 import { SharpImageResizer } from '@etare/adapters/images';
 import { createLogger } from '@etare/adapters/logging';
 import { SmtpMailer } from '@etare/adapters/mail';
@@ -16,6 +16,7 @@ import {
   PostgresJobQueue,
   PostgresNotificationStore,
   PostgresPublicationBuildStore,
+  PostgresSignatureRenewalStore,
   createPool,
 } from '@etare/adapters/postgres';
 import { SupabaseObjectStorage } from '@etare/adapters/storage';
@@ -32,6 +33,8 @@ import {
   noopHandler,
   notificationHandler,
   publicationBuildHandler,
+  signatureRenewalHandler,
+  startSignatureRenewalScheduler,
 } from './handlers';
 import { createWorker } from './runner';
 
@@ -47,8 +50,14 @@ const pool = createPool({
 
 const sha256 = async (content: Uint8Array | string) => createHash('sha256').update(content).digest('hex');
 const objects = env.storage ? SupabaseObjectStorage.fromSecretKey(env.storage.url, env.storage.secretKey) : null;
-// Publication key: signs manifests for the terminals; it never leaves the worker (ADR-015).
-const signer = env.publicationSigningKey ? Ed25519Signer.fromPkcs8(env.publicationSigningKey) : null;
+// Key set of the platform (SEC-04, ADR-027): checked against the root keys, the worker signs only
+// with a key it lists as active.
+const loadedKeyset = await loadKeyset(env.keyset);
+// Publication key: signs manifests for the terminals; it never leaves the worker (ADR-015), and stays
+// in the Transit engine when one is configured.
+const signer = env.publicationSigning
+  ? await openSigner(env.publicationSigning, 'publication', loadedKeyset?.keyset ?? null)
+  : null;
 // Antivirus of uploaded files (SEC-01): required outside development.
 const antivirus = env.antivirusUrl ? new ClamAvScanner(parseClamAvUrl(env.antivirusUrl)) : null;
 // Reduced images: thumbnails of the back-office and photos of the PDF annex (CAP-03, ADR-026).
@@ -111,6 +120,19 @@ if (objects) {
 }
 
 registry.register(basemapPlanHandler({ store: basemaps, objects, source: basemapSource?.info ?? null }));
+// SEC-04: after a rotation, the content in force is re-signed with the active key.
+const signatures = new PostgresSignatureRenewalStore(pool);
+if (signer) {
+  registry.register(
+    signatureRenewalHandler({
+      store: signatures,
+      signer,
+      keyset: loadedKeyset?.keyset ?? null,
+      verify: verifyEd25519,
+      sha256: async (text) => createHash('sha256').update(text, 'utf8').digest('hex'),
+    }),
+  );
+}
 if (!basemapSource) {
   logger.warn('no base map source configured (BASEMAP_SOURCE): the tablets get no map');
 } else if (basemapSource.info.rights !== 'approved') {
@@ -125,7 +147,11 @@ if (!basemapSource) {
 }
 
 if (signer) {
-  logger.info('publication manifests signed for offline distribution', { key_id: signer.keyId });
+  logger.info('publication manifests signed for offline distribution', {
+    key_id: signer.keyId,
+    source: env.publicationSigning?.kind,
+    keyset: loadedKeyset?.keyset.sequence ?? null,
+  });
 } else {
   logger.warn('publication signing key not configured: new publications cannot be distributed to terminals');
 }
@@ -143,9 +169,11 @@ const worker = createWorker({
 
 const stopMaintenance = objects ? startMaintenanceScheduler(new PostgresFileMaintenanceStore(pool), logger) : () => {};
 const stopBasemaps = startBasemapScheduler(basemaps, logger);
+const stopSignatures = signer ? startSignatureRenewalScheduler(signatures, signer.keyId, logger) : () => {};
 const stopScheduler = () => {
   stopMaintenance();
   stopBasemaps();
+  stopSignatures();
 };
 
 let stopping = false;

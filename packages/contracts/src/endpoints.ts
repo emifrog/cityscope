@@ -173,6 +173,7 @@ import {
   deviceRevokeSchema,
   deviceSchema,
   signedCatalogSchema,
+  signedKeysetSchema,
   syncBasemapReceiptResultSchema,
   syncBasemapReceiptSchema,
   syncBasemapSchema,
@@ -1229,6 +1230,18 @@ export const endpoints = {
     body: deviceEnrollSchema,
     successStatus: 201,
     response: deviceEnrollmentSchema,
+  }),
+  // Read before the catalogue (SEC-04): the terminal checks it with an embedded root key, refuses a
+  // sequence older than its own, then trusts only the keys it lists.
+  getSyncKeyset: tenantEndpoint({
+    operationId: 'getSyncKeyset',
+    method: 'get',
+    path: '/sync/keyset',
+    summary: 'Jeu de clés de signature signé par la clé racine (404 : aucun jeu configuré)',
+    tags: ['sync'],
+    deviceProof: true,
+    successStatus: 200,
+    response: signedKeysetSchema,
   }),
   getSyncCatalog: tenantEndpoint({
     operationId: 'getSyncCatalog',

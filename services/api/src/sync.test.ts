@@ -82,7 +82,7 @@ function makeApp() {
       timestamp,
       bodySha256: sha256Hex(body ?? ''),
     });
-    const signature = terminalKey.sign('etare.device-request.v1', text.slice('etare.device-request.v1\n'.length));
+    const signature = terminalKey.signNow('etare.device-request.v1', text.slice('etare.device-request.v1\n'.length));
     return app.request(fullPath, {
       method,
       headers: {

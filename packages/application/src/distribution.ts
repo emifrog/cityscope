@@ -14,6 +14,8 @@ import {
   type SyncAccessEventsResult,
   type Device,
   type SignedCatalog,
+  type SignedKeyset,
+  type Signature,
   type SyncCatalog,
   type SyncDownloadRequest,
   type SyncDownloads,
@@ -31,6 +33,7 @@ import {
   ENROLLMENT_CODE_LENGTH,
   ENROLLMENT_CODE_TTL_HOURS,
   InvalidInput,
+  NotFound,
   OFFLINE_AUTHORIZATION_DAYS,
   ON_DEMAND_ACCESS_HOURS,
   SIGNATURE_CONTEXTS,
@@ -42,9 +45,18 @@ import {
   enrollmentText,
   formatEnrollmentCode,
   normalizeEnrollmentCode,
+  preferredSignature,
   type RequestContext,
+  type SigningKeyPurpose,
 } from '@etare/domain';
-import type { ContentSigner, DeviceSignatureVerifier, ObjectStorage, RequestSession, SessionFactory } from './ports';
+import type {
+  ContentSigner,
+  DeviceSignatureVerifier,
+  LoadedKeyset,
+  ObjectStorage,
+  RequestSession,
+  SessionFactory,
+} from './ports';
 import { found, inTenant } from './use-cases';
 
 /** Download URLs of package files: the longest the storage gateway allows; the terminal renews them. */
@@ -55,6 +67,8 @@ export interface DistributionDependencies {
   readonly storage: ObjectStorage | null;
   /** Catalogue key of the API; null when not configured (terminal endpoints answer 503). */
   readonly catalogSigner: ContentSigner | null;
+  /** Key set served to the terminals (SEC-04); null or absent: none (development). */
+  readonly keyset?: (() => Promise<LoadedKeyset | null>) | null;
   readonly verifier: DeviceSignatureVerifier;
   /** Minimum OPS application version announced to the terminals (SYN-02); null: none. */
   readonly minAppVersion?: string | null;
@@ -83,6 +97,7 @@ export async function listDevices(
   sessions: SessionFactory,
   context: RequestContext,
   minAppVersion: string | null = null,
+  keysetSequence: number | null = null,
 ): Promise<DeviceList> {
   return inTenant(sessions, context, 'device:manage', async (session) => {
     const { items, currentGeneration, undistributedPublications } = await session.devices.list();
@@ -91,6 +106,7 @@ export async function listDevices(
       current_generation: currentGeneration,
       undistributed_publications: undistributedPublications,
       min_app_version: minAppVersion,
+      keyset_sequence: keysetSequence,
     };
   });
 }
@@ -199,10 +215,11 @@ export async function asDevice<T>(
   deps: DistributionDependencies,
   context: RequestContext,
   proof: DeviceProof,
-  work: (session: RequestSession, signer: ContentSigner) => Promise<T>,
+  work: (session: RequestSession) => Promise<T>,
 ): Promise<T> {
-  const signer = deps.catalogSigner;
-  if (!signer) throw new ServiceUnavailable('La distribution hors ligne n’est pas configurée sur ce serveur.');
+  if (!deps.catalogSigner) {
+    throw new ServiceUnavailable('La distribution hors ligne n’est pas configurée sur ce serveur.');
+  }
   // The key of the terminal stands for the second factor of an enrolled account (database:
   // terminal scope); the session commits only once the signature below is verified.
   return inTenant(deps.sessions, { ...context, deviceId: proof.deviceId }, 'offline:download', async (session) => {
@@ -215,8 +232,40 @@ export async function asDevice<T>(
     if (device.status === 'revoked') throw new DeviceRevoked();
     if (device.status !== 'active') throw new DeviceNotEnrolled();
     session.confirmDeviceProof();
-    return work(session, signer);
+    return work(session);
   });
+}
+
+async function configuredKeyset(deps: DistributionDependencies): Promise<LoadedKeyset | null> {
+  return deps.keyset ? deps.keyset() : null;
+}
+
+/**
+ * The signature to serve: the most recent by a key the terminals trust (SEC-04).
+ * None (a revoked key, the worker not having re-signed yet): 503, the terminal
+ * keeps what it holds and asks again at its next contact.
+ */
+async function servedSignature(
+  deps: DistributionDependencies,
+  signatures: readonly Signature[],
+  purpose: SigningKeyPurpose,
+): Promise<Signature> {
+  const loaded = await configuredKeyset(deps);
+  const chosen = preferredSignature(signatures, loaded?.keyset ?? null, purpose);
+  if (!chosen) throw new ServiceUnavailable('Signature en cours de renouvellement : réessayez plus tard.');
+  return chosen;
+}
+
+/** Key set of the platform, signed by the root key, read by the terminal before its catalogue. */
+export async function getSyncKeyset(
+  deps: DistributionDependencies,
+  context: RequestContext,
+  proof: DeviceProof,
+): Promise<SignedKeyset> {
+  await asDevice(deps, context, proof, async () => undefined);
+  const loaded = await configuredKeyset(deps);
+  if (!loaded) throw new NotFound('Aucun jeu de clés n’est configuré sur ce serveur.');
+  return loaded.signed;
 }
 
 /** The signed catalogue of the terminal, with the local consultation right of the user. */
@@ -225,14 +274,15 @@ export async function getSyncCatalog(
   context: RequestContext,
   proof: DeviceProof,
 ): Promise<SignedCatalog> {
-  return asDevice(deps, context, proof, async (session, signer) => {
+  const signer = deps.catalogSigner;
+  const catalog = await asDevice(deps, context, proof, async (session) => {
     const { generation, tenantName, publications, onDemand, withdrawals } = await session.devices.catalog(
       proof.deviceId,
       proof.appVersion,
     );
     const basemaps = await session.devices.basemaps(proof.deviceId);
     const now = deps.now();
-    const catalog: SyncCatalog = syncCatalogSchema.parse({
+    return syncCatalogSchema.parse({
       catalog_version: CATALOG_VERSION,
       tenant_id: session.access.tenantId ?? '',
       tenant_name: tenantName,
@@ -250,9 +300,11 @@ export async function getSyncCatalog(
       withdrawals,
       basemaps,
     } satisfies SyncCatalog);
-    const text = canonicalJson(catalog);
-    return { catalog: text, signature: signer.sign(SIGNATURE_CONTEXTS.catalog, text) };
   });
+  // Signed once the transaction is over: a Transit engine is called outside of it.
+  const text = canonicalJson(catalog);
+  if (!signer) throw new ServiceUnavailable('La distribution hors ligne n’est pas configurée sur ce serveur.');
+  return { catalog: text, signature: await signer.sign(SIGNATURE_CONTEXTS.catalog, text) };
 }
 
 /** Signed manifest and data of a distributable publication, served exactly as built. */
@@ -279,7 +331,7 @@ export async function getSyncPackage(
   if ((await deps.sha256(manifest)) !== distributed.manifestHash) throw new Error('MANIFEST_HASH_MISMATCH');
   return {
     manifest,
-    signature: distributed.signature,
+    signature: await servedSignature(deps, distributed.signatures, 'publication'),
     data: canonicalJson(distributed.payload),
     access_expires_at:
       sensitivity === 'restricted' ? new Date(now.getTime() + ON_DEMAND_ACCESS_HOURS * 3_600_000).toISOString() : null,
@@ -349,7 +401,7 @@ export async function getSyncBasemap(
   );
   const manifest = canonicalJson(basemap.manifest);
   if ((await deps.sha256(manifest)) !== basemap.manifestHash) throw new Error('MANIFEST_HASH_MISMATCH');
-  return { manifest, signature: basemap.signature };
+  return { manifest, signature: await servedSignature(deps, basemap.signatures, 'publication') };
 }
 
 /** Short-lived URLs of the parts of a base map the terminal is missing. Public data: not audited. */

@@ -101,6 +101,10 @@ Arrivée des secteurs et profils de synchronisation, politique des sites sensibl
 
 ## Suite
 
+Clés de signature (SEC-04, Sprint 12) : coffre (fichier de secret ou moteur Transit), jeu de clés signé
+par une racine hors ligne, rotation et révocation sans nouvelle version de l'application, re-signature
+des contenus en vigueur : voir l'[ADR-027](ADR-027-signing-keys-rotation.md).
+
 Périmètres et sites sensibles décidés par l’ADR-025 (DEC-04, 3 octobre 2026) : secteurs affectés aux
 tablettes et aux membres, sites « restreints » distribués à la demande avec code et 24 h, « élevés » en
 ligne seulement ; les 7 jours de consultation hors ligne sont confirmés comme valeur du porteur.

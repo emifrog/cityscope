@@ -54,6 +54,7 @@ import {
   enrollDevice,
   getAssetDownload,
   getSyncCatalog,
+  getSyncKeyset,
   getSyncPackage,
   getRevision,
   getSiteEtare,
@@ -130,6 +131,7 @@ import {
   type BasemapSourceInfo,
   type CartographyCatalog,
   type ContentSigner,
+  type LoadedKeyset,
   type DeviceProof,
   type DeviceSignatureVerifier,
   type Geocoder,
@@ -194,6 +196,8 @@ export interface ApiDependencies {
   readonly sha256: (text: string) => Promise<string>;
   /** Catalogue key (offline distribution); null when not configured: terminal endpoints answer 503. */
   readonly catalogSigner: ContentSigner | null;
+  /** Key set served to the terminals (SEC-04); null or absent: none (development). */
+  readonly keyset?: (() => Promise<LoadedKeyset | null>) | null;
   /** Minimum OPS application version (SYN-02), announced in the catalogues; null: none. */
   readonly minAppVersion?: string | null;
   readonly verifier: DeviceSignatureVerifier;
@@ -1090,7 +1094,13 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
   // ---------------------------------------------------------------- terminals (administration)
   app.get(routerPath(endpoints.listDevices.path), async (c) => {
     const context = await requestContext(c, endpoints.listDevices);
-    return respond(c, endpoints.listDevices, await listDevices(deps.sessions, context, deps.minAppVersion ?? null));
+    // The key set served (SEC-04): the administration sees the terminals behind the last rotation.
+    const keyset = await (deps.keyset?.() ?? Promise.resolve(null)).catch(() => null);
+    return respond(
+      c,
+      endpoints.listDevices,
+      await listDevices(deps.sessions, context, deps.minAppVersion ?? null, keyset?.keyset.sequence ?? null),
+    );
   });
 
   app.post(routerPath(endpoints.createDevice.path), async (c) => {
@@ -1128,6 +1138,11 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     const context = await requestContext(c, endpoints.enrollDevice);
     const input = await readBody(c, endpoints.enrollDevice.body);
     return respond(c, endpoints.enrollDevice, await enrollDevice(deps, context, input));
+  });
+
+  app.get(routerPath(endpoints.getSyncKeyset.path), async (c) => {
+    const { context, proof } = await deviceRequest(c, endpoints.getSyncKeyset);
+    return respond(c, endpoints.getSyncKeyset, await getSyncKeyset(deps, context, proof));
   });
 
   app.get(routerPath(endpoints.getSyncCatalog.path), async (c) => {

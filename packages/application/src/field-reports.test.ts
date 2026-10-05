@@ -93,7 +93,7 @@ function setup(roles: Role[] = ['OPS_USER'], overrides: Partial<FieldReportRepos
   const deps: DistributionDependencies = {
     sessions,
     storage,
-    catalogSigner: { keyId: 'catalog', sign: () => ({ algorithm: 'Ed25519', key_id: 'catalog', signature: 's' }) },
+    catalogSigner: { sign: async () => ({ algorithm: 'Ed25519', key_id: 'catalog', signature: 's' }) },
     verifier: { verify: (publicKey, text, signature) => signature === `${publicKey}|${text}` },
     sha256: async () => '0'.repeat(64),
     randomBytes: (length) => new Uint8Array(length),

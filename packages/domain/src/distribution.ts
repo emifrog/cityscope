@@ -68,6 +68,8 @@ export const SIGNATURE_CONTEXTS = {
   deviceRequest: 'etare.device-request.v1',
   enrollment: 'etare.enrollment.v1',
   basemap: 'etare.basemap.v1',
+  /** Key set of the platform, signed by the root key (SEC-04, ADR-027). */
+  keyset: 'etare.keyset.v1',
 } as const;
 export type SignatureContext = (typeof SIGNATURE_CONTEXTS)[keyof typeof SIGNATURE_CONTEXTS];
 

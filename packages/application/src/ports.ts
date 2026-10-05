@@ -34,6 +34,7 @@ import type {
   Device,
   DeviceEnrollment,
   Signature,
+  SignedKeyset,
   SyncReceipt,
   BuildingUpdate,
   Classification,
@@ -107,6 +108,7 @@ import type {
   ScanStatus,
   Sensitivity,
   SignatureContext,
+  Keyset,
 } from '@etare/domain';
 
 /**
@@ -585,11 +587,26 @@ export interface MalwareScanner {
   }>;
 }
 
-/** Ed25519 signer of distributed content: publication key (worker) or catalogue key (API). */
+/**
+ * Ed25519 signer of distributed content: publication key (worker) or catalogue key
+ * (API), held in the process (secret file) or by a Transit engine (SEC-04, ADR-027).
+ */
 export interface ContentSigner {
-  readonly keyId: string;
   /** Signs the context line followed by the content (canonical JSON). */
-  sign(context: SignatureContext, content: string): Signature;
+  sign(context: SignatureContext, content: string): Promise<Signature>;
+}
+
+/** A signer whose key is known: the worker re-signs what this key has not signed yet. */
+export interface IdentifiedSigner extends ContentSigner {
+  readonly keyId: string;
+  /** Raw Ed25519 public key (32 bytes, base64). */
+  readonly publicKey: string;
+}
+
+/** The key set of the platform as configured (SEC-04, ADR-027): the signed envelope and its content. */
+export interface LoadedKeyset {
+  readonly signed: SignedKeyset;
+  readonly keyset: Keyset;
 }
 
 /** Checks the signature of a terminal with its raw public key. */
@@ -602,7 +619,8 @@ export interface DistributedPackage {
   readonly siteId: string;
   readonly manifest: unknown;
   readonly manifestHash: string;
-  readonly signature: Signature;
+  /** Signature made at build time, then re-signatures after rotations (SEC-04), oldest first. */
+  readonly signatures: readonly Signature[];
   readonly payload: unknown;
 }
 

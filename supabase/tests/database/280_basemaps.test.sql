@@ -15,6 +15,7 @@ select plan(27);
 
 -- Start from no base map, whatever the local stack holds (the transaction is rolled back).
 delete from app.device_basemap;
+delete from app.basemap_pack_signature;
 delete from app.basemap_pack;
 -- A sector of its own, holding the EHPAD only (the local stack may hold other sites in Nice).
 insert into app.sector (id, tenant_id, name) values

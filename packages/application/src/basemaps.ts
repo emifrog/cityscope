@@ -162,7 +162,8 @@ export interface BasemapRepository {
 export interface DistributedBasemap {
   readonly manifest: unknown;
   readonly manifestHash: string;
-  readonly signature: Signature;
+  /** Signature made at build time, then re-signatures after rotations (SEC-04), oldest first. */
+  readonly signatures: readonly Signature[];
 }
 
 // ------------------------------------------------------------------ administration
@@ -428,7 +429,7 @@ export async function buildBasemap(
     const completed = await deps.store.complete(packId, tenantId, {
       manifest,
       manifestHash: await deps.sha256(text),
-      signature: signer.sign(SIGNATURE_CONTEXTS.basemap, text),
+      signature: await signer.sign(SIGNATURE_CONTEXTS.basemap, text),
       files: stored,
       totalBytes,
       tileCount: archive.tileCount,

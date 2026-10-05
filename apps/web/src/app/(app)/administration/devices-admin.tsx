@@ -197,15 +197,24 @@ function updatesWaiting(device: Device, current: number): string | null {
   return device.installed_generation < current ? 'Mises à jour publiées depuis' : null;
 }
 
+/** A terminal that has not met the last rotation of the signing keys (SEC-04). */
+function keysetBehind(device: Device, served: number | null): boolean {
+  return (
+    device.status === 'active' && served !== null && device.keyset_sequence !== null && device.keyset_sequence < served
+  );
+}
+
 function DeviceRow({
   device,
   currentGeneration,
   minAppVersion,
+  keysetSequence,
   onCode,
 }: {
   device: Device;
   currentGeneration: number;
   minAppVersion: string | null;
+  keysetSequence: number | null;
   onCode: (result: DeviceEnrollmentCode) => void;
 }) {
   const [revoking, setRevoking] = useState(false);
@@ -226,7 +235,13 @@ function DeviceRow({
           <p className="text-xs text-muted">
             {device.platform === 'android' ? 'Android' : device.platform === 'ios' ? 'iOS' : 'Plateforme inconnue'}
             {device.app_version ? ` · application ${device.app_version}` : ''}
+            {device.keyset_sequence !== null ? ` · clés n° ${device.keyset_sequence}` : ''}
           </p>
+          {keysetBehind(device, keysetSequence) ? (
+            <p className="text-xs font-semibold text-important">
+              Jeu de clés n° {keysetSequence} pas encore reçu : il le sera au prochain contact
+            </p>
+          ) : null}
           {outdated ? (
             <p className="text-xs font-semibold text-important">
               Application à mettre à jour (version {minAppVersion} exigée) : aucune nouvelle version n’est installée
@@ -391,6 +406,9 @@ export function DevicesAdmin() {
                 {devices.data.min_app_version
                   ? ` Version minimale de l’application exigée : ${devices.data.min_app_version}.`
                   : ''}
+                {devices.data.keyset_sequence !== null
+                  ? ` Jeu de clés de signature servi : n° ${devices.data.keyset_sequence}.`
+                  : ''}
               </CardDescription>
             </CardHeader>
             {devices.data.items.length === 0 ? (
@@ -417,6 +435,7 @@ export function DevicesAdmin() {
                       device={device}
                       currentGeneration={devices.data.current_generation}
                       minAppVersion={devices.data.min_app_version}
+                      keysetSequence={devices.data.keyset_sequence}
                       onCode={setCode}
                     />
                   ))}

@@ -35,6 +35,7 @@ interface DeviceRow {
   last_error_code: string | null;
   catalog_generation: string | null;
   installed_generation: string | null;
+  keyset_sequence: number | null;
   installed_sites: number;
   scope: 'tenant' | 'sectors';
   sectors: { id: string; name: string }[];
@@ -47,7 +48,7 @@ const DEVICE_SELECT = `
   select d.id, d.name, d.status, d.platform, d.enrollment_expires_at, d.enrolled_at,
          app.member_name(d.enrolled_by) as enrolled_by_name, d.revoked_at, d.revocation_reason,
          s.app_version, app.member_name(s.last_user_id) as last_user_name, s.last_seen_at, s.last_sync_at,
-         s.last_status, s.last_error_code, s.catalog_generation, s.installed_generation,
+         s.last_status, s.last_error_code, s.catalog_generation, s.installed_generation, s.keyset_sequence,
          (select count(*)::int from app.device_publication p where p.device_id = d.id) as installed_sites,
          d.scope,
          coalesce((select jsonb_agg(jsonb_build_object('id', sc.id, 'name', sc.name) order by lower(sc.name), sc.id)
@@ -59,6 +60,12 @@ const DEVICE_SELECT = `
   where d.tenant_id = app.current_tenant_id()`;
 
 const generation = (value: string | null) => (value === null ? null : Number(value));
+
+/** The signature made at build time, then the re-signatures after rotations (SEC-04), oldest first. */
+const signaturesOf = (original: unknown, renewed: unknown) => [
+  signatureSchema.parse(original),
+  ...signatureSchema.array().parse(renewed ?? []),
+];
 
 function toDevice(row: DeviceRow, now: Date): Device {
   return deviceSchema.parse({
@@ -80,6 +87,7 @@ function toDevice(row: DeviceRow, now: Date): Device {
     last_error_code: row.last_error_code,
     catalog_generation: generation(row.catalog_generation),
     installed_generation: generation(row.installed_generation),
+    keyset_sequence: row.keyset_sequence,
     installed_sites: row.installed_sites,
     perimeter: { scope: row.scope, sectors: row.sectors },
     created_at: row.created_at.toISOString(),
@@ -236,9 +244,11 @@ export class PostgresDeviceRepository implements DeviceRepository {
       manifest: unknown;
       manifest_hash: string;
       manifest_signature: unknown;
+      renewed: unknown;
       payload: unknown;
     }>(
-      `select manifest ->> 'site_id' as site_id, manifest, manifest_hash, manifest_signature, payload
+      `select manifest ->> 'site_id' as site_id, manifest, manifest_hash, manifest_signature, payload,
+              app.sync_renewed_signatures($1, 'publication', $2) as renewed
        from app.sync_package($1, $2)`,
       [deviceId, publicationId],
     );
@@ -248,7 +258,7 @@ export class PostgresDeviceRepository implements DeviceRepository {
       siteId: row.site_id,
       manifest: row.manifest,
       manifestHash: row.manifest_hash,
-      signature: signatureSchema.parse(row.manifest_signature),
+      signatures: signaturesOf(row.manifest_signature, row.renewed),
       payload: row.payload,
     };
   }
@@ -267,8 +277,15 @@ export class PostgresDeviceRepository implements DeviceRepository {
 
   async receipt(deviceId: string, receipt: SyncReceipt): Promise<number> {
     const { rows } = await this.client.query<{ installed: number }>(
-      'select app.sync_receipt($1, $2, $3, $4, $5) as installed',
-      [deviceId, receipt.generation, receipt.status, receipt.error_code, receipt.installed],
+      'select app.sync_receipt($1, $2, $3, $4, $5, $6) as installed',
+      [
+        deviceId,
+        receipt.generation,
+        receipt.status,
+        receipt.error_code,
+        receipt.installed,
+        receipt.keyset_sequence ?? null,
+      ],
     );
     return rows[0]?.installed ?? 0;
   }
@@ -279,13 +296,23 @@ export class PostgresDeviceRepository implements DeviceRepository {
   }
 
   async basemap(deviceId: string, packId: string): Promise<DistributedBasemap | null> {
-    const { rows } = await this.client.query<{ manifest: unknown; manifest_hash: string; signature: unknown }>(
-      'select manifest, manifest_hash, signature from app.sync_basemap($1, $2)',
+    const { rows } = await this.client.query<{
+      manifest: unknown;
+      manifest_hash: string;
+      signature: unknown;
+      renewed: unknown;
+    }>(
+      `select manifest, manifest_hash, signature, app.sync_renewed_signatures($1, 'basemap', $2) as renewed
+       from app.sync_basemap($1, $2)`,
       [deviceId, packId],
     );
     const row = rows[0];
     if (!row) return null;
-    return { manifest: row.manifest, manifestHash: row.manifest_hash, signature: signatureSchema.parse(row.signature) };
+    return {
+      manifest: row.manifest,
+      manifestHash: row.manifest_hash,
+      signatures: signaturesOf(row.signature, row.renewed),
+    };
   }
 
   async basemapFiles(

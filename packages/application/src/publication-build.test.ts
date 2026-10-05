@@ -155,8 +155,8 @@ describe('publication content', () => {
 
   it('signs the canonical manifest when a publication key is given', async () => {
     expect((await buildPublicationContent(await toBuild(), tools)).manifestSignature).toBeNull();
-    const sign = vi.fn(() => ({ algorithm: 'Ed25519' as const, key_id: 'publication', signature: 'sig' }));
-    const built = await buildPublicationContent(await toBuild(), { ...tools, signer: { keyId: 'publication', sign } });
+    const sign = vi.fn(async () => ({ algorithm: 'Ed25519' as const, key_id: 'publication', signature: 'sig' }));
+    const built = await buildPublicationContent(await toBuild(), { ...tools, signer: { sign } });
     expect(built.manifestSignature).toEqual({ algorithm: 'Ed25519', key_id: 'publication', signature: 'sig' });
     expect(sign).toHaveBeenCalledWith('etare.manifest.v1', canonicalJson(built.manifest));
   });

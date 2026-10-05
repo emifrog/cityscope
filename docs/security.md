@@ -176,8 +176,23 @@ Voir ADR-015.
 
 - Deux clés Ed25519 serveur : la clé de **publication** n’existe que dans le worker et signe les
   manifestes à la fabrication ; la clé de **catalogue** n’existe que dans l’API et signe les catalogues.
-  Une compromission de l’API ne permet pas de forger un contenu publié. Les terminaux ne font confiance
-  qu’aux clés publiques de leur configuration, chacune liée à son usage.
+  Une compromission de l’API ne permet pas de forger un contenu publié.
+- **Clés dans un coffre** (SEC-04, ADR-027) :
+  - en préproduction et en production, chaque clé vient d’un fichier de secret monté par l’hébergeur,
+    ou reste dans le moteur Transit d’OpenBao ou de Vault, qui signe sans jamais la livrer ;
+  - la variable d’environnement est refusée au démarrage hors développement et essais ;
+  - chaque processus a son jeton, limité à sa clé (`infra/openbao/`) : le jeton de l’API ne peut ni
+    signer avec la clé des publications, ni exporter, ni faire tourner une clé.
+- **Jeu de clés signé par une racine hors ligne** (ADR-027) :
+  - les tablettes vérifient un jeu de clés numéroté (actives, retirées, révoquées) avec la racine
+    embarquée, avant leur catalogue ;
+  - rotation et révocation passent sans nouvelle version de l’application ;
+  - un processus ne signe qu’avec une clé active du jeu ;
+  - après une rotation, le worker re-signe les contenus en vigueur, seulement si l’empreinte stockée et
+    une signature d’origine se vérifient. L’original reste immuable, et chaque re-signature est tracée ;
+  - procédures de rotation et de compromission : `docs/exploitation/cles-de-signature.md`.
+- Les terminaux ne font confiance qu’aux clés de leur jeu, chacune liée à son usage. Les clés
+  compilées dans l’application ne servent qu’au premier contact.
 - Ce qui est signé commence par une ligne de contexte : une signature faite pour un usage (manifeste,
   catalogue, requête, enrôlement) n’est valable pour aucun autre.
 - Enrôlement : code à usage unique de 60 bits, valable 24 h, conservé haché, délivré par un administrateur
@@ -255,13 +270,20 @@ Depuis le Sprint 11 (ADR-024) :
 
 `.env`, `.env.*` (sauf `.env.example`), `supabase/signing_keys.json`, keystores Android et
 `key.properties` sont ignorés. La CI n’utilise aucun secret : elle génère des clés de distribution
-jetables (`pnpm setup:local`). Les clés de signature des environnements partagés
-(`PUBLICATION_SIGNING_KEY`, `CATALOG_SIGNING_KEY`) viennent d’un coffre au démarrage, jamais du dépôt.
+jetables et une racine de développement (`pnpm setup:local`), et éprouve le moteur Transit avec un
+OpenBao de développement. Dans les environnements partagés, les clés de signature viennent d’un fichier
+de secret ou du moteur Transit (`*_SIGNING_KEY_FILE`, `*_SIGNING_TRANSIT_KEY`), jamais du dépôt ni de
+l’environnement. La racine des jeux de clés reste hors ligne (`pnpm keys`, cérémonie à deux).
 
 ## Limites connues (à traiter avant le pilote)
 
-- Clés de signature lues dans l’environnement : gestionnaire de secrets ou KMS à brancher avant la
-  production.
+- Clés de signature :
+  - le KMS d’un fournisseur reste à choisir avec l’hébergement (DEC-03) ; OpenBao Transit ou un fichier
+    de secret couvrent le pilote ;
+  - la première cérémonie (racine, racine de secours, procès-verbal) est à tenir avec le RSSI avant la
+    préproduction ;
+  - la compromission de la racine sans racine de secours embarquée exige une nouvelle version de
+    l’application.
 - Antivirus : ClamAV (clamd) obligatoire hors développement ; la fraîcheur des signatures, la
   supervision du démon et le choix éventuel d’un service managé restent à organiser avec l’exploitation.
 - SSO OIDC/SAML non développé ; plafonds de connexion du fournisseur d’identité à reporter sur le projet

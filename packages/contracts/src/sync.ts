@@ -4,11 +4,16 @@ import {
   DEVICE_PLATFORMS,
   DEVICE_STATES,
   DEVICE_STATUSES,
+  KEYSET_MAX_KEYS,
+  KEYSET_VERSION,
   SIGNATURE_ALGORITHM,
+  SIGNING_KEY_PURPOSES,
+  SIGNING_KEY_STATUSES,
   SYNC_RECEIPT_STATUSES,
   isEd25519PublicKey,
   isEd25519Signature,
   isSafePackagePath,
+  keysetProblems,
 } from '@etare/domain';
 import { isoDateTimeSchema, sha256Schema, uuidSchema } from '@etare/schemas';
 import { z } from 'zod';
@@ -48,6 +53,8 @@ export const deviceSchema = z
     /** Catalogue generation announced to the terminal, and the one it installed completely. */
     catalog_generation: z.number().int().nullable(),
     installed_generation: z.number().int().nullable(),
+    /** Key set the terminal holds (SEC-04): below the one served, it has not met the last rotation yet. */
+    keyset_sequence: z.number().int().positive().nullable(),
     installed_sites: z.number().int().nonnegative(),
     /** Synchronisation profile (PER-01, screen 11): the whole SIS, explicitly, or sectors. */
     perimeter: z
@@ -68,6 +75,8 @@ export const deviceListSchema = z
     undistributed_publications: z.number().int().nonnegative(),
     /** Minimum OPS application version required by the server (SYN-02); older terminals must be updated. */
     min_app_version: z.string().nullable(),
+    /** Key set served to the terminals (SEC-04); null when none is configured. */
+    keyset_sequence: z.number().int().positive().nullable(),
   })
   .meta({ id: 'DeviceList' });
 export type DeviceList = z.infer<typeof deviceListSchema>;
@@ -116,14 +125,52 @@ export const deviceEnrollmentSchema = z
 export type DeviceEnrollment = z.infer<typeof deviceEnrollmentSchema>;
 
 // ------------------------------------------------------------------ signed content
+const keyIdSchema = z.string().regex(/^[A-Za-z0-9._:-]{1,64}$/);
+
 export const signatureSchema = z
   .object({
     algorithm: z.literal(SIGNATURE_ALGORITHM),
-    key_id: z.string().regex(/^[A-Za-z0-9._:-]{1,64}$/),
+    key_id: keyIdSchema,
     signature: z.string().refine(isEd25519Signature, 'Signature Ed25519 attendue.'),
   })
   .meta({ id: 'Signature', description: 'Signature détachée : algorithme, clé et valeur (base64).' });
 export type Signature = z.infer<typeof signatureSchema>;
+
+/** A signing key of the platform and its status (SEC-04, ADR-027). */
+export const keysetKeySchema = z
+  .object({
+    purpose: z.enum(SIGNING_KEY_PURPOSES),
+    key_id: keyIdSchema,
+    public_key: z.string().refine(isEd25519PublicKey, 'Clé publique Ed25519 attendue.'),
+    status: z.enum(SIGNING_KEY_STATUSES),
+  })
+  .strict()
+  .meta({ id: 'KeysetKey' });
+
+/** Key set of the platform: the terminals trust these keys once the root signature is verified. */
+export const keysetSchema = z
+  .object({
+    keyset_version: z.literal(KEYSET_VERSION),
+    sequence: z.number().int().positive(),
+    issued_at: isoDateTimeSchema,
+    keys: z.array(keysetKeySchema).min(2).max(KEYSET_MAX_KEYS),
+  })
+  .strict()
+  .superRefine((keyset, context) => {
+    for (const problem of keysetProblems(keyset)) context.addIssue({ code: 'custom', message: problem });
+  })
+  .meta({ id: 'Keyset' });
+export type KeysetDocument = z.infer<typeof keysetSchema>;
+
+export const signedKeysetSchema = z
+  .object({
+    /** Canonical JSON of a Keyset: verify the root signature on these exact bytes, then parse. */
+    keyset: z.string(),
+    /** Signature by a root key embedded in the application (context etare.keyset.v1). */
+    signature: signatureSchema,
+  })
+  .meta({ id: 'SignedKeyset' });
+export type SignedKeyset = z.infer<typeof signedKeysetSchema>;
 
 /** One file of a publication package (architecture §10). */
 export const manifestFileSchema = z
@@ -301,6 +348,8 @@ export const syncReceiptSchema = z
       .nullable(),
     /** Publications active on the terminal after the installation. */
     installed: z.array(uuidSchema).max(20_000),
+    /** Key set the terminal holds (SEC-04); absent from applications before 0.4.0. */
+    keyset_sequence: z.number().int().positive().nullable().optional(),
   })
   .meta({ id: 'SyncReceipt' });
 export type SyncReceipt = z.infer<typeof syncReceiptSchema>;

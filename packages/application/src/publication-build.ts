@@ -253,7 +253,7 @@ export async function buildPublicationContent(
     manifestHash: await tools.sha256(manifestText),
     templateVersion: generated?.templateVersion ?? null,
     pdfStorageKey: generated?.storageKey ?? null,
-    manifestSignature: tools.signer?.sign(SIGNATURE_CONTEXTS.manifest, manifestText) ?? null,
+    manifestSignature: tools.signer ? await tools.signer.sign(SIGNATURE_CONTEXTS.manifest, manifestText) : null,
   };
 }
 

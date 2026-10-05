@@ -9554,13 +9554,21 @@
               "string",
               "null"
             ]
+          },
+          "keyset_sequence": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0
           }
         },
         "required": [
           "items",
           "current_generation",
           "undistributed_publications",
-          "min_app_version"
+          "min_app_version",
+          "keyset_sequence"
         ]
       },
       "Device": {
@@ -9692,6 +9700,13 @@
               "null"
             ]
           },
+          "keyset_sequence": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0
+          },
           "installed_sites": {
             "type": "integer",
             "minimum": 0
@@ -9727,6 +9742,7 @@
           "last_error_code",
           "catalog_generation",
           "installed_generation",
+          "keyset_sequence",
           "installed_sites",
           "perimeter",
           "created_at",
@@ -9884,10 +9900,10 @@
           "proof"
         ]
       },
-      "SignedCatalog": {
+      "SignedKeyset": {
         "type": "object",
         "properties": {
-          "catalog": {
+          "keyset": {
             "type": "string"
           },
           "signature": {
@@ -9895,7 +9911,7 @@
           }
         },
         "required": [
-          "catalog",
+          "keyset",
           "signature"
         ]
       },
@@ -9922,6 +9938,21 @@
           "signature"
         ],
         "description": "Signature détachée : algorithme, clé et valeur (base64)."
+      },
+      "SignedCatalog": {
+        "type": "object",
+        "properties": {
+          "catalog": {
+            "type": "string"
+          },
+          "signature": {
+            "$ref": "#/components/schemas/Signature"
+          }
+        },
+        "required": [
+          "catalog",
+          "signature"
+        ]
       },
       "SyncPackage": {
         "type": "object",
@@ -10046,6 +10077,13 @@
               "format": "uuid"
             },
             "maxItems": 20000
+          },
+          "keyset_sequence": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0
           }
         },
         "required": [
@@ -22788,6 +22826,127 @@
           },
           "409": {
             "description": "Conflit avec des données existantes (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sync/keyset": {
+      "get": {
+        "operationId": "getSyncKeyset",
+        "summary": "Jeu de clés de signature signé par la clé racine (404 : aucun jeu configuré)",
+        "tags": [
+          "sync"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Terminal enrôlé qui signe la requête."
+            },
+            "required": true,
+            "description": "Terminal enrôlé qui signe la requête.",
+            "name": "x-device-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{1,15}$",
+              "description": "Horloge du terminal (millisecondes depuis 1970), à 5 min près de celle du serveur."
+            },
+            "required": true,
+            "description": "Horloge du terminal (millisecondes depuis 1970), à 5 min près de celle du serveur.",
+            "name": "x-device-time",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Ed25519 (base64) du texte « etare.device-request.v1 », méthode, chemin, horloge et SHA-256 du corps, un par ligne."
+            },
+            "required": true,
+            "description": "Ed25519 (base64) du texte « etare.device-request.v1 », méthode, chemin, horloge et SHA-256 du corps, un par ligne.",
+            "name": "x-device-signature",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Version de l’application OPS."
+            },
+            "required": false,
+            "description": "Version de l’application OPS.",
+            "name": "x-app-version",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignedKeyset"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise (UNAUTHENTICATED, DEVICE_PROOF_INVALID, DEVICE_CLOCK_SKEW)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, DEVICE_NOT_ENROLLED, DEVICE_REVOKED)",
             "content": {
               "application/json": {
                 "schema": {

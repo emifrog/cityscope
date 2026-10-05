@@ -19,6 +19,10 @@ import {
   NOTIFICATION_SEND_JOB,
   PUBLICATION_BUILD_JOB,
   PermanentJobError,
+  SIGNATURE_RENEWAL_JOB,
+  renewSignatures,
+  type SignatureRenewalDependencies,
+  type SignatureRenewalStore,
   buildPublication,
   sendNotification,
   verifyAsset,
@@ -199,6 +203,60 @@ export function startMaintenanceScheduler(
   const tick = () =>
     store.schedule(maintenanceSlot(now())).catch((error: unknown) => {
       logger.warn('maintenance not scheduled', { error: error instanceof Error ? error.message : String(error) });
+    });
+  void tick();
+  const timer = setInterval(() => void tick(), options.intervalMs ?? 5 * 60_000);
+  timer.unref();
+  return () => clearInterval(timer);
+}
+
+/**
+ * Re-signs the content in force with the active publication key (SEC-04, ADR-027): a
+ * platform job, without SIS. A content the worker cannot vouch for is never re-signed,
+ * and is reported as an error.
+ */
+export function signatureRenewalHandler(deps: SignatureRenewalDependencies): JobHandler {
+  return defineHandler({
+    type: SIGNATURE_RENEWAL_JOB,
+    payloadVersion: 1,
+    payload: z.object({ key_id: z.string().max(64), slot: z.string().max(20) }),
+    async handle(payload, { logger }) {
+      // Another worker of the platform holding another key would sign with it: leave the job to the key it names.
+      if (payload.key_id !== deps.signer.keyId) {
+        logger.warn('signature renewal for another key', { key_id: payload.key_id, own_key_id: deps.signer.keyId });
+        return;
+      }
+      const report = await renewSignatures(deps);
+      const fields = {
+        slot: payload.slot,
+        key_id: report.keyId,
+        publications: report.publications,
+        basemaps: report.basemaps,
+        unverifiable: report.unverifiable.length,
+      };
+      if (report.unverifiable.length > 0) {
+        logger.error('content not re-signed: stored manifest or signature not verified', {
+          ...fields,
+          contents: report.unverifiable.slice(0, 20),
+        });
+      } else if (report.publications + report.basemaps > 0) {
+        logger.info('signatures renewed', fields);
+      }
+    },
+  });
+}
+
+/** Asks for the renewal of the signatures every few minutes (one job per key and per hour). */
+export function startSignatureRenewalScheduler(
+  store: Pick<SignatureRenewalStore, 'schedule'>,
+  keyId: string,
+  logger: Logger,
+  options: { intervalMs?: number; now?: () => Date } = {},
+): () => void {
+  const now = options.now ?? (() => new Date());
+  const tick = () =>
+    store.schedule(keyId, maintenanceSlot(now())).catch((error: unknown) => {
+      logger.warn('signature renewal not scheduled', { error: error instanceof Error ? error.message : String(error) });
     });
   void tick();
   const timer = setInterval(() => void tick(), options.intervalMs ?? 5 * 60_000);

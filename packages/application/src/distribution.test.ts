@@ -6,6 +6,7 @@ import {
   DeviceRevoked,
   EMPTY_BODY_SHA256,
   InvalidInput,
+  NotFound,
   ServiceUnavailable,
   canonicalJson,
   deviceRequestText,
@@ -13,6 +14,7 @@ import {
   permissionsForRoles,
   signedText,
   type DeviceStatus,
+  type Keyset,
   type RequestContext,
   type Role,
   type SignatureContext,
@@ -26,6 +28,7 @@ import {
   getSyncBasemap,
   recordSyncBasemapReceipt,
   getSyncCatalog,
+  getSyncKeyset,
   getSyncPackage,
   submitAccessEvents,
   type DeviceProof,
@@ -87,8 +90,7 @@ function terminal() {
 
 const CATALOG_KEY = 'catalog-key';
 const catalogSigner: ContentSigner = {
-  keyId: 'catalog-test',
-  sign: (signatureContext: SignatureContext, content: string): Signature => ({
+  sign: async (signatureContext: SignatureContext, content: string): Promise<Signature> => ({
     algorithm: 'Ed25519',
     key_id: 'catalog-test',
     signature: fakeSign(CATALOG_KEY, signedText(signatureContext, content)),
@@ -107,6 +109,24 @@ const entry: CatalogEntry = {
 };
 
 const builtSignature: Signature = { algorithm: 'Ed25519', key_id: 'publication', signature: 'signed' };
+
+const keysetKey = (purpose: 'publication' | 'catalog', id: string, status: 'active' | 'retired' | 'revoked') => ({
+  purpose,
+  key_id: id,
+  public_key: `${id.padEnd(43, 'A').slice(0, 43)}=`,
+  status,
+});
+const keyset: Keyset = {
+  keyset_version: 1,
+  sequence: 2,
+  issued_at: '2026-10-06T08:00:00.000Z',
+  keys: [
+    keysetKey('publication', 'pub-new', 'active'),
+    keysetKey('publication', 'pub-old', 'retired'),
+    keysetKey('publication', 'pub-lost', 'revoked'),
+    keysetKey('catalog', 'cat', 'active'),
+  ],
+};
 
 const basemapEntry = {
   pack_id: '0600000b-0000-4000-8000-000000000001',
@@ -266,7 +286,7 @@ describe('terminal requests', () => {
       siteId: entry.site_id,
       manifest,
       manifestHash: await sha256(canonicalJson(manifest)),
-      signature: builtSignature,
+      signatures: [builtSignature],
       payload: { b: 1, a: 2 },
     });
     expect(await getSyncPackage(deps, context, device.proof(), entry.publication_id)).toEqual({
@@ -279,11 +299,61 @@ describe('terminal requests', () => {
       siteId: entry.site_id,
       manifest,
       manifestHash: 'b'.repeat(64),
-      signature: builtSignature,
+      signatures: [builtSignature],
       payload: {},
     });
     await expect(getSyncPackage(deps, context, device.proof(), entry.publication_id)).rejects.toThrow(
       'MANIFEST_HASH_MISMATCH',
+    );
+  });
+
+  it('serves the key set to enrolled terminals, 404 when none is configured (SEC-04)', async () => {
+    const { deps } = setup({ status: 'active', publicKey: device.publicKey });
+    await expect(getSyncKeyset(deps, context, device.proof())).rejects.toBeInstanceOf(NotFound);
+    const signed = { keyset: '{}', signature: builtSignature };
+    const withKeyset = { ...deps, keyset: async () => ({ signed, keyset }) };
+    await expect(getSyncKeyset(withKeyset, context, device.proof())).resolves.toEqual(signed);
+    const revoked = setup({ status: 'revoked', publicKey: device.publicKey });
+    await expect(
+      getSyncKeyset({ ...revoked.deps, keyset: async () => ({ signed, keyset }) }, context, device.proof()),
+    ).rejects.toBeInstanceOf(DeviceRevoked);
+  });
+
+  it('serves the newest signature the terminals trust, 503 while a revoked key is not replaced (SEC-04)', async () => {
+    const { deps, devices } = setup({ status: 'active', publicKey: device.publicKey });
+    const manifest = { manifest_version: 1, files: [] };
+    const signature = (keyId: string): Signature => ({ algorithm: 'Ed25519', key_id: keyId, signature: keyId });
+    const withKeyset = {
+      ...deps,
+      keyset: async () => ({ signed: { keyset: '{}', signature: builtSignature }, keyset }),
+    };
+    devices.package.mockResolvedValue({
+      siteId: entry.site_id,
+      manifest,
+      manifestHash: await sha256(canonicalJson(manifest)),
+      signatures: [signature('pub-old'), signature('pub-new')],
+      payload: {},
+    });
+    expect((await getSyncPackage(withKeyset, context, device.proof(), entry.publication_id)).signature).toEqual(
+      signature('pub-new'),
+    );
+    devices.package.mockResolvedValue({
+      siteId: entry.site_id,
+      manifest,
+      manifestHash: await sha256(canonicalJson(manifest)),
+      signatures: [signature('pub-lost')],
+      payload: {},
+    });
+    await expect(getSyncPackage(withKeyset, context, device.proof(), entry.publication_id)).rejects.toBeInstanceOf(
+      ServiceUnavailable,
+    );
+    devices.basemap.mockResolvedValue({
+      manifest,
+      manifestHash: await sha256(canonicalJson(manifest)),
+      signatures: [signature('pub-lost'), signature('pub-old')],
+    });
+    expect((await getSyncBasemap(withKeyset, context, device.proof(), basemapEntry.pack_id)).signature).toEqual(
+      signature('pub-old'),
     );
   });
 
@@ -302,13 +372,13 @@ describe('terminal requests', () => {
     devices.basemap.mockResolvedValue({
       manifest,
       manifestHash: await sha256(canonicalJson(manifest)),
-      signature: builtSignature,
+      signatures: [builtSignature],
     });
     await expect(getSyncBasemap(deps, context, device.proof(), basemapEntry.pack_id)).resolves.toEqual({
       manifest: canonicalJson(manifest),
       signature: builtSignature,
     });
-    devices.basemap.mockResolvedValue({ manifest, manifestHash: 'd'.repeat(64), signature: builtSignature });
+    devices.basemap.mockResolvedValue({ manifest, manifestHash: 'd'.repeat(64), signatures: [builtSignature] });
     await expect(getSyncBasemap(deps, context, device.proof(), basemapEntry.pack_id)).rejects.toThrow(
       'MANIFEST_HASH_MISMATCH',
     );
@@ -351,7 +421,7 @@ describe('terminal requests', () => {
       siteId: entry.site_id,
       manifest,
       manifestHash: await sha256(canonicalJson(manifest)),
-      signature: builtSignature,
+      signatures: [builtSignature],
       payload: {},
     });
     accessJournal.record.mockResolvedValue('restricted');
@@ -391,7 +461,7 @@ describe('terminal requests', () => {
       siteId: entry.site_id,
       manifest: {},
       manifestHash: '',
-      signature: builtSignature,
+      signatures: [builtSignature],
       payload: {},
     });
     devices.packageFiles.mockResolvedValue([{ sha256: 'c'.repeat(64), storageKey: 'tenants/t/assets/a' }]);

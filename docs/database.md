@@ -36,6 +36,7 @@ pas exposé par la Data API Supabase (`supabase/config.toml` → `api.schemas`),
 | `20261021000100_basemaps.sql`                      | Sprint 11 : fonds de carte par secteur (`basemap_pack`, `device_basemap`), couverture (`basemap_coverage`), planification et préparation par le worker (`worker_*_basemap*`), distribution aux terminaux (`sync_basemap*`)                   |
 | `20261021000200_worker_slots.sql`                  | Sprint 11 : `claim_jobs` exclut les types de travaux qu’un worker mène déjà (une préparation de fond à la fois)                                                                                                                              |
 | `20261021000300_basemap_signed_detail.sql`         | Sprint 11 : zones de détail des fonds limitées aux sites de version signée (réellement diffusés)                                                                                                                                             |
+| `20261028000100_signature_rotation.sql`            | Sprint 12 : re-signatures après une rotation de clé (`publication_signature`, `basemap_pack_signature`), travail `signatures.renew`, `sync_renewed_signatures`, jeu de clés déclaré par les terminaux (`device_sync_state.keyset_sequence`)  |
 
 ## Correspondance avec les documents de cadrage
 
@@ -161,6 +162,23 @@ Sprint 10).
   fichiers du manifeste et les fichiers contrôlés référencés par la charge utile) et `sync_receipt`.
   Toutes exigent `offline:download` et un terminal enrôlé, non révoqué, du SIS courant. Voir le test
   `120_offline_distribution`.
+
+### Rotation des clés de signature (Sprint 12, ADR-027)
+
+- La signature faite à la fabrication reste immuable. Après une rotation, le worker ajoute des
+  re-signatures : `publication_signature` et `basemap_pack_signature`, une par contenu et par clé.
+  - Elles sont écrites par `worker_record_signature`, seulement pour un contenu en vigueur : version
+    publiée, fond prêt.
+  - Chaque re-signature est tracée au journal du SIS (`publication.resigned`, `basemap.resigned`).
+- `worker_signature_candidates(clé, limite, exclus)` liste les contenus en vigueur que la clé n'a pas
+  signés, avec leurs signatures. Le worker vérifie l'empreinte et une signature d'origine avant de
+  signer ; ce qu'il n'a pas pu vérifier est exclu pour le reste du passage.
+- `worker_schedule_signature_renewal` met en file un travail `signatures.renew` par clé et par heure.
+- `sync_renewed_signatures(terminal, type, contenu)` rend aux terminaux du SIS les re-signatures,
+  de la plus ancienne à la plus récente. L'API choisit celle à servir selon le jeu de clés.
+- `sync_receipt` reçoit le numéro du jeu de clés du terminal (`device_sync_state.keyset_sequence`,
+  absent avant l'application 0.4.0).
+- Les deux tables ne sont lisibles par aucun rôle applicatif. Voir le test `290_signature_rotation`.
 
 ## Signalements terrain
 

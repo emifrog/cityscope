@@ -1,7 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import {
   basemapSourceInfo,
-  Ed25519Signer,
   IgnCartographyCatalog,
   IgnGeocoder,
   PostgresHealthProbe,
@@ -14,8 +13,13 @@ import {
   createPool,
   createSupabaseTokenVerifier,
   ed25519Verifier,
+  lazySigner,
+  loadKeyset,
+  openSigner,
 } from '@etare/adapters';
+import type { LoadedKeyset } from '@etare/application';
 import { readApiEnv, type Env } from '@etare/config';
+import { ServiceUnavailable } from '@etare/domain';
 import { buildOpenApiDocument } from '@etare/contracts/openapi';
 import type { ApiDependencies } from './app';
 
@@ -30,6 +34,15 @@ export function createApiDependencies(env: Env): ApiDependencies {
     onIdleError: (error) => logger.warn('idle database connection lost', { error: error.message }),
   });
   let openApi: unknown;
+  // Key set served to the terminals (SEC-04, ADR-027): read and checked once, at first use.
+  let keysetLoading: Promise<LoadedKeyset | null> | null = null;
+  const keyset = () =>
+    (keysetLoading ??= loadKeyset(config.keyset).catch((error: unknown) => {
+      keysetLoading = null;
+      logger.error('distribution key set unusable', { error: error instanceof Error ? error.message : String(error) });
+      throw new ServiceUnavailable('Jeu de clés de distribution inutilisable.');
+    }));
+  const catalogSigning = config.catalogSigning;
   return {
     sessions: new PostgresSessionFactory(pool),
     tokens: createSupabaseTokenVerifier(config.auth),
@@ -47,8 +60,21 @@ export function createApiDependencies(env: Env): ApiDependencies {
     basemapSource: basemapSourceInfo(config.basemapSource),
     geocoder: new IgnGeocoder(),
     sha256: async (text) => createHash('sha256').update(text, 'utf8').digest('hex'),
-    // Catalogue key: server-side only; terminals trust its public key (ADR-015).
-    catalogSigner: config.catalogSigningKey ? Ed25519Signer.fromPkcs8(config.catalogSigningKey) : null,
+    // Catalogue key: server-side only, active in the key set the terminals trust (ADR-015, SEC-04).
+    catalogSigner: catalogSigning
+      ? lazySigner(async () => {
+          try {
+            return await openSigner(catalogSigning, 'catalog', (await keyset())?.keyset ?? null);
+          } catch (error) {
+            logger.error('catalogue signing key unusable', {
+              source: catalogSigning.kind,
+              error: error instanceof Error ? error.message : String(error),
+            });
+            throw new ServiceUnavailable('Signature des catalogues indisponible.');
+          }
+        })
+      : null,
+    keyset,
     minAppVersion: config.minAppVersion,
     verifier: ed25519Verifier,
     randomBytes: (length) => new Uint8Array(randomBytes(length)),

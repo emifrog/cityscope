@@ -44,6 +44,114 @@ function requiredOutsideDevelopment(
 }
 
 /**
+ * Where a signing key of the distribution lives (SEC-04, ADR-027): the environment
+ * (development and tests only), a secret file mounted by the host, or a Transit
+ * engine of OpenBao or Vault that signs without ever handing out the key.
+ */
+export type SigningKeySource =
+  | { readonly kind: 'environment'; readonly value: string }
+  | { readonly kind: 'file'; readonly path: string }
+  | {
+      readonly kind: 'transit';
+      readonly url: string;
+      readonly mount: string;
+      readonly key: string;
+      readonly tokenFile: string;
+      readonly namespace: string | null;
+    };
+
+/** The key set served to the terminals, signed by the root key (SEC-04, ADR-027). */
+export interface KeysetSetting {
+  readonly source:
+    { readonly kind: 'inline'; readonly text: string } | { readonly kind: 'file'; readonly path: string };
+  /** Root public keys (`root:<id>:<base64>`) the process checks the key set with at startup. */
+  readonly rootKeys: string | null;
+}
+
+const signingSchema = z.object({
+  /** Transit engine of OpenBao or Vault (https outside development). */
+  SIGNING_TRANSIT_URL: z.url().optional(),
+  /** Token of the process, written to a file by the agent of the vault. */
+  SIGNING_TRANSIT_TOKEN_FILE: z.string().min(1).optional(),
+  SIGNING_TRANSIT_MOUNT: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]+(\/[A-Za-z0-9_-]+)*$/, 'SIGNING_TRANSIT_MOUNT must look like transit')
+    .default('transit'),
+  SIGNING_TRANSIT_NAMESPACE: z.string().min(1).max(200).optional(),
+  /** Signed key set (JSON), or the file holding it. */
+  DISTRIBUTION_KEYSET: z.string().min(2).optional(),
+  DISTRIBUTION_KEYSET_FILE: z.string().min(1).optional(),
+  /** Root public keys of the key set: `root:<id>:<base64>`, separated by `;`. */
+  DISTRIBUTION_ROOT_KEYS: z.string().min(1).optional(),
+});
+type SigningEnv = z.infer<typeof signingSchema>;
+
+const SHARED_ENVS: readonly AppEnv[] = ['staging', 'production'];
+
+function signingKeySource(
+  appEnv: AppEnv,
+  prefix: 'CATALOG' | 'PUBLICATION',
+  values: {
+    readonly environment: string | undefined;
+    readonly file: string | undefined;
+    readonly transitKey: string | undefined;
+  },
+  signing: SigningEnv,
+): SigningKeySource | null {
+  const names = [`${prefix}_SIGNING_KEY`, `${prefix}_SIGNING_KEY_FILE`, `${prefix}_SIGNING_TRANSIT_KEY`];
+  const given = [values.environment, values.file, values.transitKey].filter((value) => value !== undefined);
+  if (given.length > 1) throw new Error(`Only one of ${names.join(', ')} may be set.`);
+  if (values.environment !== undefined) {
+    if (SHARED_ENVS.includes(appEnv)) {
+      throw new Error(
+        `${names[0]} is reserved to development and tests: in ${appEnv}, use ${names[1]} or ${names[2]} (SEC-04).`,
+      );
+    }
+    return { kind: 'environment', value: values.environment };
+  }
+  if (values.file !== undefined) return { kind: 'file', path: values.file };
+  if (values.transitKey !== undefined) {
+    if (!signing.SIGNING_TRANSIT_URL || !signing.SIGNING_TRANSIT_TOKEN_FILE) {
+      throw new Error(`${names[2]} requires SIGNING_TRANSIT_URL and SIGNING_TRANSIT_TOKEN_FILE.`);
+    }
+    if (SHARED_ENVS.includes(appEnv) && !signing.SIGNING_TRANSIT_URL.startsWith('https://')) {
+      throw new Error(`SIGNING_TRANSIT_URL must use https in ${appEnv}.`);
+    }
+    return {
+      kind: 'transit',
+      url: signing.SIGNING_TRANSIT_URL,
+      mount: signing.SIGNING_TRANSIT_MOUNT,
+      key: values.transitKey,
+      tokenFile: signing.SIGNING_TRANSIT_TOKEN_FILE,
+      namespace: signing.SIGNING_TRANSIT_NAMESPACE ?? null,
+    };
+  }
+  // Shared environments distribute to terminals: their signing keys are mandatory (ADR-015).
+  if (SHARED_ENVS.includes(appEnv)) {
+    throw new Error(`${names[1]} or ${names[2]} is required in ${appEnv} (offline distribution).`);
+  }
+  return null;
+}
+
+function keysetSetting(appEnv: AppEnv, signing: SigningEnv): KeysetSetting | null {
+  if (signing.DISTRIBUTION_KEYSET !== undefined && signing.DISTRIBUTION_KEYSET_FILE !== undefined) {
+    throw new Error('Only one of DISTRIBUTION_KEYSET, DISTRIBUTION_KEYSET_FILE may be set.');
+  }
+  const source =
+    signing.DISTRIBUTION_KEYSET !== undefined
+      ? ({ kind: 'inline', text: signing.DISTRIBUTION_KEYSET } as const)
+      : signing.DISTRIBUTION_KEYSET_FILE !== undefined
+        ? ({ kind: 'file', path: signing.DISTRIBUTION_KEYSET_FILE } as const)
+        : null;
+  if (SHARED_ENVS.includes(appEnv) && (!source || !signing.DISTRIBUTION_ROOT_KEYS)) {
+    throw new Error(
+      `DISTRIBUTION_KEYSET_FILE (or DISTRIBUTION_KEYSET) and DISTRIBUTION_ROOT_KEYS are required in ${appEnv} (SEC-04).`,
+    );
+  }
+  return source ? { source, rootKeys: signing.DISTRIBUTION_ROOT_KEYS ?? null } : null;
+}
+
+/**
  * Source of the offline base maps of the tablets (ADR-024): the synthetic test map, the Plan
  * IGN through the flow agreed with the IGN, or none. The synthetic map is never a real map:
  * refused in production; it is the default of the development and test environments.
@@ -72,13 +180,22 @@ const authSchema = z.object({
   AUTH_AUDIENCE: z.string().min(1).default('authenticated'),
 });
 
-const apiEnvSchema = authSchema.extend({
+const apiEnvSchema = authSchema.extend(signingSchema.shape).extend({
   APP_ENV: appEnvSchema,
   DATABASE_URL: z.string().min(1),
   /** Server-side only: signs short-lived download URLs after authorization (storage gateway). */
   SUPABASE_SECRET_KEY: z.string().min(1).optional(),
-  /** Server-side only: Ed25519 key (PKCS#8 DER, base64) signing the catalogues of the terminals. */
+  /**
+   * Ed25519 key signing the catalogues of the terminals (server-side only), one source among:
+   * the key itself (PKCS#8 DER, base64; development and tests), a secret file (PEM or base64),
+   * or the name of a key of the Transit engine (SEC-04).
+   */
   CATALOG_SIGNING_KEY: z.string().min(1).optional(),
+  CATALOG_SIGNING_KEY_FILE: z.string().min(1).optional(),
+  CATALOG_SIGNING_TRANSIT_KEY: z
+    .string()
+    .regex(/^[A-Za-z0-9._-]{1,100}$/)
+    .optional(),
   /** Oldest OPS application (x.y.z) allowed to install publications (SYN-02); unset: no minimum. */
   MOBILE_MIN_APP_VERSION: z
     .string()
@@ -104,7 +221,9 @@ export interface ApiEnv {
   readonly supabaseUrl: string;
   readonly supabaseSecretKey: string | undefined;
   /** Null when offline distribution is not configured (terminal endpoints answer 503). */
-  readonly catalogSigningKey: string | null;
+  readonly catalogSigning: SigningKeySource | null;
+  /** Key set served to the terminals; null: none (development, the terminals keep their embedded keys). */
+  readonly keyset: KeysetSetting | null;
   /** Minimum OPS application version announced in the signed catalogues (null: none). */
   readonly minAppVersion: string | null;
   readonly auth: { readonly issuer: string; readonly jwksUrl: string; readonly audience: string };
@@ -117,14 +236,24 @@ export interface ApiEnv {
 
 export function readApiEnv(env: Env): ApiEnv {
   const parsed = apiEnvSchema.parse(env);
-  requiredOutsideDevelopment(parsed.APP_ENV, 'CATALOG_SIGNING_KEY', parsed.CATALOG_SIGNING_KEY);
+  const catalogSigning = signingKeySource(
+    parsed.APP_ENV,
+    'CATALOG',
+    {
+      environment: parsed.CATALOG_SIGNING_KEY,
+      file: parsed.CATALOG_SIGNING_KEY_FILE,
+      transitKey: parsed.CATALOG_SIGNING_TRANSIT_KEY,
+    },
+    parsed,
+  );
   const issuer = parsed.AUTH_ISSUER ?? `${parsed.SUPABASE_URL.replace(/\/$/, '')}/auth/v1`;
   return {
     appEnv: parsed.APP_ENV,
     databaseUrl: assertDedicatedDatabaseRole(parsed.DATABASE_URL, 'etare_api'),
     supabaseUrl: parsed.SUPABASE_URL,
     supabaseSecretKey: parsed.SUPABASE_SECRET_KEY,
-    catalogSigningKey: parsed.CATALOG_SIGNING_KEY ?? null,
+    catalogSigning,
+    keyset: keysetSetting(parsed.APP_ENV, parsed),
     minAppVersion: parsed.MOBILE_MIN_APP_VERSION ?? null,
     rateLimits: parsed.RATE_LIMITS === 'on',
     trustedProxyHops: parsed.TRUSTED_PROXY_HOPS,
@@ -142,7 +271,7 @@ export function readApiEnv(env: Env): ApiEnv {
   };
 }
 
-const workerEnvSchema = z.object({
+const workerEnvSchema = signingSchema.extend({
   APP_ENV: appEnvSchema,
   WORKER_DATABASE_URL: z.string().min(1),
   WORKER_ID: z
@@ -155,8 +284,16 @@ const workerEnvSchema = z.object({
   /** Object storage access for file verification (server-side secret, never exposed). */
   SUPABASE_URL: z.url().optional(),
   SUPABASE_SECRET_KEY: z.string().min(1).optional(),
-  /** Ed25519 key (PKCS#8 DER, base64) signing the manifests of publications (never given to the API). */
+  /**
+   * Ed25519 key signing the manifests of publications and base maps (never given to the API), one
+   * source among: the key itself (development and tests), a secret file, or a Transit key (SEC-04).
+   */
   PUBLICATION_SIGNING_KEY: z.string().min(1).optional(),
+  PUBLICATION_SIGNING_KEY_FILE: z.string().min(1).optional(),
+  PUBLICATION_SIGNING_TRANSIT_KEY: z
+    .string()
+    .regex(/^[A-Za-z0-9._-]{1,100}$/)
+    .optional(),
   /** ClamAV daemon checking every uploaded file, `tcp://host:3310` (SEC-01). */
   ANTIVIRUS_URL: z
     .string()
@@ -189,7 +326,9 @@ export interface WorkerEnv {
   /** Null when the worker cannot reach the object storage (file verification disabled). */
   readonly storage: { readonly url: string; readonly secretKey: string } | null;
   /** Null when publications are built without a signature (not distributable offline). */
-  readonly publicationSigningKey: string | null;
+  readonly publicationSigning: SigningKeySource | null;
+  /** Key set of the platform: the worker signs only with a key it lists as active. */
+  readonly keyset: KeysetSetting | null;
   /** Null in development only: files are then checked without antivirus (said at startup). */
   readonly antivirusUrl: string | null;
   /** Null when no mail server is configured: notifications fail visibly and can be replayed. */
@@ -204,7 +343,16 @@ export interface WorkerEnv {
 
 export function readWorkerEnv(env: Env): WorkerEnv {
   const parsed = workerEnvSchema.parse(env);
-  requiredOutsideDevelopment(parsed.APP_ENV, 'PUBLICATION_SIGNING_KEY', parsed.PUBLICATION_SIGNING_KEY);
+  const publicationSigning = signingKeySource(
+    parsed.APP_ENV,
+    'PUBLICATION',
+    {
+      environment: parsed.PUBLICATION_SIGNING_KEY,
+      file: parsed.PUBLICATION_SIGNING_KEY_FILE,
+      transitKey: parsed.PUBLICATION_SIGNING_TRANSIT_KEY,
+    },
+    parsed,
+  );
   // A file is never admitted without antivirus outside development (SEC-01).
   requiredOutsideDevelopment(parsed.APP_ENV, 'ANTIVIRUS_URL', parsed.ANTIVIRUS_URL, 'antivirus of uploaded files');
   const basemapSource = basemapSourceSetting(parsed.APP_ENV, parsed.BASEMAP_SOURCE);
@@ -224,7 +372,8 @@ export function readWorkerEnv(env: Env): WorkerEnv {
       parsed.SUPABASE_URL && parsed.SUPABASE_SECRET_KEY
         ? { url: parsed.SUPABASE_URL, secretKey: parsed.SUPABASE_SECRET_KEY }
         : null,
-    publicationSigningKey: parsed.PUBLICATION_SIGNING_KEY ?? null,
+    publicationSigning,
+    keyset: keysetSetting(parsed.APP_ENV, parsed),
     antivirusUrl: parsed.ANTIVIRUS_URL ?? null,
     mail:
       parsed.SMTP_URL && parsed.APP_BASE_URL
