@@ -169,6 +169,13 @@ same-origin` (ADR-023).
   autre onglet ou l’expiration d’une session. Un ancien chargement de session ne peut pas rétablir
   une identité après un événement d’authentification plus récent.
 - Journaux JSON avec masquage des clés sensibles (jetons, mots de passe, URL signées).
+- Supervision (EXP-03, ADR-028) :
+  - `GET /api/v1/metrics` n'existe qu'avec `METRICS_TOKEN` (32 caractères au moins), comparé en
+    temps constant ; un refus est tracé au journal (`security.metrics_refused`) ;
+  - les métriques sont des agrégats aux étiquettes bornées (routes, types de travaux, SIS, statuts) :
+    jamais un site, une personne ni un identifiant ;
+  - le tableau du SIS exige `audit:read`, et ses chiffres restent dans le SIS (fonction
+    `SECURITY DEFINER` filtrée par le SIS actif).
 
 ## Terminaux et distribution hors ligne
 

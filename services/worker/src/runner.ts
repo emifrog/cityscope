@@ -35,6 +35,16 @@ async function sleep(ms: number, signal: AbortSignal): Promise<void> {
   }
 }
 
+/**
+ * Code kept with a failure (EXP-03): the code of a permanent failure, else the code of a known
+ * error (unavailable antivirus, storage, refused connection...), else HANDLER_ERROR.
+ */
+export function failureCode(error: unknown): string {
+  if (error instanceof PermanentJobError) return error.code;
+  const code = typeof error === 'object' && error !== null && 'code' in error ? error.code : undefined;
+  return typeof code === 'string' && /^[A-Z][A-Z0-9_]{1,63}$/.test(code) ? code : 'HANDLER_ERROR';
+}
+
 export function createWorker(options: WorkerOptions): Worker {
   const { queue, registry, logger, concurrency, leaseSeconds, pollIntervalMs } = options;
   const retryDelay = options.retryDelay ?? retryDelaySeconds;
@@ -58,12 +68,17 @@ export function createWorker(options: WorkerOptions): Worker {
   }
 
   async function process(job: Job): Promise<void> {
+    // The trace of the request that enqueued the job follows it (EXP-03 correlation).
     const jobLogger = logger.child({
       job_id: job.id,
       job_type: job.type,
       tenant_id: job.tenantId,
       attempt: job.attempts,
+      ...(job.correlationId ? { trace_id: job.correlationId } : {}),
     });
+    const started = performance.now();
+    const elapsed = () => Math.round(performance.now() - started);
+    jobLogger.debug('job started');
     const lease = new AbortController();
     const stopLease = () => lease.abort();
     shutdown.signal.addEventListener('abort', stopLease);
@@ -85,13 +100,16 @@ export function createWorker(options: WorkerOptions): Worker {
 
     try {
       await registry.execute({ job, logger: jobLogger, signal: lease.signal });
-      if (await queue.complete(job.id)) jobLogger.info('job succeeded');
-      else jobLogger.warn('job completion ignored: lease lost');
+      if (await queue.complete(job.id)) jobLogger.info('job succeeded', { duration_ms: elapsed() });
+      else jobLogger.warn('job completion ignored: lease lost', { duration_ms: elapsed() });
     } catch (error) {
       const permanent = error instanceof PermanentJobError;
-      const code = permanent ? error.code : 'HANDLER_ERROR';
+      const code = failureCode(error);
       const status = await queue.fail(job.id, code, permanent ? null : retryDelay(job.attempts));
-      jobLogger.warn('job failed', { code, status, ...(permanent ? {} : { error }) });
+      const fields = { code, status, duration_ms: elapsed(), ...(permanent ? {} : { error }) };
+      // A dead job needs someone: it is an error; a retried one a warning.
+      if (status === 'dead') jobLogger.error('job failed', fields);
+      else jobLogger.warn('job failed', fields);
     } finally {
       clearInterval(heartbeat);
       shutdown.signal.removeEventListener('abort', stopLease);

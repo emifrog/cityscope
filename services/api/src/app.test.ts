@@ -4,7 +4,7 @@ import { stubSession } from '@etare/application/testing';
 import { API_BASE_PATH, apiErrorSchema, endpoints, type SiteDetail } from '@etare/contracts';
 import { AccessDenied, Unauthenticated, permissionsForRoles, type RequestContext, type Role } from '@etare/domain';
 import { describe, expect, it } from 'vitest';
-import { createApiApp, routerPath, type ApiDependencies } from './app';
+import { createApiApp, routerPath, traceIdOf, type ApiDependencies } from './app';
 import { DEFAULT_RATE_LIMITS } from './network';
 
 const tenant06 = '06000000-0000-4000-8000-000000000000';
@@ -92,7 +92,6 @@ const tokens: AccessTokenVerifier = {
 function makeApp(roles: Role[] = ['PREVISION_EDITOR'], extra: Partial<ApiDependencies> = {}) {
   const fake = sessions(roles);
   const app = createApiApp({
-    ...extra,
     sessions: fake,
     tokens,
     health: { database: async () => 'ok' },
@@ -108,6 +107,7 @@ function makeApp(roles: Role[] = ['PREVISION_EDITOR'], extra: Partial<ApiDepende
     logger: createLogger({}, { write: () => undefined }),
     version: 'test',
     openApiDocument: () => ({ openapi: '3.1.0' }),
+    ...extra,
   });
   const call = (path: string, headers: Record<string, string> = {}) =>
     app.request(`${API_BASE_PATH}${path}`, { headers });
@@ -274,5 +274,59 @@ describe('network protection (SEC-03)', () => {
         metadata: expect.objectContaining({ code: 'FORBIDDEN', method: 'GET' }),
       }),
     ]);
+  });
+});
+
+describe('supervision of the operator (EXP-03)', () => {
+  const token = 'metrics-token-of-at-least-32-characters';
+  const recorded: { method: string; route: string; status: number }[] = [];
+  const metrics = {
+    observeRequest: (method: string, route: string, status: number) => recorded.push({ method, route, status }),
+    render: async () => 'etare_up 1\n',
+  };
+
+  it('answers 503 to the probes when the database is unreachable', async () => {
+    const { call } = makeApp(['PREVISION_EDITOR'], { health: { database: async () => 'unavailable' } });
+    const response = await call('/health');
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ status: 'degraded', checks: { database: 'unavailable' } });
+  });
+
+  it('serves the metrics with the bearer token only, and never without one configured', async () => {
+    expect((await makeApp(['PREVISION_EDITOR'], { metrics }).call('/metrics')).status).toBe(404);
+    const securityEvents = { record: async (event: SecurityEvent) => void events.push(event) };
+    const events: SecurityEvent[] = [];
+    const { call } = makeApp(['PREVISION_EDITOR'], { metrics, metricsToken: token, securityEvents });
+    expect((await call('/metrics')).status).toBe(401);
+    expect((await call('/metrics', { authorization: `Bearer ${token}x` })).status).toBe(401);
+    expect(events.map((event) => event.action)).toEqual(['security.metrics_refused', 'security.metrics_refused']);
+    const response = await call('/metrics', { authorization: `Bearer ${token}` });
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('text/plain; version=0.0.4');
+    expect(await response.text()).toBe('etare_up 1\n');
+  });
+
+  it('records each answer by route template, never by concrete path, and not the metrics scrapes', async () => {
+    recorded.length = 0;
+    const { call } = makeApp(['PREVISION_EDITOR'], { metrics, metricsToken: token });
+    await call(`/sites/${siteId}`, { ...auth, 'x-tenant-id': tenant06 });
+    await call('/unknown');
+    await call('/metrics', { authorization: `Bearer ${token}` });
+    expect(recorded).toEqual([
+      { method: 'GET', route: `${API_BASE_PATH}/sites/:id`, status: 200 },
+      { method: 'GET', route: 'unmatched', status: 404 },
+    ]);
+  });
+
+  it('follows the W3C trace context of the caller, or starts one', async () => {
+    const { call } = makeApp();
+    const followed = await call('/health', { traceparent: '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01' });
+    expect(followed.headers.get('x-trace-id')).toBe('4bf92f35-77b3-4da6-a3ce-929d0e0e4736');
+    expect(followed.headers.get('traceparent')).toMatch(/^00-4bf92f3577b34da6a3ce929d0e0e4736-[0-9a-f]{16}-01$/);
+    const started = await call('/health', { traceparent: 'garbage' });
+    expect(started.headers.get('x-trace-id')).toMatch(/^[0-9a-f-]{36}$/);
+    expect(traceIdOf('00-00000000000000000000000000000000-00f067aa0ba902b7-01')).not.toBe(
+      '00000000-0000-0000-0000-000000000000',
+    );
   });
 });

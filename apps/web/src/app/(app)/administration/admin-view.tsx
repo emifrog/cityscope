@@ -17,6 +17,7 @@ import { NotificationsAdmin } from './notifications-admin';
 import { RiskCatalogAdmin } from './risk-catalog-admin';
 import { SectorsAdmin } from './sectors-admin';
 import { SettingsAdmin } from './settings-admin';
+import { SupervisionAdmin } from './supervision-admin';
 
 const TABS: readonly { key: string; label: string; permission: Permission }[] = [
   { key: 'membres', label: 'Membres', permission: 'member:manage' },
@@ -26,6 +27,7 @@ const TABS: readonly { key: string; label: string; permission: Permission }[] = 
   { key: 'risques', label: 'Catalogue des risques', permission: 'catalog:manage' },
   { key: 'notifications', label: 'Notifications', permission: 'member:manage' },
   { key: 'journal', label: 'Journal des sites sensibles', permission: 'audit:read' },
+  { key: 'supervision', label: 'Supervision', permission: 'audit:read' },
   { key: 'parametres', label: 'Paramètres', permission: 'member:manage' },
 ];
 
@@ -53,7 +55,7 @@ export function AdminView() {
     <>
       <PageHeader
         title="Administration"
-        description="Membres du SIS et rôles, secteurs, terminaux et synchronisation, fonds de carte des tablettes, catalogue des risques, notifications et paramètres du SIS."
+        description="Membres du SIS et rôles, secteurs, terminaux et synchronisation, fonds de carte des tablettes, catalogue des risques, notifications, supervision et paramètres du SIS."
       />
       <TabLinks tabs={tabs} active={tab.key} param="onglet" basePath="/administration" />
       {tab.key === 'membres' ? (
@@ -70,6 +72,8 @@ export function AdminView() {
         <AccessJournalAdmin />
       ) : tab.key === 'parametres' ? (
         <SettingsAdmin />
+      ) : tab.key === 'supervision' ? (
+        <SupervisionAdmin />
       ) : (
         <RiskCatalogAdmin />
       )}

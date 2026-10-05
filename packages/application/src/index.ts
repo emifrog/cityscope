@@ -25,4 +25,5 @@ export * from './referential';
 export * from './risks';
 export * from './sectors';
 export * from './signatures';
+export * from './supervision';
 export * from './use-cases';

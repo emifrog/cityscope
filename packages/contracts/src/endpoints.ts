@@ -183,6 +183,7 @@ import {
   syncReceiptResultSchema,
   syncReceiptSchema,
 } from './sync';
+import { tenantSupervisionSchema } from './supervision';
 
 export const API_VERSION = 'v1';
 export const API_BASE_PATH = `/api/${API_VERSION}`;
@@ -1230,6 +1231,15 @@ export const endpoints = {
     body: deviceEnrollSchema,
     successStatus: 201,
     response: deviceEnrollmentSchema,
+  }),
+  getSupervision: tenantEndpoint({
+    operationId: 'getSupervision',
+    method: 'get',
+    path: '/supervision',
+    summary: 'Tableau de supervision du SIS : publications, terminaux, signalements, fichiers, fonds (audit:read)',
+    tags: ['supervision'],
+    successStatus: 200,
+    response: tenantSupervisionSchema,
   }),
   // Read before the catalogue (SEC-04): the terminal checks it with an embedded root key, refuses a
   // sequence older than its own, then trusts only the keys it lists.

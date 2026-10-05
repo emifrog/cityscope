@@ -1,0 +1,20 @@
+# Example scrape configuration of the platform (EXP-03, ADR-028). The metrics endpoint of the API is
+# protected by METRICS_TOKEN: Prometheus reads it from a secret file, never from this file.
+global:
+  scrape_interval: 60s
+  evaluation_interval: 60s
+
+rule_files:
+  - alerts.yml
+
+scrape_configs:
+  - job_name: etare-api
+    metrics_path: /api/v1/metrics
+    scheme: https
+    authorization:
+      type: Bearer
+      credentials_file: /run/secrets/etare_metrics_token
+    static_configs:
+      - targets: ['firescape.example.org']
+  # External probe of the availability (architecture §29: "sondes extérieures"), e.g. with the
+  # blackbox exporter on GET /api/v1/health (200 when the API and its database answer, 503 otherwise).

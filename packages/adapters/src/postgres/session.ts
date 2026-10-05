@@ -34,6 +34,7 @@ import { PostgresPlanRepository } from './plan-repository';
 import { PostgresRiskRepository } from './risk-repository';
 import { PostgresSectorRepository } from './sector-repository';
 import { PostgresBasemapRepository } from './basemap-repository';
+import { PostgresSupervisionRepository } from './supervision-repository';
 import { PostgresZoneRepository } from './zone-repository';
 import { sqlState, type Pool, type PoolClient } from './pool';
 import { PostgresAuditRecorder, PostgresJobScheduler } from './request-services';
@@ -101,6 +102,7 @@ export class PostgresSessionFactory implements SessionFactory {
         jobs: new PostgresJobScheduler(client),
         audit: new PostgresAuditRecorder(client),
         accessJournal: new PostgresAccessJournal(client),
+        supervision: new PostgresSupervisionRepository(client),
       });
       // The terminal named by the request may have stood for the second factor of the
       // account: nothing commits nor answers unless its signature was verified.

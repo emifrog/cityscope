@@ -11,6 +11,9 @@ export interface ClamAvOptions {
 
 /** Thrown when the daemon cannot give a verdict: the job is retried, the file stays in quarantine. */
 export class AntivirusUnavailable extends Error {
+  /** Kept with the failed job (EXP-03). */
+  readonly code = 'ANTIVIRUS_UNAVAILABLE';
+
   constructor(detail: string) {
     super(`ANTIVIRUS_UNAVAILABLE: ${detail}`);
     this.name = 'AntivirusUnavailable';

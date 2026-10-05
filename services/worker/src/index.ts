@@ -5,6 +5,7 @@ export {
   assetVerificationHandler,
   basemapBuildHandler,
   basemapPlanHandler,
+  databaseMaintenanceHandler,
   defineHandler,
   fileMaintenanceHandler,
   noopHandler,
@@ -14,8 +15,9 @@ export {
   startBasemapScheduler,
   startMaintenanceScheduler,
   startSignatureRenewalScheduler,
+  startWorkerSupervision,
   type HandlerDefinition,
   type JobExecution,
   type JobHandler,
 } from './handlers';
-export { createWorker, type Worker, type WorkerOptions } from './runner';
+export { createWorker, failureCode, type Worker, type WorkerOptions } from './runner';

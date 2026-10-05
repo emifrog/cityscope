@@ -20,6 +20,8 @@ import {
   PUBLICATION_BUILD_JOB,
   PermanentJobError,
   SIGNATURE_RENEWAL_JOB,
+  DATABASE_MAINTENANCE_JOB,
+  type WorkerSupervisionStore,
   renewSignatures,
   type SignatureRenewalDependencies,
   type SignatureRenewalStore,
@@ -244,6 +246,50 @@ export function signatureRenewalHandler(deps: SignatureRenewalDependencies): Job
       }
     },
   });
+}
+
+/** Hourly database maintenance (EXP-03): finished jobs, receipt history, heartbeats, rate-limit windows. */
+export function databaseMaintenanceHandler(store: WorkerSupervisionStore): JobHandler {
+  return defineHandler({
+    type: DATABASE_MAINTENANCE_JOB,
+    payloadVersion: 1,
+    payload: z.object({ slot: z.string().max(20) }),
+    async handle(payload, { logger }) {
+      logger.info('database maintenance', { slot: payload.slot, purged: await store.purgeHistory() });
+    },
+  });
+}
+
+/**
+ * Supervision of the worker (EXP-03): a heartbeat every [intervalMs] (live workers are counted
+ * by the metrics of the platform), and the database maintenance asked for every few minutes.
+ * Returns the function stopping both, which records a clean shutdown.
+ */
+export function startWorkerSupervision(
+  store: WorkerSupervisionStore,
+  beat: { workerId: string; version: string; handlers: readonly string[]; concurrency: number },
+  logger: Logger,
+  options: { intervalMs?: number; now?: () => Date } = {},
+): () => Promise<void> {
+  const now = options.now ?? (() => new Date());
+  const startedAt = now();
+  const tick = () => {
+    store.beat({ ...beat, startedAt }).catch((error: unknown) => {
+      logger.warn('heartbeat not recorded', { error: error instanceof Error ? error.message : String(error) });
+    });
+    store.scheduleMaintenance(maintenanceSlot(now())).catch((error: unknown) => {
+      logger.warn('database maintenance not scheduled', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+  };
+  tick();
+  const timer = setInterval(tick, options.intervalMs ?? 30_000);
+  timer.unref();
+  return async () => {
+    clearInterval(timer);
+    await store.beat({ ...beat, startedAt, stopping: true }).catch(() => undefined);
+  };
 }
 
 /** Asks for the renewal of the signatures every few minutes (one job per key and per hour). */

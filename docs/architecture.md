@@ -148,6 +148,26 @@ fichiers déposés, ADR-009 ; antivirus ClamAV par `ANTIVIRUS_URL`, obligatoire 
 enregistré dès que `SUPABASE_URL` et `SUPABASE_SECRET_KEY` sont fournis.
 Miniatures, imports et notifications restent à ajouter. La fabrication des publications, de leurs
 manifestes signés et de leurs PDF est déjà assurée par `publication.build`. Voir ADR-007.
+Depuis le Sprint 12 s'y ajoutent :
+
+- `signatures.renew` : re-signature des contenus en vigueur après une rotation de clé (ADR-027) ;
+- `maintenance.database` : purge horaire des travaux terminés, des reçus et des battements de cœur
+  (ADR-028) ;
+- un battement de cœur toutes les 30 secondes dans `app.worker_heartbeat`.
+
+## Supervision (EXP-03, ADR-028)
+
+- `GET /api/v1/health` : 200 si l'API lit sa base, 503 sinon (sonde extérieure).
+- `GET /api/v1/metrics`, format texte Prometheus, jeton `METRICS_TOKEN` :
+  - métriques du processus : requêtes et latence par modèle de route, pool SQL ;
+  - chiffres de la plateforme lus en base à chaque collecte (`app.platform_metrics()`) : file de
+    travaux, workers vivants, publications, parc, reçus, fichiers, fonds, notifications, refus,
+    volume.
+- Trace W3C : le `traceparent` reçu (ou nouveau) donne le `trace_id` des journaux, de l'audit et des
+  travaux mis en file, que le worker journalise.
+- Règles d'alerte : `infra/monitoring/prometheus/alerts.yml`. Procédures :
+  `docs/exploitation/supervision.md`.
+- Tableau du SIS : Administration › Supervision (`audit:read`, `app.tenant_supervision()`).
 
 ## Distribution hors ligne
 

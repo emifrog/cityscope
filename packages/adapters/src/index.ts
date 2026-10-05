@@ -8,6 +8,7 @@ export * from './crypto';
 export * from './images/sharp-resizer';
 export * from './logging/logger';
 export * from './mail/smtp';
+export * from './metrics';
 export * from './pdf/etare-pdf';
 export * from './postgres/index';
 export * from './storage/supabase-object-storage';

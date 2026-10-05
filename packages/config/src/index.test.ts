@@ -226,3 +226,23 @@ describe('base maps of the tablets (ADR-024)', () => {
     ).toEqual({ source: 'ign-plan-vector', contact: 'sig@sdis06.example', requestsPerSecond: 2 });
   });
 });
+
+describe('supervision (EXP-03)', () => {
+  const api = { DATABASE_URL: 'postgresql://etare_api:pw@db:5432/etare', SUPABASE_URL: 'https://auth.example.org' };
+  const worker = { WORKER_DATABASE_URL: 'postgresql://etare_worker:pw@db:5432/etare' };
+
+  it('serves metrics only with a token of at least 32 characters', () => {
+    expect(readApiEnv(api).metricsToken).toBeNull();
+    expect(readApiEnv({ ...api, METRICS_TOKEN: 'x'.repeat(32) }).metricsToken).toBe('x'.repeat(32));
+    expect(() => readApiEnv({ ...api, METRICS_TOKEN: 'short' })).toThrow(/32 characters/);
+  });
+
+  it('reads the log level and the version of the build', () => {
+    expect(readApiEnv(api)).toMatchObject({ logLevel: 'info', version: 'dev' });
+    expect(readWorkerEnv({ ...worker, LOG_LEVEL: 'warn', APP_VERSION: '0.4.0' })).toMatchObject({
+      logLevel: 'warn',
+      version: '0.4.0',
+    });
+    expect(() => readWorkerEnv({ ...worker, LOG_LEVEL: 'verbose' })).toThrow();
+  });
+});

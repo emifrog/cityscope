@@ -17,6 +17,7 @@ import {
   PostgresNotificationStore,
   PostgresPublicationBuildStore,
   PostgresSignatureRenewalStore,
+  PostgresWorkerSupervisionStore,
   createPool,
 } from '@etare/adapters/postgres';
 import { SupabaseObjectStorage } from '@etare/adapters/storage';
@@ -33,14 +34,19 @@ import {
   noopHandler,
   notificationHandler,
   publicationBuildHandler,
+  databaseMaintenanceHandler,
   signatureRenewalHandler,
   startSignatureRenewalScheduler,
+  startWorkerSupervision,
 } from './handlers';
 import { createWorker } from './runner';
 
 const env = readWorkerEnv(process.env);
 const workerId = env.workerId ?? `${hostname()}-${process.pid}`;
-const logger = createLogger({ component: 'worker', worker_id: workerId, env: env.appEnv });
+const logger = createLogger(
+  { component: 'worker', version: env.version, worker_id: workerId, env: env.appEnv },
+  { level: env.logLevel },
+);
 const pool = createPool({
   connectionString: env.databaseUrl,
   applicationName: 'etare-worker',
@@ -120,6 +126,9 @@ if (objects) {
 }
 
 registry.register(basemapPlanHandler({ store: basemaps, objects, source: basemapSource?.info ?? null }));
+// EXP-03: hourly purge of the history (finished jobs, receipts, heartbeats, rate-limit windows).
+const supervision = new PostgresWorkerSupervisionStore(pool);
+registry.register(databaseMaintenanceHandler(supervision));
 // SEC-04: after a rotation, the content in force is re-signed with the active key.
 const signatures = new PostgresSignatureRenewalStore(pool);
 if (signer) {
@@ -170,10 +179,16 @@ const worker = createWorker({
 const stopMaintenance = objects ? startMaintenanceScheduler(new PostgresFileMaintenanceStore(pool), logger) : () => {};
 const stopBasemaps = startBasemapScheduler(basemaps, logger);
 const stopSignatures = signer ? startSignatureRenewalScheduler(signatures, signer.keyId, logger) : () => {};
-const stopScheduler = () => {
+const stopSupervision = startWorkerSupervision(
+  supervision,
+  { workerId, version: env.version, handlers: registry.types(), concurrency: env.concurrency },
+  logger,
+);
+const stopScheduler = async () => {
   stopMaintenance();
   stopBasemaps();
   stopSignatures();
+  await stopSupervision();
 };
 
 let stopping = false;
@@ -181,8 +196,8 @@ async function shutdown(signal: string): Promise<void> {
   if (stopping) return;
   stopping = true;
   logger.info('shutdown requested', { signal });
-  stopScheduler();
   await worker.stop();
+  await stopScheduler();
   await pool.end();
   process.exit(0);
 }

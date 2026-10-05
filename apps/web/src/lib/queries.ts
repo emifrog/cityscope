@@ -39,6 +39,7 @@ export const queryKeys = {
   devices: (tenantId: string) => ['tenant', tenantId, 'devices'] as const,
   sectors: (tenantId: string) => ['tenant', tenantId, 'sectors'] as const,
   basemaps: (tenantId: string) => ['tenant', tenantId, 'basemaps'] as const,
+  supervision: (tenantId: string) => ['tenant', tenantId, 'supervision'] as const,
   accessEvents: (tenantId: string) => ['tenant', tenantId, 'access-events'] as const,
   sectorCommunes: (tenantId: string) => ['tenant', tenantId, 'sector-communes'] as const,
   etare: (tenantId: string) => ['tenant', tenantId, 'etare'] as const,
@@ -552,6 +553,18 @@ export function useBasemaps() {
       query.state.data?.sectors.some((state) => state.latest && ['queued', 'building'].includes(state.latest.status))
         ? 5_000
         : false,
+  });
+}
+
+/** Board of the SIS (EXP-03, audit:read), refreshed every minute while shown. */
+export function useSupervision() {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.supervision(tenantId ?? 'none'),
+    enabled,
+    queryFn: ({ signal }) => api.getSupervision({ ...options, signal }),
+    retry: false,
+    refetchInterval: 60_000,
   });
 }
 

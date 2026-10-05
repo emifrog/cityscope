@@ -36,6 +36,7 @@ pas exposé par la Data API Supabase (`supabase/config.toml` → `api.schemas`),
 | `20261021000100_basemaps.sql`                      | Sprint 11 : fonds de carte par secteur (`basemap_pack`, `device_basemap`), couverture (`basemap_coverage`), planification et préparation par le worker (`worker_*_basemap*`), distribution aux terminaux (`sync_basemap*`)                   |
 | `20261021000200_worker_slots.sql`                  | Sprint 11 : `claim_jobs` exclut les types de travaux qu’un worker mène déjà (une préparation de fond à la fois)                                                                                                                              |
 | `20261021000300_basemap_signed_detail.sql`         | Sprint 11 : zones de détail des fonds limitées aux sites de version signée (réellement diffusés)                                                                                                                                             |
+| `20261028000200_supervision.sql`                   | Sprint 12 : chronologie des travaux (`started_at`, `first_started_at`), `worker_heartbeat`, historique des reçus (`device_sync_event`), purge `maintenance.database`, `platform_metrics`, `tenant_supervision`                               |
 | `20261028000100_signature_rotation.sql`            | Sprint 12 : re-signatures après une rotation de clé (`publication_signature`, `basemap_pack_signature`), travail `signatures.renew`, `sync_renewed_signatures`, jeu de clés déclaré par les terminaux (`device_sync_state.keyset_sequence`)  |
 
 ## Correspondance avec les documents de cadrage
@@ -179,6 +180,23 @@ Sprint 10).
 - `sync_receipt` reçoit le numéro du jeu de clés du terminal (`device_sync_state.keyset_sequence`,
   absent avant l'application 0.4.0).
 - Les deux tables ne sont lisibles par aucun rôle applicatif. Voir le test `290_signature_rotation`.
+
+## Supervision (Sprint 12, ADR-028)
+
+- `job.started_at` (prise de la tentative en cours) et `job.first_started_at` (première prise),
+  posés par `claim_jobs` : l'attente en file et le calcul se mesurent séparément.
+- `worker_heartbeat` : un battement par worker toutes les 30 secondes (`worker_beat`), avec sa
+  version et ses types de travaux ; l'arrêt propre est noté.
+- `device_sync_event` : chaque reçu de terminal, gardé 90 jours. `sync_receipt` l'alimente avec
+  `device_sync_state`.
+- `worker_purge_history` (travail `maintenance.database`, une fois par heure) :
+  - travaux réussis après 30 jours, morts après 90 jours ;
+  - reçus après 90 jours, battements de cœur après 7 jours ;
+  - fenêtres de limitation de débit après un jour.
+- `platform_metrics()` (rôle `etare_api`, point de métriques de l'exploitant) : agrégats de la
+  plateforme, par type de travail et par SIS, sans aucune ligne ni identifiant.
+- `tenant_supervision()` : tableau du SIS courant, `audit:read`.
+- Ces tables ne sont lisibles par aucun rôle applicatif. Voir le test `300_supervision`.
 
 ## Signalements terrain
 

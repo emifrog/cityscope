@@ -36,6 +36,7 @@ import type {
   Signature,
   SignedKeyset,
   SyncReceipt,
+  TenantSupervision,
   BuildingUpdate,
   Classification,
   ClassificationCreate,
@@ -149,6 +150,12 @@ export interface RequestSession {
   readonly jobs: JobScheduler;
   readonly audit: AuditRecorder;
   readonly accessJournal: AccessJournal;
+  readonly supervision: SupervisionRepository;
+}
+
+/** Board of the current SIS (EXP-03), aggregated in PostgreSQL. */
+export interface SupervisionRepository {
+  read(): Promise<TenantSupervision>;
 }
 
 /**

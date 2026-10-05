@@ -80,6 +80,7 @@ import {
   type MemberSensitiveAccessInput,
   type AccessEventList,
   type BasemapOverview,
+  type TenantSupervision,
   type AccessEventListQuery,
   type Sector,
   type SectorCommuneList,
@@ -824,6 +825,10 @@ export const api = {
 
   listAccessEvents: (options: ApiCallOptions, query: Partial<AccessEventListQuery> = {}): Promise<AccessEventList> =>
     call(endpoints.listAccessEvents.response, endpoints.listAccessEvents.path, options, { query }),
+
+  // ---------------------------------------------------------------- supervision of the SIS (EXP-03)
+  getSupervision: (options: ApiCallOptions): Promise<TenantSupervision> =>
+    call(endpoints.getSupervision.response, endpoints.getSupervision.path, options),
 
   // ---------------------------------------------------------------- base maps of the tablets (ADR-024)
   getBasemapOverview: (options: ApiCallOptions): Promise<BasemapOverview> =>

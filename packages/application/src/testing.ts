@@ -146,6 +146,10 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       requestBuild: unstubbed('basemaps.requestBuild'),
       ...overrides.basemaps,
     },
+    supervision: {
+      read: unstubbed('supervision.read'),
+      ...overrides.supervision,
+    },
     members: {
       list: unstubbed('members.list'),
       add: unstubbed('members.add'),

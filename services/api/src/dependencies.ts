@@ -1,9 +1,11 @@
 import { createHash, randomBytes } from 'node:crypto';
 import {
+  ApiMetrics,
   basemapSourceInfo,
   IgnCartographyCatalog,
   IgnGeocoder,
   PostgresHealthProbe,
+  PostgresPlatformMetrics,
   PostgresRateLimiter,
   PostgresSecurityEventRecorder,
   PostgresSessionFactory,
@@ -26,8 +28,8 @@ import type { ApiDependencies } from './app';
 /** Wires the real adapters from the environment (fails fast on a missing or unsafe configuration). */
 export function createApiDependencies(env: Env): ApiDependencies {
   const config = readApiEnv(env);
-  const version = env['APP_VERSION'] ?? 'dev';
-  const logger = createLogger({ component: 'api', version, env: config.appEnv });
+  const version = config.version;
+  const logger = createLogger({ component: 'api', version, env: config.appEnv }, { level: config.logLevel });
   const pool = createPool({
     connectionString: config.databaseUrl,
     applicationName: 'etare-api',
@@ -87,5 +89,8 @@ export function createApiDependencies(env: Env): ApiDependencies {
     securityEvents: new PostgresSecurityEventRecorder(pool),
     trustedProxyHops: config.trustedProxyHops,
     allowedOrigins: config.allowedOrigins,
+    // EXP-03: latency per route, SQL pool, and the figures of the platform read at each scrape.
+    metrics: new ApiMetrics({ component: 'api', version, pool, platform: new PostgresPlatformMetrics(pool) }),
+    metricsToken: config.metricsToken,
   };
 }

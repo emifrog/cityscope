@@ -1,0 +1,264 @@
+# Alert rules of the platform (EXP-03, ADR-028, architecture §29). Every alert names a service, an
+# impact and an owner, and links its procedure in docs/exploitation/supervision.md. Thresholds follow
+# the pilot objectives of §29; adjust them once measured on the pilot (CAP-01, R5).
+# Checked by packages/adapters/src/metrics/alerts.test.ts: every metric used here is exposed.
+groups:
+  - name: etare-disponibilite
+    rules:
+      - alert: EtareApiIndisponible
+        expr: up{job="etare-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: api
+          owner: exploitation
+        annotations:
+          summary: L'API ne répond plus à la supervision.
+          impact: Back-office et synchronisation des tablettes arrêtés ; les tablettes consultent ce qu'elles ont.
+          runbook_url: docs/exploitation/supervision.md#api-indisponible
+      - alert: EtareBaseInjoignable
+        expr: etare_platform_metrics_up == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: database
+          owner: exploitation
+        annotations:
+          summary: L'API ne lit plus la base de données.
+          impact: Toute requête métier échoue ; les tablettes gardent leurs données installées.
+          runbook_url: docs/exploitation/supervision.md#base-injoignable
+      - alert: EtareErreursApi
+        expr: >-
+          sum(rate(etare_http_requests_total{status="5xx"}[10m]))
+          / clamp_min(sum(rate(etare_http_requests_total[10m])), 0.001) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          service: api
+          owner: exploitation
+        annotations:
+          summary: Plus de 5 % des réponses de l'API sont des erreurs serveur.
+          impact: Des actions des utilisateurs échouent.
+          runbook_url: docs/exploitation/supervision.md#erreurs-api
+      - alert: EtareLatenceApi
+        expr: >-
+          histogram_quantile(0.95, sum by (le) (rate(etare_http_request_duration_seconds_bucket{route!~".*/downloads"}[10m])))
+          > 0.5
+        for: 15m
+        labels:
+          severity: warning
+          service: api
+          owner: exploitation
+        annotations:
+          summary: Le 95e centile des réponses de l'API dépasse 500 ms (objectif du pilote).
+          impact: Back-office lent ; synchronisations plus longues.
+          runbook_url: docs/exploitation/supervision.md#latence-api
+      - alert: EtarePoolSqlSature
+        expr: max(etare_db_pool_connections{state="waiting"}) > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+          owner: exploitation
+        annotations:
+          summary: Des requêtes attendent une connexion libre du pool SQL.
+          impact: Latence croissante, puis délais dépassés.
+          runbook_url: docs/exploitation/supervision.md#pool-sql
+
+  - name: etare-travaux
+    rules:
+      - alert: EtareAucunWorker
+        expr: etare_workers_alive == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: worker
+          owner: exploitation
+        annotations:
+          summary: Aucun worker n'a donné signe de vie depuis 5 minutes.
+          impact: Plus de publication, de contrôle antivirus, de notification ni de fond de carte.
+          runbook_url: docs/exploitation/supervision.md#aucun-worker
+      - alert: EtareFileQuiVieillit
+        expr: max(etare_jobs_oldest_queued_seconds) > 600
+        for: 10m
+        labels:
+          severity: warning
+          service: worker
+          owner: exploitation
+        annotations:
+          summary: Un travail attend son tour depuis plus de 10 minutes.
+          impact: Publications et contrôles de fichiers retardés.
+          runbook_url: docs/exploitation/supervision.md#file-qui-vieillit
+      - alert: EtareTravauxMorts
+        expr: sum by (type) (etare_jobs_dead_24h) > 0
+        labels:
+          severity: warning
+          service: worker
+          owner: exploitation
+        annotations:
+          summary: Des travaux ont échoué définitivement dans les 24 heures.
+          impact: Selon le type, publication en échec, fichier refusé ou notification non envoyée.
+          runbook_url: docs/exploitation/supervision.md#travaux-morts
+      - alert: EtarePublicationBloquee
+        expr: sum by (tenant) (etare_publications_stuck) > 0
+        for: 5m
+        labels:
+          severity: critical
+          service: worker
+          owner: exploitation
+        annotations:
+          summary: Une version validée attend sa fabrication depuis plus de 15 minutes.
+          impact: Les tablettes du SIS ne reçoivent pas la version validée.
+          runbook_url: docs/exploitation/supervision.md#publication-bloquee
+      - alert: EtarePublicationLente
+        expr: max(etare_publications_duration_p95_seconds) > 300
+        for: 30m
+        labels:
+          severity: warning
+          service: worker
+          owner: exploitation
+        annotations:
+          summary: Le 95e centile du délai de publication dépasse 5 minutes (objectif du pilote).
+          impact: Les versions validées tardent à atteindre les tablettes.
+          runbook_url: docs/exploitation/supervision.md#publication-lente
+      - alert: EtarePublicationEnEchec
+        expr: sum by (tenant) (etare_publications_failed_24h) > 0
+        labels:
+          severity: warning
+          service: worker
+          owner: sis
+        annotations:
+          summary: Une publication a échoué dans les 24 heures.
+          impact: La version précédente reste en vigueur ; la publication est à relancer.
+          runbook_url: docs/exploitation/supervision.md#publication-en-echec
+
+  - name: etare-fichiers
+    rules:
+      - alert: EtareControleFichiersEnAttente
+        expr: max(etare_files_pending_oldest_seconds) > 1800
+        for: 10m
+        labels:
+          severity: warning
+          service: fichiers
+          owner: exploitation
+        annotations:
+          summary: Un fichier déposé attend son contrôle depuis plus de 30 minutes.
+          impact: Documents et photos bloqués en quarantaine (jamais servis) ; antivirus probablement indisponible.
+          runbook_url: docs/exploitation/supervision.md#controle-fichiers
+      - alert: EtareNotificationsBloquees
+        expr: etare_notifications_pending_oldest_seconds > 3600
+        for: 10m
+        labels:
+          severity: warning
+          service: worker
+          owner: exploitation
+        annotations:
+          summary: Une notification attend son envoi depuis plus d'une heure.
+          impact: Les exploitants ne sont pas prévenus des suites de leurs propositions.
+          runbook_url: docs/exploitation/supervision.md#notifications
+      - alert: EtareFondDeCarteEnEchec
+        expr: etare_basemaps_failed_24h > 0
+        labels:
+          severity: info
+          service: worker
+          owner: exploitation
+        annotations:
+          summary: La préparation d'un fond de carte a échoué.
+          impact: Les tablettes gardent le fond précédent.
+          runbook_url: docs/exploitation/supervision.md#fonds-de-carte
+
+  - name: etare-parc
+    rules:
+      - alert: EtareFraicheurDuParc
+        expr: >-
+          sum(etare_devices_contacted_up_to_date_24h) / sum(etare_devices_contacted_24h) < 0.95
+          and sum(etare_devices_contacted_24h) > 0
+        for: 1h
+        labels:
+          severity: warning
+          service: terminaux
+          owner: exploitation
+        annotations:
+          summary: Moins de 95 % des tablettes joignables ont installé leur dernière génération.
+          impact: Des agents consultent des ETARE dépassés.
+          runbook_url: docs/exploitation/supervision.md#fraicheur-du-parc
+      - alert: EtareSynchronisationsEnErreur
+        expr: >-
+          sum(etare_sync_receipts_24h{status="error"}) / sum(etare_sync_receipts_24h) > 0.01
+          and sum(etare_sync_receipts_24h) > 20
+        for: 30m
+        labels:
+          severity: warning
+          service: terminaux
+          owner: exploitation
+        annotations:
+          summary: Plus de 1 % des synchronisations des tablettes échouent (objectif du pilote).
+          impact: Des tablettes ne se mettent plus à jour.
+          runbook_url: docs/exploitation/supervision.md#synchronisations-en-erreur
+      - alert: EtareContenuRefuseParLesTablettes
+        expr: sum by (tenant) (etare_sync_integrity_errors_24h) > 0
+        labels:
+          severity: critical
+          service: terminaux
+          owner: exploitation
+        annotations:
+          summary: Des tablettes refusent un contenu (empreinte, signature ou rejeu invalide).
+          impact: Contenu altéré ou clé non reconnue ; la version précédente reste sur les tablettes.
+          runbook_url: docs/exploitation/supervision.md#contenu-refuse
+
+  - name: etare-securite
+    rules:
+      - alert: EtareAccesRefusesEnNombre
+        expr: sum(etare_security_denied_1h{action=~"security.forbidden|security.cross_origin"}) > 50
+        labels:
+          severity: warning
+          service: securite
+          owner: exploitation
+        annotations:
+          summary: Nombreux accès refusés en une heure (autre SIS, origine non autorisée).
+          impact: Possible tentative d'accès à un autre SIS ; aucune donnée n'a été servie.
+          runbook_url: docs/exploitation/supervision.md#acces-refuses
+      - alert: EtarePreuvesDeTerminalRefusees
+        expr: sum(etare_security_denied_1h{action=~"security.device_.*"}) > 20
+        labels:
+          severity: warning
+          service: securite
+          owner: exploitation
+        annotations:
+          summary: Nombreuses requêtes de terminal refusées en une heure (révoqué, preuve invalide).
+          impact: Tablette perdue ou volée qui insiste, ou clé de terminal compromise.
+          runbook_url: docs/exploitation/supervision.md#terminaux-refuses
+      - alert: EtareJetonDeSupervisionRefuse
+        expr: etare_security_denied_1h{action="security.metrics_refused"} > 5
+        labels:
+          severity: warning
+          service: securite
+          owner: exploitation
+        annotations:
+          summary: Le point de métriques refuse des jetons.
+          impact: Supervision aveugle si le jeton a changé ; sinon, tentative de lecture.
+          runbook_url: docs/exploitation/supervision.md#jeton-de-supervision
+
+  - name: etare-capacite
+    rules:
+      - alert: EtareBaseVolumineuse
+        expr: etare_database_size_bytes > 6e9
+        for: 1h
+        labels:
+          severity: warning
+          service: database
+          owner: exploitation
+        annotations:
+          summary: La base dépasse 6 Go (seuil à ajuster à l'offre d'hébergement retenue).
+          impact: Risque de saturation du disque de la base.
+          runbook_url: docs/exploitation/supervision.md#volumes
+      - alert: EtareSignalementsEnSouffrance
+        expr: max(etare_field_reports_oldest_new_seconds) > 604800
+        labels:
+          severity: info
+          service: metier
+          owner: sis
+        annotations:
+          summary: Un signalement terrain attend son traitement depuis plus de 7 jours.
+          impact: Une anomalie relevée sur le terrain n'est pas prise en compte dans l'ETARE.
+          runbook_url: docs/exploitation/supervision.md#signalements

@@ -9900,6 +9900,197 @@
           "proof"
         ]
       },
+      "TenantSupervision": {
+        "type": "object",
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "publications": {
+            "type": "object",
+            "properties": {
+              "in_force": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "published_7d": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "failed_7d": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "stuck": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "duration_p95_seconds_7d": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "in_force",
+              "published_7d",
+              "failed_7d",
+              "stuck",
+              "duration_p95_seconds_7d"
+            ]
+          },
+          "devices": {
+            "type": "object",
+            "properties": {
+              "active": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "up_to_date": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "late": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "error": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "never_synced": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "holding_withdrawn": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "active",
+              "up_to_date",
+              "late",
+              "error",
+              "never_synced",
+              "holding_withdrawn"
+            ]
+          },
+          "receipts_7d": {
+            "type": "object",
+            "properties": {
+              "installed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "partial": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "error": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "installed",
+              "partial",
+              "error"
+            ]
+          },
+          "field_reports": {
+            "type": "object",
+            "properties": {
+              "new": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "oldest_new_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "new",
+              "oldest_new_at"
+            ]
+          },
+          "files": {
+            "type": "object",
+            "properties": {
+              "pending": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "rejected_7d": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "clean_bytes": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "pending",
+              "rejected_7d",
+              "clean_bytes"
+            ]
+          },
+          "notifications": {
+            "type": "object",
+            "properties": {
+              "pending": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "failed": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "pending",
+              "failed"
+            ]
+          },
+          "basemaps": {
+            "type": "object",
+            "properties": {
+              "ready": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "failed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "renewal_due": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "ready",
+              "failed",
+              "renewal_due"
+            ]
+          }
+        },
+        "required": [
+          "generated_at",
+          "publications",
+          "devices",
+          "receipts_7d",
+          "field_reports",
+          "files",
+          "notifications",
+          "basemaps"
+        ]
+      },
       "SignedKeyset": {
         "type": "object",
         "properties": {
@@ -22826,6 +23017,85 @@
           },
           "409": {
             "description": "Conflit avec des données existantes (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/supervision": {
+      "get": {
+        "operationId": "getSupervision",
+        "summary": "Tableau de supervision du SIS : publications, terminaux, signalements, fichiers, fonds (audit:read)",
+        "tags": [
+          "supervision"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantSupervision"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
             "content": {
               "application/json": {
                 "schema": {

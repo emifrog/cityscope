@@ -18,4 +18,5 @@ export * from './referential';
 export * from './resources';
 export * from './risks';
 export * from './sectors';
+export * from './supervision';
 export * from './sync';

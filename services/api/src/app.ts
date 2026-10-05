@@ -55,6 +55,7 @@ import {
   getAssetDownload,
   getSyncCatalog,
   getSyncKeyset,
+  getSupervision,
   getSyncPackage,
   getRevision,
   getSiteEtare,
@@ -215,6 +216,43 @@ export interface ApiDependencies {
   readonly trustedProxyHops?: number;
   /** Origins allowed besides the own origin of the API (browsers). */
   readonly allowedOrigins?: readonly string[];
+  /** Metrics of the API and of the platform (EXP-03); null or absent: none. */
+  readonly metrics?: ApiMetricsRecorder | null;
+  /** Bearer token of GET /metrics; null or absent: no metrics endpoint (404). */
+  readonly metricsToken?: string | null;
+}
+
+/** What the API records and exposes for the supervision of the operator (EXP-03). */
+export interface ApiMetricsRecorder {
+  observeRequest(method: string, route: string, status: number, seconds: number): void;
+  render(): Promise<string>;
+}
+
+const TRACEPARENT = /^00-([0-9a-f]{32})-([0-9a-f]{16})-[0-9a-f]{2}$/;
+
+/**
+ * The trace of a request (EXP-03): the W3C trace context sent by a proxy or a
+ * client is followed, otherwise a new trace starts. It is kept as a UUID (the
+ * same 128 bits) in the logs, the audit journal and the jobs it enqueues.
+ */
+export function traceIdOf(traceparent: string | undefined): string {
+  const match = TRACEPARENT.exec(traceparent?.trim().toLowerCase() ?? '');
+  const hex = match?.[1];
+  if (!hex || /^0+$/.test(hex) || /^0+$/.test(match[2] ?? '')) return crypto.randomUUID();
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+const randomSpanId = () =>
+  Array.from(crypto.getRandomValues(new Uint8Array(8)), (byte) => byte.toString(16).padStart(2, '0')).join('');
+
+/** Constant-time comparison of a presented token with the expected one. */
+async function sameToken(presented: string, expected: string): Promise<boolean> {
+  const digest = async (value: string) =>
+    new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)));
+  const [a, b] = await Promise.all([digest(presented), digest(expected)]);
+  let difference = 0;
+  for (let index = 0; index < a.length; index += 1) difference |= (a[index] ?? 0) ^ (b[index] ?? 0);
+  return difference === 0;
 }
 
 type Env = { Variables: { traceId: string; principal?: Principal; operationId?: string } };
@@ -223,6 +261,10 @@ const CLIENT_HEADER = 'x-client-platform';
 const tenantIdSchema = z.uuid();
 const originSchema = z.enum(['web', 'mobile', 'integration']);
 const MAX_JSON_BODY_BYTES = 64 * 1024;
+/** Metrics endpoint of the operator (EXP-03), outside of the business contract. */
+const METRICS_PATH = '/metrics';
+const METRICS_ROUTE = `${API_BASE_PATH}${METRICS_PATH}`;
+const METRICS_CONTENT_TYPE = 'text/plain; version=0.0.4; charset=utf-8';
 /** An installation receipt lists the publications of the terminal (thousands of sites). */
 const MAX_RECEIPT_BODY_BYTES = 1024 * 1024;
 const deviceIdSchema = z.uuid();
@@ -262,7 +304,8 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
   }
 
   app.use('*', async (c, next) => {
-    const traceId = crypto.randomUUID();
+    const started = performance.now();
+    const traceId = traceIdOf(c.req.header('traceparent'));
     c.set('traceId', traceId);
     // No CORS: browsers call the API from its own origin (or a configured one), never from elsewhere.
     const origin = c.req.header('origin');
@@ -274,6 +317,23 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     }
     await next();
     c.header('x-trace-id', traceId);
+    c.header('traceparent', `00-${traceId.replace(/-/g, '')}-${randomSpanId()}-01`);
+    // Supervision (EXP-03): latency and outcome per route template, one access line per answer.
+    // An unknown path matches only the catch-all of the middlewares: never the path itself (cardinality).
+    const route = c.req.routePath && !c.req.routePath.endsWith('*') ? c.req.routePath : 'unmatched';
+    if (route !== METRICS_ROUTE) {
+      const seconds = (performance.now() - started) / 1000;
+      deps.metrics?.observeRequest(c.req.method, route, c.res.status, seconds);
+      if (c.res.status < 400) {
+        deps.logger.info('request completed', {
+          trace_id: traceId,
+          method: c.req.method,
+          route,
+          status: c.res.status,
+          duration_ms: Math.round(seconds * 1000),
+        });
+      }
+    }
     // Business answers are never cached by browsers or shared caches.
     c.header('cache-control', 'no-store');
     c.header('x-content-type-options', 'nosniff');
@@ -444,11 +504,31 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
 
   app.get(routerPath(endpoints.getHealth.path), async (c) => {
     const database = await deps.health.database();
-    return respond(c, endpoints.getHealth, {
+    const body = endpoints.getHealth.response.parse({
       status: database === 'ok' ? 'ok' : 'degraded',
       version: deps.version,
       checks: { database },
     });
+    // External probes read the status code: a degraded API answers 503 (EXP-03).
+    return c.json(body, database === 'ok' ? 200 : 503);
+  });
+
+  // Metrics of the API and of the platform (EXP-03): text exposition format, outside of the
+  // business contract, for the supervision of the operator only (bearer token, constant time).
+  app.get(METRICS_PATH, async (c) => {
+    const expected = deps.metricsToken;
+    if (!expected || !deps.metrics) return c.notFound();
+    const presented = /^Bearer (\S+)$/.exec(c.req.header('authorization') ?? '')?.[1] ?? '';
+    if (!(await sameToken(presented, expected))) {
+      await recordRefusal(c, 'security.metrics_refused', 'Jeton de supervision refusé.', {});
+      return c.json({ error: { code: 'UNAUTHENTICATED', message: 'Jeton refusé.', trace_id: c.get('traceId') } }, 401);
+    }
+    return c.body(await deps.metrics.render(), 200, { 'content-type': METRICS_CONTENT_TYPE });
+  });
+
+  app.get(routerPath(endpoints.getSupervision.path), async (c) => {
+    const context = await requestContext(c, endpoints.getSupervision);
+    return respond(c, endpoints.getSupervision, await getSupervision(deps.sessions, context));
   });
 
   app.get('/openapi.json', (c) => c.json(deps.openApiDocument() as object));

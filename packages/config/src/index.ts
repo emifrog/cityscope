@@ -68,6 +68,10 @@ export interface KeysetSetting {
   readonly rootKeys: string | null;
 }
 
+/** Least important level written to the JSON logs (EXP-03). */
+const logLevelSchema = z.enum(['debug', 'info', 'warn', 'error']).default('info');
+export type LogLevelSetting = z.infer<typeof logLevelSchema>;
+
 const signingSchema = z.object({
   /** Transit engine of OpenBao or Vault (https outside development). */
   SIGNING_TRANSIT_URL: z.url().optional(),
@@ -213,6 +217,14 @@ const apiEnvSchema = authSchema.extend(signingSchema.shape).extend({
   ALLOWED_ORIGINS: z.string().optional(),
   /** Source of the offline base maps (ADR-024); the worker reads the same setting. */
   BASEMAP_SOURCE: basemapSourceSchema,
+  LOG_LEVEL: logLevelSchema,
+  /**
+   * Bearer token of the metrics endpoint (EXP-03), read by the supervision of the operator; at least
+   * 32 characters. Unset: no metrics endpoint (404).
+   */
+  METRICS_TOKEN: z.string().min(32, 'METRICS_TOKEN must hold at least 32 characters').optional(),
+  /** Version of the deployed build, in logs and metrics. */
+  APP_VERSION: z.string().min(1).max(64).default('dev'),
 });
 
 export interface ApiEnv {
@@ -232,6 +244,10 @@ export interface ApiEnv {
   readonly allowedOrigins: readonly string[];
   /** Source of the offline base maps; null: none on this platform. */
   readonly basemapSource: BasemapSourceId | null;
+  readonly logLevel: LogLevelSetting;
+  /** Null: no metrics endpoint. */
+  readonly metricsToken: string | null;
+  readonly version: string;
 }
 
 export function readApiEnv(env: Env): ApiEnv {
@@ -263,6 +279,9 @@ export function readApiEnv(env: Env): ApiEnv {
       .filter(Boolean)
       .map((origin) => new URL(origin).origin),
     basemapSource: basemapSourceSetting(parsed.APP_ENV, parsed.BASEMAP_SOURCE),
+    logLevel: parsed.LOG_LEVEL,
+    metricsToken: parsed.METRICS_TOKEN ?? null,
+    version: parsed.APP_VERSION,
     auth: {
       issuer,
       jwksUrl: parsed.AUTH_JWKS_URL ?? `${issuer}/.well-known/jwks.json`,
@@ -314,6 +333,9 @@ const workerEnvSchema = signingSchema.extend({
   BASEMAP_CONTACT: z.string().min(3).max(200).optional(),
   /** Pace of the requests to the source of the base maps. */
   BASEMAP_REQUESTS_PER_SECOND: z.coerce.number().min(0.1).max(50).default(4),
+  LOG_LEVEL: logLevelSchema,
+  /** Version of the deployed build, in logs and in the heartbeat of the worker. */
+  APP_VERSION: z.string().min(1).max(64).default('dev'),
 });
 
 export interface WorkerEnv {
@@ -339,6 +361,8 @@ export interface WorkerEnv {
     readonly contact: string | null;
     readonly requestsPerSecond: number;
   } | null;
+  readonly logLevel: LogLevelSetting;
+  readonly version: string;
 }
 
 export function readWorkerEnv(env: Env): WorkerEnv {
@@ -386,6 +410,8 @@ export function readWorkerEnv(env: Env): WorkerEnv {
           requestsPerSecond: parsed.BASEMAP_REQUESTS_PER_SECOND,
         }
       : null,
+    logLevel: parsed.LOG_LEVEL,
+    version: parsed.APP_VERSION,
   };
 }
 
