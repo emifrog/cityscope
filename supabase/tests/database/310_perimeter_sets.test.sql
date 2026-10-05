@@ -18,6 +18,11 @@ language sql as $$ select row_version from app.membership where id = p_membershi
 -- Résidence Les Pins in the SIS 83. Members of the SIS 06: admin (…01), reader (…06, 0600000a-…06).
 select plan(15);
 
+-- A site of the SIS 06 in no sector: outside the perimeter given to the reader below.
+insert into app.site (id, tenant_id, name, site_type)
+values ('06000002-0000-4000-8000-000000000310', '06000000-0000-4000-8000-000000000000',
+        'Site hors périmètre (pgTAP 310)', 'other');
+
 -- -----------------------------------------------------------------------------
 -- Policies: no call per row left
 -- -----------------------------------------------------------------------------
@@ -118,7 +123,8 @@ select ok(
 
 select pg_temp.act_as('00000000-0000-4000-a000-000000000006', 'aal1');
 select ok(
-  (select count(*) from app.site_ids_matching('%')) > 2,
+  '06000002-0000-4000-8000-000000000310'::uuid in (select app.site_ids_matching('%hors périmètre%'))
+  and not app.has_permission('site:read', '06000002-0000-4000-8000-000000000310'),
   'the ids are those of the whole SIS, whatever the perimeter of the person'
 );
 select set_eq(
