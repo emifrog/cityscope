@@ -1,8 +1,10 @@
 import 'dart:convert';
 
 import 'package:etare_ops/src/core/di/providers.dart';
+import 'package:etare_ops/src/core/platform/platform_services.dart';
 import 'package:etare_ops/src/core/security/local_code.dart';
 import 'package:etare_ops/src/core/storage/secure_store.dart';
+import 'package:etare_ops/src/core/time/trusted_clock.dart';
 import 'package:etare_ops/src/features/account/application/account_providers.dart';
 import 'package:etare_ops/src/features/account/domain/account_repository.dart';
 import 'package:etare_ops/src/features/account/domain/user_account.dart';
@@ -11,6 +13,7 @@ import 'package:etare_ops/src/features/auth/domain/auth_failure.dart';
 import 'package:etare_ops/src/features/auth/domain/auth_repository.dart';
 import 'package:etare_ops/src/features/auth/domain/auth_session.dart';
 import 'package:etare_ops/src/features/lock/application/lock_controller.dart';
+import 'package:etare_ops/src/features/lock/application/terminal_providers.dart';
 import 'package:etare_ops/src/features/sync/application/sync_providers.dart';
 import 'package:etare_ops/src/features/sync/domain/sync_status.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,6 +32,9 @@ final testSession = AuthSession(
 final class ScriptedAuthRepository implements AuthRepository {
   AuthFailure? failure;
   int signInCalls = 0;
+
+  /// Session ouverte par la prochaine connexion (un autre agent, tablette partagée).
+  AuthSession session = testSession;
   int signOutCalls = 0;
 
   @override
@@ -38,7 +44,7 @@ final class ScriptedAuthRepository implements AuthRepository {
   }) async {
     signInCalls++;
     if (failure case final f?) throw AuthException(f);
-    return testSession;
+    return session;
   }
 
   @override
@@ -93,6 +99,8 @@ List<Override> appOverrides({
   bool stubSyncStatus = true,
   bool stubAccount = true,
   bool lock = false,
+  PlatformServices platform = const SoftwarePlatformServices(),
+  DateTime? signedInAt,
 }) {
   final store = InMemorySecureStore({
     if (signedIn)
@@ -101,10 +109,22 @@ List<Override> appOverrides({
         'refresh_token': testSession.refreshToken,
         'expires_at': testSession.expiresAt.toIso8601String(),
         'user': {'id': testSession.user.id, 'email': testSession.user.email},
+        if (signedInAt != null) 'signed_in_at': signedInAt.toIso8601String(),
       }),
   });
   return [
     secureStoreProvider.overrideWithValue(store),
+    // Ni Keystore ni horloge monotone : clé logicielle, heure du test.
+    platformServicesProvider.overrideWithValue(platform),
+    trustedClockProvider.overrideWith(
+      (ref) => TrustedClock(
+        platform: const SoftwarePlatformServices(),
+        wall: ref.watch(clockProvider),
+      ),
+    ),
+    storedLoginNoticeProvider.overrideWith(
+      (ref) => Stream<String?>.value(null),
+    ),
     authRepositoryProvider.overrideWithValue(authRepository),
     tenantSelectionRepositoryProvider.overrideWithValue(
       InMemoryTenantSelection(),

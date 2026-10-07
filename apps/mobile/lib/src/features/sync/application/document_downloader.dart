@@ -1,7 +1,9 @@
 import 'dart:typed_data';
 
+import 'package:etare_ops/src/core/platform/platform_services.dart';
 import 'package:etare_ops/src/data/local/daos/offline_dao.dart';
 import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
+import 'package:etare_ops/src/features/sync/data/device_keys.dart';
 import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
 import 'package:etare_ops/src/features/sync/data/sync_api.dart';
 
@@ -52,12 +54,14 @@ class DocumentDownloader {
     required this._offline,
     required this._identities,
     this._clock = DateTime.now,
-  });
+    DeviceKeys? keys,
+  }) : _keys = keys ?? DeviceKeys(const SoftwarePlatformServices());
 
   final SyncApi _api;
   final OfflineDao _offline;
   final DeviceIdentityStore _identities;
   final DateTime Function() _clock;
+  final DeviceKeys _keys;
 
   /// Lève [DocumentDownloadException], `ApiException` ou `NetworkException`.
   Future<void> download({
@@ -78,10 +82,7 @@ class DocumentDownloader {
     }
     if ((await _offline.presentBlobs([sha256])).isNotEmpty) return;
 
-    final device = DeviceCredentials(
-      identity,
-      await DeviceKey.fromSeed(identity.keySeed),
-    );
+    final device = await _keys.credentials(identity);
     final urls = await _api.downloadUrls(device, site.publicationId, [sha256]);
     final url = urls[sha256];
     if (url == null) {

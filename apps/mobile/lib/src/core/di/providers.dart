@@ -9,6 +9,7 @@ import 'package:dio/dio.dart';
 import 'package:etare_ops/src/core/config/app_config.dart';
 import 'package:etare_ops/src/core/network/auth_interceptor.dart';
 import 'package:etare_ops/src/core/network/dio_factory.dart';
+import 'package:etare_ops/src/core/platform/platform_services.dart';
 import 'package:etare_ops/src/core/storage/secure_store.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/data/remote/etare_api_client.dart';
@@ -26,6 +27,12 @@ final appDatabaseProvider = Provider<AppDatabase>(
   (ref) => throw UnimplementedError(
     'appDatabaseProvider doit être surchargé au démarrage.',
   ),
+);
+
+/// Services Android (Keystore, horloge monotone, espace libre, FLAG_SECURE),
+/// remplacés dans les tests (SEC-05, CAP-02).
+final platformServicesProvider = Provider<PlatformServices>(
+  (ref) => const AndroidPlatformServices(),
 );
 
 final secureStoreProvider = Provider<SecureStore>(

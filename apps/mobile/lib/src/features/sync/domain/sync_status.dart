@@ -1,3 +1,4 @@
+import 'package:etare_ops/src/features/sync/domain/terminal_policy.dart';
 import 'package:flutter/foundation.dart';
 
 /// Phase de la synchronisation hors ligne (colonne `sync_state.status`).
@@ -48,6 +49,7 @@ final class SyncStatus {
     this.authorizationExpiresAt,
     this.installedSites = 0,
     this.requiredAppVersion,
+    this.terminalPolicy = TerminalPolicy.defaults,
   });
 
   static const initial = SyncStatus(phase: SyncPhase.never);
@@ -77,6 +79,9 @@ final class SyncStatus {
   /// Version minimale exigée par le serveur quand l'application est trop
   /// ancienne pour le contenu reçu (SYN-02) ; chaîne vide si elle est inconnue.
   final String? requiredAppVersion;
+
+  /// Politique des tablettes reçue avec le dernier catalogue (SEC-05).
+  final TerminalPolicy terminalPolicy;
 
   /// Les nouvelles versions ne s'installeront qu'après mise à jour de
   /// l'application ; les données installées restent consultables.

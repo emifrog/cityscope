@@ -5,9 +5,14 @@ import 'package:etare_ops/src/app.dart';
 import 'package:etare_ops/src/core/config/app_config.dart';
 import 'package:etare_ops/src/core/di/providers.dart';
 import 'package:etare_ops/src/core/logging/app_logger.dart';
+import 'package:etare_ops/src/core/platform/platform_services.dart';
 import 'package:etare_ops/src/core/storage/secure_store.dart';
+import 'package:etare_ops/src/core/time/trusted_clock.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
+import 'package:etare_ops/src/data/local/daos/sync_state_dao.dart';
 import 'package:etare_ops/src/data/local/encrypted_database.dart';
+import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
+import 'package:etare_ops/src/features/lock/application/terminal_providers.dart';
 import 'package:etare_ops/src/features/startup/presentation/startup_error_screen.dart';
 import 'package:etare_ops/src/features/sync/background/background_scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -61,12 +66,25 @@ Future<void> bootstrap() async {
 
   unawaited(_startBackgroundSync());
 
+  // Heure de confiance prête avant le premier contrôle (SEC-05).
+  const platform = AndroidPlatformServices();
+  final trustedClock = TrustedClock(
+    platform: platform,
+    store: DriftTrustedTimeStore(database.syncStateDao),
+  );
+  await trustedClock.refresh();
+
   runApp(
     ProviderScope(
       overrides: [
         appConfigProvider.overrideWithValue(config),
         secureStoreProvider.overrideWithValue(secureStore),
         appDatabaseProvider.overrideWithValue(database),
+        platformServicesProvider.overrideWithValue(platform),
+        trustedClockProvider.overrideWithValue(trustedClock),
+        signInClockProvider.overrideWith(
+          (ref) => ref.watch(trustedNowProvider),
+        ),
       ],
       // Pas de nouvelle tentative automatique : les erreurs sont affichées et
       // l'utilisateur relance explicitement (« Réessayer »).

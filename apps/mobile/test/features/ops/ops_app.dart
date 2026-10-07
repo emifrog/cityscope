@@ -52,6 +52,7 @@ Future<void> pumpApp(
   AppDatabase database, {
   List<Override> overrides = const [],
   SyncController Function() sync = IdleSync.new,
+  ScriptedAuthRepository? authRepository,
 }) async {
   tester.view
     ..physicalSize = const Size(1200, 1900)
@@ -61,7 +62,7 @@ Future<void> pumpApp(
     ProviderScope(
       overrides: [
         ...appOverrides(
-          authRepository: ScriptedAuthRepository(),
+          authRepository: authRepository ?? ScriptedAuthRepository(),
           signedIn: true,
           stubSyncStatus: false,
         ),

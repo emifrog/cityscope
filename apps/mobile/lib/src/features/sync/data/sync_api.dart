@@ -7,6 +7,7 @@ import 'package:etare_ops/src/core/errors/app_exception.dart';
 import 'package:etare_ops/src/core/json/json_reader.dart';
 import 'package:etare_ops/src/core/network/api_error_mapper.dart';
 import 'package:etare_ops/src/core/network/auth_interceptor.dart';
+import 'package:etare_ops/src/features/sync/data/device_keys.dart';
 import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
 import 'package:etare_ops/src/features/sync/domain/device_identity.dart';
 import 'package:etare_ops/src/features/sync/domain/signed_content.dart';
@@ -18,7 +19,7 @@ final class DeviceCredentials {
   const DeviceCredentials(this.identity, this.key);
 
   final DeviceIdentity identity;
-  final DeviceKey key;
+  final DeviceSigner key;
 }
 
 /// Réponse d'enrôlement.
@@ -95,7 +96,7 @@ final class SyncApi {
   Future<EnrollmentResult> enroll({
     required String tenantId,
     required String code,
-    required DeviceKey key,
+    required DeviceSigner key,
     required String platform,
   }) async {
     final publicKey = await key.publicKeyBase64();
@@ -107,6 +108,7 @@ final class SyncApi {
         '/sync/enrollment',
         data: jsonEncode({
           'code': code,
+          'key_algorithm': key.algorithm,
           'public_key': publicKey,
           'platform': platform,
           'app_version': AppInfo.version,
@@ -127,6 +129,26 @@ final class SyncApi {
       deviceName: json.requireString('device_name'),
       tenantId: json.requireString('tenant_id'),
       tenantName: json.requireString('tenant_name'),
+    );
+  }
+
+  /// Remplace la clé du terminal (SEC-05) : la requête est signée par la clé
+  /// actuelle de [device], [proof] par la nouvelle.
+  Future<void> rotateDeviceKey(
+    DeviceCredentials device, {
+    required String algorithm,
+    required String publicKey,
+    required String proof,
+  }) async {
+    await _signed(
+      device,
+      'POST',
+      '/sync/device-key',
+      body: {
+        'key_algorithm': algorithm,
+        'public_key': publicKey,
+        'proof': proof,
+      },
     );
   }
 

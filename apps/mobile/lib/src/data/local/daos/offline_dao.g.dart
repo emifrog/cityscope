@@ -12,6 +12,7 @@ mixin _$OfflineDaoMixin on DatabaseAccessor<AppDatabase> {
   $SiteDataTable get siteData => attachedDatabase.siteData;
   $SiteSearchTable get siteSearch => attachedDatabase.siteSearch;
   $SyncStateTable get syncState => attachedDatabase.syncState;
+  $TrustedTimeTable get trustedTime => attachedDatabase.trustedTime;
   OfflineDaoManager get managers => OfflineDaoManager(this);
 }
 
@@ -36,4 +37,6 @@ class OfflineDaoManager {
       $$SiteSearchTableTableManager(_db.attachedDatabase, _db.siteSearch);
   $$SyncStateTableTableManager get syncState =>
       $$SyncStateTableTableManager(_db.attachedDatabase, _db.syncState);
+  $$TrustedTimeTableTableManager get trustedTime =>
+      $$TrustedTimeTableTableManager(_db.attachedDatabase, _db.trustedTime);
 }

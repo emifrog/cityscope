@@ -6,6 +6,7 @@ import 'package:etare_ops/src/core/text/search_text.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/lock/application/lock_controller.dart';
+import 'package:etare_ops/src/features/lock/application/terminal_providers.dart';
 import 'package:etare_ops/src/features/ops/application/ops_providers.dart'
     show siteQueryProvider;
 import 'package:etare_ops/src/features/sensitive/application/sensitive_site_service.dart';
@@ -19,7 +20,9 @@ final sensitiveSiteServiceProvider = Provider<SensitiveSiteService>(
     identities: ref.watch(deviceIdentityStoreProvider),
     trust: ref.watch(trustStoreProvider),
     codes: ref.watch(localCodeStoreProvider),
-    clock: ref.watch(clockProvider),
+    // Heure de confiance : une horloge reculée ne prolonge pas les 24 heures.
+    clock: ref.watch(trustedNowProvider),
+    keys: ref.watch(deviceKeysProvider),
   ),
 );
 

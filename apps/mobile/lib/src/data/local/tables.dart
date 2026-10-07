@@ -68,6 +68,10 @@ class SyncState extends Table {
 
   DateTimeColumn get syncLeaseExpiresAt => dateTime().nullable()();
 
+  /// Politique des tablettes du SIS reçue avec le dernier catalogue (SEC-05),
+  /// JSON tel que signé ; null : aucune reçue (valeurs par défaut).
+  TextColumn get terminalPolicy => text().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 
@@ -457,6 +461,37 @@ class TrustedKeysets extends Table {
   TextColumn get signature => text()();
 
   DateTimeColumn get receivedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+
+  @override
+  List<String> get customConstraints => const ['CHECK (id = 1)'];
+}
+
+/// Repère de temps de confiance (SEC-05, ADR-029), ligne unique : heure du
+/// serveur au dernier catalogue et lecture de l'horloge monotone de la
+/// tablette (temps depuis le démarrage, veille comprise) à cet instant ; plus
+/// haute heure déjà constatée. Tant que la tablette n'a pas redémarré, l'heure
+/// se déduit du repère sans lire l'horloge réglable ; après un redémarrage,
+/// elle ne recule jamais sous la plus haute constatée.
+@DataClassName('TrustedTimeRow')
+class TrustedTime extends Table {
+  @override
+  String get tableName => 'trusted_time';
+
+  static const singletonId = 1;
+
+  IntColumn get id => integer()();
+
+  DateTimeColumn get anchorServerTime => dateTime().nullable()();
+
+  IntColumn get anchorElapsedMs => integer().nullable()();
+
+  /// Nombre de démarrages de la tablette au moment du repère (-1 : inconnu).
+  IntColumn get anchorBootCount => integer().nullable()();
+
+  DateTimeColumn get highWater => dateTime().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {id};

@@ -26,6 +26,7 @@ final class AuthSession {
     required this.refreshToken,
     required this.expiresAt,
     required this.user,
+    this.signedInAt,
   });
 
   final String accessToken;
@@ -34,6 +35,20 @@ final class AuthSession {
   /// Échéance du jeton d'accès (UTC).
   final DateTime expiresAt;
   final AuthUser user;
+
+  /// Dernière connexion par mot de passe (heure de confiance, UTC) : la
+  /// politique du SIS borne le temps qui la sépare de maintenant (SEC-05).
+  /// Null : session antérieure à SEC-05.
+  final DateTime? signedInAt;
+
+  /// La même session, avec l'heure de la connexion par mot de passe.
+  AuthSession signedInOn(DateTime? at) => AuthSession(
+    accessToken: accessToken,
+    refreshToken: refreshToken,
+    expiresAt: expiresAt,
+    user: user,
+    signedInAt: at?.toUtc(),
+  );
 
   /// Vrai si le jeton d'accès expire avant `now + margin`.
   bool expiresWithin(Duration margin, {required DateTime now}) =>
@@ -45,10 +60,12 @@ final class AuthSession {
       other.accessToken == accessToken &&
       other.refreshToken == refreshToken &&
       other.expiresAt == expiresAt &&
-      other.user == user;
+      other.user == user &&
+      other.signedInAt == signedInAt;
 
   @override
-  int get hashCode => Object.hash(accessToken, refreshToken, expiresAt, user);
+  int get hashCode =>
+      Object.hash(accessToken, refreshToken, expiresAt, user, signedInAt);
 
   @override
   String toString() =>

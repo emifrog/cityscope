@@ -15,6 +15,7 @@ import 'generated/schema_v5.dart' as v5;
 import 'generated/schema_v6.dart' as v6;
 import 'generated/schema_v7.dart' as v7;
 import 'generated/schema_v8.dart' as v8;
+import 'generated/schema_v9.dart' as v9;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -341,4 +342,43 @@ void main() {
       );
     },
   );
+
+  test('la migration v8 → v9 garde l’état, sans politique reçue ni repère de temps', () async {
+    const oldState = v8.SyncStateData(
+      id: 1,
+      status: 'idle',
+      serverTime: '2026-10-05T10:00:00.000Z',
+      authorizedUserId: 'user-1',
+      authorizationExpiresAt: '2026-10-12T10:00:00.000Z',
+      receiptPending: 0,
+    );
+    const expectedState = v9.SyncStateData(
+      id: 1,
+      status: 'idle',
+      serverTime: '2026-10-05T10:00:00.000Z',
+      authorizedUserId: 'user-1',
+      authorizationExpiresAt: '2026-10-12T10:00:00.000Z',
+      receiptPending: 0,
+    );
+
+    await verifier.testWithDataIntegrity(
+      oldVersion: 8,
+      newVersion: 9,
+      createOld: v8.DatabaseAtV8.new,
+      createNew: v9.DatabaseAtV9.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, oldDb) {
+        batch.insert(oldDb.syncState, oldState);
+      },
+      validateItems: (newDb) async {
+        // Politique absente : la tablette applique les valeurs par défaut
+        // jusqu'au prochain catalogue.
+        expect(await newDb.select(newDb.syncState).get(), [expectedState]);
+        final time = await newDb.select(newDb.trustedTime).get();
+        expect(time, hasLength(1));
+        expect(time.single.anchorServerTime == null, isTrue);
+        expect(time.single.highWater == null, isTrue);
+      },
+    );
+  });
 }

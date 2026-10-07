@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:cryptography/cryptography.dart';
 import 'package:etare_ops/src/core/security/trusted_keys.dart';
+import 'package:etare_ops/src/features/sync/data/device_keys.dart';
+import 'package:etare_ops/src/features/sync/domain/device_identity.dart';
 import 'package:etare_ops/src/features/sync/domain/signed_content.dart';
 
 /// SHA-256 (hexadécimal) d'octets.
@@ -13,9 +15,11 @@ String sha256OfText(String text) => sha256Hex(utf8.encode(text));
 
 final _ed25519 = Ed25519();
 
-/// Clé Ed25519 propre à ce terminal, générée sur l'appareil à l'enrôlement.
-/// Seule sa graine (32 octets) est conservée, dans le stockage sécurisé.
-final class DeviceKey {
+/// Clé Ed25519 logicielle des premières tablettes, générée sur l'appareil à
+/// l'enrôlement. Seule sa graine (32 octets) est conservée, dans le stockage
+/// sécurisé ; remplacée par une clé du Keystore à la première synchronisation
+/// d'une version qui le permet (SEC-05).
+final class DeviceKey implements DeviceSigner {
   DeviceKey._(this._keyPair);
 
   final SimpleKeyPair _keyPair;
@@ -28,11 +32,16 @@ final class DeviceKey {
 
   Future<List<int>> seed() => _keyPair.extractPrivateKeyBytes();
 
+  @override
+  String get algorithm => DeviceKeyAlgorithms.ed25519;
+
   /// Clé publique brute en base64 (format attendu par le serveur).
+  @override
   Future<String> publicKeyBase64() async =>
       base64.encode((await _keyPair.extractPublicKey()).bytes);
 
   /// Signature Ed25519 (base64) des octets UTF-8 de [text].
+  @override
   Future<String> sign(String text) async {
     final signature = await _ed25519.sign(utf8.encode(text), keyPair: _keyPair);
     return base64.encode(signature.bytes);

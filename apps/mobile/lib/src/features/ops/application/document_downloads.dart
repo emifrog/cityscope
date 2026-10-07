@@ -20,6 +20,7 @@ final documentDownloaderProvider = Provider<DocumentDownloader>((ref) {
     offline: database.offlineDao,
     identities: ref.watch(deviceIdentityStoreProvider),
     clock: ref.watch(clockProvider),
+    keys: ref.watch(deviceKeysProvider),
   );
 });
 

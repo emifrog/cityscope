@@ -4,11 +4,12 @@ import 'package:etare_ops/src/core/errors/app_exception.dart';
 import 'package:etare_ops/src/core/errors/error_messages.dart';
 import 'package:etare_ops/src/core/json/json_reader.dart';
 import 'package:etare_ops/src/core/logging/app_logger.dart';
+import 'package:etare_ops/src/core/platform/platform_services.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/data/local/daos/reports_dao.dart';
 import 'package:etare_ops/src/features/reports/domain/field_report.dart';
 import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
-import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
+import 'package:etare_ops/src/features/sync/data/device_keys.dart';
 import 'package:etare_ops/src/features/sync/data/sync_api.dart';
 import 'package:flutter/foundation.dart';
 
@@ -51,9 +52,13 @@ final class ReportSender {
     required this._reports,
     required this._identities,
     this._clock = DateTime.now,
-  });
+    DeviceKeys? keys,
+  }) : _keys = keys ?? DeviceKeys(const SoftwarePlatformServices());
 
   static const _logger = AppLogger('reports');
+
+  /// Clé du terminal (Keystore, ou Ed25519 des premières tablettes).
+  final DeviceKeys _keys;
 
   final SyncApi _api;
   final ReportsDao _reports;
@@ -65,10 +70,7 @@ final class ReportSender {
   Future<ReportSendSummary> sendPending({required String userId}) async {
     final identity = await _identities.read();
     if (identity == null) return const ReportSendSummary();
-    final device = DeviceCredentials(
-      identity,
-      await DeviceKey.fromSeed(identity.keySeed),
-    );
+    final device = await _keys.credentials(identity);
     var sent = 0;
     var waiting = 0;
     var refused = 0;

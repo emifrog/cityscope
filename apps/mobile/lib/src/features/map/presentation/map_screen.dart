@@ -28,6 +28,9 @@ class MapScreen extends ConsumerStatefulWidget {
   static const attributionKey = Key('map.attribution');
   static const markerCardKey = Key('map.marker');
   static const openSiteKey = Key('map.openSite');
+
+  /// Message de la carte sans autorisation de consultation (SEC-05).
+  static const lockedKey = Key('map.locked');
   static Key sectorKey(String packId) => Key('map.sector.$packId');
 
   @override
@@ -65,6 +68,25 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Noms, adresses et positions des sites sont des données opérationnelles :
+    // pas sans l'autorisation de consultation en cours (SEC-05).
+    if (!ref.watch(offlineAccessProvider)) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Carte')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'Consultation hors ligne non autorisée : synchronisez la tablette.',
+              key: MapScreen.lockedKey,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge
+                  ?.copyWith(color: BrandColors.textMuted),
+            ),
+          ),
+        ),
+      );
+    }
     final basemaps = ref.watch(installedBasemapListProvider);
     final locations = ref.watch(siteLocationsProvider);
     return Scaffold(

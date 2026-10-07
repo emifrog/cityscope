@@ -1,11 +1,13 @@
 import 'package:drift/drift.dart';
+import 'package:etare_ops/src/core/time/trusted_clock.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/data/local/tables.dart';
 
 part 'sync_state_dao.g.dart';
 
-/// Accès à la ligne unique de `sync_state`.
-@DriftAccessor(tables: [SyncState])
+/// Accès à la ligne unique de `sync_state` et au repère de temps de
+/// confiance (`trusted_time`, SEC-05).
+@DriftAccessor(tables: [SyncState, TrustedTime])
 class SyncStateDao extends DatabaseAccessor<AppDatabase>
     with _$SyncStateDaoMixin {
   SyncStateDao(super.attachedDatabase);
@@ -85,4 +87,46 @@ class SyncStateDao extends DatabaseAccessor<AppDatabase>
     if (row.syncLeaseOwner == null || expiresAt == null) return null;
     return expiresAt.isAfter(now.toUtc()) ? row.syncLeaseOwner : null;
   }
+
+  Future<TrustedTimeRow> readTrustedTime() => (select(
+    trustedTime,
+  )..where((t) => t.id.equals(TrustedTime.singletonId))).getSingle();
+
+  /// Retient [at] s'il dépasse la plus haute heure constatée.
+  Future<void> raiseHighWater(DateTime at) async {
+    final utc = at.toUtc();
+    await (update(trustedTime)..where(
+          (t) =>
+              t.id.equals(TrustedTime.singletonId) &
+              (t.highWater.isNull() | t.highWater.isSmallerThanValue(utc)),
+        ))
+        .write(TrustedTimeCompanion(highWater: Value(utc)));
+  }
+}
+
+/// Repère de temps conservé dans la base chiffrée.
+final class DriftTrustedTimeStore implements TrustedTimeStore {
+  const DriftTrustedTimeStore(this._dao);
+
+  final SyncStateDao _dao;
+
+  @override
+  Future<({TimeAnchor? anchor, DateTime? highWater})> load() async {
+    final row = await _dao.readTrustedTime();
+    final serverTime = row.anchorServerTime;
+    final elapsed = row.anchorElapsedMs;
+    return (
+      anchor: serverTime == null || elapsed == null
+          ? null
+          : TimeAnchor(
+              serverTime: serverTime.toUtc(),
+              elapsedMs: elapsed,
+              bootCount: row.anchorBootCount ?? -1,
+            ),
+      highWater: row.highWater?.toUtc(),
+    );
+  }
+
+  @override
+  Future<void> raiseHighWater(DateTime at) => _dao.raiseHighWater(at);
 }

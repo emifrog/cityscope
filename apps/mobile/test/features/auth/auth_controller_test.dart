@@ -81,12 +81,14 @@ void main() {
         .read(authControllerProvider.notifier)
         .signIn(email: ' agent@sdis06.test ', password: 'x');
 
-    expect(container.read(authControllerProvider).value, session('1'));
+    // L'heure de la connexion par mot de passe accompagne la session (SEC-05).
+    final signedIn = session('1').signedInOn(DateTime.utc(2026, 9, 27));
+    expect(container.read(authControllerProvider).value, signedIn);
     expect(store.values[SecureStorageKeys.authSession], contains('access-1'));
 
     // Une nouvelle instance restaure la session depuis le stockage sécurisé.
     final restarted = createContainer();
-    expect(await restarted.read(authControllerProvider.future), session('1'));
+    expect(await restarted.read(authControllerProvider.future), signedIn);
   });
 
   test('connexion refusée : l’erreur typée remonte, état inchangé', () async {

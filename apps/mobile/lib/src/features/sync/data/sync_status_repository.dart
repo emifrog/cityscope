@@ -4,6 +4,7 @@ import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/data/local/daos/offline_dao.dart';
 import 'package:etare_ops/src/data/local/daos/sync_state_dao.dart';
 import 'package:etare_ops/src/features/sync/domain/sync_status.dart';
+import 'package:etare_ops/src/features/sync/domain/terminal_policy.dart';
 
 /// Lecture de l'état de synchronisation depuis la base locale.
 final class SyncStatusRepository {
@@ -63,5 +64,6 @@ final class SyncStatusRepository {
     authorizationExpiresAt: row.authorizationExpiresAt?.toUtc(),
     installedSites: installed,
     requiredAppVersion: row.requiredAppVersion,
+    terminalPolicy: TerminalPolicy.fromStored(row.terminalPolicy),
   );
 }

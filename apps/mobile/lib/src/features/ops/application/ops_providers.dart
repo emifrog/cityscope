@@ -5,6 +5,7 @@ import 'package:etare_ops/src/core/text/search_text.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/data/local/daos/offline_dao.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
+import 'package:etare_ops/src/features/lock/application/terminal_providers.dart';
 import 'package:etare_ops/src/features/ops/domain/published_site.dart';
 import 'package:etare_ops/src/features/sensitive/application/sensitive_providers.dart';
 import 'package:etare_ops/src/features/sync/application/sync_providers.dart';
@@ -19,7 +20,11 @@ final offlineAccessProvider = Provider<bool>((ref) {
     authControllerProvider.select((state) => state.value?.user.id),
   );
   if (status == null) return false;
-  return status.canConsult(userId: userId, now: ref.watch(clockProvider)());
+  // Heure de confiance : une horloge reculée ne prolonge pas l'autorisation (SEC-05).
+  return status.canConsult(
+    userId: userId,
+    now: ref.watch(trustedNowProvider)(),
+  );
 });
 
 /// Texte saisi dans la recherche locale (OPS-03).

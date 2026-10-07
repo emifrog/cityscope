@@ -8,13 +8,17 @@ import 'package:etare_ops/src/core/logging/app_logger.dart';
 import 'package:etare_ops/src/core/network/dio_factory.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/basemaps/application/basemap_providers.dart';
+import 'package:etare_ops/src/features/lock/application/lock_controller.dart';
+import 'package:etare_ops/src/features/lock/application/terminal_providers.dart';
 import 'package:etare_ops/src/features/reports/application/report_providers.dart';
 import 'package:etare_ops/src/features/sensitive/application/sensitive_providers.dart';
 import 'package:etare_ops/src/features/sync/application/enrollment_service.dart';
+import 'package:etare_ops/src/features/sync/application/sync_messages.dart';
 import 'package:etare_ops/src/features/sync/application/sync_service.dart';
 import 'package:etare_ops/src/features/sync/application/trust_store.dart';
 import 'package:etare_ops/src/features/sync/background/background_scheduler.dart';
 import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
+import 'package:etare_ops/src/features/sync/data/device_keys.dart';
 import 'package:etare_ops/src/features/sync/data/sync_api.dart';
 import 'package:etare_ops/src/features/sync/data/sync_status_repository.dart';
 import 'package:etare_ops/src/features/sync/domain/device_identity.dart';
@@ -41,6 +45,11 @@ final removalNoticesProvider = StreamProvider<List<RemovalNotice>>(
 
 final deviceIdentityStoreProvider = Provider<DeviceIdentityStore>(
   (ref) => DeviceIdentityStore(ref.watch(secureStoreProvider)),
+);
+
+/// Clé du terminal : Keystore Android, ou Ed25519 logicielle (SEC-05).
+final deviceKeysProvider = Provider<DeviceKeys>(
+  (ref) => DeviceKeys(ref.watch(platformServicesProvider)),
 );
 
 /// Ce terminal tel qu'enrôlé (null = pas encore enrôlé, ou purgé).
@@ -88,6 +97,9 @@ final syncServiceProvider = Provider<SyncService>((ref) {
     trust: ref.watch(trustStoreProvider),
     basemaps: ref.watch(basemapSyncProvider),
     clock: ref.watch(clockProvider),
+    keys: ref.watch(deviceKeysProvider),
+    trustedClock: ref.watch(trustedClockProvider),
+    wipeSecrets: ref.watch(terminalWipeProvider),
   );
 });
 
@@ -95,6 +107,7 @@ final enrollmentServiceProvider = Provider<EnrollmentService>(
   (ref) => EnrollmentService(
     api: ref.watch(syncApiProvider),
     identities: ref.watch(deviceIdentityStoreProvider),
+    generateKey: ref.watch(deviceKeysProvider).generate,
   ),
 );
 
@@ -200,7 +213,10 @@ class SyncController extends Notifier<SyncRunState> {
             // Fonds de carte de plus de 50 Mo : en Wi-Fi seulement (ADR-024).
             allowLargeBasemaps: trigger == SyncTrigger.unmetered,
           );
-      if (report is SyncPurged) ref.invalidate(deviceIdentityProvider);
+      if (report is SyncPurged) {
+        ref.invalidate(deviceIdentityProvider);
+        await _signOutAfterPurge(report);
+      }
       state = SyncRunFinished(report);
       if (report case SyncCompleted(:final deferredBytes, :final basemaps)
           when deferredBytes > 0 || (basemaps?.deferredBytes ?? 0) > 0) {
@@ -252,6 +268,26 @@ class SyncController extends Notifier<SyncRunState> {
     database.markTablesUpdated(database.allTables);
     ref.invalidate(deviceIdentityProvider);
     if (state is SyncRunBusy) state = const SyncRunIdle();
+  }
+
+  /// Tablette révoquée ou inconnue (SEC-05) : la session est déjà effacée
+  /// avec les données ; l'agent est déconnecté et le motif l'attend à la
+  /// connexion, même si la purge a eu lieu application fermée.
+  Future<void> _signOutAfterPurge(SyncPurged report) async {
+    final message = purgeMessage(
+      report.reason,
+      discardedReports: report.discardedReports,
+    );
+    try {
+      await ref
+          .read(appDatabaseProvider)
+          .localMetaDao
+          .writeValue(loginNoticeKey, message);
+    } on Object catch (error) {
+      _logger.warning('Motif de la purge non conservé.', error: error);
+    }
+    ref.read(lockoutNoticeProvider.notifier).set(message);
+    await ref.read(authControllerProvider.notifier).signOut();
   }
 
   /// Synchronisation sans attendre son résultat (ouverture, bouton).

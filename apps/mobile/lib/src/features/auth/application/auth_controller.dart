@@ -23,6 +23,12 @@ final sessionStoreProvider = Provider<SessionStore>(
 /// Horloge injectable (tests).
 final clockProvider = Provider<DateTime Function()>((ref) => DateTime.now);
 
+/// Heure retenue pour la connexion par mot de passe (SEC-05) : l'heure de
+/// confiance une fois le verrou de la tablette chargé, l'horloge sinon.
+final signInClockProvider = Provider<DateTime Function()>(
+  (ref) => ref.watch(clockProvider),
+);
+
 /// État d'authentification : `AsyncLoading` pendant la restauration de la
 /// session au démarrage, puis `AsyncData(null)` (déconnecté) ou
 /// `AsyncData(session)` (connecté).
@@ -58,10 +64,10 @@ class AuthController extends AsyncNotifier<AuthSession?> {
 
   /// Connexion. Lève `AuthException` en cas d'échec (affichée par l'écran).
   Future<void> signIn({required String email, required String password}) async {
-    final session = await _repository.signInWithPassword(
+    final session = (await _repository.signInWithPassword(
       email: email.trim(),
       password: password,
-    );
+    )).signedInOn(ref.read(signInClockProvider)());
     await _store.write(session);
     state = AsyncData(session);
     _logger.info('Connexion réussie.');
@@ -82,6 +88,16 @@ class AuthController extends AsyncNotifier<AuthSession?> {
       }
     }
     await _clearLocalSession();
+  }
+
+  /// Session ouverte avant SEC-05, sans heure de connexion : le délai fixé
+  /// par le SIS part de [at].
+  Future<void> markSignedIn(DateTime at) async {
+    final session = state.value;
+    if (session == null || session.signedInAt != null) return;
+    final marked = session.signedInOn(at);
+    await _store.write(marked);
+    state = AsyncData(marked);
   }
 
   /// Jeton utilisable pour un appel API, rafraîchi à l'avance si besoin.
@@ -129,7 +145,9 @@ class AuthController extends AsyncNotifier<AuthSession?> {
       current = stored;
     }
     try {
-      final session = await _repository.refreshSession(current.refreshToken);
+      // Le rafraîchissement n'est pas une nouvelle connexion par mot de passe.
+      final session = (await _repository.refreshSession(current.refreshToken))
+          .signedInOn(current.signedInAt);
       await _store.write(session);
       state = AsyncData(session);
       return session;

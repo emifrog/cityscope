@@ -241,7 +241,7 @@ Principes :
 
 ## 7. Sécurité par défaut
 
-- Permission Android unique : `INTERNET`.
+- Permissions Android : `INTERNET`, localisation à la demande (carte, Sprint 11).
 - `android:allowBackup="false"` + `fullBackupContent` /
   `dataExtractionRules` excluant tous les domaines (sauvegarde cloud **et**
   transfert d'appareil) : ni jetons, ni clé, ni base dans les sauvegardes.
@@ -260,7 +260,8 @@ Principes :
 - **Code personnel** :
   - six chiffres, choisis par chaque agent à sa connexion sur la tablette, saisis sur un pavé à grosses
     touches (aucun clavier système) ;
-  - exigé au démarrage et après 15 minutes d'inactivité ;
+  - exigé au démarrage, après l'inactivité et au retour dans l'application, selon la politique du SIS
+    (section 7 quater) ;
   - verrou posé au-dessus de toute la navigation, documents ouverts compris ;
   - cinq erreurs déconnectent l'agent, qui se reconnecte en ligne ; rien d'installé n'est effacé ;
   - rien du code n'est gardé : un sel, un vérificateur et le compte des essais, dans le stockage sécurisé.
@@ -278,6 +279,30 @@ Principes :
   journal du SIS après la synchronisation suivante (`POST /sync/access-events`, idempotent).
 - **Limite connue** : qui détient à la fois la base et le secret de l'installation (stockage sécurisé
   Android) peut essayer le million de codes possibles ; la durée de 24 h borne l'exposition.
+
+## 7 quater. Sécurité du terminal (SEC-05, ADR-029)
+
+- **Clé du terminal** : ECDSA P-256 du Keystore Android (StrongBox si présent), jamais extractible.
+  Une tablette enrôlée avant la 0.5.0 (clé Ed25519 logicielle) passe au Keystore à sa première
+  synchronisation, par une rotation signée par l'ancienne clé ; une réponse perdue est reprise au
+  passage suivant. Une clé du Keystore perdue (réinitialisation) purge la tablette, à réenrôler.
+- **Plugin local** `packages/etare_platform` (Kotlin, `MethodChannel` `fr.etare.platform`) : clé du
+  Keystore, horloge monotone (temps depuis le démarrage, veille comprise, et nombre de démarrages),
+  espace libre, `FLAG_SECURE`. Sans implémentation (iOS, tests), l'application garde ses replis :
+  clé logicielle, horloge de l'appareil bornée, pas de protection d'écran. Les tests remplacent
+  `platformServicesProvider` (`test/support/fake_platform.dart`).
+- **Politique du SIS** reçue avec le catalogue (`sync_state.terminal_policy`, schéma local v9) :
+  inactivité (5 min par défaut), verrouillage en quittant l'application (immédiat par défaut ; voile
+  pendant un délai), captures interdites par défaut (`FLAG_SECURE`), reconnexion par mot de passe
+  (30 jours), consultation hors ligne (7 jours).
+- **Heure de confiance** (`TrustedClock`, table `trusted_time`) : repère « heure du serveur + horloge
+  monotone » posé à chaque catalogue ; sans redémarrage, l'horloge réglable n'est pas lue ; après un
+  redémarrage, jamais sous la plus haute heure constatée. Elle sert à l'autorisation de consultation,
+  aux sites sensibles et à la durée de session.
+- **Révocation** : données, fonds, identité, clés du Keystore, session, code et secret de
+  l'installation effacés ; base locale rechiffrée avec une nouvelle clé ; motif montré à la connexion.
+- **Tablette partagée** : le code et le secret de l'installation de l'agent précédent sont effacés ;
+  l'agent suivant ne voit rien, carte comprise, avant sa propre synchronisation.
 
 ## 7 ter. Carte hors ligne (CAR-01 à CAR-03, ADR-024)
 
@@ -310,8 +335,9 @@ Principes :
 
 1. L'administrateur du SIS déclare la tablette (web, onglet « Terminaux ») et
    remet le code à usage unique.
-2. Connecté, l'agent saisit le code : la tablette génère sa clé Ed25519, en
-   prouve la détention, et garde sa graine dans le Keystore.
+2. Connecté, l'agent saisit le code : la tablette génère sa clé dans le
+   Keystore Android (ECDSA P-256, Ed25519 logicielle sans Keystore), en prouve
+   la détention, et n'en garde que l'alias (section 7 quater).
 3. À l'ouverture de l'accueil, au retour dans l'application (dernière
    tentative de plus de 15 min), à la demande, et toutes les heures en
    arrière-plan sur Android (ADR-018), la tablette demande son catalogue
@@ -397,8 +423,9 @@ du réseau pour l'obtenir. Les documents « jamais » restent au back-office.
   (section 7 ter). La caméra sert aux photos des signalements, par l’application appareil photo du
   système, sans permission.
 - Client API généré depuis l'OpenAPI (client manuel provisoire).
-- ~~Verrouillage applicatif~~ : code personnel livré au Sprint 10 (section 7 bis) ;
-  restent l'épinglage de certificats et la détection root/jailbreak (à arbitrer, SEC-05).
+- ~~Verrouillage applicatif~~ : code personnel livré au Sprint 10 (section 7 bis), politique du SIS au
+  Sprint 13 (section 7 quater) ; épinglage de certificats et détection root/jailbreak non retenus
+  après analyse (ADR-029, à revoir avec SEC-06).
 - Signature release (la variante release est signée avec la clé de debug),
   icône et nom définitifs, thème sombre.
 - À la déconnexion, les jetons sont effacés ; le cache chiffré, le SIS sélectionné

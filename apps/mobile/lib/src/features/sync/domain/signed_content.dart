@@ -13,6 +13,9 @@ abstract final class SignatureContexts {
 
   /// Jeu de clés signé par la clé racine (SEC-04, ADR-027).
   static const keyset = 'etare.keyset.v1';
+
+  /// Nouvelle clé du terminal, signée par elle-même à la rotation (SEC-05).
+  static const deviceKey = 'etare.device-key.v1';
 }
 
 /// SHA-256 d'un corps vide (requêtes GET signées).
@@ -34,6 +37,18 @@ String deviceRequestText({
 );
 
 /// Ce que la tablette signe à l'enrôlement : preuve de détention de sa clé.
+/// Ce que signe la nouvelle clé à une rotation (SEC-05) ; la requête
+/// elle-même est signée par la clé actuelle.
+String deviceKeyRotationText({
+  required String tenantId,
+  required String deviceId,
+  required String algorithm,
+  required String publicKey,
+}) => signedText(
+  SignatureContexts.deviceKey,
+  [tenantId, deviceId, algorithm, publicKey].join('\n'),
+);
+
 String enrollmentText({
   required String tenantId,
   required String code,

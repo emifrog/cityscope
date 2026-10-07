@@ -19,12 +19,29 @@ final class DeviceIdentityStore {
     if (raw == null) return null;
     try {
       final json = asJsonMap(jsonDecode(raw));
+      // Absent avant SEC-05 : clé Ed25519 et sa graine.
+      final algorithm =
+          json.optionalString('key_algorithm') ?? DeviceKeyAlgorithms.ed25519;
+      final seed = json.optionalString('key_seed');
+      final alias = json.optionalString('key_alias');
+      if (algorithm == DeviceKeyAlgorithms.ed25519
+          ? seed == null
+          : alias == null) {
+        throw const FormatException('Clé du terminal absente');
+      }
+      if (algorithm != DeviceKeyAlgorithms.ed25519 &&
+          algorithm != DeviceKeyAlgorithms.ecdsaP256) {
+        throw const FormatException('Algorithme de clé inconnu');
+      }
       return DeviceIdentity(
         deviceId: json.requireString('device_id'),
         deviceName: json.requireString('device_name'),
         tenantId: json.requireString('tenant_id'),
         tenantName: json.requireString('tenant_name'),
-        keySeed: base64.decode(json.requireString('key_seed')),
+        keyAlgorithm: algorithm,
+        keySeed: seed == null ? const [] : base64.decode(seed),
+        keyAlias: alias,
+        pendingKeyAlias: json.optionalString('pending_key_alias'),
       );
     } on FormatException {
       _logger.warning('Identité du terminal illisible : suppression.');
@@ -40,7 +57,11 @@ final class DeviceIdentityStore {
       'device_name': identity.deviceName,
       'tenant_id': identity.tenantId,
       'tenant_name': identity.tenantName,
-      'key_seed': base64.encode(identity.keySeed),
+      'key_algorithm': identity.keyAlgorithm,
+      if (identity.keyAlgorithm == DeviceKeyAlgorithms.ed25519)
+        'key_seed': base64.encode(identity.keySeed),
+      'key_alias': ?identity.keyAlias,
+      'pending_key_alias': ?identity.pendingKeyAlias,
     }),
   );
 

@@ -52,13 +52,27 @@ final class DatabaseKeyStore {
   /// Génère 32 octets aléatoires (générateur cryptographique), les persiste
   /// et renvoie leur représentation hexadécimale.
   Future<String> createKey() async {
+    final key = _newKey();
+    await _store.write(SecureStorageKeys.databaseKey, key);
+    return key;
+  }
+
+  /// Révocation (SEC-05) : la base, une fois vidée, est rechiffrée avec une
+  /// nouvelle clé, puis celle-ci remplace l'ancienne. Un arrêt entre les deux
+  /// rend la base illisible avec la clé connue : elle est alors recréée vide à
+  /// l'ouverture, ce qu'elle est déjà.
+  Future<void> rekey(AppDatabase database) async {
+    final key = _newKey();
+    await database.customStatement("PRAGMA rekey = \"x'$key'\";");
+    await _store.write(SecureStorageKeys.databaseKey, key);
+  }
+
+  String _newKey() {
     final buffer = StringBuffer();
     for (var i = 0; i < databaseKeyLength; i++) {
       buffer.write(_random.nextInt(256).toRadixString(16).padLeft(2, '0'));
     }
-    final key = buffer.toString();
-    await _store.write(SecureStorageKeys.databaseKey, key);
-    return key;
+    return buffer.toString();
   }
 }
 

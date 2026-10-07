@@ -1,4 +1,5 @@
 import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
+import 'package:etare_ops/src/features/sync/data/device_keys.dart';
 import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
 import 'package:etare_ops/src/features/sync/data/sync_api.dart';
 import 'package:etare_ops/src/features/sync/domain/device_identity.dart';
@@ -11,8 +12,8 @@ final class EnrollmentCodeInvalid implements Exception {
 }
 
 /// Enrôlement de cette tablette (ADR-015) : la clé est générée SUR
-/// l'appareil, seule la clé publique part au serveur avec la preuve de sa
-/// détention (signature du code). La graine reste dans le Keystore.
+/// l'appareil, dans le Keystore quand il existe (SEC-05) ; seule la clé
+/// publique part au serveur avec la preuve de sa détention (signature du code).
 final class EnrollmentService {
   EnrollmentService({
     required this._api,
@@ -23,7 +24,7 @@ final class EnrollmentService {
 
   final SyncApi _api;
   final DeviceIdentityStore _identities;
-  final Future<DeviceKey> Function() _generateKey;
+  final Future<DeviceSigner> Function() _generateKey;
   final String Function() _platformName;
 
   static String _platform() =>
@@ -47,7 +48,9 @@ final class EnrollmentService {
       deviceName: result.deviceName,
       tenantId: result.tenantId,
       tenantName: result.tenantName,
-      keySeed: await key.seed(),
+      keyAlgorithm: key.algorithm,
+      keySeed: key is DeviceKey ? await key.seed() : const [],
+      keyAlias: key is KeystoreDeviceKey ? key.alias : null,
     );
     await _identities.write(identity);
     return identity;

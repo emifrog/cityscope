@@ -1,15 +1,20 @@
 import 'dart:async';
 
+import 'package:etare_ops/src/core/di/providers.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/lock/application/lock_controller.dart';
+import 'package:etare_ops/src/features/lock/application/terminal_providers.dart';
 import 'package:etare_ops/src/features/lock/presentation/code_pad.dart';
+import 'package:etare_ops/src/features/sync/domain/terminal_policy.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Verrou posé au-dessus de toute l'application (navigation et documents
 /// ouverts compris) : choix du code à la première connexion, code exigé au
-/// démarrage et après 15 minutes d'inactivité (ADR-025).
+/// démarrage, après l'inactivité et au retour dans l'application selon la
+/// politique du SIS (ADR-025, SEC-05). Applique aussi l'interdiction des
+/// captures d'écran et tient l'heure de confiance à jour.
 class LockGate extends ConsumerStatefulWidget {
   const LockGate({required this.child, super.key});
 
@@ -17,6 +22,7 @@ class LockGate extends ConsumerStatefulWidget {
 
   static const setupKey = Key('lock.setup');
   static const lockedKey = Key('lock.locked');
+  static const veilKey = Key('lock.veil');
 
   @override
   ConsumerState<LockGate> createState() => _LockGateState();
@@ -26,16 +32,41 @@ class _LockGateState extends ConsumerState<LockGate> {
   Timer? _timer;
   late final AppLifecycleListener _lifecycle;
 
+  LockController get _lock => ref.read(lockControllerProvider.notifier);
+
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(
-      const Duration(seconds: 20),
-      (_) => ref.read(lockControllerProvider.notifier).checkIdle(),
-    );
+    _timer = Timer.periodic(const Duration(seconds: 20), (_) => _tick());
     _lifecycle = AppLifecycleListener(
-      onResume: () => ref.read(lockControllerProvider.notifier).checkIdle(),
+      // Autre application, écran éteint : verrouillée ou voilée (SEC-05).
+      onHide: () => unawaited(_lock.leave()),
+      onShow: () => unawaited(_returned()),
     );
+    // Captures d'écran et aperçu des applications récentes, selon le SIS.
+    ref.listenManual<TerminalPolicy>(terminalPolicyProvider, (_, policy) {
+      unawaited(
+        ref
+            .read(platformServicesProvider)
+            .setSecureWindow(secure: !policy.screenshotsAllowed),
+      );
+    }, fireImmediately: true);
+  }
+
+  Future<void> _returned() async {
+    await ref.read(trustedClockProvider).refresh();
+    if (!mounted) return;
+    await _lock.back();
+    _lock.checkIdle();
+    await _lock.checkSession();
+  }
+
+  Future<void> _tick() async {
+    _lock.checkIdle();
+    final clock = ref.read(trustedClockProvider);
+    await clock.refresh();
+    await clock.persist();
+    if (mounted) await _lock.checkSession();
   }
 
   @override
@@ -50,6 +81,9 @@ class _LockGateState extends ConsumerState<LockGate> {
     ref.watch(lockCleanupBridgeProvider);
     final lock = ref.watch(lockControllerProvider);
     final covered = switch (lock.phase) {
+      LockPhase.unlocked when lock.veiled => const _Blank(
+        key: LockGate.veilKey,
+      ),
       LockPhase.inactive || LockPhase.unlocked => null,
       LockPhase.checking => const _Blank(),
       LockPhase.setup => _SetupScreen(busy: lock.busy, key: LockGate.setupKey),
@@ -77,7 +111,7 @@ class _LockGateState extends ConsumerState<LockGate> {
 }
 
 class _Blank extends StatelessWidget {
-  const _Blank();
+  const _Blank({super.key});
 
   @override
   Widget build(BuildContext context) =>
@@ -152,8 +186,9 @@ class _SetupScreenState extends ConsumerState<_SetupScreen> {
   Widget build(BuildContext context) => _Frame(
     title: _first == null ? 'Choisissez votre code' : 'Confirmez votre code',
     text:
-        'Six chiffres, personnels. Ils déverrouillent l’application après 15 minutes '
-        'd’inactivité et ouvrent les sites sensibles.',
+        'Six chiffres, personnels. Ils déverrouillent l’application après '
+        '${ref.watch(terminalPolicyProvider).idleLockMinutes} minute(s) '
+        'd’inactivité ou à votre retour, et ouvrent les sites sensibles.',
     child: widget.busy
         ? const Padding(
             padding: EdgeInsets.all(24),

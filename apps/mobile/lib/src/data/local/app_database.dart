@@ -33,6 +33,7 @@ part 'app_database.g.dart';
     AccessEventOutbox,
     InstalledBasemaps,
     TrustedKeysets,
+    TrustedTime,
   ],
   daos: [
     LocalMetaDao,
@@ -51,7 +52,7 @@ class AppDatabase extends _$AppDatabase {
   /// `dart run drift_dev make-migrations` (instantanés, tests générés et
   /// `app_database.steps.dart`, définitions de tables par version). Une étape
   /// qui crée une table modifiée plus tard prend sa définition versionnée.
-  static const currentSchemaVersion = 8;
+  static const currentSchemaVersion = 9;
 
   @override
   int get schemaVersion => currentSchemaVersion;
@@ -66,6 +67,7 @@ class AppDatabase extends _$AppDatabase {
     6: _migrateToV6,
     7: _migrateToV7,
     8: _migrateToV8,
+    9: _migrateToV9,
   };
 
   /// v2 (Sprint 4) : contenu hors ligne installé et état de synchronisation
@@ -133,6 +135,13 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  /// v9 (Sprint 13) : politique des tablettes reçue avec le catalogue et
+  /// repère de temps de confiance (SEC-05, ADR-029).
+  static Future<void> _migrateToV9(Migrator m, AppDatabase db) async {
+    await m.addColumn(db.syncState, db.syncState.terminalPolicy);
+    await m.createTable(db.trustedTime);
+  }
+
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
@@ -162,6 +171,14 @@ class AppDatabase extends _$AppDatabase {
         const SyncStateCompanion(id: Value(SyncState.singletonId)),
         mode: InsertMode.insertOrIgnore,
       );
+      // Repère de temps de confiance (v9) : absent des schémas plus anciens,
+      // que les tests de migration ouvrent aussi.
+      if (details.versionNow >= 9) {
+        await into(trustedTime).insert(
+          const TrustedTimeCompanion(id: Value(TrustedTime.singletonId)),
+          mode: InsertMode.insertOrIgnore,
+        );
+      }
     },
   );
 

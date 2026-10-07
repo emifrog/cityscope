@@ -1,11 +1,13 @@
 import 'dart:async';
 
+import 'package:etare_ops/src/core/di/providers.dart';
 import 'package:etare_ops/src/core/logging/app_logger.dart';
 import 'package:etare_ops/src/core/theme/app_theme.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/auth/presentation/auth_error_messages.dart';
 import 'package:etare_ops/src/features/lock/application/lock_controller.dart';
+import 'package:etare_ops/src/features/lock/application/terminal_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -72,12 +74,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             password: _passwordController.text,
           );
       ref.read(lockoutNoticeProvider.notifier).set(null);
+      unawaited(_forgetStoredNotice());
       // La redirection vers l'accueil est assurée par le routeur.
     } on Object catch (error) {
       _logger.info('Échec de connexion : $error');
       if (mounted) setState(() => _error = describeAuthError(error));
     } finally {
       if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  /// Le motif conservé d'une révocation est lu : il disparaît.
+  Future<void> _forgetStoredNotice() async {
+    try {
+      await ref
+          .read(appDatabaseProvider)
+          .localMetaDao
+          .removeValue(loginNoticeKey);
+    } on Object catch (error) {
+      _logger.info('Motif conservé non effacé : $error');
     }
   }
 
@@ -156,7 +171,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         validator: validatePassword,
                         onFieldSubmitted: (_) => unawaited(_submit()),
                       ),
-                      if (_error ?? ref.watch(lockoutNoticeProvider)
+                      if (_error ??
+                              ref.watch(lockoutNoticeProvider) ??
+                              ref.watch(storedLoginNoticeProvider).value
                           case final error?) ...[
                         const SizedBox(height: 16),
                         _ErrorBanner(

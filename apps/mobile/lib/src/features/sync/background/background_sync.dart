@@ -8,6 +8,7 @@ import 'package:etare_ops/src/core/logging/app_logger.dart';
 import 'package:etare_ops/src/core/storage/secure_store.dart';
 import 'package:etare_ops/src/data/local/encrypted_database.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
+import 'package:etare_ops/src/features/lock/application/terminal_providers.dart';
 import 'package:etare_ops/src/features/sync/application/sync_providers.dart';
 import 'package:etare_ops/src/features/sync/domain/sync_trigger.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -81,6 +82,8 @@ Future<bool> runBackgroundSync(
     final session = await container.read(authControllerProvider.future);
     final identity = await container.read(deviceIdentityProvider.future);
     if (session == null || identity == null) return true;
+    // Heure de confiance lue avant la synchronisation, qui la recale (SEC-05).
+    await container.read(trustedClockProvider).refresh();
     await container
         .read(syncControllerProvider.notifier)
         .synchronize(trigger: trigger);

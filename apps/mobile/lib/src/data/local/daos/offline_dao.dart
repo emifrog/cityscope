@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:etare_ops/src/core/time/trusted_clock.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/data/local/tables.dart';
 import 'package:etare_ops/src/features/sync/domain/package_models.dart';
@@ -118,6 +119,8 @@ final class ActivationRecord {
     this.requiredAppVersion,
     this.notices = const [],
     this.onDemand,
+    this.timeAnchor,
+    this.terminalPolicy,
   });
 
   final List<InstallRecord> install;
@@ -148,6 +151,13 @@ final class ActivationRecord {
   /// Sites restreints proposés à la demande par le catalogue (PER-02) ; null
   /// laisse la liste inchangée.
   final List<CatalogEntry>? onDemand;
+
+  /// Heure du serveur au catalogue et horloge monotone à cet instant (SEC-05) ;
+  /// null : horloge monotone indisponible, repère inchangé.
+  final TimeAnchor? timeAnchor;
+
+  /// Politique des tablettes reçue (JSON) ; null : aucune (valeurs par défaut).
+  final String? terminalPolicy;
 }
 
 /// Clé `local_meta` des avis de retrait conservés (MET-04).
@@ -165,6 +175,7 @@ const removalNoticesKey = 'removal_notices';
     SiteData,
     SiteSearch,
     SyncState,
+    TrustedTime,
   ],
 )
 class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
@@ -172,6 +183,23 @@ class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
 
   Future<List<InstalledPublicationRow>> installed() =>
       select(installedPublications).get();
+
+  /// Nouveau repère de temps de confiance (SEC-05) : l'heure du serveur
+  /// remplace aussi la plus haute heure constatée, qu'une horloge avancée
+  /// aurait poussée.
+  Future<void> writeTimeAnchor(TimeAnchor? anchor) async {
+    if (anchor == null) return;
+    await (update(
+      trustedTime,
+    )..where((t) => t.id.equals(TrustedTime.singletonId))).write(
+      TrustedTimeCompanion(
+        anchorServerTime: Value(anchor.serverTime.toUtc()),
+        anchorElapsedMs: Value(anchor.elapsedMs),
+        anchorBootCount: Value(anchor.bootCount),
+        highWater: Value(anchor.serverTime.toUtc()),
+      ),
+    );
+  }
 
   Stream<int> watchInstalledCount() {
     final count = installedPublications.siteId.count();
@@ -398,8 +426,10 @@ class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
         authorizationExpiresAt: Value(activation.authorizationExpiresAt),
         receiptPending: const Value(true),
         requiredAppVersion: Value(activation.requiredAppVersion),
+        terminalPolicy: Value(activation.terminalPolicy),
       ),
     );
+    await writeTimeAnchor(activation.timeAnchor);
     await _removeOrphanBlobs(activation.keepBlobs);
   });
 

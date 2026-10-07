@@ -7,8 +7,10 @@ import 'package:etare_ops/src/core/errors/error_messages.dart';
 import 'package:etare_ops/src/core/formatting/date_formatting.dart';
 import 'package:etare_ops/src/core/json/json_reader.dart';
 import 'package:etare_ops/src/core/logging/app_logger.dart';
+import 'package:etare_ops/src/core/platform/platform_services.dart';
 import 'package:etare_ops/src/core/security/trusted_keys.dart';
 import 'package:etare_ops/src/core/text/search_text.dart';
+import 'package:etare_ops/src/core/time/trusted_clock.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/data/local/daos/offline_dao.dart';
 import 'package:etare_ops/src/data/local/daos/reports_dao.dart';
@@ -17,6 +19,7 @@ import 'package:etare_ops/src/features/basemaps/application/basemap_sync.dart';
 import 'package:etare_ops/src/features/sync/application/package_verification.dart';
 import 'package:etare_ops/src/features/sync/application/trust_store.dart';
 import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
+import 'package:etare_ops/src/features/sync/data/device_keys.dart';
 import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
 import 'package:etare_ops/src/features/sync/data/sync_api.dart';
 import 'package:etare_ops/src/features/sync/domain/package_models.dart';
@@ -158,7 +161,10 @@ final class SyncService {
     required this._trust,
     this._basemaps,
     this._clock = DateTime.now,
-  });
+    DeviceKeys? keys,
+    this._trustedClock,
+    this._wipeSecrets,
+  }) : _keys = keys ?? DeviceKeys(const SoftwarePlatformServices());
 
   static const _logger = AppLogger('sync');
 
@@ -178,7 +184,21 @@ final class SyncService {
   final BasemapSync? _basemaps;
   final DateTime Function() _clock;
 
-  DateTime get _now => _clock().toUtc();
+  /// Clé du terminal : Keystore, ou Ed25519 des premières tablettes (SEC-05).
+  final DeviceKeys _keys;
+
+  /// Heure de confiance (SEC-05) ; null : horloge [_clock].
+  final TrustedClock? _trustedClock;
+
+  /// Révocation : session, code personnel et clé de la base locale effacés
+  /// (SEC-05) ; null dans les tests du service seul.
+  final Future<void> Function()? _wipeSecrets;
+
+  DateTime get _now => (_trustedClock?.now() ?? _clock()).toUtc();
+
+  /// Heure du serveur au catalogue de ce passage, et horloge monotone à sa
+  /// réception : le nouveau repère de temps de confiance (SEC-05).
+  TimeAnchor? _anchor;
 
   /// Confirme, juste avant d'activer, que ce moteur mène toujours la
   /// synchronisation (bail partagé entre moteurs, SYN-01).
@@ -193,6 +213,8 @@ final class SyncService {
       throw const SyncSuperseded();
     }
     await _offline.activate(activation);
+    final anchor = activation.timeAnchor;
+    if (anchor != null) _trustedClock?.anchorAt(anchor);
   }
 
   /// [maxDownloadBytes] borne ce qui est téléchargé (fichiers manquants) : une
@@ -217,10 +239,19 @@ final class SyncService {
         throw const SyncIntegrityException('TRUSTED_KEYS_MISSING');
       }
     }
-    final device = DeviceCredentials(
-      identity,
-      await DeviceKey.fromSeed(identity.keySeed),
-    );
+    DeviceCredentials device;
+    try {
+      device = await _keys.credentials(identity);
+    } on DeviceKeyLost {
+      // Keystore réinitialisé : la tablette ne peut plus rien prouver.
+      _logger.warning('Clé du terminal perdue : purge.');
+      final discarded = await _reports.pendingCount();
+      await purge();
+      return SyncPurged(
+        ApiErrorCode.deviceNotEnrolled,
+        discardedReports: discarded,
+      );
+    }
     await _state.write(
       SyncStateCompanion(
         status: const Value('running'),
@@ -229,6 +260,7 @@ final class SyncService {
     );
     try {
       onProgress?.call(const SyncProgress(step: SyncStep.catalog));
+      device = await _rotateKey(device);
       await _refreshKeyset(device);
       _trustedKeys = await _trust.current();
       if (!_trustedKeys.has(KeyPurpose.publication) ||
@@ -322,13 +354,77 @@ final class SyncService {
     }
   }
 
-  /// Révocation (OFF-04) : données installées, fonds de carte, état et
-  /// identité effacés.
+  /// Passage à une clé du Keystore (SEC-05) : la requête est signée par la
+  /// clé actuelle, la nouvelle signe le texte de rotation. Si la réponse se
+  /// perd, la rotation engagée est reprise au passage suivant : le serveur
+  /// refuse alors l'ancienne clé, la nouvelle le prouve et la rotation
+  /// s'achève. Toute autre erreur laisse la clé actuelle en place.
+  Future<DeviceCredentials> _rotateKey(DeviceCredentials device) async {
+    final identity = device.identity;
+    if (identity.hardwareKey || !_keys.hardware) return device;
+    final alias = identity.pendingKeyAlias ?? _keys.newAlias();
+    final KeystoreDeviceKey? next;
+    try {
+      next = await _keys.hardwareKey(alias);
+    } on Exception catch (error) {
+      _logger.warning(
+        'Keystore indisponible : clé actuelle gardée.',
+        error: error,
+      );
+      return device;
+    }
+    if (next == null) return device;
+    if (identity.pendingKeyAlias == null) {
+      await _identities.write(identity.withPendingKey(alias));
+    }
+    final publicKey = await next.publicKeyBase64();
+    try {
+      await _api.rotateDeviceKey(
+        device,
+        algorithm: next.algorithm,
+        publicKey: publicKey,
+        proof: await next.sign(
+          deviceKeyRotationText(
+            tenantId: identity.tenantId,
+            deviceId: identity.deviceId,
+            algorithm: next.algorithm,
+            publicKey: publicKey,
+          ),
+        ),
+      );
+    } on ApiException catch (error) {
+      if (error.code != ApiErrorCode.deviceProofInvalid) {
+        // Serveur antérieur à SEC-05 (route inconnue), refus passager : plus tard.
+        _logger.warning(
+          'Rotation de la clé reportée (${error.code.wireValue}).',
+        );
+        return device;
+      }
+      // L'ancienne clé est refusée : la rotation a peut-être abouti sans
+      // réponse. La nouvelle clé le prouve, ou le terminal est bien refusé.
+      final candidate = DeviceCredentials(identity, next);
+      try {
+        await _api.keyset(candidate);
+      } on ApiException catch (probe) {
+        if (probe.code != ApiErrorCode.notFound) throw error;
+      }
+    }
+    final rotated = identity.withHardwareKey(alias);
+    await _identities.write(rotated);
+    _logger.info('Clé du terminal déplacée dans le Keystore.');
+    return DeviceCredentials(rotated, next);
+  }
+
+  /// Révocation (OFF-04) : données installées, fonds de carte, état,
+  /// identité et clés du terminal effacés ; puis session, code personnel et
+  /// clé de la base locale (SEC-05).
   Future<void> purge() async {
     await _reports.purgeAll();
     await _offline.purgeAll();
     await _basemaps?.purge();
+    await _keys.discard(await _identities.read());
     await _identities.clear();
+    await _wipeSecrets?.call();
   }
 
   Future<SyncReport> _synchronize(
@@ -457,6 +553,8 @@ final class SyncService {
             failures.any((failure) => failure.code == _readerTooOld)
             ? ''
             : null,
+        timeAnchor: _anchor,
+        terminalPolicy: catalog.terminalPolicy?.encode(),
       ),
     );
 
@@ -553,6 +651,8 @@ final class SyncService {
         now: _now,
         error: appUpdateMessage(minVersion),
         requiredAppVersion: minVersion,
+        timeAnchor: _anchor,
+        terminalPolicy: catalog.terminalPolicy?.encode(),
       ),
     );
     await _sendReceipt(
@@ -584,6 +684,9 @@ final class SyncService {
     String userId,
   ) async {
     final signed = await _api.catalog(device);
+    // Horloge monotone à la réception : avec l'heure du catalogue, le repère
+    // de temps de confiance (SEC-05).
+    final reading = await _trustedClock?.monotonic();
     final valid = await verifyServerSignature(
       trustedKeys: _trustedKeys,
       purpose: KeyPurpose.catalog,
@@ -610,6 +713,13 @@ final class SyncService {
     if (accepted != null && catalog.generation < accepted) {
       throw const SyncIntegrityException('CATALOG_REPLAYED');
     }
+    _anchor = reading == null
+        ? null
+        : TimeAnchor(
+            serverTime: catalog.issuedAt,
+            elapsedMs: reading.elapsedMs,
+            bootCount: reading.bootCount,
+          );
     return catalog;
   }
 

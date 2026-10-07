@@ -4,7 +4,7 @@ description: "Application opérationnelle (OPS) ETARE numérique — squelette S
 publish_to: 'none'
 
 # versionName+versionCode (Android) / CFBundleShortVersionString+CFBundleVersion (iOS).
-version: 0.4.0+4
+version: 0.5.0+5
 
 environment:
   sdk: ^3.13.4
@@ -50,6 +50,10 @@ dependencies:
   # Autorisation de localiser l'agent sur la carte (position jamais transmise),
   # Baseflow, MIT.
   permission_handler: ^12.0.1
+  # Services Android de l'application (clé du terminal dans le Keystore,
+  # horloge monotone, espace libre, FLAG_SECURE), paquet privé local (SEC-05).
+  etare_platform:
+    path: packages/etare_platform
 
 dev_dependencies:
   build_runner: ^2.16.1

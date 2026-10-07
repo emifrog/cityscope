@@ -27,6 +27,7 @@ final reportSenderProvider = Provider<ReportSender>(
     reports: ref.watch(reportsDaoProvider),
     identities: ref.watch(deviceIdentityStoreProvider),
     clock: ref.watch(clockProvider),
+    keys: ref.watch(deviceKeysProvider),
   ),
 );
 

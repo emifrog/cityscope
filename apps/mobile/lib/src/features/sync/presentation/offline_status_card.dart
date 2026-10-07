@@ -1,9 +1,9 @@
 import 'package:etare_ops/src/core/config/app_info.dart';
-import 'package:etare_ops/src/core/errors/app_exception.dart';
 import 'package:etare_ops/src/core/formatting/date_formatting.dart';
 import 'package:etare_ops/src/core/routing/app_routes.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
+import 'package:etare_ops/src/features/sync/application/sync_messages.dart';
 import 'package:etare_ops/src/features/sync/application/sync_providers.dart';
 import 'package:etare_ops/src/features/sync/application/sync_service.dart';
 import 'package:etare_ops/src/features/sync/background/background_scheduler.dart';
@@ -358,18 +358,4 @@ class _Progress extends StatelessWidget {
       ],
     );
   }
-}
-
-/// Message lisible d'une purge (révocation, terminal inconnu).
-String purgeMessage(ApiErrorCode reason, {int discardedReports = 0}) {
-  final base = switch (reason) {
-    ApiErrorCode.deviceRevoked =>
-      'Tablette révoquée par votre SIS : données hors ligne effacées.',
-    _ => 'Tablette inconnue du serveur : données effacées, réenrôlez-la.',
-  };
-  return switch (discardedReports) {
-    0 => base,
-    1 => '$base 1 signalement non transmis a été effacé.',
-    _ => '$base $discardedReports signalements non transmis ont été effacés.',
-  };
 }

@@ -9,9 +9,9 @@ import 'package:etare_ops/src/core/storage/secure_store.dart';
 import 'package:flutter/foundation.dart';
 
 /// Code personnel de l'agent sur la tablette (PER-02, ADR-025) : 6 chiffres,
-/// choisis à la connexion. Il déverrouille l'application après 15 minutes
-/// d'inactivité et ouvre les sites sensibles, dont il protège aussi le
-/// déchiffrement local.
+/// choisis à la connexion. Il déverrouille l'application (démarrage,
+/// inactivité et retour selon la politique du SIS, SEC-05) et ouvre les sites
+/// sensibles, dont il protège aussi le déchiffrement local.
 ///
 /// Rien du code n'est conservé : seulement un sel, un vérificateur et le
 /// nombre d'essais manqués. La clé dérivée (PBKDF2-HMAC-SHA-256) est mêlée à
@@ -23,9 +23,6 @@ const localCodeLength = 6;
 
 /// Au-delà, l'agent est déconnecté et se reconnecte en ligne (rien n'est effacé).
 const maxLocalCodeAttempts = 5;
-
-/// Inactivité au-delà de laquelle l'application se verrouille (ADR-025).
-const localLockAfter = Duration(minutes: 15);
 
 bool isValidLocalCode(String code) =>
     code.length == localCodeLength && RegExp(r'^[0-9]+$').hasMatch(code);
@@ -248,8 +245,13 @@ final class LocalCodeStore {
         : LocalCodeRejected(maxLocalCodeAttempts - failures);
   }
 
-  /// Déconnexion, révocation : le code de l'agent disparaît.
-  Future<void> clear() => _store.delete(LocalCodeKeys.record);
+  /// Déconnexion, changement d'agent, révocation : le code de l'agent
+  /// disparaît, et avec lui le secret de l'installation, renouvelé au code
+  /// suivant (SEC-05) ; les sites sensibles qu'il protégeait sont déjà effacés.
+  Future<void> clear() async {
+    await _store.delete(LocalCodeKeys.record);
+    await _store.delete(LocalCodeKeys.pepper);
+  }
 }
 
 /// Chiffrement authentifié (AES-256-GCM) des contenus sensibles : le résultat

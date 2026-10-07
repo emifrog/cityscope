@@ -115,6 +115,22 @@ void main() {
     ],
   );
 
+  testWidgets('aucun site sur la carte sans l’autorisation de consultation '
+      'de l’agent connecté (SEC-05)', (tester) async {
+    await database.close();
+    database = await installedDatabase(user: 'autre-agent');
+    await installBasemap(database, nice);
+    await open(tester);
+
+    await tester.tap(find.byKey(HomeScreen.mapButtonKey));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(MapScreen.lockedKey), findsOneWidget);
+    expect(map.spec, isNull);
+    expect(find.byKey(const Key('fake.${fixtures.siteId}')), findsNothing);
+    await finish(tester, database);
+  });
+
   testWidgets('situe les sites installés sur le fond du secteur, avec sa '
       'source et sa date, et ouvre la fiche d’un site', (tester) async {
     await installBasemap(database, nice);

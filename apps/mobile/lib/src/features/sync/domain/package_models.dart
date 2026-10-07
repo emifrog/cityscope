@@ -1,6 +1,7 @@
 import 'package:etare_ops/src/core/json/json_reader.dart';
 import 'package:etare_ops/src/features/basemaps/domain/basemap_models.dart';
 import 'package:etare_ops/src/features/sync/domain/removal_notice.dart';
+import 'package:etare_ops/src/features/sync/domain/terminal_policy.dart';
 import 'package:flutter/foundation.dart';
 
 final _sha256Pattern = RegExp(r'^[0-9a-f]{64}$');
@@ -118,6 +119,7 @@ final class SyncCatalog {
     this.withdrawals = const [],
     this.onDemand = const [],
     this.basemaps = const [],
+    this.terminalPolicy,
   });
 
   factory SyncCatalog.fromJson(JsonMap json) {
@@ -167,6 +169,10 @@ final class SyncCatalog {
               for (final entry in json.requireObjectList('basemaps'))
                 CatalogBasemap.fromJson(entry),
             ],
+      // Absente des catalogues antérieurs au Sprint 13 (SEC-05).
+      terminalPolicy: json['terminal_policy'] == null
+          ? null
+          : TerminalPolicy.fromJson(json.requireObject('terminal_policy')),
     );
   }
 
@@ -195,6 +201,9 @@ final class SyncCatalog {
 
   /// Fonds de carte en vigueur pour les secteurs de la tablette (ADR-024).
   final List<CatalogBasemap> basemaps;
+
+  /// Politique des tablettes du SIS (SEC-05) ; null : serveur antérieur.
+  final TerminalPolicy? terminalPolicy;
 }
 
 /// Fichier d'un paquet, identifié par son empreinte.

@@ -215,6 +215,10 @@ Voir ADR-015.
 - Enrôlement : code à usage unique de 60 bits, valable 24 h, conservé haché, délivré par un administrateur
   avec second facteur ; la tablette génère sa clé et prouve la détenir. Un identifiant de terminal seul
   n’authentifie rien.
+- **Clé du terminal dans le Keystore** (SEC-05, ADR-029) : ECDSA P-256 du Keystore Android, jamais
+  extractible (StrongBox si la tablette en a un). Les tablettes de la première génération (Ed25519
+  logicielle) y passent d’elles-mêmes par une rotation signée par l’ancienne clé et prouvée par la
+  nouvelle ; l’ancienne est refusée aussitôt, la rotation est auditée.
 - Chaque requête de synchronisation porte le jeton de l’utilisateur **et** la signature du terminal sur la
   méthode, le chemin, l’heure (± 5 min) et le corps ; PostgreSQL revérifie `offline:download`, le SIS et
   l’état du terminal. Un terminal révoqué est refusé à la requête suivante (`DEVICE_REVOKED`).
@@ -257,8 +261,15 @@ Voir ADR-015.
   - donnée publique : distribuée selon les secteurs de la tablette, sans journal ; aucune zone de détail
     autour d'un site restreint ou élevé, qui le désignerait ;
   - le fond n'est servi qu'aux tablettes de son secteur, par des URL signées de 5 minutes.
-- Le catalogue accorde une consultation locale de 7 jours à l’utilisateur ; une horloge de tablette
-  manipulée peut prolonger cette durée hors réseau (limite décrite par l’architecture §19).
+- **Politique des tablettes du SIS** (SEC-05, ADR-029) : inactivité, verrouillage en quittant
+  l’application, captures d’écran, reconnexion par mot de passe et durée de consultation hors ligne
+  (7 jours par défaut), réglés par l’administration avec second facteur, bornés et audités, portés par le
+  catalogue signé.
+- **Heure de confiance** : chaque catalogue fixe un repère (heure du serveur, horloge monotone de la
+  tablette). Tant que la tablette n’a pas redémarré, reculer ou avancer l’horloge ne change pas les
+  durées ; après un redémarrage, l’heure ne descend jamais sous la plus haute constatée. Un appareil
+  compromis peut encore tricher (architecture §19) : aucune révocation instantanée hors réseau n’est
+  promise.
 
 ## Mobile
 
@@ -268,8 +279,8 @@ la demande), HTTP en clair uniquement en debug vers l’émulateur. Voir `apps/m
 
 Depuis le Sprint 10 (ADR-025) :
 
-- **Code personnel** de chaque agent (6 chiffres) : exigé au démarrage et après 15 minutes d’inactivité ;
-  cinq erreurs déconnectent l’agent.
+- **Code personnel** de chaque agent (6 chiffres) : exigé au démarrage, après l’inactivité et au retour
+  dans l’application selon la politique du SIS (Sprint 13) ; cinq erreurs déconnectent l’agent.
 - **Sites restreints ouverts à la demande** : chiffrés une seconde fois par une clé dérivée de ce code
   (PBKDF2, secret de l’installation, AES-256-GCM), et gardés 24 h au plus.
 - **Changement d’agent** : le code et les sites sensibles du précédent sont effacés ; ses consultations
@@ -282,6 +293,18 @@ Depuis le Sprint 11 (ADR-024) :
 - **Localisation** : permission demandée au premier « Me situer » (`ACCESS_FINE_LOCATION`,
   `ACCESS_COARSE_LOCATION`) ; la position est affichée par le moteur de carte et n'est jamais transmise ;
   un refus laisse la carte utilisable.
+
+Depuis le Sprint 13 (SEC-05, ADR-029) :
+
+- **Écran protégé** : `FLAG_SECURE` par défaut (ni capture ni aperçu dans les applications récentes),
+  levé seulement si le SIS l’autorise ; contenu voilé pendant le délai de sortie.
+- **Révocation complète** : données, fonds, identité et clés du Keystore, puis session, code personnel et
+  secret de l’installation, enfin nouvelle clé pour la base locale ; l’agent est déconnecté et le motif
+  l’attend à la connexion.
+- **Tablette partagée** : au changement d’agent, le secret de l’installation est renouvelé avec le code ;
+  l’agent suivant ne voit rien, carte comprise, avant sa propre synchronisation.
+- **Non retenus après analyse** : détection de root, attestation d’intégrité, épinglage de certificat
+  (raisons dans l’ADR-029, à revoir avec SEC-06). Seules les autorités du système sont reconnues.
 
 ## Secrets et Git
 
@@ -307,8 +330,9 @@ l’environnement. La racine des jeux de clés reste hors ligne (`pnpm keys`, c�
   hébergé ; pas de rapport des violations CSP (`report-to`).
 - Durée maximale et inactivité des sessions (`[auth.sessions]`) à régler sur le projet hébergé avec la
   DSI, sans couper la synchronisation en arrière-plan des tablettes.
-- Tablette : code personnel livré (Sprint 10), mais un code à six chiffres reste exposé à un essai
-  exhaustif par qui détient à la fois la base et le secret de l’installation ; ni attestation
-  d’intégrité du terminal, ni rotation de la clé de la base locale ; changement d’agent hors ligne
-  impossible (connexion en ligne requise).
+- Tablette : un code à six chiffres reste exposé à un essai exhaustif par qui détient à la fois la base
+  et le secret de l’installation ; attestation, détection de root et épinglage non retenus (ADR-029, à
+  revoir avec l’analyse de risques SEC-06) ; la clé de la base locale ne change qu’à la révocation ;
+  changement d’agent hors ligne impossible (connexion en ligne requise) ; un Keystore réinitialisé
+  impose un nouvel enrôlement.
 - Chaînage d’empreintes / export externe du journal d’audit : à décider.

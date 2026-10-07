@@ -316,6 +316,21 @@ final class FakeSyncServer {
 
   /// Clé publique de la tablette enrôlée (base64), pour vérifier ses requêtes.
   String? devicePublicKey;
+
+  /// Algorithme de la clé de la tablette (SEC-05). Le faux Keystore des
+  /// tests signe en Ed25519 sous l'étiquette « ecdsa-p256 » : ce serveur
+  /// vérifie donc toujours en Ed25519 ; la vraie vérification P-256 est
+  /// éprouvée côté serveur.
+  String deviceKeyAlgorithm = 'ed25519';
+
+  /// Rotations de clé acceptées (SEC-05).
+  final List<String> rotatedKeys = [];
+
+  /// La rotation est retenue, mais sa réponse se perd (coupure simulée).
+  bool loseRotationResponse = false;
+
+  /// Politique des tablettes annoncée dans le catalogue (null : absente).
+  Map<String, Object>? terminalPolicy;
   DateTime serverClock = DateTime.utc(2026, 10, 1, 10);
   int generation = 1;
   final Map<String, FakePublication> catalog = {};
@@ -435,6 +450,7 @@ final class FakeSyncServer {
     if (path.endsWith('/sync/enrollment')) {
       final body = jsonDecode(rawBody ?? '{}') as Map<String, Object?>;
       devicePublicKey = body['public_key'] as String?;
+      deviceKeyAlgorithm = body['key_algorithm'] as String? ?? 'ed25519';
       return _json(201, {
         'device_id': deviceId,
         'device_name': 'TABLETTE TEST',
@@ -446,6 +462,43 @@ final class FakeSyncServer {
     final refusal = await _checkProof(options, path, rawBody);
     if (refusal != null) return refusal;
     if (revoked) return _error(403, 'DEVICE_REVOKED');
+
+    if (path.endsWith('/sync/device-key') && options.method == 'POST') {
+      final body = jsonDecode(rawBody ?? '{}') as Map<String, Object?>;
+      final algorithm = body['key_algorithm']! as String;
+      final publicKey = body['public_key']! as String;
+      final proven = await Ed25519().verify(
+        utf8.encode(
+          deviceKeyRotationText(
+            tenantId: tenantId,
+            deviceId: deviceId,
+            algorithm: algorithm,
+            publicKey: publicKey,
+          ),
+        ),
+        signature: Signature(
+          base64.decode(body['proof']! as String),
+          publicKey: SimplePublicKey(
+            base64.decode(publicKey),
+            type: KeyPairType.ed25519,
+          ),
+        ),
+      );
+      if (!proven) return _error(401, 'DEVICE_PROOF_INVALID');
+      devicePublicKey = publicKey;
+      deviceKeyAlgorithm = algorithm;
+      rotatedKeys.add(publicKey);
+      if (loseRotationResponse) {
+        throw DioException.connectionError(
+          requestOptions: options,
+          reason: 'réponse perdue (simulée)',
+        );
+      }
+      return _json(200, {
+        'key_algorithm': algorithm,
+        'rotated_at': serverClock.toIso8601String(),
+      });
+    }
 
     if (path.endsWith('/sync/keyset')) {
       keysetRequests.add(path);
@@ -479,6 +532,7 @@ final class FakeSyncServer {
               .toIso8601String(),
         },
         'min_app_version': minAppVersion,
+        'terminal_policy': ?terminalPolicy,
         'withdrawals': withdrawals,
         'publications': [
           for (final publication in catalog.values) _entryOf(publication),

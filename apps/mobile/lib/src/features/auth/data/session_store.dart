@@ -27,6 +27,9 @@ final class SessionStore {
           id: user.requireString('id'),
           email: user.requireString('email'),
         ),
+        signedInAt: json['signed_in_at'] == null
+            ? null
+            : json.requireDateTime('signed_in_at').toUtc(),
       );
     } on FormatException {
       _logger.warning('Session stockée illisible : suppression.');
@@ -42,6 +45,8 @@ final class SessionStore {
       'refresh_token': session.refreshToken,
       'expires_at': session.expiresAt.toUtc().toIso8601String(),
       'user': {'id': session.user.id, 'email': session.user.email},
+      if (session.signedInAt case final signedInAt?)
+        'signed_in_at': signedInAt.toUtc().toIso8601String(),
     }),
   );
 

@@ -373,6 +373,17 @@ class $SyncStateTable extends SyncState
         type: DriftSqlType.dateTime,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _terminalPolicyMeta = const VerificationMeta(
+    'terminalPolicy',
+  );
+  @override
+  late final GeneratedColumn<String> terminalPolicy = GeneratedColumn<String>(
+    'terminal_policy',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -389,6 +400,7 @@ class $SyncStateTable extends SyncState
     requiredAppVersion,
     syncLeaseOwner,
     syncLeaseExpiresAt,
+    terminalPolicy,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -513,6 +525,15 @@ class $SyncStateTable extends SyncState
         ),
       );
     }
+    if (data.containsKey('terminal_policy')) {
+      context.handle(
+        _terminalPolicyMeta,
+        terminalPolicy.isAcceptableOrUnknown(
+          data['terminal_policy']!,
+          _terminalPolicyMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -578,6 +599,10 @@ class $SyncStateTable extends SyncState
         DriftSqlType.dateTime,
         data['${effectivePrefix}sync_lease_expires_at'],
       ),
+      terminalPolicy: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}terminal_policy'],
+      ),
     );
   }
 
@@ -622,6 +647,10 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
   /// moteurs du même processus ; un bail échu est repris (arrêt brutal).
   final String? syncLeaseOwner;
   final DateTime? syncLeaseExpiresAt;
+
+  /// Politique des tablettes du SIS reçue avec le dernier catalogue (SEC-05),
+  /// JSON tel que signé ; null : aucune reçue (valeurs par défaut).
+  final String? terminalPolicy;
   const SyncStateRow({
     required this.id,
     this.activeGeneration,
@@ -637,6 +666,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     this.requiredAppVersion,
     this.syncLeaseOwner,
     this.syncLeaseExpiresAt,
+    this.terminalPolicy,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -679,6 +709,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     if (!nullToAbsent || syncLeaseExpiresAt != null) {
       map['sync_lease_expires_at'] = Variable<DateTime>(syncLeaseExpiresAt);
     }
+    if (!nullToAbsent || terminalPolicy != null) {
+      map['terminal_policy'] = Variable<String>(terminalPolicy);
+    }
     return map;
   }
 
@@ -720,6 +753,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       syncLeaseExpiresAt: syncLeaseExpiresAt == null && nullToAbsent
           ? const Value.absent()
           : Value(syncLeaseExpiresAt),
+      terminalPolicy: terminalPolicy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(terminalPolicy),
     );
   }
 
@@ -749,6 +785,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       syncLeaseExpiresAt: serializer.fromJson<DateTime?>(
         json['syncLeaseExpiresAt'],
       ),
+      terminalPolicy: serializer.fromJson<String?>(json['terminalPolicy']),
     );
   }
   @override
@@ -771,6 +808,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       'requiredAppVersion': serializer.toJson<String?>(requiredAppVersion),
       'syncLeaseOwner': serializer.toJson<String?>(syncLeaseOwner),
       'syncLeaseExpiresAt': serializer.toJson<DateTime?>(syncLeaseExpiresAt),
+      'terminalPolicy': serializer.toJson<String?>(terminalPolicy),
     };
   }
 
@@ -789,6 +827,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     Value<String?> requiredAppVersion = const Value.absent(),
     Value<String?> syncLeaseOwner = const Value.absent(),
     Value<DateTime?> syncLeaseExpiresAt = const Value.absent(),
+    Value<String?> terminalPolicy = const Value.absent(),
   }) => SyncStateRow(
     id: id ?? this.id,
     activeGeneration: activeGeneration.present
@@ -820,6 +859,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     syncLeaseExpiresAt: syncLeaseExpiresAt.present
         ? syncLeaseExpiresAt.value
         : this.syncLeaseExpiresAt,
+    terminalPolicy: terminalPolicy.present
+        ? terminalPolicy.value
+        : this.terminalPolicy,
   );
   SyncStateRow copyWithCompanion(SyncStateCompanion data) {
     return SyncStateRow(
@@ -859,6 +901,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       syncLeaseExpiresAt: data.syncLeaseExpiresAt.present
           ? data.syncLeaseExpiresAt.value
           : this.syncLeaseExpiresAt,
+      terminalPolicy: data.terminalPolicy.present
+          ? data.terminalPolicy.value
+          : this.terminalPolicy,
     );
   }
 
@@ -878,7 +923,8 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
           ..write('receiptPending: $receiptPending, ')
           ..write('requiredAppVersion: $requiredAppVersion, ')
           ..write('syncLeaseOwner: $syncLeaseOwner, ')
-          ..write('syncLeaseExpiresAt: $syncLeaseExpiresAt')
+          ..write('syncLeaseExpiresAt: $syncLeaseExpiresAt, ')
+          ..write('terminalPolicy: $terminalPolicy')
           ..write(')'))
         .toString();
   }
@@ -899,6 +945,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     requiredAppVersion,
     syncLeaseOwner,
     syncLeaseExpiresAt,
+    terminalPolicy,
   );
   @override
   bool operator ==(Object other) =>
@@ -917,7 +964,8 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
           other.receiptPending == this.receiptPending &&
           other.requiredAppVersion == this.requiredAppVersion &&
           other.syncLeaseOwner == this.syncLeaseOwner &&
-          other.syncLeaseExpiresAt == this.syncLeaseExpiresAt);
+          other.syncLeaseExpiresAt == this.syncLeaseExpiresAt &&
+          other.terminalPolicy == this.terminalPolicy);
 }
 
 class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
@@ -935,6 +983,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
   final Value<String?> requiredAppVersion;
   final Value<String?> syncLeaseOwner;
   final Value<DateTime?> syncLeaseExpiresAt;
+  final Value<String?> terminalPolicy;
   const SyncStateCompanion({
     this.id = const Value.absent(),
     this.activeGeneration = const Value.absent(),
@@ -950,6 +999,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     this.requiredAppVersion = const Value.absent(),
     this.syncLeaseOwner = const Value.absent(),
     this.syncLeaseExpiresAt = const Value.absent(),
+    this.terminalPolicy = const Value.absent(),
   });
   SyncStateCompanion.insert({
     this.id = const Value.absent(),
@@ -966,6 +1016,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     this.requiredAppVersion = const Value.absent(),
     this.syncLeaseOwner = const Value.absent(),
     this.syncLeaseExpiresAt = const Value.absent(),
+    this.terminalPolicy = const Value.absent(),
   });
   static Insertable<SyncStateRow> custom({
     Expression<int>? id,
@@ -982,6 +1033,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     Expression<String>? requiredAppVersion,
     Expression<String>? syncLeaseOwner,
     Expression<DateTime>? syncLeaseExpiresAt,
+    Expression<String>? terminalPolicy,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1001,6 +1053,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
       if (syncLeaseOwner != null) 'sync_lease_owner': syncLeaseOwner,
       if (syncLeaseExpiresAt != null)
         'sync_lease_expires_at': syncLeaseExpiresAt,
+      if (terminalPolicy != null) 'terminal_policy': terminalPolicy,
     });
   }
 
@@ -1019,6 +1072,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     Value<String?>? requiredAppVersion,
     Value<String?>? syncLeaseOwner,
     Value<DateTime?>? syncLeaseExpiresAt,
+    Value<String?>? terminalPolicy,
   }) {
     return SyncStateCompanion(
       id: id ?? this.id,
@@ -1036,6 +1090,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
       requiredAppVersion: requiredAppVersion ?? this.requiredAppVersion,
       syncLeaseOwner: syncLeaseOwner ?? this.syncLeaseOwner,
       syncLeaseExpiresAt: syncLeaseExpiresAt ?? this.syncLeaseExpiresAt,
+      terminalPolicy: terminalPolicy ?? this.terminalPolicy,
     );
   }
 
@@ -1088,6 +1143,9 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
         syncLeaseExpiresAt.value,
       );
     }
+    if (terminalPolicy.present) {
+      map['terminal_policy'] = Variable<String>(terminalPolicy.value);
+    }
     return map;
   }
 
@@ -1107,7 +1165,8 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
           ..write('receiptPending: $receiptPending, ')
           ..write('requiredAppVersion: $requiredAppVersion, ')
           ..write('syncLeaseOwner: $syncLeaseOwner, ')
-          ..write('syncLeaseExpiresAt: $syncLeaseExpiresAt')
+          ..write('syncLeaseExpiresAt: $syncLeaseExpiresAt, ')
+          ..write('terminalPolicy: $terminalPolicy')
           ..write(')'))
         .toString();
   }
@@ -8536,6 +8595,391 @@ class TrustedKeysetsCompanion extends UpdateCompanion<TrustedKeysetRow> {
   }
 }
 
+class $TrustedTimeTable extends TrustedTime
+    with TableInfo<$TrustedTimeTable, TrustedTimeRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TrustedTimeTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _anchorServerTimeMeta = const VerificationMeta(
+    'anchorServerTime',
+  );
+  @override
+  late final GeneratedColumn<DateTime> anchorServerTime =
+      GeneratedColumn<DateTime>(
+        'anchor_server_time',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _anchorElapsedMsMeta = const VerificationMeta(
+    'anchorElapsedMs',
+  );
+  @override
+  late final GeneratedColumn<int> anchorElapsedMs = GeneratedColumn<int>(
+    'anchor_elapsed_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _anchorBootCountMeta = const VerificationMeta(
+    'anchorBootCount',
+  );
+  @override
+  late final GeneratedColumn<int> anchorBootCount = GeneratedColumn<int>(
+    'anchor_boot_count',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _highWaterMeta = const VerificationMeta(
+    'highWater',
+  );
+  @override
+  late final GeneratedColumn<DateTime> highWater = GeneratedColumn<DateTime>(
+    'high_water',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    anchorServerTime,
+    anchorElapsedMs,
+    anchorBootCount,
+    highWater,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'trusted_time';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TrustedTimeRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('anchor_server_time')) {
+      context.handle(
+        _anchorServerTimeMeta,
+        anchorServerTime.isAcceptableOrUnknown(
+          data['anchor_server_time']!,
+          _anchorServerTimeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('anchor_elapsed_ms')) {
+      context.handle(
+        _anchorElapsedMsMeta,
+        anchorElapsedMs.isAcceptableOrUnknown(
+          data['anchor_elapsed_ms']!,
+          _anchorElapsedMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('anchor_boot_count')) {
+      context.handle(
+        _anchorBootCountMeta,
+        anchorBootCount.isAcceptableOrUnknown(
+          data['anchor_boot_count']!,
+          _anchorBootCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('high_water')) {
+      context.handle(
+        _highWaterMeta,
+        highWater.isAcceptableOrUnknown(data['high_water']!, _highWaterMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TrustedTimeRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TrustedTimeRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      anchorServerTime: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}anchor_server_time'],
+      ),
+      anchorElapsedMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}anchor_elapsed_ms'],
+      ),
+      anchorBootCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}anchor_boot_count'],
+      ),
+      highWater: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}high_water'],
+      ),
+    );
+  }
+
+  @override
+  $TrustedTimeTable createAlias(String alias) {
+    return $TrustedTimeTable(attachedDatabase, alias);
+  }
+}
+
+class TrustedTimeRow extends DataClass implements Insertable<TrustedTimeRow> {
+  final int id;
+  final DateTime? anchorServerTime;
+  final int? anchorElapsedMs;
+
+  /// Nombre de démarrages de la tablette au moment du repère (-1 : inconnu).
+  final int? anchorBootCount;
+  final DateTime? highWater;
+  const TrustedTimeRow({
+    required this.id,
+    this.anchorServerTime,
+    this.anchorElapsedMs,
+    this.anchorBootCount,
+    this.highWater,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || anchorServerTime != null) {
+      map['anchor_server_time'] = Variable<DateTime>(anchorServerTime);
+    }
+    if (!nullToAbsent || anchorElapsedMs != null) {
+      map['anchor_elapsed_ms'] = Variable<int>(anchorElapsedMs);
+    }
+    if (!nullToAbsent || anchorBootCount != null) {
+      map['anchor_boot_count'] = Variable<int>(anchorBootCount);
+    }
+    if (!nullToAbsent || highWater != null) {
+      map['high_water'] = Variable<DateTime>(highWater);
+    }
+    return map;
+  }
+
+  TrustedTimeCompanion toCompanion(bool nullToAbsent) {
+    return TrustedTimeCompanion(
+      id: Value(id),
+      anchorServerTime: anchorServerTime == null && nullToAbsent
+          ? const Value.absent()
+          : Value(anchorServerTime),
+      anchorElapsedMs: anchorElapsedMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(anchorElapsedMs),
+      anchorBootCount: anchorBootCount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(anchorBootCount),
+      highWater: highWater == null && nullToAbsent
+          ? const Value.absent()
+          : Value(highWater),
+    );
+  }
+
+  factory TrustedTimeRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TrustedTimeRow(
+      id: serializer.fromJson<int>(json['id']),
+      anchorServerTime: serializer.fromJson<DateTime?>(
+        json['anchorServerTime'],
+      ),
+      anchorElapsedMs: serializer.fromJson<int?>(json['anchorElapsedMs']),
+      anchorBootCount: serializer.fromJson<int?>(json['anchorBootCount']),
+      highWater: serializer.fromJson<DateTime?>(json['highWater']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'anchorServerTime': serializer.toJson<DateTime?>(anchorServerTime),
+      'anchorElapsedMs': serializer.toJson<int?>(anchorElapsedMs),
+      'anchorBootCount': serializer.toJson<int?>(anchorBootCount),
+      'highWater': serializer.toJson<DateTime?>(highWater),
+    };
+  }
+
+  TrustedTimeRow copyWith({
+    int? id,
+    Value<DateTime?> anchorServerTime = const Value.absent(),
+    Value<int?> anchorElapsedMs = const Value.absent(),
+    Value<int?> anchorBootCount = const Value.absent(),
+    Value<DateTime?> highWater = const Value.absent(),
+  }) => TrustedTimeRow(
+    id: id ?? this.id,
+    anchorServerTime: anchorServerTime.present
+        ? anchorServerTime.value
+        : this.anchorServerTime,
+    anchorElapsedMs: anchorElapsedMs.present
+        ? anchorElapsedMs.value
+        : this.anchorElapsedMs,
+    anchorBootCount: anchorBootCount.present
+        ? anchorBootCount.value
+        : this.anchorBootCount,
+    highWater: highWater.present ? highWater.value : this.highWater,
+  );
+  TrustedTimeRow copyWithCompanion(TrustedTimeCompanion data) {
+    return TrustedTimeRow(
+      id: data.id.present ? data.id.value : this.id,
+      anchorServerTime: data.anchorServerTime.present
+          ? data.anchorServerTime.value
+          : this.anchorServerTime,
+      anchorElapsedMs: data.anchorElapsedMs.present
+          ? data.anchorElapsedMs.value
+          : this.anchorElapsedMs,
+      anchorBootCount: data.anchorBootCount.present
+          ? data.anchorBootCount.value
+          : this.anchorBootCount,
+      highWater: data.highWater.present ? data.highWater.value : this.highWater,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrustedTimeRow(')
+          ..write('id: $id, ')
+          ..write('anchorServerTime: $anchorServerTime, ')
+          ..write('anchorElapsedMs: $anchorElapsedMs, ')
+          ..write('anchorBootCount: $anchorBootCount, ')
+          ..write('highWater: $highWater')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    anchorServerTime,
+    anchorElapsedMs,
+    anchorBootCount,
+    highWater,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TrustedTimeRow &&
+          other.id == this.id &&
+          other.anchorServerTime == this.anchorServerTime &&
+          other.anchorElapsedMs == this.anchorElapsedMs &&
+          other.anchorBootCount == this.anchorBootCount &&
+          other.highWater == this.highWater);
+}
+
+class TrustedTimeCompanion extends UpdateCompanion<TrustedTimeRow> {
+  final Value<int> id;
+  final Value<DateTime?> anchorServerTime;
+  final Value<int?> anchorElapsedMs;
+  final Value<int?> anchorBootCount;
+  final Value<DateTime?> highWater;
+  const TrustedTimeCompanion({
+    this.id = const Value.absent(),
+    this.anchorServerTime = const Value.absent(),
+    this.anchorElapsedMs = const Value.absent(),
+    this.anchorBootCount = const Value.absent(),
+    this.highWater = const Value.absent(),
+  });
+  TrustedTimeCompanion.insert({
+    this.id = const Value.absent(),
+    this.anchorServerTime = const Value.absent(),
+    this.anchorElapsedMs = const Value.absent(),
+    this.anchorBootCount = const Value.absent(),
+    this.highWater = const Value.absent(),
+  });
+  static Insertable<TrustedTimeRow> custom({
+    Expression<int>? id,
+    Expression<DateTime>? anchorServerTime,
+    Expression<int>? anchorElapsedMs,
+    Expression<int>? anchorBootCount,
+    Expression<DateTime>? highWater,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (anchorServerTime != null) 'anchor_server_time': anchorServerTime,
+      if (anchorElapsedMs != null) 'anchor_elapsed_ms': anchorElapsedMs,
+      if (anchorBootCount != null) 'anchor_boot_count': anchorBootCount,
+      if (highWater != null) 'high_water': highWater,
+    });
+  }
+
+  TrustedTimeCompanion copyWith({
+    Value<int>? id,
+    Value<DateTime?>? anchorServerTime,
+    Value<int?>? anchorElapsedMs,
+    Value<int?>? anchorBootCount,
+    Value<DateTime?>? highWater,
+  }) {
+    return TrustedTimeCompanion(
+      id: id ?? this.id,
+      anchorServerTime: anchorServerTime ?? this.anchorServerTime,
+      anchorElapsedMs: anchorElapsedMs ?? this.anchorElapsedMs,
+      anchorBootCount: anchorBootCount ?? this.anchorBootCount,
+      highWater: highWater ?? this.highWater,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (anchorServerTime.present) {
+      map['anchor_server_time'] = Variable<DateTime>(anchorServerTime.value);
+    }
+    if (anchorElapsedMs.present) {
+      map['anchor_elapsed_ms'] = Variable<int>(anchorElapsedMs.value);
+    }
+    if (anchorBootCount.present) {
+      map['anchor_boot_count'] = Variable<int>(anchorBootCount.value);
+    }
+    if (highWater.present) {
+      map['high_water'] = Variable<DateTime>(highWater.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrustedTimeCompanion(')
+          ..write('id: $id, ')
+          ..write('anchorServerTime: $anchorServerTime, ')
+          ..write('anchorElapsedMs: $anchorElapsedMs, ')
+          ..write('anchorBootCount: $anchorBootCount, ')
+          ..write('highWater: $highWater')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -8560,6 +9004,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $InstalledBasemapsTable installedBasemaps =
       $InstalledBasemapsTable(this);
   late final $TrustedKeysetsTable trustedKeysets = $TrustedKeysetsTable(this);
+  late final $TrustedTimeTable trustedTime = $TrustedTimeTable(this);
   late final LocalMetaDao localMetaDao = LocalMetaDao(this as AppDatabase);
   late final SyncStateDao syncStateDao = SyncStateDao(this as AppDatabase);
   late final OfflineDao offlineDao = OfflineDao(this as AppDatabase);
@@ -8587,6 +9032,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     accessEventOutbox,
     installedBasemaps,
     trustedKeysets,
+    trustedTime,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -8758,6 +9204,7 @@ typedef $$SyncStateTableCreateCompanionBuilder = SyncStateCompanion Function({
   Value<String?> requiredAppVersion,
   Value<String?> syncLeaseOwner,
   Value<DateTime?> syncLeaseExpiresAt,
+  Value<String?> terminalPolicy,
 });
 typedef $$SyncStateTableUpdateCompanionBuilder = SyncStateCompanion Function({
   Value<int> id,
@@ -8774,6 +9221,7 @@ typedef $$SyncStateTableUpdateCompanionBuilder = SyncStateCompanion Function({
   Value<String?> requiredAppVersion,
   Value<String?> syncLeaseOwner,
   Value<DateTime?> syncLeaseExpiresAt,
+  Value<String?> terminalPolicy,
 });
 
 class $$SyncStateTableFilterComposer
@@ -8852,6 +9300,11 @@ class $$SyncStateTableFilterComposer
 
   ColumnFilters<DateTime> get syncLeaseExpiresAt => $composableBuilder(
     column: $table.syncLeaseExpiresAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get terminalPolicy => $composableBuilder(
+    column: $table.terminalPolicy,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -8934,6 +9387,11 @@ class $$SyncStateTableOrderingComposer
     column: $table.syncLeaseExpiresAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get terminalPolicy => $composableBuilder(
+    column: $table.terminalPolicy,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SyncStateTableAnnotationComposer
@@ -9008,6 +9466,11 @@ class $$SyncStateTableAnnotationComposer
     column: $table.syncLeaseExpiresAt,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get terminalPolicy => $composableBuilder(
+    column: $table.terminalPolicy,
+    builder: (column) => column,
+  );
 }
 
 class $$SyncStateTableTableManager
@@ -9055,6 +9518,7 @@ class $$SyncStateTableTableManager
                 Value<String?> requiredAppVersion = const Value.absent(),
                 Value<String?> syncLeaseOwner = const Value.absent(),
                 Value<DateTime?> syncLeaseExpiresAt = const Value.absent(),
+                Value<String?> terminalPolicy = const Value.absent(),
               }) => SyncStateCompanion(
                 id: id,
                 activeGeneration: activeGeneration,
@@ -9070,6 +9534,7 @@ class $$SyncStateTableTableManager
                 requiredAppVersion: requiredAppVersion,
                 syncLeaseOwner: syncLeaseOwner,
                 syncLeaseExpiresAt: syncLeaseExpiresAt,
+                terminalPolicy: terminalPolicy,
               ),
           createCompanionCallback:
               ({
@@ -9087,6 +9552,7 @@ class $$SyncStateTableTableManager
                 Value<String?> requiredAppVersion = const Value.absent(),
                 Value<String?> syncLeaseOwner = const Value.absent(),
                 Value<DateTime?> syncLeaseExpiresAt = const Value.absent(),
+                Value<String?> terminalPolicy = const Value.absent(),
               }) => SyncStateCompanion.insert(
                 id: id,
                 activeGeneration: activeGeneration,
@@ -9102,6 +9568,7 @@ class $$SyncStateTableTableManager
                 requiredAppVersion: requiredAppVersion,
                 syncLeaseOwner: syncLeaseOwner,
                 syncLeaseExpiresAt: syncLeaseExpiresAt,
+                terminalPolicy: terminalPolicy,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -13181,6 +13648,215 @@ typedef $$TrustedKeysetsTableProcessedTableManager =
       TrustedKeysetRow,
       PrefetchHooks Function()
     >;
+typedef $$TrustedTimeTableCreateCompanionBuilder =
+    TrustedTimeCompanion Function({
+      Value<int> id,
+      Value<DateTime?> anchorServerTime,
+      Value<int?> anchorElapsedMs,
+      Value<int?> anchorBootCount,
+      Value<DateTime?> highWater,
+    });
+typedef $$TrustedTimeTableUpdateCompanionBuilder =
+    TrustedTimeCompanion Function({
+      Value<int> id,
+      Value<DateTime?> anchorServerTime,
+      Value<int?> anchorElapsedMs,
+      Value<int?> anchorBootCount,
+      Value<DateTime?> highWater,
+    });
+
+class $$TrustedTimeTableFilterComposer
+    extends Composer<_$AppDatabase, $TrustedTimeTable> {
+  $$TrustedTimeTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get anchorServerTime => $composableBuilder(
+    column: $table.anchorServerTime,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get anchorElapsedMs => $composableBuilder(
+    column: $table.anchorElapsedMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get anchorBootCount => $composableBuilder(
+    column: $table.anchorBootCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get highWater => $composableBuilder(
+    column: $table.highWater,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$TrustedTimeTableOrderingComposer
+    extends Composer<_$AppDatabase, $TrustedTimeTable> {
+  $$TrustedTimeTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get anchorServerTime => $composableBuilder(
+    column: $table.anchorServerTime,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get anchorElapsedMs => $composableBuilder(
+    column: $table.anchorElapsedMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get anchorBootCount => $composableBuilder(
+    column: $table.anchorBootCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get highWater => $composableBuilder(
+    column: $table.highWater,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TrustedTimeTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TrustedTimeTable> {
+  $$TrustedTimeTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get anchorServerTime => $composableBuilder(
+    column: $table.anchorServerTime,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get anchorElapsedMs => $composableBuilder(
+    column: $table.anchorElapsedMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get anchorBootCount => $composableBuilder(
+    column: $table.anchorBootCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get highWater =>
+      $composableBuilder(column: $table.highWater, builder: (column) => column);
+}
+
+class $$TrustedTimeTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TrustedTimeTable,
+          TrustedTimeRow,
+          $$TrustedTimeTableFilterComposer,
+          $$TrustedTimeTableOrderingComposer,
+          $$TrustedTimeTableAnnotationComposer,
+          $$TrustedTimeTableCreateCompanionBuilder,
+          $$TrustedTimeTableUpdateCompanionBuilder,
+          (
+            TrustedTimeRow,
+            BaseReferences<_$AppDatabase, $TrustedTimeTable, TrustedTimeRow>,
+          ),
+          TrustedTimeRow,
+          PrefetchHooks Function()
+        > {
+  $$TrustedTimeTableTableManager(_$AppDatabase db, $TrustedTimeTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TrustedTimeTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TrustedTimeTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TrustedTimeTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime?> anchorServerTime = const Value.absent(),
+                Value<int?> anchorElapsedMs = const Value.absent(),
+                Value<int?> anchorBootCount = const Value.absent(),
+                Value<DateTime?> highWater = const Value.absent(),
+              }) => TrustedTimeCompanion(
+                id: id,
+                anchorServerTime: anchorServerTime,
+                anchorElapsedMs: anchorElapsedMs,
+                anchorBootCount: anchorBootCount,
+                highWater: highWater,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime?> anchorServerTime = const Value.absent(),
+                Value<int?> anchorElapsedMs = const Value.absent(),
+                Value<int?> anchorBootCount = const Value.absent(),
+                Value<DateTime?> highWater = const Value.absent(),
+              }) => TrustedTimeCompanion.insert(
+                id: id,
+                anchorServerTime: anchorServerTime,
+                anchorElapsedMs: anchorElapsedMs,
+                anchorBootCount: anchorBootCount,
+                highWater: highWater,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$TrustedTimeTable, TrustedTimeRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $TrustedTimeTable,
+                    TrustedTimeRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TrustedTimeTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TrustedTimeTable,
+      TrustedTimeRow,
+      $$TrustedTimeTableFilterComposer,
+      $$TrustedTimeTableOrderingComposer,
+      $$TrustedTimeTableAnnotationComposer,
+      $$TrustedTimeTableCreateCompanionBuilder,
+      $$TrustedTimeTableUpdateCompanionBuilder,
+      (
+        TrustedTimeRow,
+        BaseReferences<_$AppDatabase, $TrustedTimeTable, TrustedTimeRow>,
+      ),
+      TrustedTimeRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -13215,4 +13891,6 @@ class $AppDatabaseManager {
       $$InstalledBasemapsTableTableManager(_db, _db.installedBasemaps);
   $$TrustedKeysetsTableTableManager get trustedKeysets =>
       $$TrustedKeysetsTableTableManager(_db, _db.trustedKeysets);
+  $$TrustedTimeTableTableManager get trustedTime =>
+      $$TrustedTimeTableTableManager(_db, _db.trustedTime);
 }

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:etare_ops/src/core/platform/platform_services.dart';
 import 'package:etare_ops/src/core/security/local_code.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/data/local/daos/sensitive_dao.dart';
@@ -10,6 +11,7 @@ import 'package:etare_ops/src/features/reports/application/report_providers.dart
 import 'package:etare_ops/src/features/sync/application/package_verification.dart';
 import 'package:etare_ops/src/features/sync/application/trust_store.dart';
 import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
+import 'package:etare_ops/src/features/sync/data/device_keys.dart';
 import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
 import 'package:etare_ops/src/features/sync/data/sync_api.dart';
 import 'package:etare_ops/src/features/sync/domain/package_models.dart';
@@ -72,7 +74,12 @@ class SensitiveSiteService {
     required this._codes,
     this._clock = DateTime.now,
     Random? random,
-  }) : _random = random ?? Random.secure();
+    DeviceKeys? keys,
+  }) : _random = random ?? Random.secure(),
+       _keys = keys ?? DeviceKeys(const SoftwarePlatformServices());
+
+  /// Clé du terminal (Keystore, ou Ed25519 des premières tablettes).
+  final DeviceKeys _keys;
 
   final SyncApi _api;
   final SensitiveDao _dao;
@@ -103,10 +110,7 @@ class SensitiveSiteService {
     if (identity == null) {
       throw const SensitiveSiteUnavailable('Tablette non enrôlée.');
     }
-    return DeviceCredentials(
-      identity,
-      await DeviceKey.fromSeed(identity.keySeed),
-    );
+    return _keys.credentials(identity);
   }
 
   /// Valable : ouvert par cet agent, ni expiré ni « dans le futur » (horloge

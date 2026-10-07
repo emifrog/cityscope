@@ -5,6 +5,7 @@ part of 'sync_state_dao.dart';
 // ignore_for_file: type=lint
 mixin _$SyncStateDaoMixin on DatabaseAccessor<AppDatabase> {
   $SyncStateTable get syncState => attachedDatabase.syncState;
+  $TrustedTimeTable get trustedTime => attachedDatabase.trustedTime;
   SyncStateDaoManager get managers => SyncStateDaoManager(this);
 }
 
@@ -13,4 +14,6 @@ class SyncStateDaoManager {
   SyncStateDaoManager(this._db);
   $$SyncStateTableTableManager get syncState =>
       $$SyncStateTableTableManager(_db.attachedDatabase, _db.syncState);
+  $$TrustedTimeTableTableManager get trustedTime =>
+      $$TrustedTimeTableTableManager(_db.attachedDatabase, _db.trustedTime);
 }
