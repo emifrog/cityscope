@@ -1,6 +1,6 @@
 # Roadmap complète de développement — ETARE numérique
 
-**Mise à jour : 5 octobre 2026. Base : Sprint 12 livré ([rapport](sprint-12-report.md)).**
+**Mise à jour : 7 octobre 2026. Base : Sprint 13 livré ([rapport](sprint-13-report.md)).**
 
 Ce document est le plan de développement courant : **ce qui est implémenté, ce qui reste à construire,
 dans quel ordre et avec quelle preuve de fin**. Il complète le
@@ -91,25 +91,30 @@ Un total de tests ou un nombre de sprints ne donne pas un pourcentage fiable d�
 | Sprint 12 B — tablette      | Jeu de clés vérifié par la racine, rejeu et conflit refusés, revérification sans retéléchargement, sites sensibles refermés à la révocation ; émulateur en rotation         | Commit `81f808d`                                                                |
 | Sprint 12 C — supervision   | Métriques Prometheus protégées, trace W3C jusqu'aux travaux, battements des workers, 22 alertes avec procédures, onglet Supervision du SIS                                  | Commit `8da86ff`, [ADR-028](decisions/ADR-028-supervision.md)                   |
 | Sprint 12 D — volumétrie    | Banc de 10 000 sites ; périmètres évalués par ensemble (1,6–9,8 s → 16–60 ms), recherche par trigrammes, charge 170 → 292 req/s ; version réduite en CI                     | Commit `f6bb6e8`, [rapport CAP-01](volumetrie/cap-01.md)                        |
+| Sprint 13 A — terminal      | Algorithme de la clé du terminal, rotation signée par l'ancienne et la nouvelle clé, politique des tablettes du SIS (second facteur, bornes, audit) portée par le catalogue | Commit `0195297`, [ADR-029](decisions/ADR-029-terminal-security.md)             |
+| Sprint 13 B — tablette      | Clé P-256 du Keystore, heure de confiance, verrouillages et captures selon le SIS, révocation complète, tablette partagée ; analyse root/attestation/épinglage              | Commit `1e09315` ; émulateur : rotation, FLAG_SECURE, verrouillage              |
+| Sprint 13 C — gros fichiers | Fichiers par morceaux de 1 Mio avec reprise (Range), PDF lus par plages, images décodées bornées, espace libre et disque plein ; 96 Mo repris après coupure                 | Commit `f850042`, [rapport CAP-02](volumetrie/cap-02.md)                        |
+| Sprint 13 D — livraison     | Variantes prod/préprod, release jamais signée par la clé de debug, clé créée hors ligne, APK tracé et vérifié, licences ; release construite en CI avec clé jetable         | Commit `1d88c25`, [ADR-030](decisions/ADR-030-mobile-delivery.md)               |
 
-**État technique vérifié :** 437 tests TypeScript, 648 assertions SQL, 149 tests d’intégration (dont
+**État technique vérifié :** 454 tests TypeScript, 669 assertions SQL, 154 tests d’intégration (dont
 l’antivirus contre un vrai ClamAV, les e-mails dans Mailpit, la préparation des fonds de carte par le worker
-et la signature par OpenBao Transit en CI), 236 tests Flutter réussis et 1 test optionnel ignoré ; banc de
-volumétrie de 10 000 sites ; 42 migrations, 28 ADR ([rapport du Sprint 12](sprint-12-report.md)). Origine de chaque vérification et limites :
+et la signature par OpenBao Transit en CI), 298 tests Flutter réussis et 1 test optionnel ignoré ; banc de
+volumétrie de 10 000 sites ; APK de release construit en CI ; 43 migrations, 30 ADR
+([rapport du Sprint 13](sprint-13-report.md)). Origine de chaque vérification et limites :
 [bilan du 1er octobre](bilan-depot-2026-10-01.md).
 
 ## 3. Séquence proposée jusqu’au pilote
 
-| Lot                                | Objectif et contenu                                                                                                                                                                                                   | Dépendances                                                 | Responsable à désigner                | Sortie attendue                                                            |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------- |
-| R0 — décisions et matériel         | Tablette cible, produits/droits IGN, hébergement, secteurs, sites sensibles, durée offline, ambiguïtés de périmètre                                                                                                   | Référents SIS disponibles                                   | Porteur, Prévision/OPS, SIG, DSI/RSSI | Décisions tracées et protocole de recette                                  |
-| R1 — boucle terrain (Sprints 5–6)  | **Réalisé** : signalement hors ligne avec photo, transmission/reprise, instruction Prévision, nouvelle publication ; lecteur PDF                                                                                      | Socle Sprint 4 ; sécurité des fichiers pour données réelles | Mobile + API/web + référent Prévision | Un écart créé sans réseau devient une correction publiée et resynchronisée |
-| R2 — portail exploitant (Sprint 7) | **Réalisé** : invitation par site, consultation filtrée, propositions, documents, validation SIS, notifications                                                                                                       | Chaîne de contributions R1 ; antivirus R4                   | Web/API + référent Prévision          | Aucun accès transversal, aucune publication directe exploitant             |
-| R3 — compléter le périmètre MVP    | Recherche par risque, risques extérieurs, archivage/retrait, sections minimales, secteurs/listes, politique sensible, carte offline                                                                                   | Arbitrages R0 ; R1/R2 selon parcours                        | Web/API/mobile + SIG/RSSI             | Tous les P0 ont une preuve ou un écart explicitement accepté               |
-| R4 — sécuriser et exploiter        | **En cours** : antivirus, second facteur et sessions, débit, CSP, fichiers (Sprints 5 et 9), clés, supervision et volumétrie (Sprint 12) ; restent terminal, gros fichiers, sauvegardes, déploiement, version Android | Sans arbitrage pour la plupart ; choix R0 (hébergement)     | API/mobile + exploitation + RSSI      | Préproduction et dossier de sécurité prêts pour recette                    |
-| R5 — recette et pilote SIS         | Tablette physique, réseau dégradé, charge, intrusion, restauration, formation, pilote mesuré                                                                                                                          | R1–R4 et décisions bloquantes levées                        | Métier, SIG, DSI/RSSI, exploitation   | Procès-verbal de recette et décision d’ouverture                           |
-| R6 — MVP+ / V1.5                   | Les neuf exigences P1, imports avancés, personnalisation, comparaison, rétention, exports                                                                                                                             | Retours du pilote ; mesure de valeur                        | Produit + équipe de développement     | Extensions génériques, sans fork par SIS                                   |
-| R7 — industrialisation / V2–V3     | SSO étendu, MDM, connecteurs, RRF, assistance IA, partage contrôlé et écosystème                                                                                                                                      | MVP exploité, accords/qualifications disponibles            | Produit + partenaires SIS             | Lots autonomes justifiés par usage et capacité                             |
+| Lot                                | Objectif et contenu                                                                                                                                                                                                                                       | Dépendances                                                 | Responsable à désigner                | Sortie attendue                                                            |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------- |
+| R0 — décisions et matériel         | Tablette cible, produits/droits IGN, hébergement, secteurs, sites sensibles, durée offline, ambiguïtés de périmètre                                                                                                                                       | Référents SIS disponibles                                   | Porteur, Prévision/OPS, SIG, DSI/RSSI | Décisions tracées et protocole de recette                                  |
+| R1 — boucle terrain (Sprints 5–6)  | **Réalisé** : signalement hors ligne avec photo, transmission/reprise, instruction Prévision, nouvelle publication ; lecteur PDF                                                                                                                          | Socle Sprint 4 ; sécurité des fichiers pour données réelles | Mobile + API/web + référent Prévision | Un écart créé sans réseau devient une correction publiée et resynchronisée |
+| R2 — portail exploitant (Sprint 7) | **Réalisé** : invitation par site, consultation filtrée, propositions, documents, validation SIS, notifications                                                                                                                                           | Chaîne de contributions R1 ; antivirus R4                   | Web/API + référent Prévision          | Aucun accès transversal, aucune publication directe exploitant             |
+| R3 — compléter le périmètre MVP    | Recherche par risque, risques extérieurs, archivage/retrait, sections minimales, secteurs/listes, politique sensible, carte offline                                                                                                                       | Arbitrages R0 ; R1/R2 selon parcours                        | Web/API/mobile + SIG/RSSI             | Tous les P0 ont une preuve ou un écart explicitement accepté               |
+| R4 — sécuriser et exploiter        | **En cours** : antivirus, second facteur et sessions, débit, CSP, fichiers (Sprints 5 et 9), clés, supervision et volumétrie (Sprint 12), terminal, gros fichiers et livraison Android (Sprint 13) ; restent sauvegardes, déploiement, analyse de risques | Sans arbitrage pour la plupart ; choix R0 (hébergement)     | API/mobile + exploitation + RSSI      | Préproduction et dossier de sécurité prêts pour recette                    |
+| R5 — recette et pilote SIS         | Tablette physique, réseau dégradé, charge, intrusion, restauration, formation, pilote mesuré                                                                                                                                                              | R1–R4 et décisions bloquantes levées                        | Métier, SIG, DSI/RSSI, exploitation   | Procès-verbal de recette et décision d’ouverture                           |
+| R6 — MVP+ / V1.5                   | Les neuf exigences P1, imports avancés, personnalisation, comparaison, rétention, exports                                                                                                                                                                 | Retours du pilote ; mesure de valeur                        | Produit + équipe de développement     | Extensions génériques, sans fork par SIS                                   |
+| R7 — industrialisation / V2–V3     | SSO étendu, MDM, connecteurs, RRF, assistance IA, partage contrôlé et écosystème                                                                                                                                                                          | MVP exploité, accords/qualifications disponibles            | Produit + partenaires SIS             | Lots autonomes justifiés par usage et capacité                             |
 
 **Dès maintenant :** R1, R2 et R3 (MET-01 à MET-05, PER-01, PER-02, CAR-02, CAR-03) et les lots SEC-01 à
 SEC-04, CAP-01, CAP-03 et EXP-03 de R4 sont réalisés. CAR-01 est éprouvé sur émulateur avec le fond d’essai :
@@ -361,14 +366,14 @@ carte, fiches et plans utilisables après démarrage à froid en mode avion sur 
       CSP compatible avec les workers carte/PDF, politique CORS et traces des refus sensibles.
 - [x] **SEC-04 — Secrets et signatures :** stockage dans un gestionnaire de secrets ou KMS, séparation
       des clés API/worker, rotation testée avec chevauchement des clés publiques, procédure de compromission.
-- [ ] **SEC-05 — Terminal :** verrouillage applicatif selon le parc, politique déconnexion/expiration,
+- [x] **SEC-05 — Terminal :** verrouillage applicatif selon le parc, politique déconnexion/expiration,
       rotation/récupération de clé locale, test d’horloge manipulée et de tablette partagée. Attestation,
       détection root et épinglage de certificat à arbitrer par l’analyse de risques, pas à présumer obligatoires.
 - [ ] **SEC-06 — Analyse de risques :** permissions, imports, cache, distribution, support exceptionnel
       limité dans le temps ; SAST/DAST, contrôle des dépendances et pentest avant pilote opérationnel.
 - [x] **CAP-01 — Volumétrie :** jeu représentatif de 10 000 sites et plusieurs centaines de milliers
       d’objets ; recherche, carte, RLS, publication, file de jobs, catalogue et transfert mesurés.
-- [ ] **CAP-02 — Gros fichiers :** contrôle d’espace libre, réserve pour ancienne/nouvelle version,
+- [x] **CAP-02 — Gros fichiers :** contrôle d’espace libre, réserve pour ancienne/nouvelle version,
       erreurs disque plein, limites mémoire, décodage des images et lecture des PDF ; optimiser les BLOB
       ou introduire un stockage chiffré alternatif seulement si les mesures le justifient.
 - [x] **CAP-03 — Cycle des fichiers :** miniatures côté serveur, nettoyage des dépôts abandonnés,
@@ -379,7 +384,7 @@ carte, fiches et plans utilisables après démarrage à froid en mode avion sur 
       mesure RPO/RTO, répétition d’un parcours publié/restauré et vérification des empreintes.
 - [x] **EXP-03 — Supervision :** métriques de jobs en échec, délai de publication, erreurs de sync,
       espace/volumes, disponibilité et fraîcheur métier ; alertes, corrélation et procédures de diagnostic.
-- [ ] **EXP-04 — Livraison mobile :** clé de signature Android dédiée, paquet release, distribution/MDM
+- [x] **EXP-04 — Livraison mobile :** clé de signature Android dédiée, paquet release, distribution/MDM
       et mise à jour compatibles avec les anciens manifestes et migrations locales ; iOS selon DEC-01.
 - [ ] **EXP-05 — Qualité de livraison :** tests E2E automatisés des parcours majeurs, migration depuis
       versions précédentes, échecs injectés, mise à jour OpenAPI ; client Dart généré ou contrôle renforcé
@@ -401,6 +406,22 @@ nouvelle, banc local sur deux SIS fictifs. Réserves :
 - collecteur et outil d’alerte à choisir avec l’hébergeur, seuils à ajuster après le pilote ;
 - volumétrie mesurée sur un poste de développement : à confirmer en préproduction, transfert réel vers
   les tablettes en R5.
+
+**Livré au Sprint 13 (7 octobre 2026) :** SEC-05, CAP-02 et EXP-04 ([rapport](sprint-13-report.md),
+ADR-029, ADR-030, complément de l’ADR-016, [gros fichiers](volumetrie/cap-02.md)). Choix du porteur du
+7 octobre :
+
+- politique des tablettes réglée par chaque SIS, durcie par défaut ;
+- analyse écrite, sans détection de root, attestation ni épinglage ;
+- fichiers en morceaux, avec contrôles d’espace ;
+- APK signé par une clé détenue par l’exploitant.
+
+Réserves :
+
+- analyse des risques du terminal à revoir avec SEC-06 ; un Keystore réinitialisé impose un réenrôlement ;
+- mesures de mémoire faites sur émulateur en debug : à refaire sur la tablette cible avec l’APK de release ;
+- clé Android à créer lors de la première cérémonie des clés ; distribution MDM ou manuelle à trancher
+  (DEC-01).
 
 **Acceptation :** aucune réserve critique de sécurité ouverte ; restauration démontrée ; installation
 et mise à jour d’une release sur matériel cible ; tableaux et alertes utilisés pendant un incident simulé ;
@@ -440,52 +461,52 @@ Chaque ligne reste reliée au [suivi des preuves automatisées](suivi-exigences.
 La colonne « suite » indique le lot qui ferme la réserve ; **R5 s’applique aussi aux lignes implémentées**.
 Les exigences transverses hors de cette table sont couvertes par R0/R4 et la section interopérabilité.
 
-| ID        | Priorité | Fonction                                 | État actuel | Suite / critère restant                                                                      |
-| --------- | -------- | ---------------------------------------- | ----------- | -------------------------------------------------------------------------------------------- |
-| SITE-01   | P0       | Site, géométrie, identifiants            | Implémenté  | R5 : création et audit avec données pilotes                                                  |
-| SITE-02   | P0       | Bâtiments multiples                      | Implémenté  | R5 : plusieurs bâtiments, ordre/emprises cohérents                                           |
-| SITE-03   | P0       | Classifications                          | Implémenté  | R5 : valeurs multiples, dates et historique                                                  |
-| SITE-04   | P0       | Contacts et astreintes                   | Implémenté  | R5 : confidentialité et usage terrain                                                        |
-| SITE-05   | P0       | Photos et documents versionnés           | Implémenté  | R5 : documents « à la demande » sur tablette réelle, volumes                                 |
-| SITE-06   | P0       | Recherche texte/commune/catégorie/risque | Implémenté  | Sprint 8 (MET-01) ; CAP-01 : 13–31 ms sur 10 000 sites ; mesure < 2 s sur jeu pilote en R5   |
-| MAP-01    | P0       | Carte des sites et regroupement          | Implémenté  | CAP-01 mesuré (Sprint 12) ; R5 : fluidité/filtrage sur jeu cible                             |
-| MAP-02    | P0       | Emprises et points opérationnels         | Implémenté  | R5 : zoom, filtres et ouverture des fiches                                                   |
-| MAP-03    | P1       | Import GeoJSON/CSV                       | À faire     | R6 ; décision DEC-06 pour reprise initiale MVP                                               |
-| MAP-04    | P1       | Mesure de distances                      | À faire     | R6 ; desktop/tablette, unités/projections explicites                                         |
-| PLAN-01   | P0       | Fond PDF ou image                        | Implémenté  | R5 : rattachement, version et lisibilité                                                     |
-| PLAN-02   | P0       | Points/lignes/surfaces, annulation       | Implémenté  | R3 MET-03 ; R5 : gestes et cohérence spatiale                                                |
-| PLAN-03   | P0       | Fiches d’objets typés                    | Implémenté  | R5 : champs métier et lecture offline                                                        |
-| PLAN-04   | P0       | Calques activables                       | Implémenté  | R5 : terrain et lisibilité                                                                   |
-| PLAN-05   | P0       | Photos attachées aux objets              | Implémenté  | Sprint 9 : miniatures (CAP-03) ; R5 : photo du même objet offline                            |
-| PLAN-06   | P0       | Historique des fonds                     | Implémenté  | R5 : ancienne publication intacte après remplacement                                         |
-| RISK-01   | P0       | Catalogue des risques SIS                | Implémenté  | R5 : catalogue national/propre au SIS et propriétés                                          |
-| RISK-02   | P0       | Risques avec géométrie et portée         | Implémenté  | Sprint 8 (MET-02/03) ; risques à placer sur la carte de la tablette (après CAR-02)           |
-| RISK-03   | P1       | Matières dangereuses et FDS              | À faire     | R6 : produit, quantité/unité, localisation, FDS                                              |
-| ETARE-01  | P0       | Assemblage, aperçu, sections             | À qualifier | Sprint 10 (MET-05, ADR-026) ; R5 : dossiers longs et chargés en texte                        |
-| ETARE-02  | P0       | PDF standardisé/versionné                | Implémenté  | R5 : relecture métier ; R1 pour lecture mobile                                               |
-| ETARE-03  | P1       | Modèle ETARE par SIS                     | À faire     | R6 : logo, sections, couleurs, mentions et obligations                                       |
-| ETARE-04  | P1       | Scénarios et consignes structurés        | À faire     | R6 : création, validation, PDF et OPS                                                        |
-| WF-01     | P0       | Cycle de vie jusqu’à l’archive           | Implémenté  | Sprint 8 (MET-04, ADR-021) ; recette du retrait d’urgence en R5                              |
-| WF-02     | P0       | Validation avant publication             | Implémenté  | R5 : séparation des tâches, aucun brouillon OPS                                              |
-| WF-03     | P1       | Comparaison de versions                  | Partiel     | R6 : détail par champ/document, au-delà de l’élément                                         |
-| WF-04     | P0       | Journal d’audit                          | Implémenté  | Sprint 9 : refus sensibles tracés (SEC-03) ; R5 : couverture des nouveaux parcours           |
-| OPS-01    | P0       | Synthèse opérationnelle                  | À qualifier | R5 : critères d’interactions harmonisés et testés                                            |
-| OPS-02    | P0       | Plans tactiles par niveau                | À qualifier | R5 : tablette physique, zoom/calques/fiches                                                  |
-| OPS-03    | P0       | Recherche locale                         | À qualifier | R5 : nom/adresse/commune/n° ETARE, performance                                               |
-| OPS-04    | P0       | Signalement avec photo hors ligne        | À qualifier | Livré (ADR-017) ; R5 : tablette physique, réseau dégradé, DEC-04 (GPS, file à la révocation) |
-| OPS-05    | P0       | Version et âge de la donnée              | Implémenté  | R5 : compréhension fraîcheur/validité métier                                                 |
-| OFF-01    | P0       | Paquets signés, progression/taille       | Implémenté  | R5 : progression et taille sur tablette ; fonds de carte par secteur livrés au Sprint 11     |
-| OFF-02    | P0       | Synchronisation différentielle           | Implémenté  | DEC-08 : différentiel par fichier à faire accepter ; R5 : arrière-plan, panne/reprise        |
-| OFF-03    | P0       | Stockage local chiffré                   | Implémenté  | R4 SEC-05/CAP-02 ; nouveaux PDF/signalements sans fichier en clair                           |
-| OFF-04    | P0       | Révocation et purge au contact           | Implémenté  | DEC-04, R5 : latence et limites hors réseau acceptées                                        |
-| OFF-05    | P1       | Rétention configurable par SIS           | À faire     | R6 ; distinguer conservation serveur et cache local                                          |
-| PORTAL-01 | P0       | Invitation exploitant par site           | Implémenté  | Sprint 7 (ADR-019) ; R5 : recette avec un exploitant pilote                                  |
-| PORTAL-02 | P0       | Proposition sans publication directe     | Implémenté  | Sprint 7 : conflit explicite, report manuel dans les données de travail                      |
-| PORTAL-03 | P0       | Documents et photos exploitants          | Implémenté  | Sprint 7 : pièces contrôlées (antivirus), documents partagés par le SIS                      |
-| ADMIN-01  | P0       | Rôles et périmètres                      | Implémenté  | Sprint 10 (PER-01, PER-02) ; R5 : recette avec un parc et des sites sensibles pilotes        |
-| ADMIN-02  | P0       | Terminaux                                | Implémenté  | Sprint 9 : codes limités en débit (SEC-03) ; R4 SEC-05 ; R5 inventaire/enrôlement/révocation |
-| ADMIN-03  | P1       | Catalogues configurables                 | Partiel     | R6 : objets/icônes/champs/valeurs ; risques déjà livrés                                      |
-| ADMIN-04  | P1       | Exports et rapports                      | Partiel     | R6 : CSV/rapports ; PDF déjà livré ; DEC-06                                                  |
+| ID        | Priorité | Fonction                                 | État actuel | Suite / critère restant                                                                         |
+| --------- | -------- | ---------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------- |
+| SITE-01   | P0       | Site, géométrie, identifiants            | Implémenté  | R5 : création et audit avec données pilotes                                                     |
+| SITE-02   | P0       | Bâtiments multiples                      | Implémenté  | R5 : plusieurs bâtiments, ordre/emprises cohérents                                              |
+| SITE-03   | P0       | Classifications                          | Implémenté  | R5 : valeurs multiples, dates et historique                                                     |
+| SITE-04   | P0       | Contacts et astreintes                   | Implémenté  | R5 : confidentialité et usage terrain                                                           |
+| SITE-05   | P0       | Photos et documents versionnés           | Implémenté  | R5 : documents « à la demande » sur tablette réelle, volumes                                    |
+| SITE-06   | P0       | Recherche texte/commune/catégorie/risque | Implémenté  | Sprint 8 (MET-01) ; CAP-01 : 13–31 ms sur 10 000 sites ; mesure < 2 s sur jeu pilote en R5      |
+| MAP-01    | P0       | Carte des sites et regroupement          | Implémenté  | CAP-01 mesuré (Sprint 12) ; R5 : fluidité/filtrage sur jeu cible                                |
+| MAP-02    | P0       | Emprises et points opérationnels         | Implémenté  | R5 : zoom, filtres et ouverture des fiches                                                      |
+| MAP-03    | P1       | Import GeoJSON/CSV                       | À faire     | R6 ; décision DEC-06 pour reprise initiale MVP                                                  |
+| MAP-04    | P1       | Mesure de distances                      | À faire     | R6 ; desktop/tablette, unités/projections explicites                                            |
+| PLAN-01   | P0       | Fond PDF ou image                        | Implémenté  | R5 : rattachement, version et lisibilité                                                        |
+| PLAN-02   | P0       | Points/lignes/surfaces, annulation       | Implémenté  | R3 MET-03 ; R5 : gestes et cohérence spatiale                                                   |
+| PLAN-03   | P0       | Fiches d’objets typés                    | Implémenté  | R5 : champs métier et lecture offline                                                           |
+| PLAN-04   | P0       | Calques activables                       | Implémenté  | R5 : terrain et lisibilité                                                                      |
+| PLAN-05   | P0       | Photos attachées aux objets              | Implémenté  | Sprint 9 : miniatures (CAP-03) ; R5 : photo du même objet offline                               |
+| PLAN-06   | P0       | Historique des fonds                     | Implémenté  | R5 : ancienne publication intacte après remplacement                                            |
+| RISK-01   | P0       | Catalogue des risques SIS                | Implémenté  | R5 : catalogue national/propre au SIS et propriétés                                             |
+| RISK-02   | P0       | Risques avec géométrie et portée         | Implémenté  | Sprint 8 (MET-02/03) ; risques à placer sur la carte de la tablette (après CAR-02)              |
+| RISK-03   | P1       | Matières dangereuses et FDS              | À faire     | R6 : produit, quantité/unité, localisation, FDS                                                 |
+| ETARE-01  | P0       | Assemblage, aperçu, sections             | À qualifier | Sprint 10 (MET-05, ADR-026) ; R5 : dossiers longs et chargés en texte                           |
+| ETARE-02  | P0       | PDF standardisé/versionné                | Implémenté  | R5 : relecture métier ; R1 pour lecture mobile                                                  |
+| ETARE-03  | P1       | Modèle ETARE par SIS                     | À faire     | R6 : logo, sections, couleurs, mentions et obligations                                          |
+| ETARE-04  | P1       | Scénarios et consignes structurés        | À faire     | R6 : création, validation, PDF et OPS                                                           |
+| WF-01     | P0       | Cycle de vie jusqu’à l’archive           | Implémenté  | Sprint 8 (MET-04, ADR-021) ; recette du retrait d’urgence en R5                                 |
+| WF-02     | P0       | Validation avant publication             | Implémenté  | R5 : séparation des tâches, aucun brouillon OPS                                                 |
+| WF-03     | P1       | Comparaison de versions                  | Partiel     | R6 : détail par champ/document, au-delà de l’élément                                            |
+| WF-04     | P0       | Journal d’audit                          | Implémenté  | Sprint 9 : refus sensibles tracés (SEC-03) ; R5 : couverture des nouveaux parcours              |
+| OPS-01    | P0       | Synthèse opérationnelle                  | À qualifier | R5 : critères d’interactions harmonisés et testés                                               |
+| OPS-02    | P0       | Plans tactiles par niveau                | À qualifier | R5 : tablette physique, zoom/calques/fiches                                                     |
+| OPS-03    | P0       | Recherche locale                         | À qualifier | R5 : nom/adresse/commune/n° ETARE, performance                                                  |
+| OPS-04    | P0       | Signalement avec photo hors ligne        | À qualifier | Livré (ADR-017) ; R5 : tablette physique, réseau dégradé, DEC-04 (GPS, file à la révocation)    |
+| OPS-05    | P0       | Version et âge de la donnée              | Implémenté  | R5 : compréhension fraîcheur/validité métier                                                    |
+| OFF-01    | P0       | Paquets signés, progression/taille       | Implémenté  | R5 : progression et taille sur tablette ; fonds de carte par secteur livrés au Sprint 11        |
+| OFF-02    | P0       | Synchronisation différentielle           | Implémenté  | DEC-08 : différentiel par fichier à faire accepter ; R5 : arrière-plan, panne/reprise           |
+| OFF-03    | P0       | Stockage local chiffré                   | Implémenté  | Sprint 13 : morceaux chiffrés, base rechiffrée à la révocation ; R5 : tablette cible            |
+| OFF-04    | P0       | Révocation et purge au contact           | Implémenté  | DEC-04, R5 : latence et limites hors réseau acceptées                                           |
+| OFF-05    | P1       | Rétention configurable par SIS           | À faire     | R6 ; distinguer conservation serveur et cache local                                             |
+| PORTAL-01 | P0       | Invitation exploitant par site           | Implémenté  | Sprint 7 (ADR-019) ; R5 : recette avec un exploitant pilote                                     |
+| PORTAL-02 | P0       | Proposition sans publication directe     | Implémenté  | Sprint 7 : conflit explicite, report manuel dans les données de travail                         |
+| PORTAL-03 | P0       | Documents et photos exploitants          | Implémenté  | Sprint 7 : pièces contrôlées (antivirus), documents partagés par le SIS                         |
+| ADMIN-01  | P0       | Rôles et périmètres                      | Implémenté  | Sprint 10 (PER-01, PER-02) ; R5 : recette avec un parc et des sites sensibles pilotes           |
+| ADMIN-02  | P0       | Terminaux                                | Implémenté  | Sprint 13 : politique des tablettes, type de clé (SEC-05) ; R5 inventaire/enrôlement/révocation |
+| ADMIN-03  | P1       | Catalogues configurables                 | Partiel     | R6 : objets/icônes/champs/valeurs ; risques déjà livrés                                         |
+| ADMIN-04  | P1       | Exports et rapports                      | Partiel     | R6 : CSV/rapports ; PDF déjà livré ; DEC-06                                                     |
 
 ## 6. Interopérabilité et extensions après le socle MVP
 
@@ -552,9 +573,15 @@ Après chaque lot :
 4. Écrire un rapport daté avec commit, tests, limites et décision de passage.
 5. Réestimer le lot suivant selon les retours ; toute nouvelle demande garde une priorité et un lien au cadrage.
 
-**Prochaine tranche recommandée :** Sprint 13 — suite de R4 sans attendre l’hébergement : SEC-05
-(terminal), CAP-02 (gros fichiers sur la tablette) et EXP-04 (livraison mobile). Avec la décision
-d’hébergement (DEC-03) : EXP-01, EXP-02, première cérémonie des clés et mesure de CAP-01 en préproduction.
+**Prochaine tranche recommandée :** avec la décision d’hébergement (DEC-03) :
+
+- EXP-01 (préproduction, déploiement coordonné, retour arrière) ;
+- EXP-02 (sauvegarde et restauration mesurées) ;
+- première cérémonie des clés, clé Android comprise ;
+- mesure de CAP-01 et CAP-02 en préproduction, avec l’APK de release sur la tablette cible.
+
+Sans l’attendre : EXP-05 (parcours de bout en bout automatisés, échecs injectés) et la préparation de SEC-06
+(contrôle des dépendances, SAST).
 Dès la fiche de droits validée et la tablette livrée : activation du Plan IGN sur un secteur pilote et
 qualification de CAR-01 sur matériel.
 
