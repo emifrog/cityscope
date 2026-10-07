@@ -1,4 +1,5 @@
 import 'package:etare_ops/src/core/errors/app_exception.dart';
+import 'package:etare_ops/src/core/storage/storage_guard.dart';
 
 /// Traduit une erreur technique en message français destiné à l'utilisateur.
 ///
@@ -46,6 +47,8 @@ String describeError(Object error) => switch (error) {
   UnexpectedResponseException() =>
     'Réponse inattendue du serveur. Mettez l’application à jour ou '
         'contactez le support.',
+  StorageInsufficientException(:final message) => message,
+  _ when isStorageFull(error) => storageFullMessage,
   _ => 'Une erreur inattendue est survenue.',
 };
 

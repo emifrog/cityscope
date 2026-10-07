@@ -230,9 +230,12 @@ Principes :
   locale, accusé en attente), `installed_publication`, `publication_file`,
   `file_blob` (contenu des fichiers, par empreinte), `site_data`,
   `site_search`. Les fichiers des paquets sont DANS la base chiffrée
-  (ADR-016). Migrations pas à pas dans `app_database.dart`, instantanés v1
-  et v2 dans `drift_schemas/`, test de migration avec données dans
+  (ADR-016). Migrations pas à pas dans `app_database.dart`, instantanés de
+  chaque version dans `drift_schemas/`, test de migration avec données dans
   `test/drift/`.
+- **Schéma v10** (Sprint 13, CAP-02) : fichiers rangés en morceaux de 1 Mio
+  (`file_chunk`) ; `file_blob` garde le nombre de morceaux et, pendant un
+  téléchargement, les octets reçus (section 8 quater).
 - **Licences** : SQLCipher Community Edition (licence de type BSD, mention
   requise dans la documentation distribuée) et OpenSSL sur Android — à
   intégrer à l'écran « À propos » / aux mentions légales avant diffusion.
@@ -380,8 +383,8 @@ Principes :
 
 Le PDF du dossier ETARE (depuis la synthèse du site) et les documents
 installés sont lus dans l'application avec `pdfrx` (MIT, moteur PDFium) :
-le fichier est ouvert depuis la mémoire, après lecture dans la base
-chiffrée, jamais copié en clair sur la tablette. Zoom au geste, pages
+PDFium lit les pages au besoin, morceau par morceau, dans la base chiffrée
+(CAP-02) ; le fichier n'est jamais copié en clair sur la tablette. Zoom au geste, pages
 précédente et suivante, message explicite si le PDF est illisible.
 
 Documents « à la demande » (DOC-02) : listés avec les documents essentiels,
@@ -394,6 +397,27 @@ change le document l'efface ; il faut alors le retélécharger), jusqu'au
 retrait par l'agent (« Retirer de la tablette ») ou à la purge du terminal.
 Sans réseau, l'écran dit exactement que le document manque et qu'il faudra
 du réseau pour l'obtenir. Les documents « jamais » restent au back-office.
+
+## 8 quater. Gros fichiers (CAP-02, ADR-016)
+
+- **Téléchargement par morceaux** (`FileFetcher`) : chaque morceau de 1 Mio
+  est rangé dans la base chiffrée dès qu'il est complet, l'empreinte est
+  calculée au fil de l'eau ; après une coupure, la suite est demandée
+  (`Range`) et seul le morceau en cours est perdu. Un fichier n'est visible
+  qu'une fois complet et vérifié.
+- **Lecture** : PDF ouverts par PDFium avec des rappels de lecture
+  (`ChunkedSource`, 4 morceaux au plus en mémoire) ; plans décodés à 4 096 px
+  au plus, photos en plein écran à 2 560 px (`bounded_image.dart`) ;
+  contenus libérés à la fermeture des écrans.
+- **Espace libre** (`StorageGuard`, `platformServicesProvider`) : vérifié
+  avant chaque version, document à la demande, site sensible et fond de
+  carte (place demandée + 10 % + 64 Mo). Sans place : « Stockage de la
+  tablette insuffisant… », accusé `STORAGE_INSUFFICIENT` ; disque plein en
+  cours d'écriture : « Stockage de la tablette plein… », accusé
+  `STORAGE_FULL`, la reprise repart du dernier morceau.
+- Le bilan des fonds de carte (installés, en attente du Wi-Fi, non installés
+  et pourquoi) s'affiche après une synchronisation.
+- Mesures : `docs/volumetrie/cap-02.md`.
 
 ## 8 bis. Signalements terrain (OPS-04, ADR-017)
 

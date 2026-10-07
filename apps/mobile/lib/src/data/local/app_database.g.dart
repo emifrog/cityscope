@@ -2349,8 +2349,38 @@ class $FileBlobsTable extends FileBlobs
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _chunkCountMeta = const VerificationMeta(
+    'chunkCount',
+  );
   @override
-  List<GeneratedColumn> get $columns => [sha256, sizeBytes, content, storedAt];
+  late final GeneratedColumn<int> chunkCount = GeneratedColumn<int>(
+    'chunk_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _receivedBytesMeta = const VerificationMeta(
+    'receivedBytes',
+  );
+  @override
+  late final GeneratedColumn<int> receivedBytes = GeneratedColumn<int>(
+    'received_bytes',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    sha256,
+    sizeBytes,
+    content,
+    storedAt,
+    chunkCount,
+    receivedBytes,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -2395,6 +2425,21 @@ class $FileBlobsTable extends FileBlobs
     } else if (isInserting) {
       context.missing(_storedAtMeta);
     }
+    if (data.containsKey('chunk_count')) {
+      context.handle(
+        _chunkCountMeta,
+        chunkCount.isAcceptableOrUnknown(data['chunk_count']!, _chunkCountMeta),
+      );
+    }
+    if (data.containsKey('received_bytes')) {
+      context.handle(
+        _receivedBytesMeta,
+        receivedBytes.isAcceptableOrUnknown(
+          data['received_bytes']!,
+          _receivedBytesMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2420,6 +2465,14 @@ class $FileBlobsTable extends FileBlobs
         DriftSqlType.dateTime,
         data['${effectivePrefix}stored_at'],
       )!,
+      chunkCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}chunk_count'],
+      )!,
+      receivedBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}received_bytes'],
+      ),
     );
   }
 
@@ -2432,13 +2485,26 @@ class $FileBlobsTable extends FileBlobs
 class FileBlobRow extends DataClass implements Insertable<FileBlobRow> {
   final String sha256;
   final int sizeBytes;
+
+  /// Contenu entier des fichiers rangés avant CAP-02 ; vide pour un fichier
+  /// rangé par morceaux (`file_chunk`).
   final Uint8List content;
   final DateTime storedAt;
+
+  /// Nombre de morceaux dans `file_chunk` (0 : contenu entier dans `content`).
+  final int chunkCount;
+
+  /// Téléchargement en cours : octets déjà reçus et vérifiés en taille ; le
+  /// fichier n'est utilisable qu'une fois complet et son empreinte vérifiée
+  /// (null).
+  final int? receivedBytes;
   const FileBlobRow({
     required this.sha256,
     required this.sizeBytes,
     required this.content,
     required this.storedAt,
+    required this.chunkCount,
+    this.receivedBytes,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2447,6 +2513,10 @@ class FileBlobRow extends DataClass implements Insertable<FileBlobRow> {
     map['size_bytes'] = Variable<int>(sizeBytes);
     map['content'] = Variable<Uint8List>(content);
     map['stored_at'] = Variable<DateTime>(storedAt);
+    map['chunk_count'] = Variable<int>(chunkCount);
+    if (!nullToAbsent || receivedBytes != null) {
+      map['received_bytes'] = Variable<int>(receivedBytes);
+    }
     return map;
   }
 
@@ -2456,6 +2526,10 @@ class FileBlobRow extends DataClass implements Insertable<FileBlobRow> {
       sizeBytes: Value(sizeBytes),
       content: Value(content),
       storedAt: Value(storedAt),
+      chunkCount: Value(chunkCount),
+      receivedBytes: receivedBytes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(receivedBytes),
     );
   }
 
@@ -2469,6 +2543,8 @@ class FileBlobRow extends DataClass implements Insertable<FileBlobRow> {
       sizeBytes: serializer.fromJson<int>(json['sizeBytes']),
       content: serializer.fromJson<Uint8List>(json['content']),
       storedAt: serializer.fromJson<DateTime>(json['storedAt']),
+      chunkCount: serializer.fromJson<int>(json['chunkCount']),
+      receivedBytes: serializer.fromJson<int?>(json['receivedBytes']),
     );
   }
   @override
@@ -2479,6 +2555,8 @@ class FileBlobRow extends DataClass implements Insertable<FileBlobRow> {
       'sizeBytes': serializer.toJson<int>(sizeBytes),
       'content': serializer.toJson<Uint8List>(content),
       'storedAt': serializer.toJson<DateTime>(storedAt),
+      'chunkCount': serializer.toJson<int>(chunkCount),
+      'receivedBytes': serializer.toJson<int?>(receivedBytes),
     };
   }
 
@@ -2487,11 +2565,17 @@ class FileBlobRow extends DataClass implements Insertable<FileBlobRow> {
     int? sizeBytes,
     Uint8List? content,
     DateTime? storedAt,
+    int? chunkCount,
+    Value<int?> receivedBytes = const Value.absent(),
   }) => FileBlobRow(
     sha256: sha256 ?? this.sha256,
     sizeBytes: sizeBytes ?? this.sizeBytes,
     content: content ?? this.content,
     storedAt: storedAt ?? this.storedAt,
+    chunkCount: chunkCount ?? this.chunkCount,
+    receivedBytes: receivedBytes.present
+        ? receivedBytes.value
+        : this.receivedBytes,
   );
   FileBlobRow copyWithCompanion(FileBlobsCompanion data) {
     return FileBlobRow(
@@ -2499,6 +2583,12 @@ class FileBlobRow extends DataClass implements Insertable<FileBlobRow> {
       sizeBytes: data.sizeBytes.present ? data.sizeBytes.value : this.sizeBytes,
       content: data.content.present ? data.content.value : this.content,
       storedAt: data.storedAt.present ? data.storedAt.value : this.storedAt,
+      chunkCount: data.chunkCount.present
+          ? data.chunkCount.value
+          : this.chunkCount,
+      receivedBytes: data.receivedBytes.present
+          ? data.receivedBytes.value
+          : this.receivedBytes,
     );
   }
 
@@ -2508,7 +2598,9 @@ class FileBlobRow extends DataClass implements Insertable<FileBlobRow> {
           ..write('sha256: $sha256, ')
           ..write('sizeBytes: $sizeBytes, ')
           ..write('content: $content, ')
-          ..write('storedAt: $storedAt')
+          ..write('storedAt: $storedAt, ')
+          ..write('chunkCount: $chunkCount, ')
+          ..write('receivedBytes: $receivedBytes')
           ..write(')'))
         .toString();
   }
@@ -2519,6 +2611,8 @@ class FileBlobRow extends DataClass implements Insertable<FileBlobRow> {
     sizeBytes,
     $driftBlobEquality.hash(content),
     storedAt,
+    chunkCount,
+    receivedBytes,
   );
   @override
   bool operator ==(Object other) =>
@@ -2527,7 +2621,9 @@ class FileBlobRow extends DataClass implements Insertable<FileBlobRow> {
           other.sha256 == this.sha256 &&
           other.sizeBytes == this.sizeBytes &&
           $driftBlobEquality.equals(other.content, this.content) &&
-          other.storedAt == this.storedAt);
+          other.storedAt == this.storedAt &&
+          other.chunkCount == this.chunkCount &&
+          other.receivedBytes == this.receivedBytes);
 }
 
 class FileBlobsCompanion extends UpdateCompanion<FileBlobRow> {
@@ -2535,12 +2631,16 @@ class FileBlobsCompanion extends UpdateCompanion<FileBlobRow> {
   final Value<int> sizeBytes;
   final Value<Uint8List> content;
   final Value<DateTime> storedAt;
+  final Value<int> chunkCount;
+  final Value<int?> receivedBytes;
   final Value<int> rowid;
   const FileBlobsCompanion({
     this.sha256 = const Value.absent(),
     this.sizeBytes = const Value.absent(),
     this.content = const Value.absent(),
     this.storedAt = const Value.absent(),
+    this.chunkCount = const Value.absent(),
+    this.receivedBytes = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   FileBlobsCompanion.insert({
@@ -2548,6 +2648,8 @@ class FileBlobsCompanion extends UpdateCompanion<FileBlobRow> {
     required int sizeBytes,
     required Uint8List content,
     required DateTime storedAt,
+    this.chunkCount = const Value.absent(),
+    this.receivedBytes = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : sha256 = Value(sha256),
        sizeBytes = Value(sizeBytes),
@@ -2558,6 +2660,8 @@ class FileBlobsCompanion extends UpdateCompanion<FileBlobRow> {
     Expression<int>? sizeBytes,
     Expression<Uint8List>? content,
     Expression<DateTime>? storedAt,
+    Expression<int>? chunkCount,
+    Expression<int>? receivedBytes,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2565,6 +2669,8 @@ class FileBlobsCompanion extends UpdateCompanion<FileBlobRow> {
       if (sizeBytes != null) 'size_bytes': sizeBytes,
       if (content != null) 'content': content,
       if (storedAt != null) 'stored_at': storedAt,
+      if (chunkCount != null) 'chunk_count': chunkCount,
+      if (receivedBytes != null) 'received_bytes': receivedBytes,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2574,6 +2680,8 @@ class FileBlobsCompanion extends UpdateCompanion<FileBlobRow> {
     Value<int>? sizeBytes,
     Value<Uint8List>? content,
     Value<DateTime>? storedAt,
+    Value<int>? chunkCount,
+    Value<int?>? receivedBytes,
     Value<int>? rowid,
   }) {
     return FileBlobsCompanion(
@@ -2581,6 +2689,8 @@ class FileBlobsCompanion extends UpdateCompanion<FileBlobRow> {
       sizeBytes: sizeBytes ?? this.sizeBytes,
       content: content ?? this.content,
       storedAt: storedAt ?? this.storedAt,
+      chunkCount: chunkCount ?? this.chunkCount,
+      receivedBytes: receivedBytes ?? this.receivedBytes,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2600,6 +2710,12 @@ class FileBlobsCompanion extends UpdateCompanion<FileBlobRow> {
     if (storedAt.present) {
       map['stored_at'] = Variable<DateTime>(storedAt.value);
     }
+    if (chunkCount.present) {
+      map['chunk_count'] = Variable<int>(chunkCount.value);
+    }
+    if (receivedBytes.present) {
+      map['received_bytes'] = Variable<int>(receivedBytes.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2613,6 +2729,8 @@ class FileBlobsCompanion extends UpdateCompanion<FileBlobRow> {
           ..write('sizeBytes: $sizeBytes, ')
           ..write('content: $content, ')
           ..write('storedAt: $storedAt, ')
+          ..write('chunkCount: $chunkCount, ')
+          ..write('receivedBytes: $receivedBytes, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -8980,6 +9098,269 @@ class TrustedTimeCompanion extends UpdateCompanion<TrustedTimeRow> {
   }
 }
 
+class $FileChunksTable extends FileChunks
+    with TableInfo<$FileChunksTable, FileChunkRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FileChunksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _sha256Meta = const VerificationMeta('sha256');
+  @override
+  late final GeneratedColumn<String> sha256 = GeneratedColumn<String>(
+    'sha256',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _idxMeta = const VerificationMeta('idx');
+  @override
+  late final GeneratedColumn<int> idx = GeneratedColumn<int>(
+    'idx',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> content = GeneratedColumn<Uint8List>(
+    'content',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [sha256, idx, content];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'file_chunk';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<FileChunkRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('sha256')) {
+      context.handle(
+        _sha256Meta,
+        sha256.isAcceptableOrUnknown(data['sha256']!, _sha256Meta),
+      );
+    } else if (isInserting) {
+      context.missing(_sha256Meta);
+    }
+    if (data.containsKey('idx')) {
+      context.handle(
+        _idxMeta,
+        idx.isAcceptableOrUnknown(data['idx']!, _idxMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_idxMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {sha256, idx};
+  @override
+  FileChunkRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FileChunkRow(
+      sha256: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sha256'],
+      )!,
+      idx: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}idx'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}content'],
+      )!,
+    );
+  }
+
+  @override
+  $FileChunksTable createAlias(String alias) {
+    return $FileChunksTable(attachedDatabase, alias);
+  }
+}
+
+class FileChunkRow extends DataClass implements Insertable<FileChunkRow> {
+  final String sha256;
+  final int idx;
+  final Uint8List content;
+  const FileChunkRow({
+    required this.sha256,
+    required this.idx,
+    required this.content,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['sha256'] = Variable<String>(sha256);
+    map['idx'] = Variable<int>(idx);
+    map['content'] = Variable<Uint8List>(content);
+    return map;
+  }
+
+  FileChunksCompanion toCompanion(bool nullToAbsent) {
+    return FileChunksCompanion(
+      sha256: Value(sha256),
+      idx: Value(idx),
+      content: Value(content),
+    );
+  }
+
+  factory FileChunkRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FileChunkRow(
+      sha256: serializer.fromJson<String>(json['sha256']),
+      idx: serializer.fromJson<int>(json['idx']),
+      content: serializer.fromJson<Uint8List>(json['content']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'sha256': serializer.toJson<String>(sha256),
+      'idx': serializer.toJson<int>(idx),
+      'content': serializer.toJson<Uint8List>(content),
+    };
+  }
+
+  FileChunkRow copyWith({String? sha256, int? idx, Uint8List? content}) =>
+      FileChunkRow(
+        sha256: sha256 ?? this.sha256,
+        idx: idx ?? this.idx,
+        content: content ?? this.content,
+      );
+  FileChunkRow copyWithCompanion(FileChunksCompanion data) {
+    return FileChunkRow(
+      sha256: data.sha256.present ? data.sha256.value : this.sha256,
+      idx: data.idx.present ? data.idx.value : this.idx,
+      content: data.content.present ? data.content.value : this.content,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FileChunkRow(')
+          ..write('sha256: $sha256, ')
+          ..write('idx: $idx, ')
+          ..write('content: $content')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(sha256, idx, $driftBlobEquality.hash(content));
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FileChunkRow &&
+          other.sha256 == this.sha256 &&
+          other.idx == this.idx &&
+          $driftBlobEquality.equals(other.content, this.content));
+}
+
+class FileChunksCompanion extends UpdateCompanion<FileChunkRow> {
+  final Value<String> sha256;
+  final Value<int> idx;
+  final Value<Uint8List> content;
+  final Value<int> rowid;
+  const FileChunksCompanion({
+    this.sha256 = const Value.absent(),
+    this.idx = const Value.absent(),
+    this.content = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  FileChunksCompanion.insert({
+    required String sha256,
+    required int idx,
+    required Uint8List content,
+    this.rowid = const Value.absent(),
+  }) : sha256 = Value(sha256),
+       idx = Value(idx),
+       content = Value(content);
+  static Insertable<FileChunkRow> custom({
+    Expression<String>? sha256,
+    Expression<int>? idx,
+    Expression<Uint8List>? content,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (sha256 != null) 'sha256': sha256,
+      if (idx != null) 'idx': idx,
+      if (content != null) 'content': content,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  FileChunksCompanion copyWith({
+    Value<String>? sha256,
+    Value<int>? idx,
+    Value<Uint8List>? content,
+    Value<int>? rowid,
+  }) {
+    return FileChunksCompanion(
+      sha256: sha256 ?? this.sha256,
+      idx: idx ?? this.idx,
+      content: content ?? this.content,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (sha256.present) {
+      map['sha256'] = Variable<String>(sha256.value);
+    }
+    if (idx.present) {
+      map['idx'] = Variable<int>(idx.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<Uint8List>(content.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FileChunksCompanion(')
+          ..write('sha256: $sha256, ')
+          ..write('idx: $idx, ')
+          ..write('content: $content, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -9005,6 +9386,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $InstalledBasemapsTable(this);
   late final $TrustedKeysetsTable trustedKeysets = $TrustedKeysetsTable(this);
   late final $TrustedTimeTable trustedTime = $TrustedTimeTable(this);
+  late final $FileChunksTable fileChunks = $FileChunksTable(this);
   late final LocalMetaDao localMetaDao = LocalMetaDao(this as AppDatabase);
   late final SyncStateDao syncStateDao = SyncStateDao(this as AppDatabase);
   late final OfflineDao offlineDao = OfflineDao(this as AppDatabase);
@@ -9033,6 +9415,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     installedBasemaps,
     trustedKeysets,
     trustedTime,
+    fileChunks,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -10212,6 +10595,8 @@ typedef $$FileBlobsTableCreateCompanionBuilder = FileBlobsCompanion Function({
   required int sizeBytes,
   required Uint8List content,
   required DateTime storedAt,
+  Value<int> chunkCount,
+  Value<int?> receivedBytes,
   Value<int> rowid,
 });
 typedef $$FileBlobsTableUpdateCompanionBuilder = FileBlobsCompanion Function({
@@ -10219,6 +10604,8 @@ typedef $$FileBlobsTableUpdateCompanionBuilder = FileBlobsCompanion Function({
   Value<int> sizeBytes,
   Value<Uint8List> content,
   Value<DateTime> storedAt,
+  Value<int> chunkCount,
+  Value<int?> receivedBytes,
   Value<int> rowid,
 });
 
@@ -10248,6 +10635,16 @@ class $$FileBlobsTableFilterComposer
 
   ColumnFilters<DateTime> get storedAt => $composableBuilder(
     column: $table.storedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get chunkCount => $composableBuilder(
+    column: $table.chunkCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get receivedBytes => $composableBuilder(
+    column: $table.receivedBytes,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -10280,6 +10677,16 @@ class $$FileBlobsTableOrderingComposer
     column: $table.storedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get chunkCount => $composableBuilder(
+    column: $table.chunkCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get receivedBytes => $composableBuilder(
+    column: $table.receivedBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$FileBlobsTableAnnotationComposer
@@ -10302,6 +10709,16 @@ class $$FileBlobsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get storedAt =>
       $composableBuilder(column: $table.storedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get chunkCount => $composableBuilder(
+    column: $table.chunkCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get receivedBytes => $composableBuilder(
+    column: $table.receivedBytes,
+    builder: (column) => column,
+  );
 }
 
 class $$FileBlobsTableTableManager
@@ -10339,12 +10756,16 @@ class $$FileBlobsTableTableManager
                 Value<int> sizeBytes = const Value.absent(),
                 Value<Uint8List> content = const Value.absent(),
                 Value<DateTime> storedAt = const Value.absent(),
+                Value<int> chunkCount = const Value.absent(),
+                Value<int?> receivedBytes = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FileBlobsCompanion(
                 sha256: sha256,
                 sizeBytes: sizeBytes,
                 content: content,
                 storedAt: storedAt,
+                chunkCount: chunkCount,
+                receivedBytes: receivedBytes,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -10353,12 +10774,16 @@ class $$FileBlobsTableTableManager
                 required int sizeBytes,
                 required Uint8List content,
                 required DateTime storedAt,
+                Value<int> chunkCount = const Value.absent(),
+                Value<int?> receivedBytes = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FileBlobsCompanion.insert(
                 sha256: sha256,
                 sizeBytes: sizeBytes,
                 content: content,
                 storedAt: storedAt,
+                chunkCount: chunkCount,
+                receivedBytes: receivedBytes,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -13857,6 +14282,175 @@ typedef $$TrustedTimeTableProcessedTableManager =
       TrustedTimeRow,
       PrefetchHooks Function()
     >;
+typedef $$FileChunksTableCreateCompanionBuilder = FileChunksCompanion Function({
+  required String sha256,
+  required int idx,
+  required Uint8List content,
+  Value<int> rowid,
+});
+typedef $$FileChunksTableUpdateCompanionBuilder = FileChunksCompanion Function({
+  Value<String> sha256,
+  Value<int> idx,
+  Value<Uint8List> content,
+  Value<int> rowid,
+});
+
+class $$FileChunksTableFilterComposer
+    extends Composer<_$AppDatabase, $FileChunksTable> {
+  $$FileChunksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get sha256 => $composableBuilder(
+    column: $table.sha256,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get idx => $composableBuilder(
+    column: $table.idx,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$FileChunksTableOrderingComposer
+    extends Composer<_$AppDatabase, $FileChunksTable> {
+  $$FileChunksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get sha256 => $composableBuilder(
+    column: $table.sha256,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get idx => $composableBuilder(
+    column: $table.idx,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$FileChunksTableAnnotationComposer
+    extends Composer<_$AppDatabase, $FileChunksTable> {
+  $$FileChunksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get sha256 =>
+      $composableBuilder(column: $table.sha256, builder: (column) => column);
+
+  GeneratedColumn<int> get idx =>
+      $composableBuilder(column: $table.idx, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+}
+
+class $$FileChunksTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $FileChunksTable,
+          FileChunkRow,
+          $$FileChunksTableFilterComposer,
+          $$FileChunksTableOrderingComposer,
+          $$FileChunksTableAnnotationComposer,
+          $$FileChunksTableCreateCompanionBuilder,
+          $$FileChunksTableUpdateCompanionBuilder,
+          (
+            FileChunkRow,
+            BaseReferences<_$AppDatabase, $FileChunksTable, FileChunkRow>,
+          ),
+          FileChunkRow,
+          PrefetchHooks Function()
+        > {
+  $$FileChunksTableTableManager(_$AppDatabase db, $FileChunksTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FileChunksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FileChunksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FileChunksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> sha256 = const Value.absent(),
+                Value<int> idx = const Value.absent(),
+                Value<Uint8List> content = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => FileChunksCompanion(
+                sha256: sha256,
+                idx: idx,
+                content: content,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String sha256,
+                required int idx,
+                required Uint8List content,
+                Value<int> rowid = const Value.absent(),
+              }) => FileChunksCompanion.insert(
+                sha256: sha256,
+                idx: idx,
+                content: content,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$FileChunksTable, FileChunkRow>(table),
+                  BaseReferences<_$AppDatabase, $FileChunksTable, FileChunkRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$FileChunksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $FileChunksTable,
+      FileChunkRow,
+      $$FileChunksTableFilterComposer,
+      $$FileChunksTableOrderingComposer,
+      $$FileChunksTableAnnotationComposer,
+      $$FileChunksTableCreateCompanionBuilder,
+      $$FileChunksTableUpdateCompanionBuilder,
+      (
+        FileChunkRow,
+        BaseReferences<_$AppDatabase, $FileChunksTable, FileChunkRow>,
+      ),
+      FileChunkRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -13893,4 +14487,6 @@ class $AppDatabaseManager {
       $$TrustedKeysetsTableTableManager(_db, _db.trustedKeysets);
   $$TrustedTimeTableTableManager get trustedTime =>
       $$TrustedTimeTableTableManager(_db, _db.trustedTime);
+  $$FileChunksTableTableManager get fileChunks =>
+      $$FileChunksTableTableManager(_db, _db.fileChunks);
 }

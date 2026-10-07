@@ -149,12 +149,39 @@ class FileBlobs extends Table {
 
   IntColumn get sizeBytes => integer()();
 
+  /// Contenu entier des fichiers rangés avant CAP-02 ; vide pour un fichier
+  /// rangé par morceaux (`file_chunk`).
   BlobColumn get content => blob()();
 
   DateTimeColumn get storedAt => dateTime()();
 
+  /// Nombre de morceaux dans `file_chunk` (0 : contenu entier dans `content`).
+  IntColumn get chunkCount => integer().withDefault(const Constant(0))();
+
+  /// Téléchargement en cours : octets déjà reçus et vérifiés en taille ; le
+  /// fichier n'est utilisable qu'une fois complet et son empreinte vérifiée
+  /// (null).
+  IntColumn get receivedBytes => integer().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => {sha256};
+}
+
+/// Morceau d'un fichier (CAP-02) : les fichiers sont téléchargés, vérifiés et
+/// lus par morceaux de 1 Mio dans la base chiffrée, jamais entiers en mémoire.
+@DataClassName('FileChunkRow')
+class FileChunks extends Table {
+  @override
+  String get tableName => 'file_chunk';
+
+  TextColumn get sha256 => text()();
+
+  IntColumn get idx => integer()();
+
+  BlobColumn get content => blob()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {sha256, idx};
 }
 
 /// Fichier de données d'une version installée (`data/site.json`), tel que reçu.

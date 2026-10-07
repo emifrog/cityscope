@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -362,6 +363,44 @@ final class SyncApi {
     } on DioException catch (error) {
       throw mapDioException(error);
     }
+  }
+
+  /// Ouvre un fichier du stockage en flux à partir de l'octet [from] (reprise
+  /// en cours de fichier, CAP-02). Renvoie l'octet où le flux commence
+  /// réellement : 0 si le stockage ignore la plage demandée. Une coupure
+  /// pendant la lecture du flux lève une [NetworkException].
+  Future<(int start, Stream<Uint8List> body)> openDownload(
+    Uri url, {
+    int from = 0,
+  }) async {
+    try {
+      final response = await _files.getUri<ResponseBody>(
+        url,
+        options: Options(
+          responseType: ResponseType.stream,
+          headers: {if (from > 0) 'range': 'bytes=$from-'},
+        ),
+      );
+      final body = response.data;
+      if (body == null) throw const UnexpectedResponseException('Fichier vide');
+      final start = response.statusCode == 206 ? from : 0;
+      return (start, body.stream.handleError(_streamFailure));
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
+
+  static Never _streamFailure(Object error, StackTrace stackTrace) {
+    if (error is DioException) throw mapDioException(error);
+    if (error is SocketException ||
+        error is HttpException ||
+        error is TimeoutException) {
+      throw const NetworkException(
+        NetworkFailure.offline,
+        'Transfert interrompu',
+      );
+    }
+    Error.throwWithStackTrace(error, stackTrace);
   }
 
   Future<JsonMap> _signed(

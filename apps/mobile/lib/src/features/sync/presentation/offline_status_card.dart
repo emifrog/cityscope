@@ -262,9 +262,11 @@ class _Enrolled extends ConsumerWidget {
       if (report.downloadedBytes > 0)
         '${formatBytesFr(report.downloadedBytes)} téléchargés',
     ];
-    return parts.isEmpty
+    final etare = parts.isEmpty
         ? 'Aucun ETARE publié à installer.'
         : '${parts.join(', ')}.';
+    final basemaps = basemapSummary(report.basemaps);
+    return basemaps == null ? etare : '$etare\n$basemaps';
   }
 }
 

@@ -25,6 +25,7 @@ final basemapSyncProvider = Provider<BasemapSync?>(
     dao: ref.watch(appDatabaseProvider).basemapDao,
     store: ref.watch(basemapStoreProvider),
     clock: ref.watch(clockProvider),
+    storage: ref.watch(storageGuardProvider),
   ),
 );
 

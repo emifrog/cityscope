@@ -5,17 +5,21 @@
 /// les surchargent de la même façon.
 library;
 
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:etare_ops/src/core/config/app_config.dart';
 import 'package:etare_ops/src/core/network/auth_interceptor.dart';
 import 'package:etare_ops/src/core/network/dio_factory.dart';
 import 'package:etare_ops/src/core/platform/platform_services.dart';
 import 'package:etare_ops/src/core/storage/secure_store.dart';
+import 'package:etare_ops/src/core/storage/storage_guard.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/data/remote/etare_api_client.dart';
 import 'package:etare_ops/src/features/account/application/account_providers.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 
 final appConfigProvider = Provider<AppConfig>(
   (ref) => throw UnimplementedError(
@@ -33,6 +37,19 @@ final appDatabaseProvider = Provider<AppDatabase>(
 /// remplacés dans les tests (SEC-05, CAP-02).
 final platformServicesProvider = Provider<PlatformServices>(
   (ref) => const AndroidPlatformServices(),
+);
+
+/// Dossier privé de l'application (base chiffrée, fonds de carte).
+final appSupportDirectoryProvider = Provider<Future<Directory> Function()>(
+  (ref) => getApplicationSupportDirectory,
+);
+
+/// Espace libre contrôlé avant chaque téléchargement (CAP-02).
+final storageGuardProvider = Provider<StorageGuard>(
+  (ref) => StorageGuard(
+    platform: ref.watch(platformServicesProvider),
+    directory: ref.watch(appSupportDirectoryProvider),
+  ),
 );
 
 final secureStoreProvider = Provider<SecureStore>(

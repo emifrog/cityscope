@@ -97,3 +97,34 @@ lecture en flux de gros documents.
   fichier altéré (rien n'est enregistré), tablette refusée (la synchronisation purge).
 - La synchronisation n'a plus lieu seulement à l'ouverture : tâche de fond Android, reprise au retour,
   budget sur réseau mobile et bail partagé entre moteurs (schéma local v5), voir l'ADR-018.
+
+## Complément du Sprint 13 — gros fichiers (CAP-02)
+
+Mesures : [docs/volumetrie/cap-02.md](../volumetrie/cap-02.md).
+
+- **Fichiers par morceaux.** Un fichier téléchargé est rangé en morceaux de 1 Mio (`file_chunk`, schéma
+  local v10) ; `file_blob` garde sa taille, son nombre de morceaux et, tant qu'il est incomplet, les octets
+  reçus. L'empreinte SHA-256 est calculée au fil de l'eau ; un fichier n'est visible qu'une fois complet et
+  vérifié, un fichier altéré ne laisse aucun morceau. Les fichiers rangés avant la v10 gardent leur contenu
+  entier et restent lisibles.
+- **Reprise en cours de fichier.** Après une coupure, la tablette relit ce qu'elle a déjà (pour
+  l'empreinte) et demande la suite (`Range: bytes=n-`) ; un stockage qui ignore la plage fait tout
+  reprendre depuis le début, sans mélange. Un téléchargement partiel qu'aucune version ne réclame plus est
+  effacé comme un fichier orphelin.
+- **Lecture sans tout charger.** Un PDF est ouvert par PDFium avec des rappels de lecture
+  (`PdfViewer.custom`) servis morceau par morceau depuis la base (4 morceaux au plus en mémoire). Les
+  images sont décodées à taille bornée (4 096 px pour un plan, 2 560 px pour une photo), jamais agrandies ;
+  les contenus des écrans sont libérés à leur fermeture.
+- **Espace et disque plein.** Avant chaque version, document à la demande, site sensible ou fond de carte,
+  la place nécessaire (fichiers manquants moins ce qui est déjà reçu, plus 10 % et 64 Mo) est comparée à
+  l'espace libre, pages libres de la base comprises ; l'ancienne version restant installée jusqu'à
+  l'activation, la réserve porte sur la nouvelle entière. Sans place, rien n'est commencé
+  (`STORAGE_INSUFFICIENT`) ; un disque plein en cours d'écriture (`SQLITE_FULL`, `ENOSPC`) arrête le
+  passage en gardant les morceaux (`STORAGE_FULL`). Les deux cas ont un message pour l'agent ; les fonds
+  de carte attendent alors, les ETARE passent avant.
+- **Pas de stockage chiffré alternatif** : le surcoût de la base est d'environ 2 % et la mémoire ne suit
+  plus la taille des fichiers.
+
+Conséquences : la conséquence « un fichier est lu entièrement en mémoire » ne vaut plus que pour les
+images avant décodage, les fichiers d'un site sensible (scellés entiers) et les parties de 32 Mio d'un fond
+de carte. Les mesures sont à refaire sur la tablette cible avec l'APK de release.

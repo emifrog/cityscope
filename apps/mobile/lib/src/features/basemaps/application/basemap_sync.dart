@@ -6,6 +6,7 @@ import 'package:etare_ops/src/core/errors/app_exception.dart';
 import 'package:etare_ops/src/core/json/json_reader.dart';
 import 'package:etare_ops/src/core/logging/app_logger.dart';
 import 'package:etare_ops/src/core/security/trusted_keys.dart';
+import 'package:etare_ops/src/core/storage/storage_guard.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/data/local/daos/basemap_dao.dart';
 import 'package:etare_ops/src/features/basemaps/data/basemap_store.dart';
@@ -83,6 +84,7 @@ final class BasemapSync {
     this._clock = DateTime.now,
     this._largeThresholdBytes = backgroundDownloadBudgetBytes,
     this._budgetBytes = basemapDeviceBudgetBytes,
+    this._storage,
   });
 
   static const _logger = AppLogger('basemaps');
@@ -93,6 +95,9 @@ final class BasemapSync {
   final DateTime Function() _clock;
   final int _largeThresholdBytes;
   final int _budgetBytes;
+
+  /// Espace libre contrôlé avant chaque fond (CAP-02).
+  final StorageGuard? _storage;
 
   /// [allowLarge] : synchronisation en Wi-Fi (tâche Android sur réseau non
   /// limité) ; sinon un fond de plus de 50 Mo à télécharger est reporté.
@@ -161,9 +166,19 @@ final class BasemapSync {
         _logger.warning('Fond refusé (${error.code}) : ${entry.sectorName}.');
         await _store.remove(entry.packId);
         failures.add(BasemapFailure(entry.sectorName, error.code));
+      } on StorageInsufficientException catch (error) {
+        _logger.warning('Fond reporté, place insuffisante : $error');
+        failures.add(
+          BasemapFailure(entry.sectorName, StorageInsufficientException.code),
+        );
       } on FileSystemException catch (error) {
         _logger.warning('Fond non écrit : ${entry.sectorName}.', error: error);
-        failures.add(BasemapFailure(entry.sectorName, 'BASEMAP_STORAGE'));
+        failures.add(
+          BasemapFailure(
+            entry.sectorName,
+            isStorageFull(error) ? storageFullCode : 'BASEMAP_STORAGE',
+          ),
+        );
       } on ApiException catch (error) {
         if (error.code == ApiErrorCode.deviceRevoked ||
             error.code == ApiErrorCode.deviceNotEnrolled ||
@@ -251,6 +266,9 @@ final class BasemapSync {
     if (!allowLarge && remaining > _largeThresholdBytes) {
       throw _Deferred(remaining);
     }
+    // L'ancienne version du secteur reste affichée jusqu'au bout : la
+    // nouvelle demande toute sa place.
+    await _storage?.ensure(remaining);
 
     var done = incoming.partialLength;
     void report() => onProgress?.call(

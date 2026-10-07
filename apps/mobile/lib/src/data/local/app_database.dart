@@ -34,6 +34,7 @@ part 'app_database.g.dart';
     InstalledBasemaps,
     TrustedKeysets,
     TrustedTime,
+    FileChunks,
   ],
   daos: [
     LocalMetaDao,
@@ -52,7 +53,7 @@ class AppDatabase extends _$AppDatabase {
   /// `dart run drift_dev make-migrations` (instantanés, tests générés et
   /// `app_database.steps.dart`, définitions de tables par version). Une étape
   /// qui crée une table modifiée plus tard prend sa définition versionnée.
-  static const currentSchemaVersion = 9;
+  static const currentSchemaVersion = 10;
 
   @override
   int get schemaVersion => currentSchemaVersion;
@@ -68,6 +69,7 @@ class AppDatabase extends _$AppDatabase {
     7: _migrateToV7,
     8: _migrateToV8,
     9: _migrateToV9,
+    10: _migrateToV10,
   };
 
   /// v2 (Sprint 4) : contenu hors ligne installé et état de synchronisation
@@ -86,7 +88,8 @@ class AppDatabase extends _$AppDatabase {
     }
     await m.createTable(db.installedPublications);
     await m.createTable(db.publicationFiles);
-    await m.createTable(db.fileBlobs);
+    // Telle qu'en v2 : l'étape v10 lui ajoute ses colonnes de morceaux.
+    await m.createTable(Schema2(database: db).fileBlob);
     await m.createTable(db.siteData);
     await m.createTable(db.siteSearch);
   }
@@ -140,6 +143,15 @@ class AppDatabase extends _$AppDatabase {
   static Future<void> _migrateToV9(Migrator m, AppDatabase db) async {
     await m.addColumn(db.syncState, db.syncState.terminalPolicy);
     await m.createTable(db.trustedTime);
+  }
+
+  /// v10 (Sprint 13) : fichiers rangés par morceaux et téléchargements
+  /// repris en cours de fichier (CAP-02). Les fichiers déjà rangés gardent
+  /// leur contenu entier.
+  static Future<void> _migrateToV10(Migrator m, AppDatabase db) async {
+    await m.addColumn(db.fileBlobs, db.fileBlobs.chunkCount);
+    await m.addColumn(db.fileBlobs, db.fileBlobs.receivedBytes);
+    await m.createTable(db.fileChunks);
   }
 
   @override

@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:etare_ops/src/core/platform/platform_services.dart';
 import 'package:etare_ops/src/core/security/local_code.dart';
+import 'package:etare_ops/src/core/storage/storage_guard.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/data/local/daos/sensitive_dao.dart';
 import 'package:etare_ops/src/features/ops/domain/published_site.dart';
@@ -75,11 +76,15 @@ class SensitiveSiteService {
     this._clock = DateTime.now,
     Random? random,
     DeviceKeys? keys,
+    this._storage,
   }) : _random = random ?? Random.secure(),
        _keys = keys ?? DeviceKeys(const SoftwarePlatformServices());
 
   /// Clé du terminal (Keystore, ou Ed25519 des premières tablettes).
   final DeviceKeys _keys;
+
+  /// Espace libre contrôlé avant une ouverture (CAP-02).
+  final StorageGuard? _storage;
 
   final SyncApi _api;
   final SensitiveDao _dao;
@@ -155,6 +160,10 @@ class SensitiveSiteService {
 
     final siteKey = _bytes(32);
     final files = verified.manifest.requiredFiles;
+    // Scellés entiers : la place se vérifie avant le premier octet (CAP-02).
+    await _storage?.ensure(
+      files.fold(0, (total, file) => total + file.sizeBytes),
+    );
     final sealed = <SealedFile>[];
     if (files.isNotEmpty) {
       final urls = await _api.downloadUrls(device, entry.publicationId, [

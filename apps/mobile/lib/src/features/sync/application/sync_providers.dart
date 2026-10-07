@@ -100,6 +100,7 @@ final syncServiceProvider = Provider<SyncService>((ref) {
     keys: ref.watch(deviceKeysProvider),
     trustedClock: ref.watch(trustedClockProvider),
     wipeSecrets: ref.watch(terminalWipeProvider),
+    storage: ref.watch(storageGuardProvider),
   );
 });
 

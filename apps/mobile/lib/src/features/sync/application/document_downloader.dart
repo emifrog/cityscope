@@ -1,10 +1,9 @@
-import 'dart:typed_data';
-
 import 'package:etare_ops/src/core/platform/platform_services.dart';
+import 'package:etare_ops/src/core/storage/storage_guard.dart';
 import 'package:etare_ops/src/data/local/daos/offline_dao.dart';
+import 'package:etare_ops/src/features/sync/application/file_fetcher.dart';
 import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
 import 'package:etare_ops/src/features/sync/data/device_keys.dart';
-import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
 import 'package:etare_ops/src/features/sync/data/sync_api.dart';
 
 /// Pourquoi un document « à la demande » n'a pas pu être enregistré.
@@ -44,10 +43,11 @@ final class DocumentDownloadException implements Exception {
 }
 
 /// Téléchargement explicite d'un document « à la demande » (DOC-02) : requête
-/// signée par le terminal, fichier vérifié contre la taille et l'empreinte du
-/// manifeste signé de la version installée, puis rangé dans la base chiffrée,
-/// où il reste tant que cette version le référence (ou jusqu'à son retrait
-/// par l'agent, ou la purge du terminal).
+/// signée par le terminal, fichier rangé par morceaux dans la base chiffrée
+/// (reprise après coupure, CAP-02) et vérifié contre la taille et l'empreinte
+/// du manifeste signé de la version installée ; il reste tant que cette
+/// version le référence (ou jusqu'à son retrait par l'agent, ou la purge du
+/// terminal).
 class DocumentDownloader {
   DocumentDownloader({
     required this._api,
@@ -55,6 +55,8 @@ class DocumentDownloader {
     required this._identities,
     this._clock = DateTime.now,
     DeviceKeys? keys,
+    this._storage,
+    this._chunkBytes = fileChunkBytes,
   }) : _keys = keys ?? DeviceKeys(const SoftwarePlatformServices());
 
   final SyncApi _api;
@@ -62,8 +64,19 @@ class DocumentDownloader {
   final DeviceIdentityStore _identities;
   final DateTime Function() _clock;
   final DeviceKeys _keys;
+  final StorageGuard? _storage;
+  final int _chunkBytes;
 
-  /// Lève [DocumentDownloadException], `ApiException` ou `NetworkException`.
+  late final _files = FileFetcher(
+    api: _api,
+    offline: _offline,
+    clock: _clock,
+    chunkBytes: _chunkBytes,
+  );
+
+  /// Lève [DocumentDownloadException], [StorageInsufficientException],
+  /// `ApiException` ou `NetworkException` (la reprise se fera au prochain
+  /// essai).
   Future<void> download({
     required String siteId,
     required String sha256,
@@ -82,23 +95,39 @@ class DocumentDownloader {
     }
     if ((await _offline.presentBlobs([sha256])).isNotEmpty) return;
 
+    await _storage?.ensure(
+      file.sizeBytes - await _files.resumable(sha256),
+      reusable: await _offline.reusableBytes(),
+    );
     final device = await _keys.credentials(identity);
-    final urls = await _api.downloadUrls(device, site.publicationId, [sha256]);
-    final url = urls[sha256];
-    if (url == null) {
-      throw const DocumentDownloadException(
-        DocumentDownloadFailure.unavailable,
-      );
+    Future<Uri> url({required bool renew}) async {
+      final urls = await _api.downloadUrls(device, site.publicationId, [
+        sha256,
+      ]);
+      final url = urls[sha256];
+      if (url == null) {
+        throw const DocumentDownloadException(
+          DocumentDownloadFailure.unavailable,
+        );
+      }
+      return url;
     }
-    final bytes = await _api.download(url, onProgress: onProgress);
-    if (bytes.length != file.sizeBytes || sha256Hex(bytes) != sha256) {
+
+    var received = 0;
+    try {
+      await _files.fetch(
+        sha256: sha256,
+        sizeBytes: file.sizeBytes,
+        url: url,
+        onProgress: (done, _) {
+          received += done;
+          onProgress?.call(received, file.sizeBytes);
+        },
+      );
+    } on FileMismatchException {
       throw const DocumentDownloadException(DocumentDownloadFailure.corrupted);
     }
-    final stored = await _offline.storeOnDemandBlob(
-      sha256,
-      Uint8List.fromList(bytes),
-      _clock().toUtc(),
-    );
+    final stored = await _offline.completeOnDemandFile(sha256);
     if (!stored) {
       throw const DocumentDownloadException(
         DocumentDownloadFailure.unavailable,

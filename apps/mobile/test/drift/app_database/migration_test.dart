@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'generated/schema.dart';
 
 import 'generated/schema_v1.dart' as v1;
+import 'generated/schema_v10.dart' as v10;
 import 'generated/schema_v2.dart' as v2;
 import 'generated/schema_v3.dart' as v3;
 import 'generated/schema_v4.dart' as v4;
@@ -381,4 +382,40 @@ void main() {
       },
     );
   });
+
+  test(
+    'la migration v9 → v10 garde les fichiers entiers, sans morceau',
+    () async {
+      final content = Uint8List.fromList([1, 2, 3, 4]);
+      final oldBlob = v9.FileBlobData(
+        sha256: 'hash-1',
+        sizeBytes: 4,
+        content: content,
+        storedAt: '2026-10-05T10:00:00.000Z',
+      );
+      // Rangé avant CAP-02 : contenu entier, complet (rien en attente).
+      final expectedBlob = v10.FileBlobData(
+        sha256: 'hash-1',
+        sizeBytes: 4,
+        content: content,
+        storedAt: '2026-10-05T10:00:00.000Z',
+        chunkCount: 0,
+      );
+
+      await verifier.testWithDataIntegrity(
+        oldVersion: 9,
+        newVersion: 10,
+        createOld: v9.DatabaseAtV9.new,
+        createNew: v10.DatabaseAtV10.new,
+        openTestedDatabase: AppDatabase.new,
+        createItems: (batch, oldDb) {
+          batch.insert(oldDb.fileBlob, oldBlob);
+        },
+        validateItems: (newDb) async {
+          expect(await newDb.select(newDb.fileBlob).get(), [expectedBlob]);
+          expect(await newDb.select(newDb.fileChunk).get(), isEmpty);
+        },
+      );
+    },
+  );
 }

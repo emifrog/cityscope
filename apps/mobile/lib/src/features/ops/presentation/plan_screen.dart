@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:etare_ops/src/core/routing/app_routes.dart';
+import 'package:etare_ops/src/core/theme/bounded_image.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
 import 'package:etare_ops/src/features/ops/application/ops_providers.dart';
 import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
@@ -251,8 +252,13 @@ class _PlanViewState extends State<PlanView> {
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          Image.memory(
-                            widget.image,
+                          // Décodé à taille bornée (CAP-02) : la géométrie
+                          // reste celle du plan publié (BoxFit.fill).
+                          Image(
+                            image: boundedImage(
+                              widget.image,
+                              maxSide: planMaxSide,
+                            ),
                             fit: BoxFit.fill,
                             gaplessPlayback: true,
                             filterQuality: FilterQuality.medium,

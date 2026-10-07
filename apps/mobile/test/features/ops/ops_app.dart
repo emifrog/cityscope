@@ -82,8 +82,8 @@ Future<void> pumpApp(
         syncControllerProvider.overrideWith(sync),
         // PDFium est natif : un lecteur simulé montre ce qui lui est confié.
         pdfViewBuilderProvider.overrideWithValue(
-          (context, bytes, sourceName) =>
-              Text('PDF ${bytes.length} octets · $sourceName'),
+          (context, source, sourceName) =>
+              Text('PDF ${source.length} octets · $sourceName'),
         ),
         ...overrides,
       ],

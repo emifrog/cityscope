@@ -23,6 +23,7 @@ final sensitiveSiteServiceProvider = Provider<SensitiveSiteService>(
     // Heure de confiance : une horloge reculée ne prolonge pas les 24 heures.
     clock: ref.watch(trustedNowProvider),
     keys: ref.watch(deviceKeysProvider),
+    storage: ref.watch(storageGuardProvider),
   ),
 );
 

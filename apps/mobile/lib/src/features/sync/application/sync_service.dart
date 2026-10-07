@@ -9,6 +9,7 @@ import 'package:etare_ops/src/core/json/json_reader.dart';
 import 'package:etare_ops/src/core/logging/app_logger.dart';
 import 'package:etare_ops/src/core/platform/platform_services.dart';
 import 'package:etare_ops/src/core/security/trusted_keys.dart';
+import 'package:etare_ops/src/core/storage/storage_guard.dart';
 import 'package:etare_ops/src/core/text/search_text.dart';
 import 'package:etare_ops/src/core/time/trusted_clock.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
@@ -16,6 +17,7 @@ import 'package:etare_ops/src/data/local/daos/offline_dao.dart';
 import 'package:etare_ops/src/data/local/daos/reports_dao.dart';
 import 'package:etare_ops/src/data/local/daos/sync_state_dao.dart';
 import 'package:etare_ops/src/features/basemaps/application/basemap_sync.dart';
+import 'package:etare_ops/src/features/sync/application/file_fetcher.dart';
 import 'package:etare_ops/src/features/sync/application/package_verification.dart';
 import 'package:etare_ops/src/features/sync/application/trust_store.dart';
 import 'package:etare_ops/src/features/sync/data/device_identity_store.dart';
@@ -95,6 +97,7 @@ final class SyncCompleted extends SyncReport {
     required this.interrupted,
     this.deferredBytes = 0,
     this.basemaps,
+    this.storageProblem,
   });
 
   final int installed;
@@ -115,7 +118,15 @@ final class SyncCompleted extends SyncReport {
   /// Il ne rend jamais la synchronisation des ETARE incomplète.
   final BasemapSyncReport? basemaps;
 
-  bool get complete => failures.isEmpty && !interrupted && deferredBytes == 0;
+  /// Place manquante sur la tablette (CAP-02) : message pour l'agent ; null
+  /// si le stockage n'a rien arrêté.
+  final String? storageProblem;
+
+  bool get complete =>
+      failures.isEmpty &&
+      !interrupted &&
+      deferredBytes == 0 &&
+      storageProblem == null;
 }
 
 /// Ce moteur n'a plus le bail de synchronisation (il a été gelé ou arrêté
@@ -164,6 +175,8 @@ final class SyncService {
     DeviceKeys? keys,
     this._trustedClock,
     this._wipeSecrets,
+    this._storage,
+    this._chunkBytes = fileChunkBytes,
   }) : _keys = keys ?? DeviceKeys(const SoftwarePlatformServices());
 
   static const _logger = AppLogger('sync');
@@ -193,6 +206,19 @@ final class SyncService {
   /// Révocation : session, code personnel et clé de la base locale effacés
   /// (SEC-05) ; null dans les tests du service seul.
   final Future<void> Function()? _wipeSecrets;
+
+  /// Espace libre contrôlé avant chaque version (CAP-02) ; null : pas de
+  /// mesure, un disque plein arrête proprement le passage.
+  final StorageGuard? _storage;
+  final int _chunkBytes;
+
+  /// Fichiers téléchargés par morceaux, avec reprise (CAP-02).
+  late final _files = FileFetcher(
+    api: _api,
+    offline: _offline,
+    clock: () => _now,
+    chunkBytes: _chunkBytes,
+  );
 
   DateTime get _now => (_trustedClock?.now() ?? _clock()).toUtc();
 
@@ -467,6 +493,8 @@ final class SyncService {
     var downloadedBytes = 0;
     var deferredBytes = 0;
     var reservedBytes = 0;
+    String? storageProblem;
+    String? storageCode;
     final totalBytes = plan.announcedBytes;
     // Budget de téléchargement : une version entière, ou rien.
     bool reserve(int bytes) {
@@ -509,6 +537,13 @@ final class SyncService {
         // Coupure : on active ce qui est prêt, la suite reprendra.
         interrupted = true;
         break;
+      } on StorageInsufficientException catch (error) {
+        // Pas la place : ni cette version ni les suivantes, rien n'est
+        // commencé ; ce qui est prêt est activé.
+        _logger.warning('Stockage insuffisant : $error');
+        storageProblem = error.message;
+        storageCode = StorageInsufficientException.code;
+        break;
       } on SyncIntegrityException catch (error) {
         failures.add(SyncFailure(entry.siteName, error.code));
       } on ApiException catch (error) {
@@ -518,6 +553,14 @@ final class SyncService {
           rethrow;
         }
         failures.add(SyncFailure(entry.siteName, error.code.wireValue));
+      } on Object catch (error) {
+        if (!isStorageFull(error)) rethrow;
+        // Disque plein en cours d'écriture : les morceaux rangés restent, le
+        // téléchargement reprendra une fois la place libérée.
+        _logger.warning('Stockage plein pendant le téléchargement.');
+        storageProblem = storageFullMessage;
+        storageCode = storageFullCode;
+        break;
       }
     }
 
@@ -530,7 +573,11 @@ final class SyncService {
         sitesTotal: plan.toInstall.length,
       ),
     );
-    final complete = failures.isEmpty && !interrupted && deferredBytes == 0;
+    final complete =
+        failures.isEmpty &&
+        !interrupted &&
+        deferredBytes == 0 &&
+        storageProblem == null;
     await _activate(
       ActivationRecord(
         install: prepared,
@@ -545,7 +592,8 @@ final class SyncService {
         now: _now,
         error: complete
             ? null
-            : _partialMessage(failures, interrupted, deferredBytes),
+            : storageProblem ??
+                  _partialMessage(failures, interrupted, deferredBytes),
         keepBlobs: keep,
         // Version de paquet trop récente pour ce lecteur : mise à jour requise
         // (version exigée inconnue), l'ancienne version du site reste.
@@ -564,13 +612,18 @@ final class SyncService {
       generation: catalog.generation,
       status: complete
           ? 'installed'
-          : (prepared.isEmpty && interrupted ? 'error' : 'partial'),
+          : (prepared.isEmpty && (interrupted || storageCode != null)
+                ? 'error'
+                : 'partial'),
       errorCode: interrupted
           ? 'NETWORK_INTERRUPTED'
-          : failures.firstOrNull?.code ??
+          : storageCode ??
+                failures.firstOrNull?.code ??
                 (deferredBytes > 0 ? 'DOWNLOAD_DEFERRED' : null),
     );
-    final basemaps = interrupted
+    // Sans réseau ou sans place, les fonds de carte attendent : les ETARE
+    // passent avant eux.
+    final basemaps = interrupted || storageCode != null
         ? null
         : await _synchronizeBasemaps(device, catalog, onProgress);
     return SyncCompleted(
@@ -582,6 +635,7 @@ final class SyncService {
       interrupted: interrupted,
       deferredBytes: deferredBytes,
       basemaps: basemaps,
+      storageProblem: storageProblem,
     );
   }
 
@@ -750,13 +804,20 @@ final class SyncService {
       for (final file in files)
         if (!present.contains(file.sha256)) file,
     ];
-    final missingBytes = missing.fold(
-      0,
-      (total, file) => total + file.sizeBytes,
-    );
-    if (missingBytes > 0 && !reserve(missingBytes)) {
+    // Un téléchargement interrompu reprend où il en était.
+    var remainingBytes = 0;
+    for (final file in missing) {
+      remainingBytes += file.sizeBytes - await _files.resumable(file.sha256);
+    }
+    if (remainingBytes > 0 && !reserve(remainingBytes)) {
       throw const _DownloadDeferred();
     }
+    // La version installée reste jusqu'à l'activation : seule la nouvelle
+    // demande de la place.
+    await _storage?.ensure(
+      remainingBytes,
+      reusable: await _offline.reusableBytes(),
+    );
     for (final file in files) {
       if (present.contains(file.sha256)) onBytes(file.sizeBytes, 0);
     }
@@ -801,27 +862,31 @@ final class SyncService {
       for (final file in missing) file.sha256,
     ]);
     for (final file in missing) {
-      final url = urls[file.sha256];
-      if (url == null) throw const SyncIntegrityException('FILE_UNAVAILABLE');
-      List<int> bytes;
-      try {
-        bytes = await _api.download(url);
-      } on ApiException {
-        // URL expirée pendant un long transfert : nouvelle autorisation.
-        urls = await _api.downloadUrls(device, entry.publicationId, [
-          file.sha256,
-        ]);
-        final renewed = urls[file.sha256];
-        if (renewed == null) {
+      // URL expirée pendant un long transfert : nouvelle autorisation.
+      Future<Uri> url({required bool renew}) async {
+        if (renew) {
+          urls = await _api.downloadUrls(device, entry.publicationId, [
+            file.sha256,
+          ]);
+        }
+        final found = urls[file.sha256];
+        if (found == null) {
           throw const SyncIntegrityException('FILE_UNAVAILABLE');
         }
-        bytes = await _api.download(renewed);
+        return found;
       }
-      if (bytes.length != file.sizeBytes || sha256Hex(bytes) != file.sha256) {
+
+      try {
+        await _files.fetch(
+          sha256: file.sha256,
+          sizeBytes: file.sizeBytes,
+          url: url,
+          onProgress: onBytes,
+        );
+      } on FileMismatchException {
         throw const SyncIntegrityException('FILE_HASH_MISMATCH');
       }
-      await _offline.storeBlob(file.sha256, Uint8List.fromList(bytes), _now);
-      onBytes(file.sizeBytes, file.sizeBytes);
+      await _offline.completeFile(file.sha256);
     }
   }
 

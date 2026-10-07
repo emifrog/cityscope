@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:drift/native.dart';
 import 'package:etare_ops/src/core/security/trusted_keys.dart';
+import 'package:etare_ops/src/core/storage/storage_guard.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/features/basemaps/application/basemap_sync.dart';
 import 'package:etare_ops/src/features/basemaps/data/basemap_store.dart';
@@ -13,6 +14,7 @@ import 'package:etare_ops/src/features/sync/data/sync_api.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
+import '../../support/fake_platform.dart';
 import '../../support/fakes.dart';
 import '../sync/fake_sync_server.dart';
 
@@ -43,6 +45,7 @@ void main() {
   late Directory root;
   late SyncService service;
   late BasemapStore store;
+  late FakePlatformServices platform;
 
   setUp(() async {
     server = await FakeSyncServer.start();
@@ -55,6 +58,7 @@ void main() {
     );
     final identities = DeviceIdentityStore(InMemorySecureStore());
     store = BasemapStore(() async => root);
+    platform = FakePlatformServices();
     service = SyncService(
       api: api,
       offline: database.offlineDao,
@@ -70,6 +74,7 @@ void main() {
         clock: () => server.serverClock,
         largeThresholdBytes: 16,
         budgetBytes: 200,
+        storage: StorageGuard(platform: platform, directory: () async => root),
       ),
       clock: () => server.serverClock,
     );
@@ -231,6 +236,21 @@ void main() {
     final report = await sync();
     expect(report.installed, 1);
     expect(report.failures.single.code, 'BASEMAP_BUDGET');
+  });
+
+  test('place insuffisante (CAP-02) : fond reporté avec sa cause, sans rien '
+      'télécharger', () async {
+    server.publishBasemap(basemapOf(1));
+    platform.freeBytes = 1024;
+
+    final report = await sync();
+
+    expect(report.installed, 0);
+    expect(report.failures.single.code, StorageInsufficientException.code);
+    expect(server.downloadedFiles, isEmpty);
+
+    platform.freeBytes = null;
+    expect((await sync()).installed, 1);
   });
 
   test('efface les fonds à la révocation du terminal', () async {

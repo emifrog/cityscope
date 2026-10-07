@@ -6,6 +6,7 @@ import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/data/local/daos/offline_dao.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/lock/application/terminal_providers.dart';
+import 'package:etare_ops/src/features/ops/data/file_source.dart';
 import 'package:etare_ops/src/features/ops/domain/published_site.dart';
 import 'package:etare_ops/src/features/sensitive/application/sensitive_providers.dart';
 import 'package:etare_ops/src/features/sync/application/sync_providers.dart';
@@ -81,19 +82,44 @@ final etarePdfProvider = FutureProvider.family<String?, String>((
   return files.where((file) => file.path == 'etare.pdf').firstOrNull?.sha256;
 });
 
-/// Contenu d'un fichier installé (plan, PDF, photo), par empreinte ; celui
-/// d'un site sensible déverrouillé est déchiffré en mémoire (PER-02).
-final installedFileProvider = FutureProvider.family<Uint8List?, String>((
-  ref,
-  sha256,
-) async {
-  final unlocked = ref.watch(unlockedSitesProvider).values;
-  if (unlocked.isNotEmpty) {
-    final service = ref.read(sensitiveSiteServiceProvider);
-    for (final site in unlocked) {
-      final bytes = await service.file(site, sha256);
-      if (bytes != null) return bytes;
-    }
-  }
-  return ref.watch(appDatabaseProvider).offlineDao.blob(sha256);
-});
+/// Contenu entier d'un fichier installé (plan, photo), par empreinte ; celui
+/// d'un site sensible déverrouillé est déchiffré en mémoire (PER-02). Libéré
+/// dès que plus aucun écran ne l'affiche (CAP-02).
+final installedFileProvider = FutureProvider.autoDispose
+    .family<Uint8List?, String>((ref, sha256) async {
+      final unlocked = ref.watch(unlockedSitesProvider).values;
+      if (unlocked.isNotEmpty) {
+        final service = ref.read(sensitiveSiteServiceProvider);
+        for (final site in unlocked) {
+          final bytes = await service.file(site, sha256);
+          if (bytes != null) return bytes;
+        }
+      }
+      return ref.watch(appDatabaseProvider).offlineDao.blob(sha256);
+    });
+
+/// Fichier installé lu par plages (PDF, CAP-02) : seuls les morceaux des pages
+/// affichées sont lus dans la base chiffrée. Un site sensible déverrouillé est
+/// déchiffré en mémoire (PER-02).
+final installedFileSourceProvider = FutureProvider.autoDispose
+    .family<FileSource?, String>((ref, sha256) async {
+      final unlocked = ref.watch(unlockedSitesProvider).values;
+      if (unlocked.isNotEmpty) {
+        final service = ref.read(sensitiveSiteServiceProvider);
+        for (final site in unlocked) {
+          final bytes = await service.file(site, sha256);
+          if (bytes != null) return MemorySource(bytes);
+        }
+      }
+      final dao = ref.watch(appDatabaseProvider).offlineDao;
+      final stored = await dao.storedFile(sha256);
+      if (stored == null) return null;
+      if (stored.chunkCount == 0) {
+        final bytes = await dao.blob(sha256);
+        return bytes == null ? null : MemorySource(bytes);
+      }
+      return ChunkedSource(
+        length: stored.sizeBytes,
+        chunk: (index) => dao.chunk(sha256, index),
+      );
+    });

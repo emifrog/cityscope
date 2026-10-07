@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:etare_ops/src/core/theme/brand.dart';
+import 'package:etare_ops/src/features/ops/data/file_source.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:pdfrx/pdfrx.dart';
@@ -10,26 +10,27 @@ import 'package:pdfrx/pdfrx.dart';
 /// moteur PDFium est natif).
 typedef PdfViewBuilder = Widget Function(
   BuildContext context,
-  Uint8List bytes,
+  FileSource source,
   String sourceName,
 );
 
 final pdfViewBuilderProvider = Provider<PdfViewBuilder>(
   (ref) =>
-      (context, bytes, sourceName) =>
-          PdfReader(bytes: bytes, sourceName: sourceName),
+      (context, source, sourceName) =>
+          PdfReader(source: source, sourceName: sourceName),
 );
 
-/// Lecture d'un PDF installé (DOC-01) : ouvert directement depuis la mémoire
-/// (octets lus dans la base chiffrée), jamais copié dans un fichier en clair ;
-/// zoom au geste, pages précédente et suivante, erreur explicite.
+/// Lecture d'un PDF installé (DOC-01) : PDFium lit les octets dont il a
+/// besoin, morceau par morceau, dans la base chiffrée (CAP-02) ; le document
+/// n'est jamais copié dans un fichier en clair ni chargé en entier. Zoom au
+/// geste, pages précédente et suivante, erreur explicite.
 class PdfReader extends StatefulWidget {
-  const PdfReader({required this.bytes, required this.sourceName, super.key});
+  const PdfReader({required this.source, required this.sourceName, super.key});
 
   static const previousKey = Key('pdf.previous');
   static const nextKey = Key('pdf.next');
 
-  final Uint8List bytes;
+  final FileSource source;
 
   /// Identifiant stable du document (son empreinte).
   final String sourceName;
@@ -52,8 +53,9 @@ class _PdfReaderState extends State<PdfReader> {
     return Column(
       children: [
         Expanded(
-          child: PdfViewer.data(
-            widget.bytes,
+          child: PdfViewer.custom(
+            fileSize: widget.source.length,
+            read: widget.source.read,
             sourceName: widget.sourceName,
             controller: _controller,
             params: PdfViewerParams(

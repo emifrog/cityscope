@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:drift/drift.dart';
 import 'package:etare_ops/src/core/time/trusted_clock.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
@@ -176,6 +178,7 @@ const removalNoticesKey = 'removal_notices';
     SiteSearch,
     SyncState,
     TrustedTime,
+    FileChunks,
   ],
 )
 class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
@@ -208,7 +211,8 @@ class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
     )..addColumns([count])).map((row) => row.read(count) ?? 0).watchSingle();
   }
 
-  /// Empreintes déjà présentes localement parmi [hashes].
+  /// Empreintes déjà présentes localement parmi [hashes] : fichiers complets
+  /// et vérifiés seulement, jamais un téléchargement en cours.
   Future<Set<String>> presentBlobs(Iterable<String> hashes) async {
     final wanted = hashes.toSet().toList();
     final present = <String>{};
@@ -220,7 +224,10 @@ class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
       final rows =
           await (selectOnly(fileBlobs)
                 ..addColumns([fileBlobs.sha256])
-                ..where(fileBlobs.sha256.isIn(chunk)))
+                ..where(
+                  fileBlobs.sha256.isIn(chunk) &
+                      fileBlobs.receivedBytes.isNull(),
+                ))
               .map((row) => row.read(fileBlobs.sha256))
               .get();
       present.addAll(rows.nonNulls);
@@ -241,10 +248,125 @@ class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
         mode: InsertMode.insertOrIgnore,
       );
 
-  Future<Uint8List?> blob(String sha256) =>
-      (select(fileBlobs)..where((t) => t.sha256.equals(sha256)))
-          .map((row) => row.content)
+  /// Contenu entier d'un fichier complet (images) ; un PDF se lit plutôt
+  /// morceau par morceau ([chunk]).
+  Future<Uint8List?> blob(String sha256) async {
+    final row = await _completeFile(sha256);
+    if (row == null) return null;
+    if (row.chunkCount == 0) return row.content;
+    final builder = BytesBuilder(copy: false);
+    for (var index = 0; index < row.chunkCount; index++) {
+      builder.add(await _chunk(sha256, index));
+    }
+    return builder.takeBytes();
+  }
+
+  Future<FileBlobRow?> _completeFile(String sha256) =>
+      (select(fileBlobs)
+            ..where((t) => t.sha256.equals(sha256) & t.receivedBytes.isNull()))
           .getSingleOrNull();
+
+  Future<Uint8List> _chunk(String sha256, int index) async {
+    final row =
+        await (select(fileChunks)
+              ..where((t) => t.sha256.equals(sha256) & t.idx.equals(index)))
+            .getSingleOrNull();
+    if (row == null) {
+      throw StateError('Morceau $index du fichier $sha256 absent.');
+    }
+    return row.content;
+  }
+
+  /// Taille et nombre de morceaux d'un fichier complet (0 : contenu entier,
+  /// rangé avant CAP-02) ; null s'il n'est pas sur la tablette.
+  Future<({int sizeBytes, int chunkCount})?> storedFile(String sha256) async {
+    final row = await _completeFile(sha256);
+    return row == null
+        ? null
+        : (sizeBytes: row.sizeBytes, chunkCount: row.chunkCount);
+  }
+
+  /// Morceau [index] d'un fichier rangé par morceaux (lecture d'un PDF page
+  /// par page, CAP-02).
+  Future<Uint8List> chunk(String sha256, int index) => _chunk(sha256, index);
+
+  /// Octets déjà reçus d'un téléchargement en cours (0 : rien, ou le
+  /// fichier est complet ; voir [presentBlobs]).
+  Future<int> receivedBytes(String sha256) async {
+    final row = await (select(
+      fileBlobs,
+    )..where((t) => t.sha256.equals(sha256))).getSingleOrNull();
+    return row?.receivedBytes ?? 0;
+  }
+
+  /// Contenu reçu jusqu'ici, morceau par morceau (reprise : l'empreinte est
+  /// recalculée sur ce qui est déjà rangé).
+  Stream<Uint8List> receivedChunks(String sha256) async* {
+    final row = await (select(
+      fileBlobs,
+    )..where((t) => t.sha256.equals(sha256))).getSingleOrNull();
+    final count = row?.chunkCount ?? 0;
+    for (var index = 0; index < count; index++) {
+      yield await _chunk(sha256, index);
+    }
+  }
+
+  /// Ajoute un morceau à un téléchargement en cours (créé au premier).
+  Future<void> appendChunk(
+    String sha256, {
+    required int sizeBytes,
+    required int index,
+    required Uint8List content,
+    required int receivedBytes,
+    required DateTime now,
+  }) => transaction(() async {
+    await into(fileBlobs).insert(
+      FileBlobsCompanion.insert(
+        sha256: sha256,
+        sizeBytes: sizeBytes,
+        content: Uint8List(0),
+        storedAt: now,
+        chunkCount: Value(index + 1),
+        receivedBytes: Value(receivedBytes),
+      ),
+      onConflict: DoUpdate(
+        (_) => FileBlobsCompanion(
+          chunkCount: Value(index + 1),
+          receivedBytes: Value(receivedBytes),
+        ),
+      ),
+    );
+    await into(fileChunks).insertOnConflictUpdate(
+      FileChunksCompanion.insert(sha256: sha256, idx: index, content: content),
+    );
+  });
+
+  /// Le fichier reçu a la taille et l'empreinte annoncées : utilisable.
+  Future<void> completeFile(String sha256) async {
+    await (update(fileBlobs)..where((t) => t.sha256.equals(sha256))).write(
+      const FileBlobsCompanion(receivedBytes: Value(null)),
+    );
+  }
+
+  /// Pages libres de la base chiffrée (fichiers effacés) : place réutilisée
+  /// par les prochains morceaux, que le système ne voit pas libre (CAP-02).
+  Future<int> reusableBytes() async {
+    // Valeur lue sans se fier au nom de colonne : la base chiffrée de la
+    // tablette ne le rend pas comme SQLite seul. Sans valeur, rien compté.
+    Future<int> pragma(String name) async {
+      final row = await customSelect('PRAGMA $name').getSingleOrNull();
+      final value = row?.data.values.firstOrNull;
+      return value is int ? value : 0;
+    }
+
+    return await pragma('freelist_count') * await pragma('page_size');
+  }
+
+  /// Téléchargement abandonné ou fichier refusé : rien n'en reste.
+  Future<void> discardFile(String sha256) => transaction(() async {
+    await (delete(fileChunks)..where((t) => t.sha256.equals(sha256))).go();
+    await (delete(fileBlobs)..where((t) => t.sha256.equals(sha256))).go();
+  });
 
   /// Fichier de données de la version installée d'un site.
   Future<String?> dataText(String siteId) =>
@@ -282,7 +404,10 @@ class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
   Stream<bool> watchBlobPresent(String sha256) =>
       (selectOnly(fileBlobs)
             ..addColumns([fileBlobs.sha256])
-            ..where(fileBlobs.sha256.equals(sha256)))
+            ..where(
+              fileBlobs.sha256.equals(sha256) &
+                  fileBlobs.receivedBytes.isNull(),
+            ))
           .watch()
           .map((rows) => rows.isNotEmpty);
 
@@ -302,6 +427,21 @@ class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
     return true;
   });
 
+  /// Rend utilisable un document « à la demande » téléchargé par morceaux,
+  /// seulement si une version installée le référence encore ; sinon il est
+  /// effacé. Renvoie `false` dans ce cas.
+  Future<bool> completeOnDemandFile(String sha256) => transaction(() async {
+    final referenced = await (select(
+      publicationFiles,
+    )..where((t) => t.sha256.equals(sha256))).get();
+    if (referenced.isEmpty) {
+      await discardFile(sha256);
+      return false;
+    }
+    await completeFile(sha256);
+    return true;
+  });
+
   /// Retire un document « à la demande » de la tablette ; un fichier
   /// obligatoire d'une version installée n'est jamais retiré.
   Future<bool> discardOnDemandBlob(String sha256) => transaction(() async {
@@ -309,6 +449,7 @@ class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
       publicationFiles,
     )..where((t) => t.sha256.equals(sha256) & t.required.equals(true))).get();
     if (required.isNotEmpty) return false;
+    await (delete(fileChunks)..where((t) => t.sha256.equals(sha256))).go();
     final deleted = await (delete(
       fileBlobs,
     )..where((t) => t.sha256.equals(sha256))).go();
@@ -463,6 +604,7 @@ class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
             .get();
     final removable = orphans.nonNulls.where((hash) => !keep.contains(hash));
     for (final hash in removable) {
+      await (delete(fileChunks)..where((t) => t.sha256.equals(hash))).go();
       await (delete(fileBlobs)..where((t) => t.sha256.equals(hash))).go();
     }
   }
@@ -488,6 +630,7 @@ class OfflineDao extends DatabaseAccessor<AppDatabase> with _$OfflineDaoMixin {
       await delete(installedPublications).go();
       await delete(siteData).go();
       await delete(siteSearch).go();
+      await delete(fileChunks).go();
       await delete(fileBlobs).go();
       await (update(
         syncState,

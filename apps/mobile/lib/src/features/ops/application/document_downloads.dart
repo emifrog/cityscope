@@ -21,6 +21,7 @@ final documentDownloaderProvider = Provider<DocumentDownloader>((ref) {
     identities: ref.watch(deviceIdentityStoreProvider),
     clock: ref.watch(clockProvider),
     keys: ref.watch(deviceKeysProvider),
+    storage: ref.watch(storageGuardProvider),
   );
 });
 
@@ -105,7 +106,9 @@ class DocumentDownloadController extends Notifier<DocumentDownloadState> {
             onProgress: (received, total) =>
                 state = DocumentDownloading(received: received, total: total),
           );
-      ref.invalidate(installedFileProvider(file.sha256));
+      ref
+        ..invalidate(installedFileProvider(file.sha256))
+        ..invalidate(installedFileSourceProvider(file.sha256));
       state = const DocumentDownloadIdle();
     } on DocumentDownloadException catch (error) {
       state = DocumentDownloadFailed(error.failure.message);
@@ -136,7 +139,9 @@ class DocumentDownloadController extends Notifier<DocumentDownloadState> {
   /// Retire le document de la tablette (place libérée).
   Future<void> discard() async {
     await ref.read(documentDownloaderProvider).discard(file.sha256);
-    ref.invalidate(installedFileProvider(file.sha256));
+    ref
+      ..invalidate(installedFileProvider(file.sha256))
+      ..invalidate(installedFileSourceProvider(file.sha256));
     state = const DocumentDownloadIdle();
   }
 }

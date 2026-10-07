@@ -347,6 +347,18 @@ final class FakeSyncServer {
 
   /// Hors ligne pour les fichiers à partir du n-ième téléchargement.
   int? filesOfflineAfter;
+
+  /// Le prochain fichier servi est coupé après ce nombre d'octets (CAP-02).
+  int? cutNextFileAfterBytes;
+
+  /// Le stockage ignore les requêtes `Range` (renvoie tout le fichier).
+  bool ignoreRange = false;
+
+  /// Octets par lecture du flux d'un fichier.
+  int filePieceBytes = 1000;
+
+  /// En-têtes `Range` reçus, dans l'ordre des téléchargements de fichiers.
+  final List<String?> fileRanges = [];
   String catalogUserId = userId;
 
   /// Tablette sans réseau : aucune réponse de l'API.
@@ -824,7 +836,7 @@ final class FakeSyncServer {
           final served = corruptedFiles.contains(hash)
               ? [bytes.first ^ 0xff, ...bytes.skip(1)]
               : bytes;
-          return ResponseBody.fromBytes(Uint8List.fromList(served), 200);
+          return _serveStream(options, served);
         }
       }
     }
@@ -839,6 +851,39 @@ final class FakeSyncServer {
       }
     }
     return ResponseBody.fromString('', 404);
+  }
+
+  /// Fichier servi en flux, à partir de l'octet demandé (`Range`) ; coupé en
+  /// route si [cutNextFileAfterBytes] est posé.
+  ResponseBody _serveStream(RequestOptions options, List<int> bytes) {
+    final range = options.headers['range'] as String?;
+    fileRanges.add(range);
+    var start = 0;
+    if (range != null && !ignoreRange) {
+      final match = RegExp(r'^bytes=(\d+)-$').firstMatch(range);
+      start = int.parse(match!.group(1)!);
+    }
+    final cut = cutNextFileAfterBytes;
+    cutNextFileAfterBytes = null;
+    final rest = bytes.sublist(start);
+    final piece = filePieceBytes;
+    Stream<Uint8List> pieces() async* {
+      for (var offset = 0; offset < rest.length; offset += piece) {
+        if (cut != null && offset >= cut) {
+          throw const SocketException('coupure simulée');
+        }
+        final end = offset + piece < rest.length ? offset + piece : rest.length;
+        yield Uint8List.fromList(rest.sublist(offset, end));
+      }
+    }
+
+    return ResponseBody(
+      pieces(),
+      start > 0 ? 206 : 200,
+      headers: {
+        Headers.contentLengthHeader: ['${rest.length}'],
+      },
+    );
   }
 
   /// La requête doit être signée par la tablette, à 5 min de l'horloge serveur.

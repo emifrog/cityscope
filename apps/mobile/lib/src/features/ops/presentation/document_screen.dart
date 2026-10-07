@@ -1,14 +1,19 @@
+import 'dart:typed_data';
+
 import 'package:etare_ops/src/core/formatting/date_formatting.dart';
+import 'package:etare_ops/src/core/theme/bounded_image.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
 import 'package:etare_ops/src/features/ops/application/document_downloads.dart';
 import 'package:etare_ops/src/features/ops/application/ops_providers.dart';
+import 'package:etare_ops/src/features/ops/data/file_source.dart';
 import 'package:etare_ops/src/features/ops/presentation/pdf_reader.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Document lu depuis la base chiffrée : jamais écrit en clair sur le stockage
-/// de la tablette. Images zoomables, PDF lus dans l'application (DOC-01). Un
-/// document « à la demande » absent se télécharge ici, explicitement (DOC-02).
+/// de la tablette. Images zoomables, décodées à taille bornée ; PDF lus dans
+/// l'application, par plages (DOC-01, CAP-02). Un document « à la demande »
+/// absent se télécharge ici, explicitement (DOC-02).
 class DocumentScreen extends ConsumerWidget {
   const DocumentScreen({
     required this.title,
@@ -18,6 +23,8 @@ class DocumentScreen extends ConsumerWidget {
     this.onDemandSiteId,
     super.key,
   });
+
+  static const _pdf = 'application/pdf';
 
   static const downloadButtonKey = Key('document.download');
   static const removeButtonKey = Key('document.remove');
@@ -34,7 +41,10 @@ class DocumentScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final file = ref.watch(installedFileProvider(sha256));
+    // Un PDF n'est jamais chargé en entier : PDFium lit ses pages au besoin.
+    final AsyncValue<Object?> file = mimeType == _pdf
+        ? ref.watch(installedFileSourceProvider(sha256))
+        : ref.watch(installedFileProvider(sha256));
     final siteId = onDemandSiteId;
     final present = file.value != null;
     return Scaffold(
@@ -52,13 +62,18 @@ class DocumentScreen extends ConsumerWidget {
       ),
       body: SafeArea(
         child: switch (file) {
-          AsyncData(value: final bytes?) when mimeType.startsWith('image/') =>
+          AsyncData(value: final Uint8List bytes)
+              when mimeType.startsWith('image/') =>
             Column(
               children: [
                 Expanded(
                   child: InteractiveViewer(
                     maxScale: 8,
-                    child: Center(child: Image.memory(bytes)),
+                    child: Center(
+                      child: Image(
+                        image: boundedImage(bytes, maxSide: photoMaxSide),
+                      ),
+                    ),
                   ),
                 ),
                 if (caption case final text?)
@@ -71,8 +86,9 @@ class DocumentScreen extends ConsumerWidget {
                   ),
               ],
             ),
-          AsyncData(value: final bytes?) when mimeType == 'application/pdf' =>
-            ref.watch(pdfViewBuilderProvider)(context, bytes, 'sha256:$sha256'),
+          AsyncData(value: final FileSource source) => ref.watch(
+            pdfViewBuilderProvider,
+          )(context, source, 'sha256:$sha256'),
           AsyncData(value: _?) => const _Notice(
             icon: Icons.description_outlined,
             text: 'Format de document non lisible sur la tablette.',
