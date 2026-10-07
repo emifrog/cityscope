@@ -68,7 +68,7 @@ production.
 - La perte des deux copies de la clé interdit toute mise à jour. Il faudrait alors une nouvelle
   application, avec désinstallation et réenrôlement de chaque tablette. La garde de la clé est donc
   aussi critique que celle de la racine.
-- Le poste qui construit doit avoir Flutter, un JDK 17 ou plus et le SDK Android. Une configuration
+- Le poste qui construit doit avoir Flutter, un JDK 21 (exigé par le plugin de carte) et le SDK Android. Une configuration
   Gradle personnelle trop pauvre en mémoire se contourne avec `--gradle-home` (construction isolée).
 - La CI construit la préproduction en release avec une clé jetable. Elle prouve que la configuration
   de signature, R8 et les variantes tiennent, sans jamais voir la vraie clé.
