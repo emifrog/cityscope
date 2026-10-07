@@ -66,12 +66,12 @@ export function normalizeFingerprint(value: string): string {
 /**
  * Distinct signing certificates, from `apksigner verify --print-certs`. Depending on the build-tools
  * version and the signature schemes, a signer is printed as `Signer #1`, `Signer (minSdkVersion=…)` or
- * `Signer #1 (v3 …)`; the same certificate printed for several schemes counts once.
+ * `V2 Signer:`; the same certificate printed for several schemes counts once.
  */
 export function signerCertificates(output: string): { sha256: string; subject: string }[] {
   const signers = new Map<string, { sha256?: string; subject?: string }>();
   for (const line of output.split(/\r?\n/)) {
-    const match = /^(Signer\b.*?) certificate (DN|SHA-256 digest): (.+)$/.exec(line.trim());
+    const match = /^(.*?Signer\b[^:]*?):? certificate (DN|SHA-256 digest): (.+)$/.exec(line.trim());
     if (!match?.[1] || !match[2] || !match[3] || /source stamp/i.test(match[1])) continue;
     const signer = signers.get(match[1]) ?? {};
     if (match[2] === 'DN') signer.subject = match[3];

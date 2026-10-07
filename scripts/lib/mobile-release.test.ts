@@ -68,6 +68,14 @@ describe('mobile release (EXP-04)', () => {
       'Source Stamp Signer certificate SHA-256 digest: ffff',
     ].join('\n');
     expect(signerCertificates(lineage)).toEqual([{ sha256: '0a1b', subject: 'CN=FireScape, C=FR' }]);
+    // Recent build-tools: « V2 Signer: certificate … ».
+    const recent = [
+      'Number of signers: 1',
+      'V2 Signer: certificate DN: CN=FireScape, O=CI, C=FR',
+      'V2 Signer: certificate SHA-256 digest: ef3f',
+      'V2 Signer: public key SHA-256 digest: 4d60',
+    ].join('\n');
+    expect(signerCertificates(recent)).toEqual([{ sha256: 'ef3f', subject: 'CN=FireScape, O=CI, C=FR' }]);
     expect(isDebugCertificate('C=US, O=Android, CN=Android Debug')).toBe(true);
     expect(isDebugCertificate('CN=FireScape, O=SDIS, C=FR')).toBe(false);
   });
