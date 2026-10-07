@@ -86,7 +86,10 @@ function setup(roles: Role[] = ['OPS_USER'], overrides: Partial<FieldReportRepos
       work(
         stubSession(
           { userId: 'user', tenantId: ctx.tenantId, permissions: permissionsForRoles(roles) },
-          { devices: { syncDevice: async () => ({ status: 'active', publicKey: KEY }) }, fieldReports },
+          {
+            devices: { syncDevice: async () => ({ status: 'active', publicKey: KEY, keyAlgorithm: 'ed25519' }) },
+            fieldReports,
+          },
         ),
       ),
   };
@@ -94,7 +97,7 @@ function setup(roles: Role[] = ['OPS_USER'], overrides: Partial<FieldReportRepos
     sessions,
     storage,
     catalogSigner: { sign: async () => ({ algorithm: 'Ed25519', key_id: 'catalog', signature: 's' }) },
-    verifier: { verify: (publicKey, text, signature) => signature === `${publicKey}|${text}` },
+    verifier: { verify: (_algorithm, publicKey, text, signature) => signature === `${publicKey}|${text}` },
     sha256: async () => '0'.repeat(64),
     randomBytes: (length) => new Uint8Array(length),
     now: () => NOW,

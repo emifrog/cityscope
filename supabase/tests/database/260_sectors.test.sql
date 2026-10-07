@@ -65,6 +65,11 @@ select app.admin_sites_outside_sectors() as outside_before \gset
 reset role;
 insert into app.site (tenant_id, name, site_type)
 values ('06000000-0000-4000-8000-000000000000', 'Site sans commune (pgTAP)', 'other');
+create temporary table nice_sites on commit drop as
+  select id from app.site
+  where tenant_id = '06000000-0000-4000-8000-000000000000'
+    and app.site_in_sector(id, '0600001a-0000-4000-8000-000000000001');
+grant select on nice_sites to etare_api;
 set local role etare_api;
 select is(app.admin_sites_outside_sectors(), :outside_before::bigint + 1, 'a site in no sector is counted for the administration');
 
@@ -91,9 +96,10 @@ select ok(not app.has_permission('site:read'), 'a limited member holds nothing o
 select ok(app.has_permission('site:read', '06000002-0000-4000-8000-000000000001'), 'but holds it on the sites of the sector');
 select ok(not app.has_permission('site:read', '06000002-0000-4000-8000-000000000002'), 'and not outside');
 select ok(app.holds_permission_on_part('offline:download'), 'the added role is limited the same way');
-select results_eq(
+-- The seeded EHPAD, and the sites of Nice that earlier runs may have left on a local stack.
+select set_eq(
   $$ select id from app.site $$,
-  array['06000002-0000-4000-8000-000000000001'::uuid],
+  $$ select id from pg_temp.nice_sites $$,
   'row-level security shows the sites of the sector only'
 );
 

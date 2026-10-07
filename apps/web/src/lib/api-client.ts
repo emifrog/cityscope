@@ -74,6 +74,7 @@ import {
   type DeviceCreate,
   type DeviceEnrollmentCode,
   type DeviceList,
+  type TerminalPolicySettings,
   type DeviceRevoke,
   type DevicePerimeterInput,
   type MemberPerimeterInput,
@@ -868,6 +869,15 @@ export const api = {
     }),
 
   // ---------------------------------------------------------------- terminals (ADMIN-02)
+  getTerminalPolicy: (options: ApiCallOptions): Promise<TerminalPolicySettings> =>
+    call(endpoints.getTerminalPolicy.response, endpoints.getTerminalPolicy.path, options),
+
+  updateTerminalPolicy: (options: ApiCallOptions, input: TerminalPolicySettings): Promise<TerminalPolicySettings> =>
+    call(endpoints.updateTerminalPolicy.response, endpoints.updateTerminalPolicy.path, options, {
+      method: 'PUT',
+      body: input,
+    }),
+
   listDevices: (options: ApiCallOptions): Promise<DeviceList> =>
     call(endpoints.listDevices.response, endpoints.listDevices.path, options),
 

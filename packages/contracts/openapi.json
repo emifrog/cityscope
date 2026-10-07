@@ -70,6 +70,42 @@
             ],
             "additionalProperties": false
           },
+          "terminal_policy": {
+            "type": "object",
+            "properties": {
+              "idle_lock_minutes": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 60
+              },
+              "background_lock_seconds": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 600
+              },
+              "screenshots_allowed": {
+                "type": "boolean"
+              },
+              "max_days_without_login": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 90
+              },
+              "offline_authorization_days": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 14
+              }
+            },
+            "required": [
+              "idle_lock_minutes",
+              "background_lock_seconds",
+              "screenshots_allowed",
+              "max_days_without_login",
+              "offline_authorization_days"
+            ],
+            "additionalProperties": false
+          },
           "min_app_version": {
             "anyOf": [
               {
@@ -300,6 +336,7 @@
           "generation",
           "issued_at",
           "authorization",
+          "terminal_policy",
           "min_app_version",
           "publications",
           "on_demand",
@@ -9707,6 +9744,24 @@
             ],
             "exclusiveMinimum": 0
           },
+          "key_algorithm": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "ed25519",
+              "ecdsa-p256",
+              null
+            ]
+          },
+          "key_rotated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
           "installed_sites": {
             "type": "integer",
             "minimum": 0
@@ -9743,6 +9798,8 @@
           "catalog_generation",
           "installed_generation",
           "keyset_sequence",
+          "key_algorithm",
+          "key_rotated_at",
           "installed_sites",
           "perimeter",
           "created_at",
@@ -9874,8 +9931,17 @@
             "minLength": 1,
             "maxLength": 40
           },
+          "key_algorithm": {
+            "type": "string",
+            "enum": [
+              "ed25519",
+              "ecdsa-p256"
+            ],
+            "default": "ed25519"
+          },
           "public_key": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 200
           },
           "platform": {
             "type": "string",
@@ -9889,7 +9955,8 @@
             "pattern": "^[0-9A-Za-z.+-]{1,32}$"
           },
           "proof": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 200
           }
         },
         "required": [
@@ -9899,6 +9966,87 @@
           "app_version",
           "proof"
         ]
+      },
+      "DeviceKeyRotation": {
+        "type": "object",
+        "properties": {
+          "key_algorithm": {
+            "type": "string",
+            "enum": [
+              "ed25519",
+              "ecdsa-p256"
+            ]
+          },
+          "rotated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "key_algorithm",
+          "rotated_at"
+        ]
+      },
+      "DeviceKeyRotate": {
+        "type": "object",
+        "properties": {
+          "key_algorithm": {
+            "type": "string",
+            "enum": [
+              "ed25519",
+              "ecdsa-p256"
+            ]
+          },
+          "public_key": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "proof": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "key_algorithm",
+          "public_key",
+          "proof"
+        ]
+      },
+      "TerminalPolicy": {
+        "type": "object",
+        "properties": {
+          "idle_lock_minutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60
+          },
+          "background_lock_seconds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 600
+          },
+          "screenshots_allowed": {
+            "type": "boolean"
+          },
+          "max_days_without_login": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 90
+          },
+          "offline_authorization_days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 14
+          }
+        },
+        "required": [
+          "idle_lock_minutes",
+          "background_lock_seconds",
+          "screenshots_allowed",
+          "max_days_without_login",
+          "offline_authorization_days"
+        ],
+        "additionalProperties": false
       },
       "TenantSupervision": {
         "type": "object",
@@ -22981,6 +23129,323 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DeviceEnrollment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflit avec des données existantes (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sync/device-key": {
+      "post": {
+        "operationId": "rotateDeviceKey",
+        "summary": "Remplacer la clé de ce terminal par une nouvelle clé qu’il détient (rotation signée)",
+        "tags": [
+          "sync"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Terminal enrôlé qui signe la requête."
+            },
+            "required": true,
+            "description": "Terminal enrôlé qui signe la requête.",
+            "name": "x-device-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{1,15}$",
+              "description": "Horloge du terminal (millisecondes depuis 1970), à 5 min près de celle du serveur."
+            },
+            "required": true,
+            "description": "Horloge du terminal (millisecondes depuis 1970), à 5 min près de celle du serveur.",
+            "name": "x-device-time",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Ed25519 (base64) du texte « etare.device-request.v1 », méthode, chemin, horloge et SHA-256 du corps, un par ligne."
+            },
+            "required": true,
+            "description": "Ed25519 (base64) du texte « etare.device-request.v1 », méthode, chemin, horloge et SHA-256 du corps, un par ligne.",
+            "name": "x-device-signature",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Version de l’application OPS."
+            },
+            "required": false,
+            "description": "Version de l’application OPS.",
+            "name": "x-app-version",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceKeyRotate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceKeyRotation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise (UNAUTHENTICATED, DEVICE_PROOF_INVALID, DEVICE_CLOCK_SKEW)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, DEVICE_NOT_ENROLLED, DEVICE_REVOKED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflit avec des données existantes (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/settings/terminals": {
+      "get": {
+        "operationId": "getTerminalPolicy",
+        "summary": "Politique de verrouillage et de session des tablettes du SIS (administration)",
+        "tags": [
+          "devices"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TerminalPolicy"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateTerminalPolicy",
+        "summary": "Modifier la politique des tablettes (second facteur exigé, auditée, suivie au prochain catalogue)",
+        "tags": [
+          "devices"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TerminalPolicy"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TerminalPolicy"
                 }
               }
             }

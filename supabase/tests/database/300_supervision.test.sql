@@ -68,11 +68,11 @@ select results_eq(
 );
 
 -- Old history to purge, recent history to keep.
-insert into app.job (tenant_id, job_type, status, created_at, completed_at) values
-  (null, 'system.noop', 'succeeded', now() - interval '40 days', now() - interval '40 days'),
-  (null, 'system.noop', 'succeeded', now() - interval '2 days', now() - interval '2 days'),
-  (null, 'system.noop', 'dead', now() - interval '40 days', now() - interval '40 days'),
-  (null, 'system.noop', 'dead', now() - interval '100 days', now() - interval '100 days');
+insert into app.job (id, tenant_id, job_type, status, created_at, completed_at) values
+  ('0600009a-0000-4000-8000-000000000301', null, 'system.noop', 'succeeded', now() - interval '40 days', now() - interval '40 days'),
+  ('0600009a-0000-4000-8000-000000000302', null, 'system.noop', 'succeeded', now() - interval '2 days', now() - interval '2 days'),
+  ('0600009a-0000-4000-8000-000000000303', null, 'system.noop', 'dead', now() - interval '40 days', now() - interval '40 days'),
+  ('0600009a-0000-4000-8000-000000000304', null, 'system.noop', 'dead', now() - interval '100 days', now() - interval '100 days');
 insert into app.device (id, tenant_id, name, status, platform, public_key, enrolled_at, enrolled_by, created_by)
 values ('06000010-0000-4000-8000-000000000300', '06000000-0000-4000-8000-000000000000', 'TABLETTE SUPERVISION', 'active',
         'android', 'Daaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa=', now(), '00000000-0000-4000-b000-000000000004',
@@ -90,7 +90,9 @@ select ok(
 );
 reset role;
 select results_eq(
-  $$ select status, count(*) from app.job where job_type = 'system.noop' and completed_at < now() - interval '1 day'
+  $$ select status, count(*) from app.job
+     where id in ('0600009a-0000-4000-8000-000000000301', '0600009a-0000-4000-8000-000000000302',
+                  '0600009a-0000-4000-8000-000000000303', '0600009a-0000-4000-8000-000000000304')
      group by status order by status $$,
   $$ values ('dead', 1::bigint), ('succeeded', 1::bigint) $$,
   'a succeeded job is kept 30 days, a dead one 90 days'

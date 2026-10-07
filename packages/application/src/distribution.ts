@@ -5,6 +5,8 @@ import {
   type DeviceEnroll,
   type DeviceEnrollment,
   type DeviceEnrollmentCode,
+  type DeviceKeyRotate,
+  type DeviceKeyRotation,
   type DeviceList,
   type DeviceRevoke,
   type SyncAccessEvents,
@@ -22,6 +24,7 @@ import {
   type SyncPackage,
   type SyncReceipt,
   type SyncReceiptResult,
+  type TerminalPolicySettings,
 } from '@etare/contracts';
 import {
   CATALOG_VERSION,
@@ -34,12 +37,13 @@ import {
   ENROLLMENT_CODE_TTL_HOURS,
   InvalidInput,
   NotFound,
-  OFFLINE_AUTHORIZATION_DAYS,
   ON_DEMAND_ACCESS_HOURS,
   SIGNATURE_CONTEXTS,
   ServiceUnavailable,
   TenantRequired,
   canonicalJson,
+  completeTerminalPolicy,
+  deviceKeyRotationText,
   deviceRequestText,
   enrollmentCodeFromBytes,
   enrollmentText,
@@ -189,6 +193,7 @@ export async function enrollDevice(
   const tenantId = context.tenantId;
   if (!tenantId) throw new TenantRequired();
   const proven = deps.verifier.verify(
+    input.key_algorithm,
     input.public_key,
     enrollmentText({ tenantId, code, publicKey: input.public_key }),
     input.proof,
@@ -199,6 +204,7 @@ export async function enrollDevice(
   return inTenant(deps.sessions, { ...context, purpose: 'enrollment' }, 'offline:download', (session) =>
     session.devices.enroll({
       codeHash,
+      keyAlgorithm: input.key_algorithm,
       publicKey: input.public_key,
       platform: input.platform,
       appVersion: input.app_version,
@@ -225,7 +231,7 @@ export async function asDevice<T>(
   return inTenant(deps.sessions, { ...context, deviceId: proof.deviceId }, 'offline:download', async (session) => {
     const device = await session.devices.syncDevice(proof.deviceId);
     if (!device?.publicKey) throw new DeviceNotEnrolled();
-    if (!deps.verifier.verify(device.publicKey, deviceRequestText(proof), proof.signature)) {
+    if (!deps.verifier.verify(device.keyAlgorithm, device.publicKey, deviceRequestText(proof), proof.signature)) {
       throw new DeviceProofInvalid();
     }
     if (Math.abs(deps.now().getTime() - proof.timestamp) > DEVICE_PROOF_MAX_SKEW_MS) throw new DeviceClockSkew();
@@ -234,6 +240,52 @@ export async function asDevice<T>(
     session.confirmDeviceProof();
     return work(session);
   });
+}
+
+/**
+ * The terminal moves to a new key (SEC-05): the request is signed by its current
+ * key, the new key signs the rotation text. From then on only the new key is accepted.
+ */
+export async function rotateDeviceKey(
+  deps: DistributionDependencies,
+  context: RequestContext,
+  proof: DeviceProof,
+  input: DeviceKeyRotate,
+): Promise<DeviceKeyRotation> {
+  const tenantId = context.tenantId;
+  if (!tenantId) throw new TenantRequired();
+  const rotationText = deviceKeyRotationText({
+    tenantId,
+    deviceId: proof.deviceId,
+    algorithm: input.key_algorithm,
+    publicKey: input.public_key,
+  });
+  if (!deps.verifier.verify(input.key_algorithm, input.public_key, rotationText, input.proof)) {
+    throw new DeviceProofInvalid();
+  }
+  const rotatedAt = await asDevice(deps, context, proof, (session) =>
+    session.devices.rotateKey(proof.deviceId, input.key_algorithm, input.public_key),
+  );
+  return { key_algorithm: input.key_algorithm, rotated_at: rotatedAt.toISOString() };
+}
+
+// ------------------------------------------------------------------ policy of the tablets (device:manage)
+export async function getTerminalPolicy(
+  sessions: SessionFactory,
+  context: RequestContext,
+): Promise<TerminalPolicySettings> {
+  return inTenant(sessions, context, 'device:manage', async (session) =>
+    completeTerminalPolicy(await session.devices.policy()),
+  );
+}
+
+/** The tablets of the SIS follow it at their next catalogue (second factor required, audited). */
+export async function updateTerminalPolicy(
+  sessions: SessionFactory,
+  context: RequestContext,
+  input: TerminalPolicySettings,
+): Promise<TerminalPolicySettings> {
+  return inTenant(sessions, context, 'device:manage', (session) => session.devices.updatePolicy(input));
 }
 
 async function configuredKeyset(deps: DistributionDependencies): Promise<LoadedKeyset | null> {
@@ -281,6 +333,7 @@ export async function getSyncCatalog(
       proof.appVersion,
     );
     const basemaps = await session.devices.basemaps(proof.deviceId);
+    const policy = completeTerminalPolicy(await session.devices.terminalPolicy(proof.deviceId));
     const now = deps.now();
     return syncCatalogSchema.parse({
       catalog_version: CATALOG_VERSION,
@@ -292,8 +345,9 @@ export async function getSyncCatalog(
       authorization: {
         // The terminal knows the user by the subject of their token, not by our internal id.
         subject: context.principal.subject,
-        expires_at: new Date(now.getTime() + OFFLINE_AUTHORIZATION_DAYS * 86_400_000).toISOString(),
+        expires_at: new Date(now.getTime() + policy.offline_authorization_days * 86_400_000).toISOString(),
       },
+      terminal_policy: policy,
       min_app_version: deps.minAppVersion ?? null,
       publications,
       on_demand: onDemand,

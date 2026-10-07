@@ -70,6 +70,8 @@ export const SIGNATURE_CONTEXTS = {
   basemap: 'etare.basemap.v1',
   /** Key set of the platform, signed by the root key (SEC-04, ADR-027). */
   keyset: 'etare.keyset.v1',
+  /** New key of a terminal, signed by itself at a rotation (SEC-05, ADR-029). */
+  deviceKey: 'etare.device-key.v1',
 } as const;
 export type SignatureContext = (typeof SIGNATURE_CONTEXTS)[keyof typeof SIGNATURE_CONTEXTS];
 

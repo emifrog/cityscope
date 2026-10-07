@@ -99,6 +99,7 @@ import type {
   SyncReportStatus,
 } from '@etare/contracts';
 import type {
+  DeviceKeyAlgorithm,
   DevicePlatform,
   DeviceStatus,
   OptionalSection,
@@ -110,6 +111,7 @@ import type {
   Sensitivity,
   SignatureContext,
   Keyset,
+  TerminalPolicy,
 } from '@etare/domain';
 
 /**
@@ -616,9 +618,9 @@ export interface LoadedKeyset {
   readonly keyset: Keyset;
 }
 
-/** Checks the signature of a terminal with its raw public key. */
+/** Checks the signature of a terminal with its public key, in the algorithm of the key (SEC-05). */
 export interface DeviceSignatureVerifier {
-  verify(publicKey: string, text: string, signature: string): boolean;
+  verify(algorithm: DeviceKeyAlgorithm, publicKey: string, text: string, signature: string): boolean;
 }
 
 /** A publication as distributed to terminals: signed manifest and data, as built by the worker. */
@@ -738,12 +740,23 @@ export interface DeviceRepository {
   /** Consumes a valid code of the current SIS; throws when it is unknown, used or expired. */
   enroll(input: {
     readonly codeHash: string;
+    readonly keyAlgorithm: DeviceKeyAlgorithm;
     readonly publicKey: string;
     readonly platform: DevicePlatform;
     readonly appVersion: string;
   }): Promise<DeviceEnrollment>;
   /** Status and key of a terminal of the current SIS (null when unknown). */
-  syncDevice(id: string): Promise<{ status: DeviceStatus; publicKey: string | null } | null>;
+  syncDevice(
+    id: string,
+  ): Promise<{ status: DeviceStatus; publicKey: string | null; keyAlgorithm: DeviceKeyAlgorithm } | null>;
+  /** Replaces the key of an active terminal of the current SIS (SEC-05); returns the time of the rotation. */
+  rotateKey(deviceId: string, keyAlgorithm: DeviceKeyAlgorithm, publicKey: string): Promise<Date>;
+  /** Policy set by the SIS of an active terminal, as stored (null: none set, the defaults apply). */
+  terminalPolicy(deviceId: string): Promise<Partial<TerminalPolicy> | null>;
+  /** Policy set by the current SIS (device:manage), as stored. */
+  policy(): Promise<Partial<TerminalPolicy> | null>;
+  /** Replaces the policy of the current SIS (device:manage, second factor). */
+  updatePolicy(policy: TerminalPolicy): Promise<TerminalPolicy>;
   /** Distributable publications at the current generation; records the contact of the terminal. */
   catalog(
     deviceId: string,

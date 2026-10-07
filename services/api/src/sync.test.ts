@@ -4,7 +4,7 @@ import {
   IgnCartographyCatalog,
   IgnGeocoder,
   createLogger,
-  ed25519Verifier,
+  deviceSignatureVerifier,
   verifyEd25519,
   type AccessTokenVerifier,
 } from '@etare/adapters';
@@ -27,6 +27,7 @@ function makeApp() {
     syncDevice: vi.fn<DeviceRepository['syncDevice']>(async () => ({
       status: 'active',
       publicKey: terminalKey.publicKey,
+      keyAlgorithm: 'ed25519',
     })),
     catalog: vi.fn<DeviceRepository['catalog']>(async () => ({
       generation: 3,
@@ -59,7 +60,7 @@ function makeApp() {
     geocoder: new IgnGeocoder(async () => new Response('{"features":[]}')),
     sha256: async (text) => sha256Hex(text),
     catalogSigner: catalogKey,
-    verifier: ed25519Verifier,
+    verifier: deviceSignatureVerifier,
     randomBytes: (length) => new Uint8Array(length),
     now: () => new Date(),
     logger: createLogger({}, { write: () => undefined }),

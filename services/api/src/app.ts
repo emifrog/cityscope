@@ -52,6 +52,9 @@ import {
   createZone,
   decideRevision,
   enrollDevice,
+  getTerminalPolicy,
+  rotateDeviceKey,
+  updateTerminalPolicy,
   getAssetDownload,
   getSyncCatalog,
   getSyncKeyset,
@@ -1118,6 +1121,17 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     return respond(c, endpoints.updateSecuritySettings, await updateSecuritySettings(deps.sessions, context, input));
   });
 
+  app.get(routerPath(endpoints.getTerminalPolicy.path), async (c) => {
+    const context = await requestContext(c, endpoints.getTerminalPolicy);
+    return respond(c, endpoints.getTerminalPolicy, await getTerminalPolicy(deps.sessions, context));
+  });
+
+  app.put(routerPath(endpoints.updateTerminalPolicy.path), async (c) => {
+    const context = await requestContext(c, endpoints.updateTerminalPolicy);
+    const input = await readBody(c, endpoints.updateTerminalPolicy.body);
+    return respond(c, endpoints.updateTerminalPolicy, await updateTerminalPolicy(deps.sessions, context, input));
+  });
+
   app.get(routerPath(endpoints.getPortalSettings.path), async (c) => {
     const context = await requestContext(c, endpoints.getPortalSettings);
     return respond(c, endpoints.getPortalSettings, await getPortalSettings(deps.sessions, context));
@@ -1218,6 +1232,12 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     const context = await requestContext(c, endpoints.enrollDevice);
     const input = await readBody(c, endpoints.enrollDevice.body);
     return respond(c, endpoints.enrollDevice, await enrollDevice(deps, context, input));
+  });
+
+  app.post(routerPath(endpoints.rotateDeviceKey.path), async (c) => {
+    const { context, proof, body } = await deviceRequest(c, endpoints.rotateDeviceKey, endpoints.rotateDeviceKey.body);
+    if (!body) throw new InvalidInput();
+    return respond(c, endpoints.rotateDeviceKey, await rotateDeviceKey(deps, context, proof, body));
   });
 
   app.get(routerPath(endpoints.getSyncKeyset.path), async (c) => {

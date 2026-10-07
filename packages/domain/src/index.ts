@@ -14,4 +14,5 @@ export * from './objects';
 export * from './portal';
 export * from './site';
 export * from './storage';
+export * from './terminal';
 export * from './workflow';

@@ -8,7 +8,9 @@ import {
   InvalidInput,
   NotFound,
   ServiceUnavailable,
+  DEFAULT_TERMINAL_POLICY,
   canonicalJson,
+  deviceKeyRotationText,
   deviceRequestText,
   enrollmentText,
   permissionsForRoles,
@@ -30,7 +32,10 @@ import {
   getSyncCatalog,
   getSyncKeyset,
   getSyncPackage,
+  getTerminalPolicy,
+  rotateDeviceKey,
   submitAccessEvents,
+  updateTerminalPolicy,
   type DeviceProof,
   type DistributionDependencies,
 } from './distribution';
@@ -64,7 +69,8 @@ const sha256 = async (text: string) => fakeHash(text);
  */
 const fakeSign = (key: string, text: string) => fakeHash(`${key}|${text}`);
 const verifier = {
-  verify: (publicKey: string, text: string, signature: string) => fakeSign(publicKey, text) === signature,
+  verify: (_algorithm: string, publicKey: string, text: string, signature: string) =>
+    fakeSign(publicKey, text) === signature,
 };
 
 let keys = 0;
@@ -141,7 +147,7 @@ const basemapEntry = {
 
 function setup(device: { status: DeviceStatus; publicKey: string | null } | null, roles: Role[] = ['OPS_USER']) {
   const devices = {
-    syncDevice: vi.fn<DeviceRepository['syncDevice']>(async () => device),
+    syncDevice: vi.fn<DeviceRepository['syncDevice']>(async () => device && { keyAlgorithm: 'ed25519', ...device }),
     catalog: vi.fn<DeviceRepository['catalog']>(async () => ({
       generation: 7,
       tenantName: 'SDIS DEMO 06',
@@ -162,6 +168,10 @@ function setup(device: { status: DeviceStatus; publicKey: string | null } | null
     basemap: vi.fn<DeviceRepository['basemap']>(async () => null),
     basemapFiles: vi.fn<DeviceRepository['basemapFiles']>(async () => []),
     basemapReceipt: vi.fn<DeviceRepository['basemapReceipt']>(async (_device, packs) => packs.length),
+    rotateKey: vi.fn<DeviceRepository['rotateKey']>(async () => NOW),
+    terminalPolicy: vi.fn<DeviceRepository['terminalPolicy']>(async () => null),
+    policy: vi.fn<DeviceRepository['policy']>(async () => null),
+    updatePolicy: vi.fn<DeviceRepository['updatePolicy']>(async (policy) => policy),
   };
   const audit = { record: vi.fn(async () => undefined) };
   const accessJournal = {
@@ -200,7 +210,7 @@ describe('terminal requests', () => {
     const { deps, devices } = setup({ status: 'active', publicKey: device.publicKey });
     const signed = await getSyncCatalog(deps, context, device.proof());
     const text = signedText('etare.catalog.v1', signed.catalog);
-    expect(verifier.verify(CATALOG_KEY, text, signed.signature.signature)).toBe(true);
+    expect(verifier.verify('ed25519', CATALOG_KEY, text, signed.signature.signature)).toBe(true);
     const catalog = syncCatalogSchema.parse(JSON.parse(signed.catalog));
     expect(signed.catalog).toBe(canonicalJson(catalog));
     expect(catalog).toMatchObject({
@@ -208,17 +218,62 @@ describe('terminal requests', () => {
       device_id: DEVICE,
       generation: 7,
       authorization: { subject: 'ops', expires_at: '2026-10-08T10:00:00.000Z' },
+      terminal_policy: DEFAULT_TERMINAL_POLICY,
       min_app_version: null,
       publications: [entry],
     });
     expect(devices.catalog).toHaveBeenCalledWith(DEVICE, '1.0.0');
   });
 
+  it('carries the policy of the SIS, whose consultation right sets the end of the authorization (SEC-05)', async () => {
+    const { deps, devices } = setup({ status: 'active', publicKey: device.publicKey });
+    devices.terminalPolicy.mockResolvedValue({ idle_lock_minutes: 2, offline_authorization_days: 3 });
+    const catalog = syncCatalogSchema.parse(JSON.parse((await getSyncCatalog(deps, context, device.proof())).catalog));
+    expect(catalog.terminal_policy).toEqual({
+      ...DEFAULT_TERMINAL_POLICY,
+      idle_lock_minutes: 2,
+      offline_authorization_days: 3,
+    });
+    expect(catalog.authorization.expires_at).toBe('2026-10-04T10:00:00.000Z');
+    expect(devices.terminalPolicy).toHaveBeenCalledWith(DEVICE);
+  });
+
+  it('moves the terminal to a new key it proves to hold, the request signed by the current key (SEC-05)', async () => {
+    const { deps, devices } = setup({ status: 'active', publicKey: device.publicKey });
+    const next = terminal();
+    const rotationProof = (publicKey: string) =>
+      next.signText(deviceKeyRotationText({ tenantId: TENANT, deviceId: DEVICE, algorithm: 'ecdsa-p256', publicKey }));
+    const input = {
+      key_algorithm: 'ecdsa-p256' as const,
+      public_key: next.publicKey,
+      proof: rotationProof(next.publicKey),
+    };
+    const signedByCurrent = device.proof({ method: 'POST', path: '/api/v1/sync/device-key' });
+    expect(await rotateDeviceKey(deps, context, signedByCurrent, input)).toEqual({
+      key_algorithm: 'ecdsa-p256',
+      rotated_at: NOW.toISOString(),
+    });
+    expect(devices.rotateKey).toHaveBeenCalledWith(DEVICE, 'ecdsa-p256', next.publicKey);
+    // The new key must have signed this very rotation; the request, the current key.
+    await expect(
+      rotateDeviceKey(deps, context, signedByCurrent, { ...input, proof: next.signText('autre chose') }),
+    ).rejects.toThrow(DeviceProofInvalid);
+    await expect(
+      rotateDeviceKey(deps, context, next.proof({ method: 'POST', path: '/api/v1/sync/device-key' }), input),
+    ).rejects.toThrow(DeviceProofInvalid);
+    expect(devices.rotateKey).toHaveBeenCalledTimes(1);
+  });
+
   it('announces the minimum application version inside the signed catalogue (SYN-02)', async () => {
     const { deps } = setup({ status: 'active', publicKey: device.publicKey });
     const signed = await getSyncCatalog({ ...deps, minAppVersion: '0.2.0' }, context, device.proof());
     expect(
-      verifier.verify(CATALOG_KEY, signedText('etare.catalog.v1', signed.catalog), signed.signature.signature),
+      verifier.verify(
+        'ed25519',
+        CATALOG_KEY,
+        signedText('etare.catalog.v1', signed.catalog),
+        signed.signature.signature,
+      ),
     ).toBe(true);
     expect(syncCatalogSchema.parse(JSON.parse(signed.catalog)).min_app_version).toBe('0.2.0');
   });
@@ -239,6 +294,7 @@ describe('terminal requests', () => {
     const key = terminal();
     await enrollDevice(deps, context, {
       code: 'ABCD-EFGH-JKLM',
+      key_algorithm: 'ed25519',
       public_key: key.publicKey,
       platform: 'android',
       app_version: '1.0.0',
@@ -493,6 +549,7 @@ describe('enrollment', () => {
     const device = terminal();
     const input = (code: string, provenCode: string) => ({
       code,
+      key_algorithm: 'ed25519' as const,
       public_key: device.publicKey,
       platform: 'android' as const,
       app_version: '1.0.0',
@@ -505,6 +562,7 @@ describe('enrollment', () => {
     await enrollDevice(deps, context, input('abcd-efgh-jklm', 'ABCDEFGHJKLM'));
     expect(devices.enroll).toHaveBeenCalledWith({
       codeHash: await sha256('ABCDEFGHJKLM'),
+      keyAlgorithm: 'ed25519',
       publicKey: device.publicKey,
       platform: 'android',
       appVersion: '1.0.0',
@@ -518,5 +576,22 @@ describe('enrollment', () => {
     expect(created.enrollment_code).toBe('BBBB-BBBB-BBBB');
     expect(created.expires_at).toBe('2026-10-02T10:00:00.000Z');
     expect(devices.create).toHaveBeenCalledWith('FPT01', await sha256('BBBBBBBBBBBB'), new Date(created.expires_at));
+  });
+});
+
+describe('policy of the tablets (SEC-05)', () => {
+  it('gives the policy completed with the defaults to device:manage only', async () => {
+    const admin = setup(null, ['SIS_ADMIN']);
+    admin.devices.policy.mockResolvedValue({ screenshots_allowed: true });
+    expect(await getTerminalPolicy(admin.deps.sessions, context)).toEqual({
+      ...DEFAULT_TERMINAL_POLICY,
+      screenshots_allowed: true,
+    });
+    const ops = setup(null, ['OPS_USER']);
+    await expect(getTerminalPolicy(ops.deps.sessions, context)).rejects.toThrow();
+    await expect(updateTerminalPolicy(ops.deps.sessions, context, DEFAULT_TERMINAL_POLICY)).rejects.toThrow();
+    expect(ops.devices.updatePolicy).not.toHaveBeenCalled();
+    const changed = { ...DEFAULT_TERMINAL_POLICY, idle_lock_minutes: 1 };
+    expect(await updateTerminalPolicy(admin.deps.sessions, context, changed)).toEqual(changed);
   });
 });

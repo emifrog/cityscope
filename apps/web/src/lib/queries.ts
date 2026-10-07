@@ -58,6 +58,7 @@ export const queryKeys = {
   mySessions: (userId: string) => ['me', userId, 'sessions'] as const,
   myRecoveryCodes: (userId: string) => ['me', userId, 'recovery-codes'] as const,
   securitySettings: (tenantId: string) => ['tenant', tenantId, 'security-settings'] as const,
+  terminalPolicy: (tenantId: string) => ['tenant', tenantId, 'terminal-policy'] as const,
   riskTypes: (tenantId: string, includeDeprecated?: boolean) =>
     includeDeprecated === undefined
       ? (['tenant', tenantId, 'risk-types'] as const)
@@ -523,6 +524,17 @@ export function useDevices() {
     queryKey: queryKeys.devices(tenantId ?? 'none'),
     enabled,
     queryFn: ({ signal }) => api.listDevices({ ...options, signal }),
+    retry: false,
+  });
+}
+
+/** Lock and session policy of the tablets (SEC-05, device:manage). */
+export function useTerminalPolicy() {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.terminalPolicy(tenantId ?? 'none'),
+    enabled,
+    queryFn: ({ signal }) => api.getTerminalPolicy({ ...options, signal }),
     retry: false,
   });
 }

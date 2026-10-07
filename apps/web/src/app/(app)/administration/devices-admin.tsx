@@ -26,6 +26,7 @@ import { DEVICE_STATE_LABELS, SYNC_RECEIPT_STATUS_LABELS } from '@/components/la
 import { api } from '@/lib/api-client';
 import { queryKeys, useApiMutation, useDevices } from '@/lib/queries';
 import { SectorChoice, type SectorSelection } from './sector-choice';
+import { TerminalPolicyCard } from './terminal-policy-card';
 
 const dateTime = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Europe/Paris' });
 const formatDate = (value: string | null) => (value ? dateTime.format(new Date(value)) : '—');
@@ -236,6 +237,11 @@ function DeviceRow({
             {device.platform === 'android' ? 'Android' : device.platform === 'ios' ? 'iOS' : 'Plateforme inconnue'}
             {device.app_version ? ` · application ${device.app_version}` : ''}
             {device.keyset_sequence !== null ? ` · clés n° ${device.keyset_sequence}` : ''}
+            {device.key_algorithm === 'ecdsa-p256'
+              ? ' · clé matérielle'
+              : device.key_algorithm === 'ed25519'
+                ? ' · clé logicielle'
+                : ''}
           </p>
           {keysetBehind(device, keysetSequence) ? (
             <p className="text-xs font-semibold text-important">
@@ -443,6 +449,7 @@ export function DevicesAdmin() {
               </Table>
             )}
           </Card>
+          <TerminalPolicyCard />
         </>
       ) : null}
     </div>

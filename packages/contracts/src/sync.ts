@@ -1,6 +1,7 @@
 import {
   APP_VERSION_PATTERN,
   CATALOG_VERSION,
+  DEVICE_KEY_ALGORITHMS,
   DEVICE_PLATFORMS,
   DEVICE_STATES,
   DEVICE_STATUSES,
@@ -10,10 +11,14 @@ import {
   SIGNING_KEY_PURPOSES,
   SIGNING_KEY_STATUSES,
   SYNC_RECEIPT_STATUSES,
+  TERMINAL_POLICY_BOUNDS,
+  isDevicePublicKey,
+  isDeviceSignature,
   isEd25519PublicKey,
   isEd25519Signature,
   isSafePackagePath,
   keysetProblems,
+  type DeviceKeyAlgorithm,
 } from '@etare/domain';
 import { isoDateTimeSchema, sha256Schema, uuidSchema } from '@etare/schemas';
 import { z } from 'zod';
@@ -55,6 +60,9 @@ export const deviceSchema = z
     installed_generation: z.number().int().nullable(),
     /** Key set the terminal holds (SEC-04): below the one served, it has not met the last rotation yet. */
     keyset_sequence: z.number().int().positive().nullable(),
+    /** Algorithm of the terminal key (SEC-05): ecdsa-p256 is held by the Android Keystore. Null before enrollment. */
+    key_algorithm: z.enum(DEVICE_KEY_ALGORITHMS).nullable(),
+    key_rotated_at: isoDateTimeSchema.nullable(),
     installed_sites: z.number().int().nonnegative(),
     /** Synchronisation profile (PER-01, screen 11): the whole SIS, explicitly, or sectors. */
     perimeter: z
@@ -106,18 +114,74 @@ export const deviceRevokeSchema = z
 export type DeviceRevoke = z.infer<typeof deviceRevokeSchema>;
 
 // ------------------------------------------------------------------ enrollment (terminal)
+/** A public key and a signature by it, each in the encoding of the algorithm of the key. */
+function checkDeviceKey(
+  value: { key_algorithm: DeviceKeyAlgorithm; public_key: string; proof: string },
+  context: z.RefinementCtx,
+): void {
+  if (!isDevicePublicKey(value.key_algorithm, value.public_key)) {
+    context.addIssue({ code: 'custom', path: ['public_key'], message: 'Clé publique invalide pour son algorithme.' });
+  }
+  if (!isDeviceSignature(value.key_algorithm, value.proof)) {
+    context.addIssue({ code: 'custom', path: ['proof'], message: 'Signature invalide pour l’algorithme de la clé.' });
+  }
+}
+
 export const deviceEnrollSchema = z
   .object({
     code: z.string().min(1).max(40),
-    /** Raw Ed25519 public key (32 bytes, base64) generated on the terminal. */
-    public_key: z.string().refine(isEd25519PublicKey, 'Clé publique Ed25519 attendue.'),
+    /** Algorithm of the key generated on the terminal (absent: ed25519, the first tablets). */
+    key_algorithm: z.enum(DEVICE_KEY_ALGORITHMS).default('ed25519'),
+    /** ed25519: raw key (32 bytes); ecdsa-p256: SubjectPublicKeyInfo (DER); base64. */
+    public_key: z.string().max(200),
     platform: z.enum(DEVICE_PLATFORMS),
     app_version: appVersionSchema,
     /** Signature of the enrollment text by the private key (proof of possession). */
-    proof: z.string().refine(isEd25519Signature, 'Signature Ed25519 attendue.'),
+    proof: z.string().max(200),
   })
+  .superRefine(checkDeviceKey)
   .meta({ id: 'DeviceEnroll' });
 export type DeviceEnroll = z.infer<typeof deviceEnrollSchema>;
+
+/**
+ * Rotation of the terminal key (SEC-05), asked by the terminal: the request is
+ * signed by its current key, the proof by the new one (rotation text).
+ */
+export const deviceKeyRotateSchema = z
+  .object({
+    key_algorithm: z.enum(DEVICE_KEY_ALGORITHMS),
+    public_key: z.string().max(200),
+    proof: z.string().max(200),
+  })
+  .superRefine(checkDeviceKey)
+  .meta({ id: 'DeviceKeyRotate' });
+export type DeviceKeyRotate = z.infer<typeof deviceKeyRotateSchema>;
+
+export const deviceKeyRotationSchema = z
+  .object({ key_algorithm: z.enum(DEVICE_KEY_ALGORITHMS), rotated_at: isoDateTimeSchema })
+  .meta({ id: 'DeviceKeyRotation' });
+export type DeviceKeyRotation = z.infer<typeof deviceKeyRotationSchema>;
+
+const boundedInteger = (bounds: { readonly min: number; readonly max: number }) =>
+  z.number().int().min(bounds.min).max(bounds.max);
+
+/** Lock and session policy of the tablets of the SIS (SEC-05, ADR-029). */
+export const terminalPolicySchema = z
+  .object({
+    /** The application locks after this many minutes without a touch. */
+    idle_lock_minutes: boundedInteger(TERMINAL_POLICY_BOUNDS.idle_lock_minutes),
+    /** Seconds in the background before the application locks (0: at once). */
+    background_lock_seconds: boundedInteger(TERMINAL_POLICY_BOUNDS.background_lock_seconds),
+    /** Screenshots and the preview in the recent applications. */
+    screenshots_allowed: z.boolean(),
+    /** Days an agent may go without signing in again with their password. */
+    max_days_without_login: boundedInteger(TERMINAL_POLICY_BOUNDS.max_days_without_login),
+    /** Local consultation right granted with each catalogue. */
+    offline_authorization_days: boundedInteger(TERMINAL_POLICY_BOUNDS.offline_authorization_days),
+  })
+  .strict()
+  .meta({ id: 'TerminalPolicy' });
+export type TerminalPolicySettings = z.infer<typeof terminalPolicySchema>;
 
 export const deviceEnrollmentSchema = z
   .object({ device_id: uuidSchema, device_name: z.string(), tenant_id: uuidSchema, tenant_name: z.string() })
@@ -248,6 +312,8 @@ export const syncCatalogSchema = z
     issued_at: isoDateTimeSchema,
     /** Local consultation right: the identity of the user as their token names it (sub), and its end. */
     authorization: z.object({ subject: z.string().min(1).max(255), expires_at: isoDateTimeSchema }),
+    /** Lock and session policy the tablet applies until its next catalogue (SEC-05). */
+    terminal_policy: terminalPolicySchema,
     /**
      * Oldest application allowed to install from this catalogue (SYN-02): an older one keeps what
      * it has installed, readable, and asks for an update (architecture §10, §12). Null: no minimum.

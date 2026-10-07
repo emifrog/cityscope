@@ -7,7 +7,7 @@ import {
   verify,
   type KeyObject,
 } from 'node:crypto';
-import type { DeviceSignatureVerifier, IdentifiedSigner } from '@etare/application';
+import type { IdentifiedSigner } from '@etare/application';
 import type { Signature } from '@etare/contracts';
 import { SIGNATURE_ALGORITHM, isEd25519PublicKey, signedText, type SignatureContext } from '@etare/domain';
 
@@ -105,5 +105,3 @@ export function verifyEd25519(publicKey: string, text: string, signature: string
     return false;
   }
 }
-
-export const ed25519Verifier: DeviceSignatureVerifier = { verify: verifyEd25519 };

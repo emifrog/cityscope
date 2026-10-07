@@ -6,6 +6,7 @@ import {
   deviceEnrollmentSchema,
   deviceSchema,
   signatureSchema,
+  terminalPolicySchema,
   type CatalogBasemap,
   type CatalogEntry,
   type CatalogWithdrawal,
@@ -13,7 +14,14 @@ import {
   type DeviceEnrollment,
   type SyncReceipt,
 } from '@etare/contracts';
-import { deviceState, type DevicePlatform, type DeviceStatus, type SyncReceiptStatus } from '@etare/domain';
+import {
+  deviceState,
+  type DeviceKeyAlgorithm,
+  type DevicePlatform,
+  type DeviceStatus,
+  type SyncReceiptStatus,
+  type TerminalPolicy,
+} from '@etare/domain';
 import type { PoolClient } from './pool';
 import { toIso } from './versioned';
 
@@ -36,6 +44,8 @@ interface DeviceRow {
   catalog_generation: string | null;
   installed_generation: string | null;
   keyset_sequence: number | null;
+  key_algorithm: DeviceKeyAlgorithm | null;
+  key_rotated_at: Date | null;
   installed_sites: number;
   scope: 'tenant' | 'sectors';
   sectors: { id: string; name: string }[];
@@ -49,6 +59,7 @@ const DEVICE_SELECT = `
          app.member_name(d.enrolled_by) as enrolled_by_name, d.revoked_at, d.revocation_reason,
          s.app_version, app.member_name(s.last_user_id) as last_user_name, s.last_seen_at, s.last_sync_at,
          s.last_status, s.last_error_code, s.catalog_generation, s.installed_generation, s.keyset_sequence,
+         case when d.public_key is null then null else d.key_algorithm end as key_algorithm, d.key_rotated_at,
          (select count(*)::int from app.device_publication p where p.device_id = d.id) as installed_sites,
          d.scope,
          coalesce((select jsonb_agg(jsonb_build_object('id', sc.id, 'name', sc.name) order by lower(sc.name), sc.id)
@@ -88,6 +99,8 @@ function toDevice(row: DeviceRow, now: Date): Device {
     catalog_generation: generation(row.catalog_generation),
     installed_generation: generation(row.installed_generation),
     keyset_sequence: row.keyset_sequence,
+    key_algorithm: row.key_algorithm,
+    key_rotated_at: toIso(row.key_rotated_at),
     installed_sites: row.installed_sites,
     perimeter: { scope: row.scope, sectors: row.sectors },
     created_at: row.created_at.toISOString(),
@@ -187,23 +200,59 @@ export class PostgresDeviceRepository implements DeviceRepository {
 
   async enroll(input: {
     codeHash: string;
+    keyAlgorithm: DeviceKeyAlgorithm;
     publicKey: string;
     platform: DevicePlatform;
     appVersion: string;
   }): Promise<DeviceEnrollment> {
     const { rows } = await this.client.query(
-      'select device_id, device_name, tenant_id, tenant_name from app.enroll_device($1, $2, $3, $4)',
-      [input.codeHash, input.publicKey, input.platform, input.appVersion],
+      'select device_id, device_name, tenant_id, tenant_name from app.enroll_device($1, $2, $3, $4, $5)',
+      [input.codeHash, input.publicKey, input.platform, input.appVersion, input.keyAlgorithm],
     );
     return deviceEnrollmentSchema.parse(rows[0]);
   }
 
-  async syncDevice(id: string): Promise<{ status: DeviceStatus; publicKey: string | null } | null> {
-    const { rows } = await this.client.query<{ status: DeviceStatus; public_key: string | null }>(
-      'select status, public_key from app.sync_device($1)',
-      [id],
+  async syncDevice(
+    id: string,
+  ): Promise<{ status: DeviceStatus; publicKey: string | null; keyAlgorithm: DeviceKeyAlgorithm } | null> {
+    const { rows } = await this.client.query<{
+      status: DeviceStatus;
+      public_key: string | null;
+      key_algorithm: DeviceKeyAlgorithm;
+    }>('select status, public_key, key_algorithm from app.sync_device($1)', [id]);
+    const row = rows[0];
+    return row ? { status: row.status, publicKey: row.public_key, keyAlgorithm: row.key_algorithm } : null;
+  }
+
+  async rotateKey(deviceId: string, keyAlgorithm: DeviceKeyAlgorithm, publicKey: string): Promise<Date> {
+    const { rows } = await this.client.query<{ rotated_at: Date }>(
+      'select app.sync_rotate_device_key($1, $2, $3) as rotated_at',
+      [deviceId, keyAlgorithm, publicKey],
     );
-    return rows[0] ? { status: rows[0].status, publicKey: rows[0].public_key } : null;
+    return rows[0]?.rotated_at ?? this.now();
+  }
+
+  async terminalPolicy(deviceId: string): Promise<Partial<TerminalPolicy> | null> {
+    const { rows } = await this.client.query<{ policy: Partial<TerminalPolicy> | null }>(
+      'select app.sync_terminal_policy($1) as policy',
+      [deviceId],
+    );
+    return rows[0]?.policy ?? null;
+  }
+
+  async policy(): Promise<Partial<TerminalPolicy> | null> {
+    const { rows } = await this.client.query<{ policy: Partial<TerminalPolicy> | null }>(
+      'select app.terminal_policy() as policy',
+    );
+    return rows[0]?.policy ?? null;
+  }
+
+  async updatePolicy(policy: TerminalPolicy): Promise<TerminalPolicy> {
+    const { rows } = await this.client.query<{ policy: unknown }>(
+      'select app.update_terminal_policy($1::jsonb) as policy',
+      [JSON.stringify(policy)],
+    );
+    return terminalPolicySchema.parse(rows[0]?.policy);
   }
 
   async catalog(
