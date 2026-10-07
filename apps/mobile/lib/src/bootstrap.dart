@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:etare_ops/src/app.dart';
 import 'package:etare_ops/src/core/config/app_config.dart';
+import 'package:etare_ops/src/core/config/licenses.dart';
 import 'package:etare_ops/src/core/di/providers.dart';
 import 'package:etare_ops/src/core/logging/app_logger.dart';
 import 'package:etare_ops/src/core/platform/platform_services.dart';
@@ -27,6 +28,7 @@ const _logger = AppLogger('bootstrap');
 /// 3. lancement de l'application avec les dépendances injectées.
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
+  registerBundledLicenses();
 
   final AppConfig config;
   switch (AppConfig.load()) {

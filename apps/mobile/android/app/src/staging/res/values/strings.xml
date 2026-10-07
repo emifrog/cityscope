@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Variante de préproduction (EXP-04) : installée à côté de la production,
+         reconnaissable sous son icône. -->
+    <string name="app_name">FireScape préprod</string>
+</resources>

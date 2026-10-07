@@ -74,12 +74,18 @@ hooks:
       source: sqlcipher
 
 flutter:
+  # Variante construite par défaut (`flutter run`, `flutter build`) ; la préproduction se
+  # construit avec `--flavor staging` (EXP-04, docs/exploitation/livraison-mobile.md).
+  default-flavor: prod
   uses-material-design: true
   # Logos FireScape générés par `pnpm brand:assets` (originaux dans assets/brand/ à la racine).
   assets:
     - assets/brand/
+    # Licences des composants natifs embarqués (SQLCipher, OpenSSL), page « À propos ».
+    - assets/licenses/
     # Glyphes Noto Sans (licence OFL 1.1, assets/map/glyphs/OFL.txt) des
     # libellés de la carte : embarqués, la carte n'appelle aucun serveur.
+    - assets/map/glyphs/OFL.txt
     - assets/map/glyphs/NotoSans-Regular/
     - assets/map/glyphs/NotoSans-Medium/
     - assets/map/glyphs/NotoSans-Italic/

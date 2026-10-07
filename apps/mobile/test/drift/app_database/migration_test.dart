@@ -418,4 +418,46 @@ void main() {
       );
     },
   );
+
+  // Tablette restée en 0.1 (schéma v1) qui reçoit directement l'application
+  // actuelle (EXP-04) : toutes les étapes s'enchaînent, le SIS actif et
+  // l'état de synchronisation sont conservés.
+  test('la migration v1 → v10 d’un coup conserve les données', () async {
+    await verifier.testWithDataIntegrity(
+      oldVersion: 1,
+      newVersion: 10,
+      createOld: v1.DatabaseAtV1.new,
+      createNew: v10.DatabaseAtV10.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, oldDb) {
+        batch
+          ..insert(
+            oldDb.localMeta,
+            const v1.LocalMetaData(key: 'active_tenant_id', value: 'tenant-06'),
+          )
+          ..insert(
+            oldDb.syncState,
+            const v1.SyncStateData(
+              id: 1,
+              lastSyncAt: '2026-09-27T10:30:00.000Z',
+              status: 'idle',
+            ),
+          );
+      },
+      validateItems: (newDb) async {
+        expect(await newDb.select(newDb.localMeta).get(), const [
+          v10.LocalMetaData(key: 'active_tenant_id', value: 'tenant-06'),
+        ]);
+        expect(await newDb.select(newDb.syncState).get(), const [
+          v10.SyncStateData(
+            id: 1,
+            lastSyncAt: '2026-09-27T10:30:00.000Z',
+            status: 'idle',
+            receiptPending: 0,
+          ),
+        ]);
+        expect(await newDb.select(newDb.fileChunk).get(), isEmpty);
+      },
+    );
+  });
 }

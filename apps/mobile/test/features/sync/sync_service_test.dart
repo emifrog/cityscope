@@ -483,6 +483,30 @@ void main() {
       );
     });
 
+    test('catalogue d’un format plus récent qui annonce la version exigée : '
+        'elle est dite à l’agent', () async {
+      server.publish(publicationOf(siteA, 1));
+      await sync();
+      server
+        ..catalogVersion = 2
+        ..minAppVersion = '9.1.0';
+
+      final report = await service.run(userId: userId);
+
+      expect(
+        report,
+        isA<SyncUpdateRequired>().having(
+          (r) => r.minVersion,
+          'minVersion',
+          '9.1.0',
+        ),
+      );
+      final state = await database.syncStateDao.read();
+      expect(state.requiredAppVersion, '9.1.0');
+      expect(state.lastError, contains('version 9.1.0 minimum'));
+      expect(await installed(), {siteA: publicationId(1)});
+    });
+
     test('paquet exigeant un lecteur plus récent : l’ancienne version du '
         'site reste et la mise à jour est demandée', () async {
       server.publish(publicationOf(siteA, 1));

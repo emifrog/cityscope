@@ -104,7 +104,7 @@ flutter analyze                 # doit afficher « No issues found! »
 flutter test                    # tests unitaires + widgets
 dart run build_runner build     # après toute modification du schéma Drift
 dart run drift_dev make-migrations  # nouvelle version du schéma : instantané + test
-flutter build apk --debug       # APK de développement
+flutter build apk --debug       # APK de développement (variante prod)
 ```
 
 - Les fichiers générés (`*.g.dart`) sont **versionnés** ; ils sont exclus de
@@ -132,6 +132,22 @@ flutter build apk --debug       # APK de développement
 - Test de bout en bout **optionnel** contre la pile locale
   (`test/e2e/local_stack_sync_test.dart`, ignoré sans `ETARE_E2E_API`) :
   enrôlement et synchronisation réels auprès de l'API TypeScript.
+
+## 4 bis. Variantes et livraison (EXP-04, ADR-030)
+
+- Deux variantes Android : `prod` (`fr.etare.ops`, « FireScape », celle de
+  `flutter run` par défaut) et `staging` (`fr.etare.ops.staging`,
+  « FireScape préprod »), installables côte à côte : `--flavor staging`.
+- La release n'est **jamais** signée par la clé de debug : Gradle lit la clé
+  désignée par `ETARE_ANDROID_SIGNING` (ou `android/key.properties`, ignoré
+  par git) et s'arrête sans elle. R8 et réduction des ressources actifs.
+- En release, l'application refuse de démarrer en environnement `dev` ou
+  dans un environnement qui n'est pas celui de sa variante.
+- Livraison : `pnpm mobile:release signing-key | build | verify` à la
+  racine (clé créée hors ligne, APK tracé : SHA-256, commit, certificat),
+  procédure dans `docs/exploitation/livraison-mobile.md`.
+- « Compte et tablette » affiche la version, la variante et le commit, et la
+  page des licences (paquets, SQLCipher, OpenSSL, glyphes Noto Sans).
 
 ## 5. Architecture
 
@@ -236,9 +252,9 @@ Principes :
 - **Schéma v10** (Sprint 13, CAP-02) : fichiers rangés en morceaux de 1 Mio
   (`file_chunk`) ; `file_blob` garde le nombre de morceaux et, pendant un
   téléchargement, les octets reçus (section 8 quater).
-- **Licences** : SQLCipher Community Edition (licence de type BSD, mention
-  requise dans la documentation distribuée) et OpenSSL sur Android — à
-  intégrer à l'écran « À propos » / aux mentions légales avant diffusion.
+- **Licences** : SQLCipher Community Edition (licence de type BSD) et
+  OpenSSL (Apache 2.0) sur Android : textes dans `assets/licenses/`,
+  affichés par la page des licences de « Compte et tablette » (EXP-04).
   Les binaires peuvent être servis depuis un dépôt interne via
   `hooks.user_defines.sqlite3.url_pattern`.
 

@@ -109,3 +109,53 @@ jobs:
       - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze
       - run: flutter test
+
+  # EXP-04 (ADR-030): the staging flavor built in release with a throwaway key created for the run:
+  # signing configuration, R8 and flavors hold, and a release never builds without its key. The real
+  # key never reaches CI.
+  mobile-release:
+    name: Android release (préproduction, clé jetable)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.5
+          channel: stable
+          cache: true
+      - run: pnpm install --frozen-lockfile
+      - name: Throwaway signing key and fictitious staging configuration
+        run: |
+          pnpm mobile:release signing-key --out "$RUNNER_TEMP/android-key" --organization "CI"
+          cat > "$RUNNER_TEMP/defines.json" <<'JSON'
+          {
+            "ENV": "staging",
+            "API_BASE_URL": "https://preprod.firescape.invalid/api/v1",
+            "AUTH_URL": "https://preprod.firescape.invalid/auth/v1",
+            "AUTH_PUBLISHABLE_KEY": "sb_publishable_ci",
+            "TRUSTED_SIGNING_KEYS": "root:ed25519-root:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          }
+          JSON
+      - name: Build, then verify signer and identifier
+        run: |
+          pnpm mobile:release build --flavor staging --defines "$RUNNER_TEMP/defines.json" \
+            --signing "$RUNNER_TEMP/android-key/key.properties" --out "$RUNNER_TEMP/release"
+          pnpm mobile:release verify --apk "$RUNNER_TEMP"/release/firescape-staging-*.apk --flavor staging \
+            --certificate "$(cat "$RUNNER_TEMP/android-key/certificat-sha256.txt")"
+      - name: A release never builds without its key
+        working-directory: apps/mobile
+        run: |
+          if flutter build apk --release --flavor staging --dart-define-from-file="$RUNNER_TEMP/defines.json"; then
+            echo "Release construite sans clé de signature" >&2
+            exit 1
+          fi

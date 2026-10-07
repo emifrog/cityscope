@@ -2,6 +2,7 @@ import 'package:etare_ops/src/core/errors/app_exception.dart';
 import 'package:etare_ops/src/core/formatting/date_formatting.dart';
 import 'package:etare_ops/src/core/storage/storage_guard.dart';
 import 'package:etare_ops/src/features/basemaps/application/basemap_sync.dart';
+import 'package:etare_ops/src/features/sync/application/package_verification.dart';
 
 /// Message lisible d'une purge (révocation, terminal inconnu).
 String purgeMessage(ApiErrorCode reason, {int discardedReports = 0}) {
@@ -44,6 +45,7 @@ String basemapFailureReason(String code) => switch (code) {
   storageFullCode => 'stockage plein',
   'BASEMAP_BUDGET' => 'place réservée aux fonds atteinte',
   'BASEMAP_STORAGE' => 'écriture impossible',
+  readerTooOldCode => 'mise à jour de l’application requise',
   'BASEMAP_SIGNATURE_INVALID' ||
   'BASEMAP_PART_MISMATCH' ||
   'BASEMAP_HASH_MISMATCH' => 'fichier refusé à la vérification',

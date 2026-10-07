@@ -194,4 +194,41 @@ void main() {
       expect(config.toString(), isNot(contains('sb_publishable_secretish')));
     });
   });
+
+  group('construction de release (EXP-04)', () {
+    const staging = {
+      'ENV': 'staging',
+      'API_BASE_URL': 'https://preprod.etare.example/api/v1',
+      'AUTH_URL': 'https://preprod.etare.example/auth/v1',
+      'AUTH_PUBLISHABLE_KEY': 'sb_publishable_preprod',
+      'TRUSTED_SIGNING_KEYS': trustedKeys,
+    };
+
+    test('ne vise jamais l’environnement dev', () {
+      expect(
+        rejectedKeys(
+          AppConfig.parse(
+            {'AUTH_PUBLISHABLE_KEY': 'k'},
+            release: true,
+            flavor: 'prod',
+          ),
+        ),
+        ['ENV'],
+      );
+      // En debug, le développement reste possible sur la variante par défaut.
+      expectLoaded(
+        AppConfig.parse({'AUTH_PUBLISHABLE_KEY': 'k'}, flavor: 'prod'),
+      );
+    });
+
+    test('la variante correspond à l’environnement', () {
+      expectLoaded(AppConfig.parse(staging, release: true, flavor: 'staging'));
+      expect(
+        rejectedKeys(AppConfig.parse(staging, release: true, flavor: 'prod')),
+        ['ENV'],
+      );
+      // Sans variante (autre plateforme), seul l'environnement compte.
+      expectLoaded(AppConfig.parse(staging, release: true, flavor: null));
+    });
+  });
 }

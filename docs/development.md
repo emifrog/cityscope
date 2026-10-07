@@ -106,6 +106,11 @@ flutter build apk --debug
 flutter run --dart-define=AUTH_PUBLISHABLE_KEY=<clé publishable locale>
 ```
 
+`flutter run` et `flutter build` construisent la variante `prod` (`default-flavor`) ;
+`--flavor staging` construit la préproduction, installable à côté. Une release se construit avec
+`pnpm mobile:release` et une clé de signature hors dépôt
+([livraison-mobile.md](exploitation/livraison-mobile.md)).
+
 L’émulateur Android joint la machine hôte via `10.0.2.2` (valeurs par défaut de `API_BASE_URL` et
 `AUTH_URL`). Voir `apps/mobile/README.md`.
 
@@ -117,7 +122,7 @@ $env:ANDROID_HOME = Join-Path $env:LOCALAPPDATA 'Android/Sdk'
 flutter build apk --debug
 ```
 
-L’APK est créé dans `apps/mobile/build/app/outputs/flutter-apk/app-debug.apk`. Sans les paramètres
+L’APK est créé dans `apps/mobile/build/app/outputs/flutter-apk/app-prod-debug.apk`. Sans les paramètres
 `--dart-define` de connexion, il compile mais affiche l’écran de configuration manquante au démarrage.
 
 ## Environnement d’intégration partagé

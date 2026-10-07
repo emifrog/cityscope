@@ -31,6 +31,7 @@
     "brand:assets": "tsx scripts/brand-assets.ts",
     "bench:volume": "tsx scripts/bench/volume.ts",
     "keys": "tsx scripts/keys.ts",
+    "mobile:release": "tsx scripts/mobile-release.ts",
     "setup:local": "tsx scripts/setup-local.ts",
     "integration": "tsx scripts/integration.ts",
     "db:push:integration": "supabase db push --linked"

@@ -305,6 +305,14 @@ Depuis le Sprint 13 (SEC-05, ADR-029) :
   l’agent suivant ne voit rien, carte comprise, avant sa propre synchronisation.
 - **Non retenus après analyse** : détection de root, attestation d’intégrité, épinglage de certificat
   (raisons dans l’ADR-029, à revoir avec SEC-06). Seules les autorités du système sont reconnues.
+- **Livraison** (EXP-04, ADR-030) :
+  - APK de release signé par une clé détenue par l’exploitant, créée hors ligne et gardée en deux
+    copies chiffrées, jamais par la clé de debug ;
+  - construction tracée (commit, SHA-256, certificat) et vérification avant diffusion ;
+  - en release, l’application refuse l’environnement `dev` et toute configuration qui n’est pas celle
+    de sa variante.
+- **Gros fichiers** (CAP-02) : téléchargés et lus par morceaux dans la base chiffrée, jamais copiés en
+  clair ; espace libre vérifié avant chaque téléchargement.
 
 ## Secrets et Git
 
@@ -320,6 +328,8 @@ l’environnement. La racine des jeux de clés reste hors ligne (`pnpm keys`, c�
 - Clés de signature :
   - le KMS d’un fournisseur reste à choisir avec l’hébergement (DEC-03) ; OpenBao Transit ou un fichier
     de secret couvrent le pilote ;
+  - la clé de signature de l’application Android est à créer lors de la même cérémonie ; sa perte
+    interdit toute mise à jour des tablettes (ADR-030) ;
   - la première cérémonie (racine, racine de secours, procès-verbal) est à tenir avec le RSSI avant la
     préproduction ;
   - la compromission de la racine sans racine de secours embarquée exige une nouvelle version de

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:etare_ops/src/core/config/app_info.dart';
 import 'package:etare_ops/src/core/errors/error_messages.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
 import 'package:etare_ops/src/features/account/application/account_providers.dart';
@@ -17,6 +18,7 @@ class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
 
   static const signOutButtonKey = Key('account.signOut');
+  static const aboutKey = Key('account.about');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
@@ -32,9 +34,31 @@ class AccountScreen extends ConsumerWidget {
             OfflineStatusCard(),
             SizedBox(height: 24),
             _SignOutButton(),
+            SizedBox(height: 16),
+            _About(),
           ],
         ),
       ),
+    ),
+  );
+}
+
+/// Version installée (EXP-04), utile au support, et licences des composants.
+class _About extends StatelessWidget {
+  const _About();
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+    key: AccountScreen.aboutKey,
+    leading: const Icon(Icons.info_outline),
+    title: const Text('À propos de ${Brand.productName}'),
+    subtitle: Text('Version ${AppInfo.describe()} · licences'),
+    onTap: () => showLicensePage(
+      context: context,
+      applicationName: Brand.productName,
+      applicationVersion: AppInfo.describe(),
+      applicationLegalese:
+          'Application des plans ETARE des services d’incendie et de secours.',
     ),
   );
 }

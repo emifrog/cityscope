@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:etare_ops/src/core/security/trusted_keys.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show appFlavor;
 
 /// Environnement d'exécution, fourni par `--dart-define=ENV=...`.
 enum AppEnvironment {
@@ -108,8 +109,13 @@ final class AppConfig {
   };
 
   /// Construit et valide la configuration à partir d'un dictionnaire de
-  /// valeurs brutes (testable sans `--dart-define`).
-  static ConfigLoadResult parse(Map<String, String> defines) {
+  /// valeurs brutes (testable sans `--dart-define`). [release] et [flavor] :
+  /// mode et variante Android de la construction (EXP-04).
+  static ConfigLoadResult parse(
+    Map<String, String> defines, {
+    bool release = kReleaseMode,
+    String? flavor = appFlavor,
+  }) {
     final issues = <ConfigIssue>[];
 
     final rawEnv = defines[envKey]?.trim() ?? '';
@@ -125,6 +131,28 @@ final class AppConfig {
       );
     }
     final effectiveEnv = environment ?? AppEnvironment.dev;
+    // Une application de release ne vise jamais le développement, et sa
+    // variante (prod, staging) dit son environnement (EXP-04).
+    if (release && environment == AppEnvironment.dev) {
+      issues.add(
+        const ConfigIssue(
+          envKey,
+          'Une application de release ne vise jamais l’environnement dev : '
+          'construisez-la pour staging ou prod.',
+        ),
+      );
+    } else if (release &&
+        environment != null &&
+        flavor != null &&
+        flavor != environment.name) {
+      issues.add(
+        ConfigIssue(
+          envKey,
+          'Variante « $flavor » construite pour l’environnement '
+          '${environment.name} : construisez la variante ${environment.name}.',
+        ),
+      );
+    }
 
     final apiBaseUrl = _parseBaseUrl(
       key: apiBaseUrlKey,

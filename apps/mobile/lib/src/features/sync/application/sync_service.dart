@@ -226,6 +226,9 @@ final class SyncService {
   /// réception : le nouveau repère de temps de confiance (SEC-05).
   TimeAnchor? _anchor;
 
+  /// Version exigée par un catalogue d'un format trop récent (SYN-02).
+  String? _newerCatalogMinVersion;
+
   /// Confirme, juste avant d'activer, que ce moteur mène toujours la
   /// synchronisation (bail partagé entre moteurs, SYN-01).
   Future<bool> Function()? _holdsLease;
@@ -256,6 +259,7 @@ final class SyncService {
   }) async {
     _holdsLease = holdsLease;
     _allowLargeBasemaps = allowLargeBasemaps;
+    _newerCatalogMinVersion = null;
     final identity = await _identities.read();
     if (identity == null) return const SyncNotEnrolled();
     if (!_trust.verifiesKeysets) {
@@ -321,13 +325,15 @@ final class SyncService {
       rethrow;
     } on SyncIntegrityException catch (error) {
       if (error.code == _updateRequired) {
-        // Catalogue d'un format plus récent : rien n'est lu ni installé.
+        // Catalogue (ou jeu de clés) d'un format plus récent : rien n'est lu
+        // ni installé ; la version exigée est dite si elle est connue.
+        final minVersion = _newerCatalogMinVersion;
         await _state.write(
           SyncStateCompanion(
             status: const Value('failed'),
-            lastError: Value(appUpdateMessage(null)),
+            lastError: Value(appUpdateMessage(minVersion)),
             lastAttemptAt: Value(_now),
-            requiredAppVersion: const Value(''),
+            requiredAppVersion: Value(minVersion ?? ''),
           ),
         );
         await _sendReceipt(
@@ -336,7 +342,7 @@ final class SyncService {
           status: 'error',
           errorCode: _updateRequired,
         );
-        return const SyncUpdateRequired(minVersion: null);
+        return SyncUpdateRequired(minVersion: minVersion);
       }
       await _fail(_integrityMessage(error.code));
       rethrow;
@@ -752,6 +758,7 @@ final class SyncService {
     try {
       catalog = SyncCatalog.fromJson(asJsonMap(jsonDecode(signed.text)));
     } on NewerFormatException {
+      _newerCatalogMinVersion = minAppVersionOfNewerCatalog(signed.text);
       throw const SyncIntegrityException(_updateRequired);
     } on FormatException {
       throw const SyncIntegrityException('CATALOG_INVALID');

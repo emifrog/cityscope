@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:etare_ops/src/core/json/json_reader.dart';
 import 'package:etare_ops/src/features/basemaps/domain/basemap_models.dart';
 import 'package:etare_ops/src/features/sync/domain/removal_notice.dart';
@@ -6,6 +8,23 @@ import 'package:flutter/foundation.dart';
 
 final _sha256Pattern = RegExp(r'^[0-9a-f]{64}$');
 final _versionPattern = RegExp(r'^\d{1,4}\.\d{1,4}\.\d{1,4}$');
+
+/// Version exigée par un catalogue d'un format plus récent que cette
+/// application, lue sans interpréter le reste (SYN-02) : l'agent sait quelle
+/// version demander. Null si elle est absente ou illisible.
+String? minAppVersionOfNewerCatalog(String text) {
+  try {
+    final json = jsonDecode(text);
+    if (json is! Map<String, Object?>) return null;
+    final version = json['min_app_version'];
+    return version is String && _versionPattern.hasMatch(version)
+        ? version
+        : null;
+  } on FormatException {
+    return null;
+  }
+}
+
 final _uuidPattern = RegExp(
   r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
 );
