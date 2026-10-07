@@ -59,6 +59,15 @@ describe('mobile release (EXP-04)', () => {
       'Signer #1 certificate SHA-1 digest: ffff',
     ].join('\n');
     expect(signerCertificates(output)).toEqual([{ sha256: '0a1b2c3d', subject: 'CN=FireScape, O=SDIS, C=FR' }]);
+    // Same certificate printed for several schemes, or by signer lineage: one certificate.
+    const lineage = [
+      'Signer (minSdkVersion=24, maxSdkVersion=2147483647) certificate DN: CN=FireScape, C=FR',
+      'Signer (minSdkVersion=24, maxSdkVersion=2147483647) certificate SHA-256 digest: 0A:1B',
+      'Signer #1 certificate DN: CN=FireScape, C=FR',
+      'Signer #1 certificate SHA-256 digest: 0a1b',
+      'Source Stamp Signer certificate SHA-256 digest: ffff',
+    ].join('\n');
+    expect(signerCertificates(lineage)).toEqual([{ sha256: '0a1b', subject: 'CN=FireScape, C=FR' }]);
     expect(isDebugCertificate('C=US, O=Android, CN=Android Debug')).toBe(true);
     expect(isDebugCertificate('CN=FireScape, O=SDIS, C=FR')).toBe(false);
   });

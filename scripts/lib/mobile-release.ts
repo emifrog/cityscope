@@ -63,20 +63,28 @@ export function normalizeFingerprint(value: string): string {
   return value.replace(/[^0-9a-fA-F]/g, '').toLowerCase();
 }
 
-/** Certificates of the signers, from `apksigner verify --print-certs`. */
+/**
+ * Distinct signing certificates, from `apksigner verify --print-certs`. Depending on the build-tools
+ * version and the signature schemes, a signer is printed as `Signer #1`, `Signer (minSdkVersion=…)` or
+ * `Signer #1 (v3 …)`; the same certificate printed for several schemes counts once.
+ */
 export function signerCertificates(output: string): { sha256: string; subject: string }[] {
   const signers = new Map<string, { sha256?: string; subject?: string }>();
   for (const line of output.split(/\r?\n/)) {
-    const match = /^Signer #(\d+) certificate (DN|SHA-256 digest): (.+)$/.exec(line.trim());
-    if (!match?.[1] || !match[2] || !match[3]) continue;
+    const match = /^(Signer\b.*?) certificate (DN|SHA-256 digest): (.+)$/.exec(line.trim());
+    if (!match?.[1] || !match[2] || !match[3] || /source stamp/i.test(match[1])) continue;
     const signer = signers.get(match[1]) ?? {};
     if (match[2] === 'DN') signer.subject = match[3];
     else signer.sha256 = normalizeFingerprint(match[3]);
     signers.set(match[1], signer);
   }
-  return [...signers.values()]
-    .filter((signer): signer is { sha256: string; subject: string } => !!signer.sha256)
-    .map((signer) => ({ sha256: signer.sha256, subject: signer.subject ?? '' }));
+  const certificates = new Map<string, { sha256: string; subject: string }>();
+  for (const signer of signers.values()) {
+    if (signer.sha256 && !certificates.has(signer.sha256)) {
+      certificates.set(signer.sha256, { sha256: signer.sha256, subject: signer.subject ?? '' });
+    }
+  }
+  return [...certificates.values()];
 }
 
 /** The debug key of the Android tools: never acceptable for a delivered APK. */

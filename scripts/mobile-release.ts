@@ -144,8 +144,12 @@ function verifyApk(apk: string, expected: { certificate?: string; flavor?: Flavo
     shell: windows,
   });
   if (result.status !== 0) fail(`Signature invalide :\n${result.stdout}${result.stderr}`);
-  const signers = signerCertificates(result.stdout);
-  if (signers.length !== 1) fail(`Un seul signataire attendu (${signers.length} trouvé(s)).`);
+  // Selon la version des build-tools, une partie de la sortie passe par stderr.
+  const output = `${result.stdout}\n${result.stderr}`;
+  const signers = signerCertificates(output);
+  if (signers.length !== 1) {
+    fail(`Un seul certificat de signature attendu (${signers.length} trouvé(s)) :\n${output}`);
+  }
   const [signer] = signers;
   if (!signer || isDebugCertificate(signer.subject)) fail('APK signé par la clé de debug : jamais diffusé.');
   if (expected.certificate && normalizeFingerprint(expected.certificate) !== signer.sha256) {
