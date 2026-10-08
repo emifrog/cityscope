@@ -42,6 +42,7 @@ const snapshot = {
   basemaps: { ready: 2, ready_bytes: 4096, failed: 0, renewal_due: 0 },
   notifications: { pending: 0, pending_oldest_seconds: 0, failed_24h: 1 },
   security: [{ action: 'security.forbidden', count: 3 }],
+  backups: { last_success_seconds: 3600.5, last_archive_bytes: 268036502, last_missing_objects: 0 },
   database: { size_bytes: 1234 },
 };
 
@@ -79,6 +80,7 @@ describe('metrics in the text exposition format (EXP-03)', () => {
     expect(text).toContain('etare_jobs_queued{type="publication.build"} 2\n');
     expect(text).toContain('etare_jobs_oldest_queued_seconds{type="publication.build"} 42.5\n');
     expect(text).toContain('etare_workers_alive 1\n');
+    expect(text).toContain('etare_backup_last_success_seconds 3600.5\n');
     expect(text).toContain('etare_files_clean_bytes{tenant="sdis-demo-06"} 250054\n');
     expect(text).toContain('etare_sync_receipts_24h{tenant="sdis-demo-06",status="installed"} 5\n');
     expect(text).toContain('etare_security_denied_1h{action="security.forbidden"} 3\n');

@@ -97,6 +97,9 @@ révèlent rien). Tests : `supabase/tests/database/10_tenant_isolation.test.sql`
 - `etare_api` / `etare_worker` : ni propriétaires, ni superutilisateurs, ni `BYPASSRLS`, aucun
   `DELETE`/`TRUNCATE`. L’application **refuse de démarrer** avec un autre identifiant
   (`assertDedicatedDatabaseRole`).
+- `etare_backup` (EXP-02, ADR-031) : lit tout (`pg_read_all_data`, `BYPASSRLS` pour `pg_dump`), n’écrit
+  rien d’autre que sa trace (`app.backup_record_run`). Son mot de passe ne va que dans la configuration
+  de la sauvegarde, jamais à l’API ni au worker.
 - Contexte de requête local à la transaction (`set_config(..., true)`) : il disparaît au commit, même
   derrière un pool de connexions.
 - Fonctions `SECURITY DEFINER` rares, `search_path` fixé, `EXECUTE` retiré à PUBLIC et accordé
@@ -322,6 +325,11 @@ jetables et une racine de développement (`pnpm setup:local`), et éprouve le mo
 OpenBao de développement. Dans les environnements partagés, les clés de signature viennent d’un fichier
 de secret ou du moteur Transit (`*_SIGNING_KEY_FILE`, `*_SIGNING_TRANSIT_KEY`), jamais du dépôt ni de
 l’environnement. La racine des jeux de clés reste hors ligne (`pnpm keys`, cérémonie à deux).
+
+Les archives de sauvegarde (ADR-031) contiennent les données et la configuration du serveur, secrets
+compris. Elles sont chiffrées sur le serveur par age, pour deux clés dont les parties privées restent hors
+ligne. Le serveur dépose avec une clé d’écriture seule : il ne peut ni relire, ni lister, ni supprimer
+les archives.
 
 ## Limites connues (à traiter avant le pilote)
 

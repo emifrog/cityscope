@@ -239,6 +239,30 @@ groups:
           impact: Supervision aveugle si le jeton a changé ; sinon, tentative de lecture.
           runbook_url: docs/exploitation/supervision.md#jeton-de-supervision
 
+  - name: etare-sauvegardes
+    rules:
+      - alert: EtareSauvegardeAbsente
+        expr: etare_backup_last_success_seconds > 93600 or etare_backup_last_success_seconds < 0
+        for: 30m
+        labels:
+          severity: critical
+          service: sauvegarde
+          owner: exploitation
+        annotations:
+          summary: Aucune sauvegarde réussie depuis plus de 26 heures (une par nuit attendue).
+          impact: Une panne de la base ou du stockage ferait perdre plus d'une journée de travail (RPO dépassé).
+          runbook_url: docs/exploitation/supervision.md#sauvegarde-absente
+      - alert: EtareSauvegardeIncomplete
+        expr: etare_backup_last_missing_objects > 0
+        labels:
+          severity: warning
+          service: sauvegarde
+          owner: exploitation
+        annotations:
+          summary: La dernière sauvegarde n'a pas trouvé dans le stockage des fichiers que la base référence.
+          impact: Ces fichiers manqueraient après une restauration ; ils manquent peut-être déjà à la plateforme.
+          runbook_url: docs/exploitation/supervision.md#sauvegarde-absente
+
   - name: etare-capacite
     rules:
       - alert: EtareBaseVolumineuse

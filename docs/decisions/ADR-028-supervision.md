@@ -86,7 +86,6 @@ Choix du porteur du 5 octobre 2026 : métriques au format Prometheus, trace W3C,
   la collecte se fait toutes les minutes.
 - Pas encore :
   - d'export OpenTelemetry ni de suivi d'erreurs (Sentry), à décider avec l'hébergement ;
-  - d'alerte « sauvegarde absente », qui viendra avec EXP-02 ;
   - de sonde extérieure, à installer chez l'hébergeur.
 
 ## Critère de réexamen

@@ -112,6 +112,7 @@ docs/               architecture, développement, base, sécurité, ADR
 - [Architecture](docs/architecture.md) · [Développement](docs/development.md) ·
   [Base de données](docs/database.md) · [Sécurité](docs/security.md) ·
   [Clés de signature](docs/exploitation/cles-de-signature.md) · [Supervision](docs/exploitation/supervision.md) ·
+  [Sauvegarde et restauration](docs/exploitation/sauvegarde-restauration.md) ·
   [Livraison mobile](docs/exploitation/livraison-mobile.md) · [Volumétrie](docs/volumetrie/cap-01.md) ·
   [Gros fichiers](docs/volumetrie/cap-02.md)
 - [Décisions d’architecture (ADR)](docs/decisions/)

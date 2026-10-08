@@ -68,7 +68,9 @@ Défauts relevés par le [bilan d’alignement](bilan-alignement-2026-09-30.md),
   traitement des sites élevés), et à éprouver sur la tablette physique.
 - Projet hébergé : droits du rôle des migrations sur le schéma `auth` (sessions, facteurs), gabarit
   « mot de passe oublié », plafonds d’authentification et durée des sessions à reporter (ADR-022, ADR-023).
-- Sauvegarde et restauration (EXP-02) à faire. Supervision livrée au Sprint 12 (EXP-03, ADR-028) :
+- Sauvegarde et restauration (EXP-02, ADR-031) : archive chiffrée nocturne, restauration contrôlée et
+  exercice complet en CI livrés le 8 octobre 2026 ; restent la mise en service et un exercice mesuré en
+  préproduction (bucket Scaleway, clés age). Supervision livrée au Sprint 12 (EXP-03, ADR-028) :
   collecteur et outil d’alerte à choisir avec l’hébergeur, seuils à ajuster après le pilote.
 - Volumétrie : 10 000 sites mesurés au Sprint 12 sur un poste de développement (CAP-01,
   [rapport](volumetrie/cap-01.md)). Le coût des périmètres y a été corrigé, celui du compteur de débit

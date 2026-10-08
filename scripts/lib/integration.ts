@@ -1,6 +1,25 @@
 import { createHash, createHmac, pbkdf2Sync, randomBytes } from 'node:crypto';
 
-export type AppRole = 'etare_api' | 'etare_worker';
+export type AppRole = 'etare_api' | 'etare_worker' | 'etare_backup';
+
+/** Login roles of an environment and the variable holding their connection string. */
+export const APP_ROLE_VARIABLES: Readonly<Record<AppRole, string>> = {
+  etare_api: 'DATABASE_URL',
+  etare_worker: 'WORKER_DATABASE_URL',
+  // Nightly backup job (EXP-02): its URL goes to sauvegarde.env on the server, never to the API or the worker.
+  etare_backup: 'BACKUP_DATABASE_URL',
+};
+
+/** Roles named by --only (comma-separated), by default those of the API and the worker. */
+export function selectedRoles(only: string | undefined): AppRole[] {
+  if (!only) return ['etare_api', 'etare_worker'];
+  const roles = only.split(',').map((role) => role.trim());
+  for (const role of roles) {
+    if (!(role in APP_ROLE_VARIABLES))
+      throw new Error(`--only: unknown role ${role} (${Object.keys(APP_ROLE_VARIABLES).join(', ')})`);
+  }
+  return [...new Set(roles)] as AppRole[];
+}
 
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
 

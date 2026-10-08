@@ -85,6 +85,25 @@ services:
     volumes:
       - clamav_db:/var/lib/clamav
 
+  # Sauvegarde chiffrée (EXP-02, ADR-031) : jamais en service permanent (profil), lancée chaque nuit par
+  # le minuteur firescape-sauvegarde.timer (sauvegarde.sh). Base par le rôle etare_backup, fichiers par le
+  # S3 de Supabase, configuration du serveur (fichiers .env et secrets/) en lecture seule.
+  sauvegarde:
+    profiles: [sauvegarde]
+    build:
+      context: ../backup
+    image: firescape-sauvegarde:preprod
+    env_file: sauvegarde.env
+    environment:
+      APP_VERSION: ${APP_VERSION:-preprod}
+      BACKUP_CONFIG_DIR: /configuration
+    command: ['sauvegarder']
+    secrets:
+      - supabase_ca
+    volumes:
+      - sauvegarde:/var/lib/firescape-sauvegarde
+      - ./:/configuration:ro
+
 # Fichiers créés sur le serveur seulement (dossier secrets/, ignoré par git) : l'API ne reçoit que la clé
 # des catalogues, le worker que celle des publications.
 secrets:
@@ -102,3 +121,5 @@ volumes:
   caddy_data:
   caddy_config:
   clamav_db:
+  # Copie incrémentale des fichiers et dernières archives chiffrées (BACKUP_KEEP_LOCAL).
+  sauvegarde:

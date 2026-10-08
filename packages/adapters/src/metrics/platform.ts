@@ -4,7 +4,7 @@ import type { LabelValues, MetricFamily } from './registry';
 /**
  * Figures of the platform read from PostgreSQL at scrape time (app.platform_metrics,
  * EXP-03): job queue, workers, publications, terminals, files, base maps,
- * notifications, field reports, refusals. Aggregates only; labels are job types,
+ * notifications, field reports, refusals, last backup (EXP-02). Aggregates only; labels are job types,
  * SIS slugs, receipt statuses and refusal actions.
  */
 export class PostgresPlatformMetrics {
@@ -167,6 +167,24 @@ const OBJECT_GAUGES: readonly ObjectGauge[] = [
     field: 'failed_24h',
     metric: 'etare_notifications_failed_24h',
     help: 'Notifications failed over 24 hours.',
+  },
+  {
+    section: 'backups',
+    field: 'last_success_seconds',
+    metric: 'etare_backup_last_success_seconds',
+    help: 'Seconds since the last successful backup (-1: never).',
+  },
+  {
+    section: 'backups',
+    field: 'last_archive_bytes',
+    metric: 'etare_backup_last_archive_bytes',
+    help: 'Size of the encrypted archive of the last successful backup.',
+  },
+  {
+    section: 'backups',
+    field: 'last_missing_objects',
+    metric: 'etare_backup_last_missing_objects',
+    help: 'Objects listed by the database but absent from the storage at the last backup.',
   },
   { section: 'database', field: 'size_bytes', metric: 'etare_database_size_bytes', help: 'Size of the database.' },
 ];

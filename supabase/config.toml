@@ -126,9 +126,10 @@ file_size_limit = "50MiB"
 # allowed_mime_types = ["image/png", "image/jpeg"]
 # objects_path = "./images"
 
-# Allow connections via S3 compatible clients
+# Allow connections via S3 compatible clients. Used by the backup job (EXP-02): copy of the files on
+# backup, upload on restore (infra/backup/exercice.sh).
 [storage.s3_protocol]
-enabled = false
+enabled = true
 
 # Image transformation API is available to Supabase Pro plan.
 # [storage.image_transformation]

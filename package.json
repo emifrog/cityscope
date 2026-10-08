@@ -34,6 +34,7 @@
     "mobile:release": "tsx scripts/mobile-release.ts",
     "setup:local": "tsx scripts/setup-local.ts",
     "integration": "tsx scripts/integration.ts",
+    "backup:verify": "tsx scripts/backup-verify.ts",
     "db:push:integration": "supabase db push --linked"
   },
   "devDependencies": {

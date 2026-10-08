@@ -79,6 +79,7 @@ pnpm --filter @etare/api start   # API seule sur :3001 (démonstration d’extra
 pnpm cartography:check  # catalogue des fonds IGN comparé aux services Géoplateforme (réseau requis)
 pnpm bench:volume       # banc de volumétrie de 10 000 sites, pile locale seule (docs/volumetrie/cap-01.md)
 pnpm keys               # racine et jeu de clés de signature (docs/exploitation/cles-de-signature.md)
+bash infra/backup/exercice.sh --effacer-la-pile-locale   # sauvegarde, effacement, restauration, contrôle (EXP-02)
 ```
 
 En développement, l’API est instanciée une seule fois par processus Next (pool de connexions partagé

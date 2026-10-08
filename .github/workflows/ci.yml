@@ -84,6 +84,10 @@ jobs:
       # 1 000 sites, to keep the bench working and fail on any request in error.
       - name: Volumetry bench, reduced (1 000 sites, no request in error)
         run: pnpm bench:volume --sites 1000 --jobs 10000 --seconds 5
+      # EXP-02 (ADR-031): the stack filled by the tests is backed up (encrypted for a throwaway key),
+      # wiped, restored from the archive alone, and checked (rows, files, manifests, signatures).
+      - name: Backup and restore exercise (wipes the stack, last step)
+        run: bash infra/backup/exercice.sh --effacer-la-pile-locale
       - if: always()
         run: pnpm exec supabase stop --no-backup
 
@@ -161,9 +165,9 @@ jobs:
           fi
 
   # EXP-01: the images of the preproduction (infra/preprod) build, and the worker loads its native image
-  # library (thumbnails, photos of the PDF) in its container.
+  # library (thumbnails, photos of the PDF) in its container. EXP-02: the backup image builds too.
   docker-images:
-    name: Images Docker (web, worker)
+    name: Images Docker (web, worker, sauvegarde)
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -174,6 +178,7 @@ jobs:
             --build-arg NEXT_PUBLIC_SUPABASE_URL=https://ci.supabase.invalid \
             --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_ci .
           docker build -f infra/docker/worker.Dockerfile -t firescape-worker:ci .
+          docker build -t firescape-sauvegarde:ci infra/backup
       - name: The worker image loads sharp
         run: |
           docker run --rm --entrypoint node -w /app firescape-worker:ci --input-type=module -e \
@@ -182,6 +187,7 @@ jobs:
         working-directory: infra/preprod
         run: |
           cp preprod.env.example preprod.env && cp web.env.example web.env && cp worker.env.example worker.env
+          cp sauvegarde.env.example sauvegarde.env
           mkdir secrets && touch secrets/catalog_signing_key.pem secrets/publication_signing_key.pem \
             secrets/distribution_keyset.json secrets/supabase-ca.crt
-          docker compose -f compose.yaml --env-file preprod.env config --quiet
+          docker compose -f compose.yaml --env-file preprod.env --profile sauvegarde config --quiet

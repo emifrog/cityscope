@@ -10,7 +10,8 @@ DPO du SIS pilote (DEC-03).
 | Worker (fichiers, PDF, signatures)   | conteneur `worker`                                                        |
 | Antivirus                            | conteneur `clamav`, réseau interne                                        |
 | HTTPS                                | Caddy, certificat Let's Encrypt ; seul service exposé (ports 80 et 443)   |
-| Base, authentification, stockage     | projet Supabase managé de la préproduction, région Europe (Paris)         |
+| Base, authentification, stockage     | projet Supabase managé de la préproduction, région Europe (Irlande)       |
+| Sauvegardes chiffrées                | conteneur `sauvegarde` chaque nuit, archive chez Scaleway (Paris)         |
 | Clés de signature de la distribution | fichiers secrets sur le VPS (ADR-027), racine de préproduction hors ligne |
 
 Fichiers du dossier :
@@ -18,7 +19,8 @@ Fichiers du dossier :
 - `bootstrap.sh` : préparation du serveur ;
 - `compose.yaml`, `Caddyfile` : les conteneurs ;
 - `*.env.example` : modèles de configuration, à copier sans `.example` sur le serveur ;
-- `deploy.sh` : déploiement et retour arrière.
+- `deploy.sh` : déploiement et retour arrière ;
+- `sauvegarde.sh`, `firescape-sauvegarde.{service,timer}` : sauvegarde nocturne (§10).
 
 La configuration réelle (`*.env`) et le dossier `secrets/` n'existent que sur le serveur. Ils sont
 ignorés par git et exclus des images.
@@ -282,9 +284,59 @@ doit exister avant l'étape 2.
 6. **Contrôle** : inviter un membre depuis Administration ; l'e-mail arrive, sans passer en indésirables.
    Dans le message reçu, les en-têtes montrent SPF, DKIM et DMARC en « pass ».
 
-## 10. Restent à faire (EXP-01, EXP-02)
+## 10. Sauvegardes (EXP-02)
 
-- Sauvegarde chiffrée hors de Supabase et d'Hostinger (stockage objet Scaleway, Paris) et restauration
-  mesurée (EXP-02).
-- Collecte des métriques et alertes (EXP-03 livré côté application).
+Une archive chiffrée chaque nuit à 2 h 15, déposée chez Scaleway (Paris) : base, fichiers et
+configuration du serveur. Principe et restauration :
+[sauvegarde et restauration](../../docs/exploitation/sauvegarde-restauration.md), ADR-031.
+
+1. **Base** :
+   - appliquer la migration `20261111000100_backups.sql` (§3, éditeur SQL et historique) ;
+   - donner un mot de passe au rôle `etare_backup`. L'URL produite est déjà celle du serveur
+     (certificat monté en `/run/secrets/supabase_ca`) :
+
+   ```sh
+   pnpm integration roles-sql --only etare_backup --out <hors dépôt>/role-sauvegarde.sql \
+     --pooler-url 'postgresql://postgres.<ref>@<hôte-pooler>:5432/postgres?sslmode=verify-full&sslrootcert=/run/secrets/supabase_ca'
+   ```
+
+   Lancer le fichier dans l'éditeur SQL, puis le supprimer. `BACKUP_DATABASE_URL` est alors dans
+   `.env.integration`.
+
+2. **Fichiers** : Supabase → Storage → S3 Configuration.
+   - Relever le point d'accès et la région.
+   - Créer une clé d'accès « firescape-sauvegarde » : elle n'est affichée qu'une fois.
+3. **Scaleway**, projet FireScape :
+   1. Object Storage → créer le bucket `firescape-preprod-sauvegardes`, région Paris, privé, avec le
+      **versioning** activé.
+   2. Ajouter au bucket trois règles de cycle de vie :
+      - expiration des versions courantes à 35 jours ;
+      - suppression des versions remplacées à 7 jours ;
+      - abandon des envois multiparties inachevés à 1 jour.
+   3. IAM → Applications → `firescape-sauvegarde-vps`. Lui donner une politique au seul droit
+      **ObjectStorageObjectsWrite** sur le projet FireScape : ni lecture, ni liste, ni suppression.
+   4. Créer la clé d'API de cette application : identifiant `SCW…` et clé secrète.
+4. **Clés age** : deux paires, principale et secours (guide, §2). Seules les clés publiques vont sur le
+   serveur.
+5. **Serveur** :
+   - `sauvegarde.env` depuis le modèle (`chmod 600`), puis `bash infra/preprod/deploy.sh`, qui
+     construit l'image de la sauvegarde ;
+   - première sauvegarde à la main : `bash infra/preprod/sauvegarde.sh`. Elle doit finir par
+     « Sauvegarde terminée », et l'archive doit apparaître dans le bucket ;
+   - minuteur de la sauvegarde nocturne :
+
+   ```sh
+   sudo cp infra/preprod/firescape-sauvegarde.service infra/preprod/firescape-sauvegarde.timer /etc/systemd/system/
+   sudo systemctl daemon-reload && sudo systemctl enable --now firescape-sauvegarde.timer
+   systemctl list-timers firescape-sauvegarde.timer
+   ```
+
+6. **Exercice** : restaurer la dernière archive, téléchargée depuis la console, dans la pile locale
+   vidée, puis la contrôler avec le jeu de clés de l'archive (guide, §4 et §5). Noter les durées
+   mesurées.
+
+## 11. Restent à faire (EXP-01)
+
+- Collecte des métriques et alertes (EXP-03 livré côté application ; l'alerte « sauvegarde absente »
+  en fait partie).
 - Coffre Transit (OpenBao) à la place des fichiers, si l'analyse de risques le demande.

@@ -7,6 +7,8 @@
  *                                                        same, without the admin connection: the SQL to run in
  *                                                        the SQL editor of the dashboard holds only the SCRAM
  *                                                        verifiers; <url> is the pooler URL WITHOUT password
+ *   --only etare_backup                                  roles and roles-sql: only these roles (comma-separated),
+ *                                                        e.g. the backup job (EXP-02, BACKUP_DATABASE_URL)
  *   pnpm integration tenant --slug <slug> --name <name>  create a SIS (tenant)
  *   pnpm integration grant --email <e> --tenant <slug> --role <ROLE> [--site <uuid>]
  *   pnpm integration members                             list memberships
@@ -28,8 +30,9 @@ import {
   isLocalUrl,
   roleConnectionString,
   scramSha256Verifier,
+  selectedRoles,
   upsertEnvValues,
-  type AppRole,
+  APP_ROLE_VARIABLES,
 } from './lib/integration';
 
 const root = resolve(import.meta.dirname, '..');
@@ -53,6 +56,7 @@ const { positionals, values: options } = parseArgs({
     dotenv: { type: 'string', default: '.env.integration' },
     'pooler-url': { type: 'string' },
     out: { type: 'string' },
+    only: { type: 'string' },
   },
 });
 const command = positionals[0];
@@ -156,11 +160,10 @@ async function roles(): Promise<void> {
     fail('The admin URL targets the local stack; local roles are managed by supabase/seed.sql.');
   }
   const urls: Record<string, string> = {};
+  const roles = selectedRoles(options.only);
   await withAdmin(async (client) => {
-    for (const [role, variable] of [
-      ['etare_api', 'DATABASE_URL'],
-      ['etare_worker', 'WORKER_DATABASE_URL'],
-    ] as const satisfies readonly (readonly [AppRole, string])[]) {
+    for (const role of roles) {
+      const variable = APP_ROLE_VARIABLES[role];
       const password = generatePassword();
       const { rows } = await client.query<{ statement: string }>(
         `select format('alter role %I with login password %L', $1::text, $2::text) as statement`,
@@ -215,10 +218,8 @@ async function rolesSql(): Promise<void> {
 
   const urls: Record<string, string> = {};
   const statements: string[] = [];
-  for (const [role, variable] of [
-    ['etare_api', 'DATABASE_URL'],
-    ['etare_worker', 'WORKER_DATABASE_URL'],
-  ] as const satisfies readonly (readonly [AppRole, string])[]) {
+  for (const role of selectedRoles(options.only)) {
+    const variable = APP_ROLE_VARIABLES[role];
     const password = generatePassword();
     // A verifier holds only base64 characters, '$' and ':': safe in a quoted literal.
     statements.push(`alter role ${role} with login password '${scramSha256Verifier(password)}';`);

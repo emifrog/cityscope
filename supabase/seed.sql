@@ -21,6 +21,8 @@
 -- Local-only logins for the application roles (see .env.example).
 alter role etare_api with login password 'etare_api_local_only';
 alter role etare_worker with login password 'etare_worker_local_only';
+-- Backup job (EXP-02): exercise of the backup and restore on the local stack (infra/backup/exercice.sh).
+alter role etare_backup with login password 'etare_backup_local_only';
 
 -- -----------------------------------------------------------------------------
 -- Tenants

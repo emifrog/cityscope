@@ -32,6 +32,8 @@ echo "Déploiement de ${commit} : $(git log -1 --format=%s)"
 compose=(docker compose -f "$here/compose.yaml" --env-file "$here/preprod.env")
 export APP_VERSION="$commit"
 "${compose[@]}" build --pull
+# Image de la sauvegarde nocturne (EXP-02), une fois sauvegarde.env en place (README.md, §10).
+if [ -s "$here/sauvegarde.env" ]; then "${compose[@]}" --profile sauvegarde build --pull sauvegarde; fi
 "${compose[@]}" up -d --remove-orphans
 
 # Le web répond sain une fois connecté à la base ; Caddy ne démarre qu'après lui.

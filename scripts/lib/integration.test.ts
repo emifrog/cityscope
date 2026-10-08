@@ -5,7 +5,9 @@ import {
   isLocalUrl,
   roleConnectionString,
   scramSha256Verifier,
+  selectedRoles,
   upsertEnvValues,
+  APP_ROLE_VARIABLES,
 } from './integration';
 
 describe('role connection strings', () => {
@@ -70,5 +72,14 @@ describe('misc', () => {
   it('recognises local URLs', () => {
     expect(isLocalUrl('postgresql://postgres@127.0.0.1:54322/postgres')).toBe(true);
     expect(isLocalUrl('https://abc.supabase.co')).toBe(false);
+  });
+});
+
+describe('roles of an environment', () => {
+  it('sets the API and the worker by default, the backup job on demand (EXP-02)', () => {
+    expect(selectedRoles(undefined)).toEqual(['etare_api', 'etare_worker']);
+    expect(selectedRoles('etare_backup')).toEqual(['etare_backup']);
+    expect(APP_ROLE_VARIABLES.etare_backup).toBe('BACKUP_DATABASE_URL');
+    expect(() => selectedRoles('postgres')).toThrow(/unknown role/);
   });
 });

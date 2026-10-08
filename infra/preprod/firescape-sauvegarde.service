@@ -1,0 +1,16 @@
+# Sauvegarde de la préproduction (EXP-02). Installé par README.md, §10 :
+#   sudo cp infra/preprod/firescape-sauvegarde.{service,timer} /etc/systemd/system/
+[Unit]
+Description=Sauvegarde chiffrée de FireScape (base, fichiers, configuration)
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+User=etare
+Group=docker
+ExecStart=/usr/bin/bash /opt/firescape/app/infra/preprod/sauvegarde.sh
+# Bien avant le redémarrage automatique de 4 h 30.
+TimeoutStartSec=90min
+Nice=10
+IOSchedulingClass=idle

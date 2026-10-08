@@ -1,0 +1,11 @@
+# Chaque nuit à 2 h 15 (heure de Paris), rattrapée au démarrage si le serveur était éteint.
+[Unit]
+Description=Sauvegarde nocturne de FireScape
+
+[Timer]
+OnCalendar=*-*-* 02:15:00
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
