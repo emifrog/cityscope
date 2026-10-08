@@ -307,7 +307,7 @@ async function grant(): Promise<void> {
       await client.query(
         `insert into app.role_binding (tenant_id, membership_id, role_id, scope_type, scope_id)
          select $1, $2, r.id, $4, $5 from app.role r where r.code = $3 and r.tenant_id is null
-         on conflict (membership_id, role_id, scope_type, scope_id) do nothing`,
+         on conflict (membership_id, role_id, scope_type, scope_id) where revoked_at is null do nothing`,
         [tenantId, membership.rows[0]?.id, role, options.site ? 'site' : 'tenant', options.site ?? null],
       );
       await client.query('commit');
