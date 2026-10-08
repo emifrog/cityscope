@@ -233,11 +233,58 @@ tablettes devront réinstaller l'application quand la vraie clé signera.
 - **Disque** : `docker system df`. Les images de plus d'une semaine sans étiquette sont purgées à chaque
   déploiement.
 
-## 8. Restent à faire (EXP-01, EXP-02)
+## 8. Domaine
 
-- Domaine définitif : changer `SITE_ADDRESS` et la Site URL de Supabase, puis redéployer.
-- Serveur d'envoi (SMTP) des notifications du portail exploitant et des invitations : Supabase limite
-  fortement ses envois intégrés.
+`firescape.fr` (en cours d'achat) : `preprod.firescape.fr` pour ce VPS, le domaine nu réservé à la
+production.
+
+1. Chez le registraire : enregistrements `A` (69.62.107.88) et `AAAA` (2a02:4780:28:ad02::1) pour
+   `preprod.firescape.fr`.
+2. `SITE_ADDRESS=preprod.firescape.fr, srv2044690.hstgr.cloud` dans `preprod.env`. Caddy sert alors les
+   deux noms : les tablettes déjà configurées avec l'ancien continuent de fonctionner.
+3. Supabase : Site URL `https://preprod.firescape.fr`, et l'ancien nom ajouté aux Redirect URLs.
+4. `APP_BASE_URL=https://preprod.firescape.fr` dans `worker.env` (liens des e-mails), puis
+   `bash infra/preprod/deploy.sh`.
+
+## 9. E-mails (Scaleway Transactional Email)
+
+Un seul service pour deux expéditeurs : Supabase Auth (invitations, mot de passe oublié) et le worker
+(notifications du portail exploitant). Adresse d'envoi : `ne-pas-repondre@firescape.fr`. Le domaine
+doit exister avant l'étape 2.
+
+1. **Compte Scaleway**, projet `firescape`. Le même projet portera le stockage des sauvegardes (§10).
+2. **Transactional Email → ajouter le domaine** `firescape.fr`, région Paris.
+   - Chez le registraire, ajouter les enregistrements DNS que la console affiche (SPF, DKIM, et MX s'il
+     est demandé), plus une politique DMARC : `_dmarc.firescape.fr` en TXT, valeur
+     `v=DMARC1; p=quarantine; adkim=s; aspf=s`.
+   - Attendre que la console marque le domaine comme vérifié.
+3. **Identifiants SMTP** :
+   - créer une application IAM `firescape-smtp`, avec le seul droit d'envoyer des e-mails
+     transactionnels, et sa clé d'API ;
+   - l'identifiant SMTP est l'ID du projet, le mot de passe est la clé secrète ;
+   - serveur `smtp.tem.scaleway.com`, port 465 (TLS).
+4. **Supabase** → Authentication → Emails → SMTP Settings :
+   - « Enable custom SMTP » ;
+   - serveur et identifiants ci-dessus ;
+   - expéditeur `ne-pas-repondre@firescape.fr`, nom « FireScape » ;
+   - ensuite, relever la limite d'envoi dans Authentication → Rate Limits.
+5. **Worker**, dans `worker.env` sur le serveur (chmod 600) :
+
+   ```text
+   SMTP_URL=smtps://<id-du-projet>:<clé-secrète>@smtp.tem.scaleway.com:465
+   MAIL_FROM=FireScape <ne-pas-repondre@firescape.fr>
+   APP_BASE_URL=https://preprod.firescape.fr
+   ```
+
+   Puis `bash infra/preprod/deploy.sh`. Au démarrage, le worker ne doit plus écrire
+   « mail server not configured ».
+
+6. **Contrôle** : inviter un membre depuis Administration ; l'e-mail arrive, sans passer en indésirables.
+   Dans le message reçu, les en-têtes montrent SPF, DKIM et DMARC en « pass ».
+
+## 10. Restent à faire (EXP-01, EXP-02)
+
+- Sauvegarde chiffrée hors de Supabase et d'Hostinger (stockage objet Scaleway, Paris) et restauration
+  mesurée (EXP-02).
 - Collecte des métriques et alertes (EXP-03 livré côté application).
-- Sauvegarde et restauration mesurées (EXP-02).
 - Coffre Transit (OpenBao) à la place des fichiers, si l'analyse de risques le demande.
