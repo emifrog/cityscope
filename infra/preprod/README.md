@@ -27,14 +27,18 @@ ignorés par git et exclus des images.
 
 Dans l'assistant Hostinger :
 
-- système **Ubuntu 24.04 LTS**, sans panneau de contrôle ni application préinstallée ;
+- système **Ubuntu LTS** (24.04 ou 26.04, éprouvé en 26.04 le 8 octobre 2026), sans panneau de contrôle ni
+  application préinstallée ;
 - une **clé SSH**, créée sur le poste :
 
   ```sh
   ssh-keygen -t ed25519 -C "firescape-vps" -f ~/.ssh/firescape_vps
   ```
 
-  Coller le contenu de `firescape_vps.pub`. La clé privée ne quitte pas le poste.
+  Coller le contenu de `firescape_vps.pub`. La clé privée ne quitte pas le poste. Une clé ajoutée dans
+  hPanel **après** la création du VPS peut ne pas être appliquée : connecté en root (mot de passe), ajouter
+  la ligne de `firescape_vps.pub` à `/root/.ssh/authorized_keys`, puis vérifier
+  `ssh -i ~/.ssh/firescape_vps root@<ip> true` avant l'étape 2.
 
 - un mot de passe root long, rangé dans le gestionnaire de mots de passe ;
 - nom d'hôte, par exemple `preprod-firescape` ; scanner Monarx inutile.
@@ -48,7 +52,7 @@ Depuis le poste, à la racine du dépôt :
 
 ```sh
 scp -i ~/.ssh/firescape_vps infra/preprod/bootstrap.sh root@<ip>:/root/
-ssh -i ~/.ssh/firescape_vps root@<ip> bash /root/bootstrap.sh
+ssh -i ~/.ssh/firescape_vps root@<ip> NEEDRESTART_MODE=a bash /root/bootstrap.sh
 ```
 
 Le script :

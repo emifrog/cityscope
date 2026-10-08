@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Préparation d'un VPS Ubuntu 24.04 neuf pour la préproduction FireScape (EXP-01).
+# Préparation d'un VPS Ubuntu LTS neuf (24.04, 26.04) pour la préproduction FireScape (EXP-01).
 #
 #   À lancer une fois, en root, sur le serveur :  bash bootstrap.sh
 #   Variables facultatives : ADMIN_USER (etare), SWAP_SIZE (2G).
@@ -21,7 +21,7 @@ die() {
 [ "$(id -u)" -eq 0 ] || die "lancer en root (sudo bash bootstrap.sh)."
 # shellcheck source=/dev/null
 . /etc/os-release
-[ "${ID:-}" = ubuntu ] || die "prévu pour Ubuntu 24.04 (système trouvé : ${ID:-inconnu})."
+[ "${ID:-}" = ubuntu ] || die "prévu pour Ubuntu LTS (système trouvé : ${ID:-inconnu})."
 
 log "Mises à jour du système"
 export DEBIAN_FRONTEND=noninteractive
