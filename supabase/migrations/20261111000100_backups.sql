@@ -24,8 +24,6 @@ comment on role etare_backup is
   'Nightly backup (EXP-02): reads every table (pg_read_all_data, BYPASSRLS for pg_dump), writes only its run record.';
 
 grant pg_read_all_data to etare_backup;
-
-revoke all on all routines in schema app from public;
 -- Like the application roles: the migration identity may impersonate it (tests), without inheriting its rights.
 grant etare_backup to current_user with inherit false, set true;
 
@@ -211,3 +209,5 @@ $$;
 -- Grants
 -- -----------------------------------------------------------------------------
 grant execute on function app.backup_record_run(timestamptz, text, bigint, integer, bigint, integer) to etare_backup;
+
+revoke all on all routines in schema app from public;
