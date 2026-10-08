@@ -10,4 +10,7 @@ export default defineConfig({
   clean: true,
   sourcemap: true,
   noExternal: [/^@etare\//],
+  // Native binary picked at runtime for the platform (thumbnails, photos of the PDF): installed with the
+  // dependencies of the worker (package.json), never bundled.
+  external: ['sharp'],
 });

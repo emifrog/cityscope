@@ -1,0 +1,13 @@
+# Relais HTTPS de la préproduction (EXP-01). Certificat Let's Encrypt obtenu et renouvelé par Caddy pour
+# SITE_ADDRESS (nom d'hôte du VPS, puis le domaine définitif). Les en-têtes de sécurité et la CSP sont
+# posés par l'application elle-même.
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+
+	reverse_proxy web:3000
+}

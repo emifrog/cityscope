@@ -6,15 +6,17 @@
  *   pnpm integration tenant --slug <slug> --name <name>  create a SIS (tenant)
  *   pnpm integration grant --email <e> --tenant <slug> --role <ROLE> [--site <uuid>]
  *   pnpm integration members                             list memberships
+ *   --env-file <file>                                    another hosted environment (default .env.integration),
+ *                                                        e.g. .env.preprod for the preproduction (EXP-01)
  *
  * The admin connection string is read ONLY from the INTEGRATION_ADMIN_DATABASE_URL
  * environment variable of the current shell: it is never written to disk.
  * Application role passwords are generated here, sent as SCRAM verifiers and
- * written to .env.integration (gitignored); they are never displayed.
+ * written to .env.integration, or the --env-file (gitignored); they are never displayed.
  * See docs/development.md, "Environnement d'intégration partagé".
  */
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import pg from 'pg';
 import {
@@ -27,7 +29,6 @@ import {
 } from './lib/integration';
 
 const root = resolve(import.meta.dirname, '..');
-const envFile = resolve(root, '.env.integration');
 const TENANT_ROLES = ['SIS_ADMIN', 'PREVISION_EDITOR', 'PREVISION_VALIDATOR', 'OPS_USER', 'EXPLOITANT', 'READER'];
 
 function fail(message: string): never {
@@ -45,9 +46,15 @@ const { positionals, values: options } = parseArgs({
     role: { type: 'string' },
     site: { type: 'string' },
     'allow-local': { type: 'boolean', default: false },
+    'env-file': { type: 'string', default: '.env.integration' },
   },
 });
 const command = positionals[0];
+const envFile = resolve(root, options['env-file']);
+const envName = basename(envFile);
+if (!/^\.env\.[a-z0-9-]+$/.test(envName) || ['.env.local', '.env.example'].includes(envName)) {
+  fail('--env-file must be a gitignored .env.<name> file (not .env.local, local stack, nor .env.example).');
+}
 
 const adminUrl = process.env['INTEGRATION_ADMIN_DATABASE_URL'];
 if (!adminUrl) {
@@ -121,20 +128,17 @@ async function check(): Promise<void> {
     const content = readFileSync(envFile, 'utf8');
     const value = (key: string) => new RegExp(`^${key}=(.*)$`, 'm').exec(content)?.[1]?.trim() ?? '';
     const key = value('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY');
-    report(
-      key.startsWith('sb_publishable_'),
-      '.env.integration uses a publishable key (never a secret key) in NEXT_PUBLIC_',
-    );
+    report(key.startsWith('sb_publishable_'), `${envName} uses a publishable key (never a secret key) in NEXT_PUBLIC_`);
     report(
       ['DATABASE_URL', 'WORKER_DATABASE_URL'].every((k) => value(k) !== ''),
-      '.env.integration has the application role URLs',
+      `${envName} has the application role URLs`,
     );
     report(
       ['SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL'].every((k) => value(k) !== '' && !isLocalUrl(value(k))),
-      '.env.integration targets the hosted project',
+      `${envName} targets the hosted project`,
     );
   } else {
-    report(false, '.env.integration exists (copy .env.integration.example)');
+    report(false, `${envName} exists (copy .env.integration.example)`);
   }
 
   if (!ok) process.exit(1);
@@ -177,7 +181,7 @@ async function roles(): Promise<void> {
     ? readFileSync(envFile, 'utf8')
     : readFileSync(resolve(root, '.env.integration.example'), 'utf8');
   writeFileSync(envFile, upsertEnvValues(base, urls), { mode: 0o600 });
-  console.log('✔ .env.integration updated (passwords are not displayed)');
+  console.log(`✔ ${envName} updated (passwords are not displayed)`);
 }
 
 async function tenant(): Promise<void> {

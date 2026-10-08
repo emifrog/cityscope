@@ -159,3 +159,29 @@ jobs:
             echo "Release construite sans clé de signature" >&2
             exit 1
           fi
+
+  # EXP-01: the images of the preproduction (infra/preprod) build, and the worker loads its native image
+  # library (thumbnails, photos of the PDF) in its container.
+  docker-images:
+    name: Images Docker (web, worker)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the web and worker images
+        run: |
+          docker build -f infra/docker/web.Dockerfile -t firescape-web:ci \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL=https://ci.supabase.invalid \
+            --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_ci .
+          docker build -f infra/docker/worker.Dockerfile -t firescape-worker:ci .
+      - name: The worker image loads sharp
+        run: |
+          docker run --rm --entrypoint node -w /app firescape-worker:ci --input-type=module -e \
+            "import sharp from 'sharp'; await sharp({ create: { width: 8, height: 8, channels: 3, background: '#c00' } }).webp().toBuffer(); console.log('sharp', sharp.versions.vips);"
+      - name: The preproduction compose file is valid
+        working-directory: infra/preprod
+        run: |
+          cp preprod.env.example preprod.env && cp web.env.example web.env && cp worker.env.example worker.env
+          mkdir secrets && touch secrets/catalog_signing_key.pem secrets/publication_signing_key.pem \
+            secrets/distribution_keyset.json secrets/supabase-ca.crt
+          docker compose -f compose.yaml --env-file preprod.env config --quiet

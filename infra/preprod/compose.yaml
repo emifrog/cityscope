@@ -1,0 +1,104 @@
+# Préproduction FireScape sur un VPS (EXP-01) : Caddy (HTTPS automatique), web + API, worker, ClamAV.
+# Base, authentification et stockage des fichiers : projet Supabase managé de la préproduction.
+#
+#   Depuis la racine du dépôt cloné sur le serveur (/opt/firescape/app) :
+#   docker compose -f infra/preprod/compose.yaml --env-file infra/preprod/preprod.env up -d --build
+#
+# Seul Caddy publie des ports (80, 443) : Docker contourne le pare-feu ufw pour les ports publiés, les
+# autres services restent sur le réseau interne. Procédure : infra/preprod/README.md.
+name: firescape-preprod
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - 80:80
+      - 443:443
+      - 443:443/udp
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?adresse publique du site (ex. srv123456.hstgr.cloud)}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/docker/web.Dockerfile
+      args:
+        # Inscrits dans le code envoyé au navigateur : publics par nature, jamais un secret.
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?URL du projet Supabase de la préproduction}
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:?clé publishable Supabase}
+    image: firescape-web:${APP_VERSION:-preprod}
+    restart: unless-stopped
+    env_file: web.env
+    environment:
+      APP_ENV: staging
+      APP_VERSION: ${APP_VERSION:-preprod}
+      # Caddy est le seul relais : l'adresse du client est la dernière entrée de X-Forwarded-For.
+      TRUSTED_PROXY_HOPS: '1'
+      CATALOG_SIGNING_KEY_FILE: /run/secrets/catalog_signing_key
+      DISTRIBUTION_KEYSET_FILE: /run/secrets/distribution_keyset
+    secrets:
+      - catalog_signing_key
+      - distribution_keyset
+      - supabase_ca
+    expose:
+      - '3000'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/api/v1/health >/dev/null || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: infra/docker/worker.Dockerfile
+    image: firescape-worker:${APP_VERSION:-preprod}
+    restart: unless-stopped
+    env_file: worker.env
+    environment:
+      APP_ENV: staging
+      APP_VERSION: ${APP_VERSION:-preprod}
+      ANTIVIRUS_URL: tcp://clamav:3310
+      PUBLICATION_SIGNING_KEY_FILE: /run/secrets/publication_signing_key
+      DISTRIBUTION_KEYSET_FILE: /run/secrets/distribution_keyset
+    secrets:
+      - publication_signing_key
+      - distribution_keyset
+      - supabase_ca
+    depends_on:
+      clamav:
+        condition: service_healthy
+
+  clamav:
+    image: clamav/clamav:stable
+    restart: unless-stopped
+    # Signatures mises à jour par freshclam dans le conteneur, gardées entre deux redémarrages.
+    volumes:
+      - clamav_db:/var/lib/clamav
+
+# Fichiers créés sur le serveur seulement (dossier secrets/, ignoré par git) : l'API ne reçoit que la clé
+# des catalogues, le worker que celle des publications.
+secrets:
+  catalog_signing_key:
+    file: ./secrets/catalog_signing_key.pem
+  publication_signing_key:
+    file: ./secrets/publication_signing_key.pem
+  distribution_keyset:
+    file: ./secrets/distribution_keyset.json
+  # Certificat du projet Supabase (Database → Settings → SSL) : connexions à la base vérifiées.
+  supabase_ca:
+    file: ./secrets/supabase-ca.crt
+
+volumes:
+  caddy_data:
+  caddy_config:
+  clamav_db:

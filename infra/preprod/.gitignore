@@ -1,0 +1,4 @@
+# Configuration réelle et secrets de la préproduction : créés sur le serveur, jamais dans le dépôt.
+*.env
+!*.env.example
+secrets/

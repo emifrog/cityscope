@@ -13,3 +13,6 @@ docs
 apps/mobile
 supabase
 coverage
+# Configuration et secrets de la préproduction, présents sur le serveur : jamais dans une image.
+infra/preprod/*.env
+infra/preprod/secrets
