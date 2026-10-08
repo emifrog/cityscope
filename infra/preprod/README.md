@@ -79,47 +79,59 @@ En cas de perte d'accès, utiliser la console de secours de hPanel.
 
 ## 3. Projet Supabase de la préproduction
 
-1. Créer le projet `firescape-preprod`, région **West EU (Paris)**, avec un mot de passe de base long.
-   Le plan gratuit met en pause un projet inactif une semaine, et n'a pas de sauvegarde : le plan Pro
-   convient à une préproduction utilisée par intermittence.
-2. Reporter les réglages de [l'environnement d'intégration](../../docs/development.md) (§1) :
+Le projet hébergé existant `vpcudfrwvzdliunmsjvt` (plan payant, région **West EU (Ireland)**) sert à la
+fois d'intégration et de préproduction (choix du 8 octobre 2026). Données fictives uniquement.
+
+1. **Réglages** : reprendre ceux de [l'environnement d'intégration](../../docs/development.md) (§1) :
    - inscriptions fermées, mots de passe forts ;
    - TOTP ;
    - clés JWT asymétriques ;
    - schéma `app` jamais exposé ;
    - modèle d'invitation.
 
-   Pour la **Site URL**, prendre `https://<adresse publique>`.
+   La **Site URL** est `https://srv2044690.hstgr.cloud`. Ajouter `http://127.0.0.1:3000/**` aux Redirect
+   URLs pour l'utiliser aussi depuis un poste.
 
-3. Appliquer les migrations, **jamais le seed** :
+2. **Migrations, jamais le seed.**
+   - La voie normale est `pnpm exec supabase db push --linked --dry-run`, puis `pnpm db:push:integration`.
+   - Si la CLI est refusée (erreur 403 sur le « login role »), appliquer chaque nouvelle migration dans
+     l'éditeur SQL du tableau de bord, puis l'inscrire dans l'historique :
 
-   ```sh
-   pnpm exec supabase link --project-ref <project-ref>
-   pnpm exec supabase db push --linked --dry-run
-   pnpm exec supabase db push --linked
-   ```
+     ```sql
+     insert into supabase_migrations.schema_migrations (version, name) values ('<AAAAMMJJhhmmss>', '<nom>');
+     ```
 
-4. Créer `.env.preprod` à la racine du dépôt, sur le poste. Partir de `.env.integration.example`,
-   remplir `SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, puis
-   créer les rôles applicatifs. L'URL d'administration se définit dans le terminal seulement, avec le
-   certificat du projet téléchargé (Database → Settings → SSL) :
+   Les 43 premières migrations y ont été appliquées à la main puis contrôlées. Le schéma est identique au
+   dépôt (empreinte des fonctions, colonnes, politiques et déclencheurs), et l'historique est enregistré.
 
-   ```sh
-   export INTEGRATION_ADMIN_DATABASE_URL='postgresql://postgres.<ref>:<mot-de-passe>@<hôte-pooler>:5432/postgres?sslmode=verify-full&sslrootcert=<chemin>/prod-ca-2021.crt'
-   pnpm integration roles --env-file .env.preprod
-   pnpm integration check --env-file .env.preprod
-   ```
+3. **Rôles applicatifs** : mots de passe aléatoires, écrits dans `.env.integration` et jamais affichés.
+   Deux voies :
+   - **avec l'URL d'administration**, définie dans le terminal seulement :
 
-   Les URL des rôles `etare_api` et `etare_worker` sont écrites dans `.env.preprod`, jamais affichées.
+     ```sh
+     export INTEGRATION_ADMIN_DATABASE_URL='postgresql://postgres.<ref>:<mot-de-passe>@<hôte-pooler>:5432/postgres?sslmode=verify-full&sslrootcert=<chemin>/prod-ca-2021.crt'
+     pnpm integration roles && pnpm integration check
+     ```
 
-5. Créer le SIS de préproduction et son premier administrateur :
+   - **sans elle**, par l'éditeur SQL : l'URL du pooler s'écrit sans mot de passe. Lancer ensuite le
+     fichier produit dans l'éditeur SQL, puis le supprimer. Il ne contient que les empreintes SCRAM.
+
+     ```sh
+     pnpm integration roles-sql --pooler-url 'postgresql://postgres.<ref>@<hôte-pooler>:5432/postgres?sslmode=verify-full&sslrootcert=<chemin>/supabase-ca.crt' --out <hors dépôt>/roles.sql
+     ```
+
+   `--dotenv .env.<nom>` vise un autre fichier que `.env.integration`.
+
+4. **SIS de préproduction et premier administrateur.** Créer d'abord le compte dans
+   Authentication → Users, puis :
 
    ```sh
    pnpm integration tenant --slug sdis-preprod-06 --name "SDIS PRÉPROD 06"
    pnpm integration grant --email <adresse> --tenant sdis-preprod-06 --role SIS_ADMIN
    ```
 
-   Le compte se crée d'abord dans Authentication → Users. Fermer le terminal ensuite.
+   Ces deux commandes demandent l'URL d'administration. À défaut, l'équivalent SQL se lance dans l'éditeur
+   (voir `tenant` et `grant` dans `scripts/integration.ts`).
 
 ## 4. Clés de signature de la préproduction
 
@@ -163,7 +175,7 @@ mkdir -m 700 secrets
 Remplir les trois fichiers :
 
 - adresse publique, URL et clé publishable du projet ;
-- URL des rôles, reprises de `.env.preprod` ;
+- URL des rôles, reprises de `.env.integration` (certificat : `/run/secrets/supabase_ca`) ;
 - clé secrète du projet ;
 - `DISTRIBUTION_ROOT_KEYS` : les deux lignes racine.
 

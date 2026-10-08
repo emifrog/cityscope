@@ -3,20 +3,24 @@
  *
  *   pnpm integration check                               verify schema, roles and absence of demo data
  *   pnpm integration roles                               set random passwords for etare_api / etare_worker
+ *   pnpm integration roles-sql --pooler-url <url> --out <file.sql>
+ *                                                        same, without the admin connection: the SQL to run in
+ *                                                        the SQL editor of the dashboard holds only the SCRAM
+ *                                                        verifiers; <url> is the pooler URL WITHOUT password
  *   pnpm integration tenant --slug <slug> --name <name>  create a SIS (tenant)
  *   pnpm integration grant --email <e> --tenant <slug> --role <ROLE> [--site <uuid>]
  *   pnpm integration members                             list memberships
- *   --env-file <file>                                    another hosted environment (default .env.integration),
+ *   --dotenv <file>                                      another hosted environment (default .env.integration),
  *                                                        e.g. .env.preprod for the preproduction (EXP-01)
  *
  * The admin connection string is read ONLY from the INTEGRATION_ADMIN_DATABASE_URL
  * environment variable of the current shell: it is never written to disk.
  * Application role passwords are generated here, sent as SCRAM verifiers and
- * written to .env.integration, or the --env-file (gitignored); they are never displayed.
+ * written to .env.integration, or the --dotenv file (gitignored); they are never displayed.
  * See docs/development.md, "Environnement d'intégration partagé".
  */
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { basename, resolve } from 'node:path';
+import { basename, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import pg from 'pg';
 import {
@@ -46,18 +50,21 @@ const { positionals, values: options } = parseArgs({
     role: { type: 'string' },
     site: { type: 'string' },
     'allow-local': { type: 'boolean', default: false },
-    'env-file': { type: 'string', default: '.env.integration' },
+    dotenv: { type: 'string', default: '.env.integration' },
+    'pooler-url': { type: 'string' },
+    out: { type: 'string' },
   },
 });
 const command = positionals[0];
-const envFile = resolve(root, options['env-file']);
+const envFile = resolve(root, options.dotenv);
 const envName = basename(envFile);
 if (!/^\.env\.[a-z0-9-]+$/.test(envName) || ['.env.local', '.env.example'].includes(envName)) {
-  fail('--env-file must be a gitignored .env.<name> file (not .env.local, local stack, nor .env.example).');
+  fail('--dotenv must be a gitignored .env.<name> file (not .env.local, local stack, nor .env.example).');
 }
 
 const adminUrl = process.env['INTEGRATION_ADMIN_DATABASE_URL'];
-if (!adminUrl) {
+// Every command but roles-sql works through the admin connection.
+if (!adminUrl && command !== 'roles-sql') {
   fail('INTEGRATION_ADMIN_DATABASE_URL is not set in this shell (see docs/development.md).');
 }
 
@@ -184,6 +191,59 @@ async function roles(): Promise<void> {
   console.log(`✔ ${envName} updated (passwords are not displayed)`);
 }
 
+/**
+ * Passwords of the application roles without the admin connection (EXP-01): generated here and
+ * written to the env file, never displayed; the SQL file sets their SCRAM verifiers (never the
+ * passwords) when run in the SQL editor of the dashboard.
+ */
+async function rolesSql(): Promise<void> {
+  const pooler =
+    options['pooler-url'] ?? fail('--pooler-url is required (pooler URL of the project, without password).');
+  const out = resolve(options.out ?? fail('--out <file.sql> is required (outside the repository).'));
+  let poolerUrl: URL;
+  try {
+    poolerUrl = new URL(pooler);
+  } catch {
+    fail('--pooler-url is not a URL.');
+  }
+  if (poolerUrl.password) fail('--pooler-url must not hold the password: it is never needed here.');
+  if (isLocalUrl(pooler)) fail('--pooler-url targets the local stack; local roles are managed by supabase/seed.sql.');
+  const inside = relative(root, out);
+  if (!inside.startsWith('..') && !inside.includes(':')) {
+    fail('--out must be outside the repository (the file holds the password verifiers).');
+  }
+
+  const urls: Record<string, string> = {};
+  const statements: string[] = [];
+  for (const [role, variable] of [
+    ['etare_api', 'DATABASE_URL'],
+    ['etare_worker', 'WORKER_DATABASE_URL'],
+  ] as const satisfies readonly (readonly [AppRole, string])[]) {
+    const password = generatePassword();
+    // A verifier holds only base64 characters, '$' and ':': safe in a quoted literal.
+    statements.push(`alter role ${role} with login password '${scramSha256Verifier(password)}';`);
+    urls[variable] = roleConnectionString(pooler, role, password);
+  }
+  writeFileSync(
+    out,
+    [
+      '-- Mots de passe des rôles applicatifs (empreintes SCRAM, jamais les mots de passe), générés par',
+      `-- pnpm integration roles-sql. À lancer une fois dans l'éditeur SQL, puis supprimer ce fichier.`,
+      'begin;',
+      ...statements,
+      'commit;',
+      '',
+    ].join('\n'),
+    { mode: 0o600 },
+  );
+  const base = existsSync(envFile)
+    ? readFileSync(envFile, 'utf8')
+    : readFileSync(resolve(root, '.env.integration.example'), 'utf8');
+  writeFileSync(envFile, upsertEnvValues(base, urls), { mode: 0o600 });
+  console.log(`✔ ${envName} updated (passwords are not displayed)`);
+  console.log(`✔ ${out}: run it once in the SQL editor of the dashboard, then delete it`);
+}
+
 async function tenant(): Promise<void> {
   const slug = options.slug ?? fail('--slug is required');
   const name = options.name ?? fail('--name is required');
@@ -275,7 +335,7 @@ async function members(): Promise<void> {
   });
 }
 
-const commands: Record<string, () => Promise<void>> = { check, roles, tenant, grant, members };
+const commands: Record<string, () => Promise<void>> = { check, roles, 'roles-sql': rolesSql, tenant, grant, members };
 const run = command ? commands[command] : undefined;
 if (!run) fail(`usage: pnpm integration <${Object.keys(commands).join('|')}> [options]`);
 await run();
