@@ -59,3 +59,13 @@ Sections et photos décidées par l’ADR-026 (DEC-05, 3 octobre 2026) : registr
 maquette, sections non obligatoires masquables par le SIS et figées dans la version soumise, annexe photos.
 Livré au Sprint 10 (gabarit `etare-pdf/4`) : les points 3 et 4 ci-dessus suivent désormais l’ADR-026 ;
 les pages de plans disparaissent quand le SIS masque la section Plans.
+
+## Complément du Sprint 14 : QR code du site (gabarit `etare-pdf/5`)
+
+La première page porte, à droite du bloc de titre, un QR code du lien du site
+(`<APP_BASE_URL>/sites/<identifiant>`, architecture §16) : il nomme le dossier, sans secret ni droit
+d’accès. Scanné par l’application OPS, il ouvre la version installée sur la tablette ; avec un téléphone,
+il ouvre la page du site du back-office, derrière la connexion. Les modules sont dessinés en vecteurs
+(`qrcode-generator`, MIT), sans image ni police ; la légende « Scanner : ouvrir le site dans FireScape
+OPS » l’accompagne. Sans `APP_BASE_URL`, le worker le dit au démarrage et le PDF reste sans code. Les PDF
+des publications antérieures ne sont pas régénérés (point 2 de l’ADR, gabarit tracé).

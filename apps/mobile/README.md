@@ -461,7 +461,9 @@ du réseau pour l'obtenir. Les documents « jamais » restent au back-office.
   Sprint 4 (sections 6 et 8).
 - ~~Cartographie et géolocalisation~~ : carte hors ligne et position à la demande livrées au Sprint 11
   (section 7 ter). La caméra sert aux photos des signalements, par l’application appareil photo du
-  système, sans permission.
+  système, sans permission ; depuis le Sprint 14, la permission caméra n’est demandée que pour lire le
+  QR code d’un dossier (« Scanner un dossier », décodage local par ML Kit embarqué, aucune image
+  conservée).
 - Client API généré depuis l'OpenAPI (client manuel provisoire).
 - ~~Verrouillage applicatif~~ : code personnel livré au Sprint 10 (section 7 bis), politique du SIS au
   Sprint 13 (section 7 quater) ; épinglage de certificats et détection root/jailbreak non retenus

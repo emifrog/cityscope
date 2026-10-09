@@ -297,6 +297,13 @@ Depuis le Sprint 11 (ADR-024) :
   `ACCESS_COARSE_LOCATION`) ; la position est affichée par le moteur de carte et n'est jamais transmise ;
   un refus laisse la carte utilisable.
 
+Depuis le Sprint 14 :
+
+- **Caméra** : permission demandée au premier « Scanner un dossier » (lecture du QR code imprimé sur le
+  dossier ETARE, ADR-014) ; décodage sur la tablette par ML Kit embarqué, sans réseau ; aucune image
+  n’est conservée ni transmise. Le code ne porte que l’identifiant du site : la tablette n’ouvre que ce
+  qu’elle a reçu par synchronisation, un code étranger ne donne rien.
+
 Depuis le Sprint 13 (SEC-05, ADR-029) :
 
 - **Écran protégé** : `FLAG_SECURE` par défaut (ni capture ni aperçu dans les applications récentes),

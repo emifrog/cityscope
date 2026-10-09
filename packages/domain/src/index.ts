@@ -13,6 +13,7 @@ export * from './keyset';
 export * from './objects';
 export * from './portal';
 export * from './site';
+export * from './site-link';
 export * from './storage';
 export * from './terminal';
 export * from './workflow';

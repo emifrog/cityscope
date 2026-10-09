@@ -11,6 +11,7 @@ import { AddressSearch } from '@/components/address-search';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { isStaleVersion } from '@/components/form-helpers';
 import { SENSITIVITY_LABELS, SITE_STATUS_LABELS, SITE_TYPE_LABELS } from '@/components/labels';
+import { SiteQrCode } from '@/components/site-qr-code';
 import { api } from '@/lib/api-client';
 import { queryKeys, useApiMutation, useExternalIds, usePermissions } from '@/lib/queries';
 import { useTenant } from '@/providers/tenant-provider';
@@ -149,6 +150,18 @@ export function SummaryPanel({ site }: { site: SiteDetail }) {
             <p className="text-xs text-muted">
               Vous consultez les données de travail. Chaque modification est tracée et devra être validée avant d’être
               diffusée.
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Code QR du site</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <SiteQrCode siteId={site.id} />
+            <p className="text-xs text-muted">
+              Imprimé sur la première page du dossier ETARE. Scanné par l’application OPS, il ouvre la version installée
+              sur la tablette ; il ne contient ni secret ni droit d’accès.
             </p>
           </CardContent>
         </Card>

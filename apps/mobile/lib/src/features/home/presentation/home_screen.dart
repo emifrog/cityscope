@@ -30,6 +30,7 @@ class HomeScreen extends ConsumerStatefulWidget {
   static const accountButtonKey = Key('home.account');
   static const reportsButtonKey = Key('home.reports');
   static const mapButtonKey = Key('home.map');
+  static const scanButtonKey = Key('home.scan');
 
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
@@ -86,6 +87,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       appBar: AppBar(
         title: const Text(Brand.productName),
         actions: [
+          IconButton(
+            key: HomeScreen.scanButtonKey,
+            tooltip: 'Scanner un dossier',
+            onPressed: () => context.push(AppRoutes.scan),
+            icon: const Icon(Icons.qr_code_scanner),
+          ),
           IconButton(
             key: HomeScreen.mapButtonKey,
             tooltip: 'Carte',

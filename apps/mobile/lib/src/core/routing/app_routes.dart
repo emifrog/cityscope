@@ -10,6 +10,9 @@ abstract final class AppRoutes {
   /// Compte, SIS actif, état de la tablette et déconnexion.
   static const account = '/home/account';
 
+  /// Lecture du QR code d'un dossier ETARE (ouvre le site installé).
+  static const scan = '/home/scan';
+
   /// Synthèse opérationnelle d'un site installé (OPS-01).
   static String site(String siteId) => '/home/site/$siteId';
 

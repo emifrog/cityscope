@@ -56,7 +56,13 @@ const worker = createWorker({
         now: () => new Date(),
         signer: publicationKey,
       },
-      artifacts: { renderer: new PdfLibEtareRenderer(), objects, sha256Bytes: sha256, images: new SharpImageResizer() },
+      artifacts: {
+        renderer: new PdfLibEtareRenderer(),
+        objects,
+        sha256Bytes: sha256,
+        images: new SharpImageResizer(),
+        appBaseUrl: null,
+      },
     }),
     basemapBuildHandler({
       store: new PostgresBasemapBuildStore(workerPool),

@@ -1,0 +1,11 @@
+ML Kit Barcode Scanning (Google LLC)
+
+Bibliothèque native de lecture des codes-barres embarquée par le paquet Flutter
+mobile_scanner (variante « bundled » : décodage sur la tablette, sans Google Play
+Services ni réseau). Composant propriétaire de Google, distribué sous les
+conditions d'utilisation de ML Kit :
+
+  https://developers.google.com/ml-kit/terms
+
+Les images de la caméra sont analysées localement, pendant la visée seulement ;
+l'application n'en conserve ni n'en transmet aucune.

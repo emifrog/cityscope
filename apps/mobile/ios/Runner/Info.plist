@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Photographier un écart pour le signaler au service Prévision.</string>
+	<string>Photographier un écart pour le signaler au service Prévision, et lire le QR code d’un dossier ETARE.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Joindre une photo existante à un signalement terrain.</string>
 	<key>CFBundleDisplayName</key>

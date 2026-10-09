@@ -1,11 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Permissions : accès réseau (API produit + authentification) et
+    <!-- Permissions : accès réseau (API produit + authentification) ;
          localisation pendant l'utilisation, demandée au premier « Me situer » sur
          la carte (CAR-02) : la position est affichée sur la tablette, jamais
-         transmise (ADR-025). Pas de contacts. Les photos des signalements passent
-         par l'application appareil photo du système (intention IMAGE_CAPTURE) ou
-         le sélecteur de photos : aucune permission caméra ni stockage. -->
+         transmise (ADR-025) ; caméra, demandée au premier « Scanner un dossier »
+         (lecture du QR code du dossier ETARE, décodage sur la tablette, aucune
+         image conservée ni transmise). Pas de contacts ni de stockage : les
+         photos des signalements passent par l'application appareil photo du
+         système (intention IMAGE_CAPTURE) ou le sélecteur de photos. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 

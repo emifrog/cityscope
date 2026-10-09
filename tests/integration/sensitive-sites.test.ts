@@ -44,6 +44,7 @@ const worker = createWorker({
         objects: SupabaseObjectStorage.fromSecretKey(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SECRET_KEY')),
         sha256Bytes: sha256,
         images: new SharpImageResizer(),
+        appBaseUrl: null,
       },
     }),
   ]),

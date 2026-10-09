@@ -197,6 +197,31 @@ function imageOf(document: PDFDocument, page: PDFPage) {
 }
 
 describe('ETARE PDF', () => {
+  it('prints the link of the site as a QR code on the first page, beside the title', async () => {
+    const renderer = new PdfLibEtareRenderer();
+    const render = async (siteLink: string | null) =>
+      PDFDocument.load(
+        await renderer.render({
+          publication: PUBLICATION,
+          snapshot,
+          planImages: new Map([[REVISION, { bytes: DEMO_PLAN, mimeType: 'image/png' }]]),
+          photoImages: new Map(),
+          siteLink,
+        }),
+      );
+    const withQr = await render(`https://firescape.example/sites/${snapshot.site.id}`);
+    const without = await render(null);
+    const first = (document: PDFDocument) => contentOf(document, document.getPage(0));
+    // Modules of the code: plain closed paths (no image), only on the first page and only with a link.
+    const rectangles = (content: string) => (content.match(/\nh\n/g) ?? []).length;
+    expect(rectangles(first(withQr)) - rectangles(first(without))).toBeGreaterThan(150);
+    expect(rectangles(contentOf(withQr, withQr.getPage(1)))).toBe(rectangles(contentOf(without, without.getPage(1))));
+    expect(textsOf(first(withQr))).toContain('Scanner : ouvrir le site dans FireScape OPS');
+    expect(textsOf(first(without))).not.toContain('Scanner : ouvrir le site dans FireScape OPS');
+    // The title block keeps every line, narrowed beside the code.
+    expect(textsOf(first(withQr)).join(' ')).toContain('EHPAD Les Oliviers');
+  });
+
   it.each(['image/png', 'image/jpeg', 'image/webp'])(
     'draws the validated %s background and every item placed on the plan',
     async (mimeType) => {
@@ -212,6 +237,7 @@ describe('ETARE PDF', () => {
         snapshot,
         planImages: new Map([[REVISION, { bytes: image, mimeType }]]),
         photoImages: new Map(),
+        siteLink: null,
       });
       expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe('%PDF-');
       const document = await PDFDocument.load(bytes);
@@ -252,6 +278,7 @@ describe('ETARE PDF', () => {
         snapshot,
         planImages: new Map(),
         photoImages: new Map(),
+        siteLink: null,
       }),
     ).rejects.toThrow('PLAN_BACKGROUND_UNAVAILABLE');
   });
@@ -270,6 +297,7 @@ describe('sections of the ETARE PDF (MET-05)', () => {
       snapshot,
       planImages: await plan(),
       photoImages: new Map(),
+      siteLink: null,
     });
     const document = await PDFDocument.load(bytes);
     expect(headingsOf(document, 0)).toEqual([
@@ -300,6 +328,7 @@ describe('sections of the ETARE PDF (MET-05)', () => {
       },
       planImages: new Map(),
       photoImages: new Map(),
+      siteLink: null,
     });
     const document = await PDFDocument.load(bytes);
     expect(document.getPageCount()).toBe(1);
@@ -339,6 +368,7 @@ describe('sections of the ETARE PDF (MET-05)', () => {
         snapshot: withPhoto,
         planImages: new Map([[REVISION, { bytes: DEMO_PLAN, mimeType: 'image/png' }]]),
         photoImages,
+        siteLink: null,
       });
     const document = await PDFDocument.load(await render(new Map([['ph1', { bytes: photo, mimeType: 'image/jpeg' }]])));
     expect(document.getPageCount()).toBe(3);

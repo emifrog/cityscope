@@ -14,6 +14,7 @@ import {
   type PhotoAnnex,
 } from '@etare/domain';
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFImage, type PDFPage, type RGB } from 'pdf-lib';
+import qrcode from 'qrcode-generator';
 
 /**
  * ETARE PDF (ETARE-02) drawn from the frozen snapshot of a publication only:
@@ -21,7 +22,7 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFImage, type PDFP
  * published and the SHA-256 of the approved content. Standard PDF fonts
  * (WinAnsi): characters they cannot encode are replaced by their closest form.
  */
-export const ETARE_PDF_TEMPLATE_VERSION = 'etare-pdf/4';
+export const ETARE_PDF_TEMPLATE_VERSION = 'etare-pdf/5';
 
 const PORTRAIT: [number, number] = [595.28, 841.89];
 const LANDSCAPE: [number, number] = [841.89, 595.28];
@@ -128,6 +129,52 @@ interface TextStyle {
   readonly color?: RGB;
   readonly indent?: number;
   readonly gap?: number;
+  /** Narrower flow, when a block drawn by hand takes the right of the page (QR code of the title). */
+  readonly width?: number;
+}
+
+/** QR code of the site link on the first page (architecture §16): side, quiet zone and caption. */
+const QR_SIDE = 76;
+const QR_QUIET_MODULES = 4;
+const QR_CAPTION = 'Scanner : ouvrir le site dans FireScape OPS';
+/** Room kept free of text at the right of the title block, QR code and its caption. */
+const QR_ZONE = QR_SIDE + 20;
+
+/**
+ * Draws the link as a QR code (error correction M, quiet zone of four modules) with its top-right
+ * corner at (right, top); returns the bottom of the caption. Modules are plain rectangles: no image,
+ * no font, the same whatever the viewer.
+ */
+function drawQr(page: PDFPage, text: string, right: number, top: number, font: PDFFont): number {
+  const code = qrcode(0, 'M');
+  code.addData(text);
+  code.make();
+  const modules = code.getModuleCount();
+  const cell = QR_SIDE / (modules + 2 * QR_QUIET_MODULES);
+  const left = right - QR_SIDE;
+  page.drawRectangle({ x: left, y: top - QR_SIDE, width: QR_SIDE, height: QR_SIDE, color: COLORS.white });
+  const origin = left + QR_QUIET_MODULES * cell;
+  for (let row = 0; row < modules; row += 1) {
+    for (let column = 0; column < modules; column += 1) {
+      if (!code.isDark(row, column)) continue;
+      page.drawRectangle({
+        x: origin + column * cell,
+        y: top - QR_QUIET_MODULES * cell - (row + 1) * cell,
+        width: cell,
+        height: cell,
+        color: COLORS.text,
+      });
+    }
+  }
+  const captionY = top - QR_SIDE - 8;
+  page.drawText(QR_CAPTION, {
+    x: right - font.widthOfTextAtSize(QR_CAPTION, 6),
+    y: captionY,
+    size: 6,
+    font,
+    color: COLORS.muted,
+  });
+  return captionY - 2;
 }
 
 /** Flowing text over pages, with room kept for the header and the footer. */
@@ -207,7 +254,7 @@ class Writer {
     const font = style.bold ? this.bold : this.font;
     const indent = style.indent ?? 0;
     const leading = size * 1.3;
-    for (const line of this.lines(text, font, size, this.width - indent)) {
+    for (const line of this.lines(text, font, size, (style.width ?? this.width) - indent)) {
       this.ensure(leading);
       this.y -= leading;
       this.page.drawText(line, {
@@ -542,7 +589,7 @@ async function embed(doc: PDFDocument, image: PlanImage): Promise<PDFImage> {
 export class PdfLibEtareRenderer implements EtarePdfRenderer {
   readonly templateVersion = ETARE_PDF_TEMPLATE_VERSION;
 
-  async render({ publication, snapshot, planImages, photoImages }: EtarePdfInput): Promise<Uint8Array> {
+  async render({ publication, snapshot, planImages, photoImages, siteLink }: EtarePdfInput): Promise<Uint8Array> {
     const doc = await PDFDocument.create();
     const font = await doc.embedFont(StandardFonts.Helvetica);
     const bold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -561,20 +608,31 @@ export class PdfLibEtareRenderer implements EtarePdfRenderer {
     doc.setCreationDate(publication.createdAt);
     doc.setModificationDate(publication.createdAt);
 
-    // Title block and publication stamp.
-    writer.text(`ETARE ${site.etare_number ?? 'sans numéro'}`, { size: 10, bold: true, color: COLORS.accent });
-    writer.text(site.name, { size: 18, bold: true, color: COLORS.navy, gap: 2 });
-    writer.text(site.address?.label ?? 'Adresse non renseignée', { size: 10, color: COLORS.muted, gap: 8 });
+    // Title block and publication stamp; the QR code of the site at their right (no secret, no right).
+    const width = siteLink ? writer.width - QR_ZONE : writer.width;
+    const qrBottom = siteLink
+      ? drawQr(writer.current, siteLink, MARGIN + writer.width, writer.cursor, font)
+      : Number.POSITIVE_INFINITY;
+    writer.text(`ETARE ${site.etare_number ?? 'sans numéro'}`, { size: 10, bold: true, color: COLORS.accent, width });
+    writer.text(site.name, { size: 18, bold: true, color: COLORS.navy, gap: 2, width });
+    writer.text(site.address?.label ?? 'Adresse non renseignée', { size: 10, color: COLORS.muted, gap: 8, width });
     writer.text(`VERSION PUBLIÉE N° ${publication.number} — ${when(publication.createdAt)}`, {
       size: 11,
       bold: true,
       color: COLORS.accent,
+      width,
     });
     writer.text(
       `Révision n° ${publication.revisionNo} soumise par ${publication.submittedBy} le ${when(publication.submittedAt)}, validée par ${publication.approvedBy} le ${when(publication.approvedAt)}.`,
-      { size: 8.5, color: COLORS.muted },
+      { size: 8.5, color: COLORS.muted, width },
     );
-    writer.text(`Empreinte du contenu validé (SHA-256) : ${publication.contentHash}`, { size: 7, color: COLORS.muted });
+    writer.text(`Empreinte du contenu validé (SHA-256) : ${publication.contentHash}`, {
+      size: 7,
+      color: COLORS.muted,
+      width,
+    });
+    // The flow goes on under both the title block and the QR code.
+    if (writer.cursor > qrBottom) writer.moveTo(qrBottom);
 
     const critical = [
       ...snapshot.risks

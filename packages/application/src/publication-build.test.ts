@@ -212,6 +212,7 @@ describe('ETARE PDF', () => {
       objects,
       sha256Bytes: bytesHash,
       images: { documentImage: vi.fn().mockResolvedValue(new Uint8Array([255, 216, 255])) },
+      appBaseUrl: 'https://firescape.example',
     };
     return { objects, store, artifacts };
   };
@@ -263,6 +264,8 @@ describe('ETARE PDF', () => {
         [snapshot.objects[0]?.photos?.[0]?.id, { bytes: new Uint8Array([255, 216, 255]), mimeType: 'image/jpeg' }],
       ]);
       expect(artifacts.images.documentImage).toHaveBeenCalledWith(pngBytes);
+      // The QR code names the site under the public address: no secret, no right of access.
+      expect(input?.siteLink).toBe(`https://firescape.example/sites/${snapshot.site.id}`);
       const built = await buildPublicationContent(publication, tools, generated);
       expect(built.pdfStorageKey).toBe(generated.storageKey);
     },
@@ -352,6 +355,7 @@ describe('ETARE PDF', () => {
     const artifacts: PublicationArtifacts = {
       sha256Bytes: bytesHash,
       images: { documentImage: vi.fn() },
+      appBaseUrl: null,
       objects: {
         download: async (key) => stored.get(key) ?? null,
         upload: async (key, bytes, _mime, options) => {

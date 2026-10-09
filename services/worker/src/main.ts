@@ -77,7 +77,9 @@ const registry = new HandlerRegistry([
     store: new PostgresPublicationBuildStore(pool),
     tools: { sha256, byteLength: (text) => Buffer.byteLength(text, 'utf8'), now: () => new Date(), signer },
     // Without storage, publications are built without their PDF (said at startup).
-    artifacts: objects ? { renderer: new PdfLibEtareRenderer(), objects, sha256Bytes: sha256, images } : null,
+    artifacts: objects
+      ? { renderer: new PdfLibEtareRenderer(), objects, sha256Bytes: sha256, images, appBaseUrl: env.appBaseUrl }
+      : null,
   }),
   // Notifications of the exploitant portal (POR-05); without mail server they fail visibly, replayable.
   notificationHandler({
@@ -86,6 +88,7 @@ const registry = new HandlerRegistry([
     appBaseUrl: env.mail?.appBaseUrl ?? null,
   }),
 ]);
+if (!env.appBaseUrl) logger.warn('APP_BASE_URL not configured: the ETARE PDF carries no QR code');
 if (env.mail) {
   logger.info('notifications sent by e-mail', { links: env.mail.appBaseUrl });
 } else {

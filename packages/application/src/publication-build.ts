@@ -1,5 +1,5 @@
 import { etareSnapshotSchema, type EtareSnapshot, type Signature } from '@etare/contracts';
-import { SIGNATURE_CONTEXTS, canonicalJson, photoAnnex, visibleSections } from '@etare/domain';
+import { SIGNATURE_CONTEXTS, canonicalJson, photoAnnex, siteLink, visibleSections } from '@etare/domain';
 import { PermanentJobError } from './jobs';
 import { ImageUnreadable, type ImageResizer } from './file-lifecycle';
 import type { ContentSigner, ObjectStoreAdmin } from './ports';
@@ -98,6 +98,8 @@ export interface EtarePdfInput {
    * null when the checked original cannot be decoded (drawn as such, the publication goes on).
    */
   readonly photoImages: ReadonlyMap<string, PlanImage | null>;
+  /** Link of the site printed as a QR code (no secret, no right of access); null without public address. */
+  readonly siteLink: string | null;
 }
 
 export interface EtarePdfRenderer {
@@ -112,6 +114,8 @@ export interface PublicationArtifacts {
   readonly sha256Bytes: (content: Uint8Array) => Promise<string>;
   /** Reduces the photos of the annex (never the thumbnails of the back-office, ADR-026). */
   readonly images: Pick<ImageResizer, 'documentImage'>;
+  /** Public address of the web application (APP_BASE_URL): the QR code of the PDF names the site under it. */
+  readonly appBaseUrl: string | null;
 }
 
 export interface ManifestFile {
@@ -321,6 +325,7 @@ export async function generateEtarePdf(
     snapshot,
     planImages,
     photoImages,
+    siteLink: artifacts.appBaseUrl ? siteLink(artifacts.appBaseUrl, snapshot.site.id) : null,
   });
   const sha256 = await artifacts.sha256Bytes(pdf);
   const storageKey = publicationPdfKey(publication.tenantId, publication.id, sha256);

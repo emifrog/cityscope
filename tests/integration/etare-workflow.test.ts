@@ -42,6 +42,8 @@ const worker = createWorker({
         objects: SupabaseObjectStorage.fromSecretKey(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SECRET_KEY')),
         sha256Bytes: sha256,
         images: new SharpImageResizer(),
+        // The PDF of the workflow carries the QR code of the site (ADR-014, complement).
+        appBaseUrl: 'https://firescape.example',
       },
     }),
   ]),

@@ -325,7 +325,7 @@ const workerEnvSchema = signingSchema.extend({
     .optional(),
   /** Sender of the notifications. */
   MAIL_FROM: z.string().min(3).max(200).default('FireScape <ne-pas-repondre@firescape.invalid>'),
-  /** Public address of the web application, for the links of the notifications. */
+  /** Public address of the web application: links of the notifications, QR code of the ETARE PDF. */
   APP_BASE_URL: z.url().optional(),
   /** Source of the offline base maps (ADR-024), the same as the API. */
   BASEMAP_SOURCE: basemapSourceSchema,
@@ -355,6 +355,8 @@ export interface WorkerEnv {
   readonly antivirusUrl: string | null;
   /** Null when no mail server is configured: notifications fail visibly and can be replayed. */
   readonly mail: { readonly smtpUrl: string; readonly from: string; readonly appBaseUrl: string } | null;
+  /** Public address of the web application; null: the ETARE PDF carries no QR code (said at startup). */
+  readonly appBaseUrl: string | null;
   /** Source of the offline base maps; null: none. */
   readonly basemap: {
     readonly source: BasemapSourceId;
@@ -399,6 +401,7 @@ export function readWorkerEnv(env: Env): WorkerEnv {
     publicationSigning,
     keyset: keysetSetting(parsed.APP_ENV, parsed),
     antivirusUrl: parsed.ANTIVIRUS_URL ?? null,
+    appBaseUrl: parsed.APP_BASE_URL ?? null,
     mail:
       parsed.SMTP_URL && parsed.APP_BASE_URL
         ? { smtpUrl: parsed.SMTP_URL, from: parsed.MAIL_FROM, appBaseUrl: parsed.APP_BASE_URL }

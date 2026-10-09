@@ -419,6 +419,7 @@ async function measurePublication(): Promise<void> {
           objects,
           sha256Bytes: sha256,
           images: new SharpImageResizer(),
+          appBaseUrl: null,
         },
       }),
     ]),

@@ -3,6 +3,7 @@ import 'package:etare_ops/src/features/account/presentation/account_screen.dart'
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/auth/presentation/login_screen.dart';
 import 'package:etare_ops/src/features/home/presentation/home_screen.dart';
+import 'package:etare_ops/src/features/home/presentation/scan_screen.dart';
 import 'package:etare_ops/src/features/map/presentation/map_screen.dart';
 import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
 import 'package:etare_ops/src/features/ops/presentation/plan_screen.dart';
@@ -74,6 +75,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'account',
             builder: (context, state) => const AccountScreen(),
+          ),
+          GoRoute(
+            path: 'scan',
+            builder: (context, state) => const ScanScreen(),
           ),
           GoRoute(
             path: 'reports',

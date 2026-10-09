@@ -54,6 +54,9 @@ dependencies:
   # horloge monotone, espace libre, FLAG_SECURE), paquet privé local (SEC-05).
   etare_platform:
     path: packages/etare_platform
+  # Lecture du QR code du dossier ETARE par la caméra, ML Kit embarqué (hors
+  # ligne), Julian Steenbakker, BSD-3-Clause.
+  mobile_scanner: ^7.4.2
 
 dev_dependencies:
   build_runner: ^2.16.1
