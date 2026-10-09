@@ -6625,6 +6625,196 @@
           }
         }
       },
+      "ExportList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportRun"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "ExportRun": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "building",
+              "ready",
+              "failed",
+              "expired"
+            ]
+          },
+          "requested_by_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "requested_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "started_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportPart"
+            }
+          },
+          "total_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "file_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "row_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "error_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "error_detail": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "requested_by_name",
+          "requested_at",
+          "started_at",
+          "finished_at",
+          "expires_at",
+          "parts",
+          "total_bytes",
+          "file_count",
+          "row_count",
+          "error_code",
+          "error_detail"
+        ]
+      },
+      "ExportPart": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "data",
+              "files",
+              "file"
+            ]
+          },
+          "filename": {
+            "type": "string"
+          },
+          "media_type": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "index",
+          "kind",
+          "filename",
+          "media_type",
+          "size_bytes",
+          "sha256"
+        ]
+      },
+      "AssetDownload": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "variant": {
+            "type": "string",
+            "enum": [
+              "original",
+              "preview",
+              "thumbnail"
+            ]
+          }
+        },
+        "required": [
+          "url",
+          "expires_at",
+          "filename",
+          "mime_type"
+        ]
+      },
       "EtareDossierList": {
         "type": "object",
         "properties": {
@@ -8741,39 +8931,6 @@
         "required": [
           "decision",
           "revision_hash"
-        ]
-      },
-      "AssetDownload": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string",
-            "format": "uri"
-          },
-          "expires_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "filename": {
-            "type": "string"
-          },
-          "mime_type": {
-            "type": "string"
-          },
-          "variant": {
-            "type": "string",
-            "enum": [
-              "original",
-              "preview",
-              "thumbnail"
-            ]
-          }
-        },
-        "required": [
-          "url",
-          "expires_at",
-          "filename",
-          "mime_type"
         ]
       },
       "PublicationWithdraw": {
@@ -19233,6 +19390,272 @@
           },
           "428": {
             "description": "En-tête If-Match manquant (PRECONDITION_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/exports": {
+      "get": {
+        "operationId": "listExports",
+        "summary": "Exports de réversibilité du SIS : état, parties à télécharger, échéance",
+        "tags": [
+          "exports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "requestExport",
+        "summary": "Demander l’export de toutes les données et de tous les fichiers du SIS (second facteur)",
+        "tags": [
+          "exports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportRun"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne (sans détail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/exports/{id}/parts/{index}/download": {
+      "post": {
+        "operationId": "downloadExportPart",
+        "summary": "URL de téléchargement (60 s) d’une partie d’un export prêt, tracée au journal",
+        "tags": [
+          "exports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "required": false,
+            "name": "index",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur."
+            },
+            "required": true,
+            "description": "SIS actif. Indication seulement : l’appartenance est revérifiée côté serveur.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetDownload"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide (VALIDATION_FAILED, TENANT_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Accès refusé (FORBIDDEN, MFA_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ressource introuvable ou non autorisée",
             "content": {
               "application/json": {
                 "schema": {

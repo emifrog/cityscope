@@ -149,6 +149,17 @@ Cycle des fichiers (ADR-009, complément du Sprint 9) :
   tentatives de fabrication perdantes. La base désigne seule ces candidats, jamais un fichier conservé ;
   le stockage refuse de supprimer un asset vérifié ou une version réduite. Chaque retrait est audité.
 
+## Export de réversibilité (ADMIN-04, ADR-033)
+
+- Demandé par l’administration du SIS avec le second facteur (`export:manage`, privilégiée), un à la
+  fois par SIS, construit par le worker sans accès direct à la base pour quiconque : lecture par
+  fonctions dédiées (liste blanche de tables, filtre par SIS, secrets de la plateforme exclus), fichiers
+  vérifiés et PDF publiés copiés par parties de 32 Mo au plus.
+- Téléchargé partie par partie par une URL signée de 60 s, chaque téléchargement audité
+  (`export.downloaded`) ; clés de stockage jamais montrées ; objets purgés à 7 jours (`export.purged`).
+- Les exports vivent dans le stockage de la plateforme, sous `tenants/<sis>/exports/`, le temps de
+  leur validité : couverts par la sauvegarde, purgés par la maintenance des fichiers.
+
 ## API et web
 
 - Pas de CORS, explicitement (ADR-023) : une requête de navigateur d’une autre origine, ou de pré-vol,

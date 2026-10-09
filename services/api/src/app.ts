@@ -50,6 +50,9 @@ import {
   createRiskType,
   createSiteRisk,
   createSiteSubstance,
+  downloadExportPart,
+  listExports,
+  requestExport,
   createZone,
   decideRevision,
   enrollDevice,
@@ -962,6 +965,24 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
   app.post(routerPath(endpoints.publishRevision.path), async (c) => {
     const context = await requestContext(c, endpoints.publishRevision);
     return respond(c, endpoints.publishRevision, await publishRevision(deps.sessions, context, idOf(c)));
+  });
+
+  // ---------------------------------------------------------------- reversibility exports (ADMIN-04)
+  const exportsDeps = { sessions: deps.sessions, storage: deps.storage };
+  app.get(routerPath(endpoints.listExports.path), async (c) => {
+    const context = await requestContext(c, endpoints.listExports);
+    return respond(c, endpoints.listExports, { items: await listExports(deps.sessions, context) });
+  });
+
+  app.post(routerPath(endpoints.requestExport.path), async (c) => {
+    const context = await requestContext(c, endpoints.requestExport);
+    return respond(c, endpoints.requestExport, await requestExport(deps.sessions, context));
+  });
+
+  app.post(routerPath(endpoints.downloadExportPart.path), async (c) => {
+    const context = await requestContext(c, endpoints.downloadExportPart);
+    const { id, index } = endpoints.downloadExportPart.params.parse(c.req.param());
+    return respond(c, endpoints.downloadExportPart, await downloadExportPart(exportsDeps, context, id, index));
   });
 
   // ---------------------------------------------------------------- documents and files

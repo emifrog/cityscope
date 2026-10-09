@@ -6,6 +6,7 @@ export * from './cartography';
 export * from './contributions';
 export * from './distribution';
 export * from './documents';
+export * from './exports';
 export * from './etare';
 export * from './etare-snapshot';
 export * from './field-reports';

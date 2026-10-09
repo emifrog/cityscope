@@ -3,6 +3,7 @@ export * from './account';
 export * from './basemaps';
 export * from './contributions';
 export * from './documents';
+export * from './exports';
 export * from './endpoints';
 export * from './etare';
 export * from './field-reports';

@@ -81,6 +81,11 @@ describe('maintenance of the files', () => {
         return true;
       }),
       purgeRateLimits: vi.fn(async () => 7),
+      exportsToPurge: vi.fn(async () => [{ exportId: 'x1', tenantId: TENANT, keys: ['e1', 'e2'] }]),
+      markExportRemoved: vi.fn(async () => {
+        calls.push('expire');
+        return true;
+      }),
     };
     const objects = {
       download: vi.fn(),
@@ -99,9 +104,10 @@ describe('maintenance of the files', () => {
       quarantineReleased: 1,
       publicationOutputsRemoved: 1,
       rateLimitWindowsPurged: 7,
+      exportsPurged: 1,
       failures: 0,
     });
-    expect(calls).toEqual(['remove q1', 'release', 'remove p1', 'mark']);
+    expect(calls).toEqual(['remove q1', 'release', 'remove p1', 'mark', 'remove e1', 'remove e2', 'expire']);
   });
 
   it('goes on after an item in error, which stays for the next run', async () => {
@@ -112,7 +118,7 @@ describe('maintenance of the files', () => {
       publicationOutputsRemoved: 1,
       failures: 1,
     });
-    expect(calls).toEqual(['remove p1', 'mark']);
+    expect(calls).toEqual(['remove p1', 'mark', 'remove e1', 'remove e2', 'expire']);
   });
 
   it('runs once per hour slot', () => {

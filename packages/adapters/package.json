@@ -15,6 +15,7 @@
     "./antivirus": "./src/antivirus/clamav.ts",
     "./mail": "./src/mail/smtp.ts",
     "./metrics": "./src/metrics/index.ts",
+    "./export": "./src/export/index.ts",
     "./images": "./src/images/sharp-resizer.ts",
     "./basemaps": "./src/basemaps/index.ts"
   },
@@ -28,6 +29,7 @@
     "@etare/domain": "workspace:*",
     "@etare/schemas": "workspace:*",
     "@supabase/supabase-js": "2.117.2",
+    "fflate": "0.8.3",
     "jose": "6.2.12",
     "nodemailer": "10.0.13",
     "pdf-lib": "1.17.1",

@@ -100,12 +100,16 @@ export interface FileMaintenanceStore {
   publicationOutputsToPurge(limit: number): Promise<PublicationOutputToPurge[]>;
   markPublicationOutputRemoved(outputId: string): Promise<boolean>;
   purgeRateLimits(): Promise<number>;
+  /** Reversibility exports expired or failed (ADR-033): every object they wrote. */
+  exportsToPurge(limit: number): Promise<{ exportId: string; tenantId: string; keys: readonly string[] }[]>;
+  markExportRemoved(exportId: string): Promise<boolean>;
 }
 
 export interface FileMaintenanceReport {
   readonly quarantineReleased: number;
   readonly publicationOutputsRemoved: number;
   readonly rateLimitWindowsPurged: number;
+  readonly exportsPurged: number;
   /** Items that could not be handled this time (storage error...): retried at the next run. */
   readonly failures: number;
 }
@@ -150,6 +154,13 @@ export async function runFileMaintenance(
       return store.markPublicationOutputRemoved(output.outputId);
     });
   }
+  let exportsPurged = 0;
+  for (const item of await store.exportsToPurge(20)) {
+    exportsPurged += await attempt(async () => {
+      for (const key of item.keys) await objects.remove(key);
+      return store.markExportRemoved(item.exportId);
+    });
+  }
   const rateLimitWindowsPurged = await store.purgeRateLimits();
-  return { quarantineReleased, publicationOutputsRemoved, rateLimitWindowsPurged, failures };
+  return { quarantineReleased, publicationOutputsRemoved, rateLimitWindowsPurged, exportsPurged, failures };
 }

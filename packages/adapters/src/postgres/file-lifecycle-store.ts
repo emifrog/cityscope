@@ -93,4 +93,19 @@ export class PostgresFileMaintenanceStore implements FileMaintenanceStore {
     const { rows } = await this.pool.query<{ purged: number }>('select app.worker_purge_rate_limits() as purged');
     return rows[0]?.purged ?? 0;
   }
+
+  async exportsToPurge(limit: number): Promise<{ exportId: string; tenantId: string; keys: readonly string[] }[]> {
+    const { rows } = await this.pool.query<{ export_id: string; tenant_id: string; storage_keys: string[] }>(
+      'select export_id, tenant_id, storage_keys from app.worker_exports_to_purge($1)',
+      [limit],
+    );
+    return rows.map((row) => ({ exportId: row.export_id, tenantId: row.tenant_id, keys: row.storage_keys }));
+  }
+
+  async markExportRemoved(exportId: string): Promise<boolean> {
+    const { rows } = await this.pool.query<{ ok: boolean }>('select app.worker_mark_export_removed($1) as ok', [
+      exportId,
+    ]);
+    return rows[0]?.ok === true;
+  }
 }

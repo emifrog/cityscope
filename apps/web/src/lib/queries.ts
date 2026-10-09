@@ -39,6 +39,7 @@ export const queryKeys = {
   devices: (tenantId: string) => ['tenant', tenantId, 'devices'] as const,
   sectors: (tenantId: string) => ['tenant', tenantId, 'sectors'] as const,
   basemaps: (tenantId: string) => ['tenant', tenantId, 'basemaps'] as const,
+  exports: (tenantId: string) => ['tenant', tenantId, 'exports'] as const,
   supervision: (tenantId: string) => ['tenant', tenantId, 'supervision'] as const,
   accessEvents: (tenantId: string) => ['tenant', tenantId, 'access-events'] as const,
   sectorCommunes: (tenantId: string) => ['tenant', tenantId, 'sector-communes'] as const,
@@ -567,6 +568,22 @@ export function useBasemaps() {
       query.state.data?.sectors.some((state) => state.latest && ['queued', 'building'].includes(state.latest.status))
         ? 5_000
         : false,
+  });
+}
+
+/**
+ * Reversibility exports of the SIS (ADMIN-04, export:manage), newest first. Refreshed while one
+ * is queued or being built, so the administration sees its parts appear without reloading.
+ */
+export function useExports() {
+  const { tenantId, options, enabled } = useApiContext();
+  return useQuery({
+    queryKey: queryKeys.exports(tenantId ?? 'none'),
+    enabled,
+    queryFn: ({ signal }) => api.listExports({ ...options, signal }),
+    retry: false,
+    refetchInterval: (query) =>
+      query.state.data?.some((run) => run.status === 'queued' || run.status === 'building') ? 5_000 : false,
   });
 }
 

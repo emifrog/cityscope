@@ -118,6 +118,7 @@ import {
   riskUpdateSchema,
 } from './risks';
 import { substanceCreateSchema, substanceListSchema, substanceSchema, substanceUpdateSchema } from './substances';
+import { exportListSchema, exportPartParamsSchema, exportRunSchema } from './exports';
 import {
   memberInvitationSchema,
   memberInviteSchema,
@@ -822,6 +823,36 @@ export const endpoints = {
     concurrency: 'if-match',
     successStatus: 200,
     response: substanceSchema,
+  }),
+
+  // ---------------------------------------------------------------- reversibility exports (ADMIN-04)
+  listExports: tenantEndpoint({
+    operationId: 'listExports',
+    method: 'get',
+    path: '/exports',
+    summary: 'Exports de réversibilité du SIS : état, parties à télécharger, échéance',
+    tags: ['exports'],
+    successStatus: 200,
+    response: exportListSchema,
+  }),
+  requestExport: tenantEndpoint({
+    operationId: 'requestExport',
+    method: 'post',
+    path: '/exports',
+    summary: 'Demander l’export de toutes les données et de tous les fichiers du SIS (second facteur)',
+    tags: ['exports'],
+    successStatus: 201,
+    response: exportRunSchema,
+  }),
+  downloadExportPart: tenantEndpoint({
+    operationId: 'downloadExportPart',
+    method: 'post',
+    path: '/exports/{id}/parts/{index}/download',
+    summary: 'URL de téléchargement (60 s) d’une partie d’un export prêt, tracée au journal',
+    tags: ['exports'],
+    params: exportPartParamsSchema,
+    successStatus: 200,
+    response: assetDownloadSchema,
   }),
 
   // ---------------------------------------------------------------- ETARE workflow

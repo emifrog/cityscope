@@ -20,19 +20,25 @@ const PUBLICATION_KEY_PATTERN = /^tenants\/[0-9a-f-]{36}\/publications\/[0-9a-f-
 const VARIANT_KEY_PATTERN = /^tenants\/[0-9a-f-]{36}\/thumbnails\/[0-9a-f-]{36}\/[0-9a-f-]{36}-\d{2,4}\.webp$/;
 /** Offline base maps of a sector (ADR-024): parts of the PMTiles file, style and pictograms. */
 const BASEMAP_KEY_PATTERN = /^tenants\/[0-9a-f-]{36}\/basemaps\/[0-9a-f-]{36}\/[a-z0-9][a-z0-9._@-]{0,63}$/;
+/** Parts of a reversibility export (ADR-033): ZIP archives and copies of big files, purged after 7 days. */
+const EXPORT_KEY_PATTERN = /^tenants\/[0-9a-f-]{36}\/exports\/[0-9a-f-]{36}\/[A-Za-z0-9][A-Za-z0-9._-]{0,200}$/;
 /** Readable objects: verified assets, their reduced images, publication files and base maps, never the quarantine. */
 const isReadable = (key: string) =>
   key.includes('/assets/') ||
   VARIANT_KEY_PATTERN.test(key) ||
   PUBLICATION_KEY_PATTERN.test(key) ||
-  BASEMAP_KEY_PATTERN.test(key);
+  BASEMAP_KEY_PATTERN.test(key) ||
+  EXPORT_KEY_PATTERN.test(key);
 /**
  * Removable objects: the quarantine and the files of publication builds (losing attempts),
  * and superseded or failed base maps, which the database designates. A verified asset or a reduced
  * image is never deleted here.
  */
 const isRemovable = (key: string) =>
-  key.includes('/quarantine/') || PUBLICATION_KEY_PATTERN.test(key) || BASEMAP_KEY_PATTERN.test(key);
+  key.includes('/quarantine/') ||
+  PUBLICATION_KEY_PATTERN.test(key) ||
+  BASEMAP_KEY_PATTERN.test(key) ||
+  EXPORT_KEY_PATTERN.test(key);
 const MAX_DOWNLOAD_TTL_SECONDS = 300;
 /** Lifetime of Supabase signed upload URLs (fixed by the provider). */
 const UPLOAD_URL_LIFETIME_MS = 2 * 60 * 60 * 1000;
@@ -126,7 +132,8 @@ function assertKey(key: string): void {
     !KEY_PATTERN.test(key) &&
     !PUBLICATION_KEY_PATTERN.test(key) &&
     !VARIANT_KEY_PATTERN.test(key) &&
-    !BASEMAP_KEY_PATTERN.test(key)
+    !BASEMAP_KEY_PATTERN.test(key) &&
+    !EXPORT_KEY_PATTERN.test(key)
   ) {
     throw new Error('Invalid storage key.');
   }

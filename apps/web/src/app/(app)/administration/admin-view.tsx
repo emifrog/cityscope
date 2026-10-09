@@ -12,6 +12,7 @@ import { useTenant } from '@/providers/tenant-provider';
 import { AccessJournalAdmin } from './access-journal-admin';
 import { BasemapsAdmin } from './basemaps-admin';
 import { DevicesAdmin } from './devices-admin';
+import { ExportsAdmin } from './exports-admin';
 import { MembersAdmin } from './members-admin';
 import { NotificationsAdmin } from './notifications-admin';
 import { RiskCatalogAdmin } from './risk-catalog-admin';
@@ -29,6 +30,7 @@ const TABS: readonly { key: string; label: string; permission: Permission }[] = 
   { key: 'journal', label: 'Journal des sites sensibles', permission: 'audit:read' },
   { key: 'supervision', label: 'Supervision', permission: 'audit:read' },
   { key: 'parametres', label: 'Paramètres', permission: 'member:manage' },
+  { key: 'export', label: 'Export de réversibilité', permission: 'export:manage' },
 ];
 
 /** Administration of the SIS: one tab per permission held. */
@@ -55,7 +57,7 @@ export function AdminView() {
     <>
       <PageHeader
         title="Administration"
-        description="Membres du SIS et rôles, secteurs, terminaux et synchronisation, fonds de carte des tablettes, catalogue des risques, notifications, supervision et paramètres du SIS."
+        description="Membres du SIS et rôles, secteurs, terminaux et synchronisation, fonds de carte des tablettes, catalogue des risques, notifications, supervision, paramètres du SIS et export de réversibilité."
       />
       <TabLinks tabs={tabs} active={tab.key} param="onglet" basePath="/administration" />
       {tab.key === 'membres' ? (
@@ -74,6 +76,8 @@ export function AdminView() {
         <SettingsAdmin />
       ) : tab.key === 'supervision' ? (
         <SupervisionAdmin />
+      ) : tab.key === 'export' ? (
+        <ExportsAdmin />
       ) : (
         <RiskCatalogAdmin />
       )}

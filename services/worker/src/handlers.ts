@@ -21,6 +21,9 @@ import {
   PermanentJobError,
   SIGNATURE_RENEWAL_JOB,
   DATABASE_MAINTENANCE_JOB,
+  EXPORT_BUILD_JOB,
+  buildExport,
+  type ExportBuildDependencies,
   type WorkerSupervisionStore,
   renewSignatures,
   type SignatureRenewalDependencies,
@@ -175,6 +178,26 @@ export function assetVariantsHandler(deps: AssetVariantDependencies): JobHandler
     async handle(payload, { job, logger }) {
       const outcome = await createAssetVariants(deps, payload.asset_id, job.tenantId);
       logger.info('asset variants', { asset_id: payload.asset_id, outcome });
+    },
+  });
+}
+
+/** Reversibility export of a SIS (ADMIN-04, ADR-033): one at a time, fenced by the job. */
+export function exportBuildHandler(deps: ExportBuildDependencies): JobHandler {
+  return defineHandler({
+    type: EXPORT_BUILD_JOB,
+    payloadVersion: 1,
+    payload: z.object({ export_id: z.uuid() }),
+    async handle(payload, { job, logger, signal }) {
+      if (!job.tenantId) throw new PermanentJobError('TENANT_REQUIRED');
+      const outcome = await buildExport(
+        deps,
+        payload.export_id,
+        job.tenantId,
+        { jobId: job.id, attempt: job.attempts },
+        signal,
+      );
+      logger.info('export build', { export_id: payload.export_id, outcome });
     },
   });
 }

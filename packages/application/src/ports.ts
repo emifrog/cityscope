@@ -1,4 +1,5 @@
 import type { BasemapRepository, DistributedBasemap } from './basemaps';
+import type { ExportRepository } from './exports';
 import type {
   AccountSession,
   CatalogBasemap,
@@ -145,6 +146,7 @@ export interface RequestSession {
   readonly zones: ZoneRepository;
   readonly risks: RiskRepository;
   readonly substances: SubstanceRepository;
+  readonly exports: ExportRepository;
   readonly etare: EtareRepository;
   readonly devices: DeviceRepository;
   readonly sectors: SectorRepository;

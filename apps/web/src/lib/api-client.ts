@@ -81,6 +81,7 @@ import {
   type MemberSensitiveAccessInput,
   type AccessEventList,
   type BasemapOverview,
+  type ExportRun,
   type TenantSupervision,
   type AccessEventListQuery,
   type Sector,
@@ -865,6 +866,21 @@ export const api = {
       {
         method: 'POST',
       },
+    ),
+
+  // ---------------------------------------------------------------- reversibility exports (ADMIN-04)
+  listExports: (options: ApiCallOptions): Promise<ExportRun[]> =>
+    itemsOf(call(endpoints.listExports.response, endpoints.listExports.path, options)),
+
+  requestExport: (options: ApiCallOptions): Promise<ExportRun> =>
+    call(endpoints.requestExport.response, endpoints.requestExport.path, options, { method: 'POST' }),
+
+  downloadExportPart: (options: ApiCallOptions, id: string, index: number): Promise<AssetDownload> =>
+    call(
+      endpoints.downloadExportPart.response,
+      pathOf(endpoints.downloadExportPart.path, { id, index: String(index) }),
+      options,
+      { method: 'POST' },
     ),
 
   // ---------------------------------------------------------------- sectors (PER-01)

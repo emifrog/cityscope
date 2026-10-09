@@ -34,6 +34,7 @@ export const PERMISSIONS = [
   'member:manage',
   'device:manage',
   'catalog:manage',
+  'export:manage',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -44,6 +45,7 @@ export const PRIVILEGED_PERMISSIONS: ReadonlySet<Permission> = new Set<Permissio
   'member:manage',
   'device:manage',
   'portal:invite',
+  'export:manage',
 ]);
 
 /**
@@ -86,6 +88,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission
     'member:manage',
     'device:manage',
     'catalog:manage',
+    'export:manage',
   ],
   // Offline download for the back-office roles too (cahier des charges §3.1, Sprint 4).
   PREVISION_EDITOR: [

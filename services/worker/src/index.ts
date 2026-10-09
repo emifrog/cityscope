@@ -7,6 +7,7 @@ export {
   basemapPlanHandler,
   databaseMaintenanceHandler,
   defineHandler,
+  exportBuildHandler,
   fileMaintenanceHandler,
   noopHandler,
   notificationHandler,

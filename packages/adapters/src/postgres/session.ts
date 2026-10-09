@@ -33,6 +33,7 @@ import { PostgresOperationalObjectRepository } from './operational-object-reposi
 import { PostgresPlanRepository } from './plan-repository';
 import { PostgresRiskRepository } from './risk-repository';
 import { PostgresSubstanceRepository } from './substance-repository';
+import { PostgresExportRepository } from './export-repository';
 import { PostgresSectorRepository } from './sector-repository';
 import { PostgresBasemapRepository } from './basemap-repository';
 import { PostgresSupervisionRepository } from './supervision-repository';
@@ -93,6 +94,7 @@ export class PostgresSessionFactory implements SessionFactory {
         zones: new PostgresZoneRepository(client),
         risks: new PostgresRiskRepository(client),
         substances: new PostgresSubstanceRepository(client),
+        exports: new PostgresExportRepository(client),
         etare: new PostgresEtareRepository(client),
         devices: new PostgresDeviceRepository(client),
         sectors: new PostgresSectorRepository(client),
@@ -159,6 +161,7 @@ const UNIQUE_MESSAGES: Readonly<Record<string, string>> = {
   catalog_code_national: 'Ce code appartient au catalogue national : choisissez-en un autre.',
   risk_type_tenant_code_uq: 'Ce code est déjà utilisé dans le catalogue de votre SIS.',
   etare_revision_open_uq: 'Une révision est déjà en cours pour ce site (brouillon ou en attente de validation).',
+  export_run_pending_uq: 'Un export est déjà en préparation pour votre SIS : attendez sa fin.',
   device_name_uq: 'Un terminal actif ou en attente porte déjà ce nom dans votre SIS.',
   device_public_key_uq: 'Cette clé de terminal est déjà enrôlée : réinstallez l’application.',
   sector_name_uq: 'Un secteur actif porte déjà ce nom dans votre SIS.',
@@ -226,6 +229,8 @@ export function translateDatabaseError(error: unknown): unknown {
       return new Unauthenticated('Compte inconnu ou désactivé.');
     case 'ET403':
       return new AccessDenied('Vous n’êtes pas membre de ce SIS.');
+    case 'ETEXP':
+      return new Conflict('Cet export n’est plus disponible : demandez-en un nouveau.');
     case 'ETSES':
       return new Unauthenticated('Session fermée : reconnectez-vous.');
     case 'ETMFA':

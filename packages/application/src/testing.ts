@@ -125,6 +125,12 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       update: unstubbed('substances.update'),
       ...overrides.substances,
     },
+    exports: {
+      list: unstubbed('exports.list'),
+      request: unstubbed('exports.request'),
+      part: unstubbed('exports.part'),
+      ...overrides.exports,
+    },
     etare: {
       dossiers: unstubbed('etare.dossiers'),
       overview: unstubbed('etare.overview'),

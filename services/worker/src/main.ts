@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto';
 import { hostname } from 'node:os';
-import { BASEMAP_BUILD_JOB, antivirusNotConfigured } from '@etare/application';
+import { BASEMAP_BUILD_JOB, EXPORT_BUILD_JOB, antivirusNotConfigured } from '@etare/application';
 import { ClamAvScanner, parseClamAvUrl } from '@etare/adapters/antivirus';
 import { PmtilesArchiveFactory, basemapTileSource } from '@etare/adapters/basemaps';
 import { loadKeyset, openSigner, verifyEd25519 } from '@etare/adapters/crypto';
+import { FflateArchiveBuilder } from '@etare/adapters/export';
 import { SharpImageResizer } from '@etare/adapters/images';
 import { createLogger } from '@etare/adapters/logging';
 import { SmtpMailer } from '@etare/adapters/mail';
@@ -12,6 +13,7 @@ import {
   PostgresAssetVariantStore,
   PostgresAssetVerificationStore,
   PostgresBasemapBuildStore,
+  PostgresExportBuildStore,
   PostgresFileMaintenanceStore,
   PostgresJobQueue,
   PostgresNotificationStore,
@@ -29,6 +31,7 @@ import {
   basemapBuildHandler,
   basemapPlanHandler,
   startBasemapScheduler,
+  exportBuildHandler,
   fileMaintenanceHandler,
   startMaintenanceScheduler,
   noopHandler,
@@ -106,6 +109,17 @@ if (objects) {
   // CAP-03: reduced images of clean images, and the hourly maintenance of the files.
   registry.register(assetVariantsHandler({ store: new PostgresAssetVariantStore(pool), objects, images }));
   registry.register(fileMaintenanceHandler({ store: new PostgresFileMaintenanceStore(pool), objects }));
+  // ADMIN-04: reversibility exports of the SIS, built as ZIP parts in the object storage.
+  registry.register(
+    exportBuildHandler({
+      store: new PostgresExportBuildStore(pool),
+      objects,
+      archives: () => new FflateArchiveBuilder(),
+      sha256,
+      now: () => new Date(),
+      utf8: (text) => new TextEncoder().encode(text),
+    }),
+  );
   // ADR-024: base maps of the tablets, from the configured source, once its rights are approved.
   registry.register(
     basemapBuildHandler({
@@ -176,7 +190,7 @@ const worker = createWorker({
   leaseSeconds: env.leaseSeconds,
   pollIntervalMs: env.pollIntervalMs,
   // A preparation of a base map lasts long: one at a time, the other slots stay free.
-  exclusiveTypes: [BASEMAP_BUILD_JOB],
+  exclusiveTypes: [BASEMAP_BUILD_JOB, EXPORT_BUILD_JOB],
 });
 
 const stopMaintenance = objects ? startMaintenanceScheduler(new PostgresFileMaintenanceStore(pool), logger) : () => {};
