@@ -191,6 +191,8 @@ export function useSiteObjects(siteId: string | null) {
 
 export const useSiteZones = (siteId: string) => useSiteList(siteId, 'zones', api.listSiteZones);
 export const useSiteRisks = (siteId: string) => useSiteList(siteId, 'risks', api.listSiteRisks);
+/** Hazardous substances of a site and their safety data sheets (RISK-03). */
+export const useSiteSubstances = (siteId: string) => useSiteList(siteId, 'substances', api.listSiteSubstances);
 
 /** Risk catalogue of the active SIS; retired SIS types only for the catalogue screen. */
 export function useRiskTypes(includeDeprecated = false) {

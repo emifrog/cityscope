@@ -2,7 +2,9 @@
 
 import type { EtareSnapshot } from '@etare/contracts';
 import {
+  HAZARD_CLASS_LABELS,
   OPTIONAL_SECTIONS,
+  PHYSICAL_STATE_LABELS,
   SECTION_TITLES,
   compareObjects,
   compareRisks,
@@ -31,6 +33,7 @@ import { useAssetUrl } from '@/lib/queries';
 type SnapshotObject = EtareSnapshot['objects'][number];
 type SnapshotPhoto = NonNullable<SnapshotObject['photos']>[number];
 type SnapshotRisk = EtareSnapshot['risks'][number];
+type SnapshotSubstance = NonNullable<EtareSnapshot['substances']>[number];
 
 function formatValue(
   value: unknown,
@@ -192,6 +195,32 @@ export function EtareDocument({ snapshot, versionLabel }: { snapshot: EtareSnaps
     </li>
   );
 
+  // Hazardous substances (RISK-03): the sheet is named as published beside the substance.
+  const substanceItem = (substance: SnapshotSubstance) => (
+    <li key={substance.id} className="py-1.5">
+      <p className="text-sm">
+        <span className="font-semibold">{substance.name}</span>
+        {substance.un_number ? <span className="text-muted"> — ONU {substance.un_number}</span> : null}{' '}
+        {substance.hazard_classes.map((code) => (
+          <Badge key={code} tone="important" className="mr-1">
+            {HAZARD_CLASS_LABELS[code]}
+          </Badge>
+        ))}
+      </p>
+      <p className="text-xs text-muted">
+        {[
+          scope(substance),
+          substance.quantity !== null ? `${substance.quantity} ${substance.unit ?? ''}`.trim() : null,
+          substance.physical_state ? PHYSICAL_STATE_LABELS[substance.physical_state] : null,
+          substance.location_note,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+      </p>
+      <p className="text-xs">{substance.fds ? `FDS : ${substance.fds.title}` : 'FDS absente'}</p>
+    </li>
+  );
+
   const content = (section: LayoutSection): ReactNode | null => {
     switch (section) {
       case 'synthesis':
@@ -228,13 +257,24 @@ export function EtareDocument({ snapshot, versionLabel }: { snapshot: EtareSnaps
       case 'risks': {
         const risks = [...snapshot.risks].sort(compareRisks);
         const riskObjects = sectionObjects(snapshot.objects, 'risks');
-        return risks.length === 0 && riskObjects.length === 0 ? (
+        const substances = snapshot.substances ?? [];
+        return risks.length === 0 && riskObjects.length === 0 && substances.length === 0 ? (
           <Empty>Aucun risque déclaré.</Empty>
         ) : (
-          <ul className="divide-y divide-border">
-            {risks.map(riskItem)}
-            {riskObjects.map(objectItem)}
-          </ul>
+          <>
+            {risks.length > 0 || riskObjects.length > 0 ? (
+              <ul className="divide-y divide-border">
+                {risks.map(riskItem)}
+                {riskObjects.map(objectItem)}
+              </ul>
+            ) : null}
+            {substances.length > 0 ? (
+              <div className="mt-3 break-inside-avoid">
+                <h4 className="text-xs font-bold tracking-wide text-muted uppercase">Matières dangereuses</h4>
+                <ul className="divide-y divide-border">{substances.map(substanceItem)}</ul>
+              </div>
+            ) : null}
+          </>
         );
       }
       case 'access':

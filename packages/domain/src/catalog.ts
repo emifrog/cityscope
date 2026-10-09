@@ -121,3 +121,41 @@ export function fieldsFromSchema(schema: unknown): CatalogField[] {
     };
   });
 }
+
+/**
+ * Hazardous substances (RISK-03): CLP pictograms of a product, as printed on its
+ * safety data sheet (FDS). Codes are the GHS ones; labels are the French names.
+ */
+export const HAZARD_CLASSES = [
+  'GHS01',
+  'GHS02',
+  'GHS03',
+  'GHS04',
+  'GHS05',
+  'GHS06',
+  'GHS07',
+  'GHS08',
+  'GHS09',
+] as const;
+export type HazardClass = (typeof HAZARD_CLASSES)[number];
+
+export const HAZARD_CLASS_LABELS: Readonly<Record<HazardClass, string>> = {
+  GHS01: 'Explosif',
+  GHS02: 'Inflammable',
+  GHS03: 'Comburant',
+  GHS04: 'Gaz sous pression',
+  GHS05: 'Corrosif',
+  GHS06: 'Toxicité aiguë',
+  GHS07: 'Nocif ou irritant',
+  GHS08: 'Danger pour la santé',
+  GHS09: 'Dangereux pour l’environnement',
+};
+
+export const PHYSICAL_STATES = ['solid', 'liquid', 'gas'] as const;
+export type PhysicalState = (typeof PHYSICAL_STATES)[number];
+
+export const PHYSICAL_STATE_LABELS: Readonly<Record<PhysicalState, string>> = {
+  solid: 'Solide',
+  liquid: 'Liquide',
+  gas: 'Gaz',
+};

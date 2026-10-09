@@ -1,4 +1,4 @@
-import type { Contact, Document, OperationalObject, Plan, Risk, SiteDetail } from '@etare/contracts';
+import type { Contact, Document, OperationalObject, Plan, Risk, SiteDetail, Substance } from '@etare/contracts';
 import { canonicalJson } from '@etare/domain';
 import { describe, expect, it } from 'vitest';
 import {
@@ -226,6 +226,7 @@ const data = (overrides: Partial<WorkingData> = {}): WorkingData => ({
   zones: [],
   objects: [object('o1'), object('o2', { status: 'archived' })],
   risks: [],
+  substances: [],
   documents: [document('d1', 'clean')],
   objectTypes: [
     {
@@ -338,6 +339,67 @@ describe('exterior risks (MET-02)', () => {
     const checks = preSubmissionChecks(data({ risks: [risk('r1', near), risk('r2', far)] }), now);
     expect(checks.find((check) => check.code === 'risk_locations')).toMatchObject({ level: 'warning' });
     expect(checks.find((check) => check.code === 'risks')?.detail).toContain('2 sur carte');
+  });
+});
+
+const substance = (id: string, fdsDocumentId: string | null): Substance => ({
+  id,
+  site_id: SITE,
+  name: `Produit ${id}`,
+  hazard_classes: ['GHS02', 'GHS07'],
+  un_number: '1202',
+  physical_state: 'liquid',
+  quantity: 2000,
+  unit: 'L',
+  building_id: 'b1',
+  level_id: null,
+  zone_id: null,
+  location_note: 'Cuve enterrée',
+  fds_document_id: fdsDocumentId,
+  fds_title: fdsDocumentId ? `Document ${fdsDocumentId}` : null,
+  notes: null,
+  status: 'active',
+  row_version: 1,
+});
+
+describe('hazardous substances in the snapshot (RISK-03)', () => {
+  it('publishes the substances with the sheet that travels with them, sorted by name', () => {
+    const snapshot = buildSnapshot(
+      data({
+        substances: [
+          substance('s2', 'd1'),
+          substance('s1', 'd-pending'),
+          { ...substance('s3', null), status: 'archived' },
+        ],
+        documents: [document('d1', 'clean'), document('d-pending', 'pending')],
+      }),
+    );
+    expect(snapshot.substances?.map((item) => item.name)).toEqual(['Produit s1', 'Produit s2']);
+    // The sheet is named only when it is among the published documents.
+    expect(snapshot.substances?.[0]?.fds).toBeNull();
+    expect(snapshot.substances?.[1]?.fds).toEqual({ document_id: 'd1', title: 'Document d1', version_id: 'd1-v1' });
+    expect(snapshot.substances?.[1]).toMatchObject({ hazard_classes: ['GHS02', 'GHS07'], quantity: 2000, unit: 'L' });
+  });
+
+  it('leaves older snapshots untouched: no key without substances, and compares by substance', () => {
+    const before = buildSnapshot(data());
+    expect('substances' in before).toBe(false);
+    const after = buildSnapshot(data({ substances: [substance('s1', null)] }));
+    expect(compareSnapshots(before, after)).toEqual([
+      { section: 'substances', id: 's1', label: 'Produit s1', change: 'added' },
+    ]);
+    expect(compareSnapshots(after, before)).toEqual([
+      { section: 'substances', id: 's1', label: 'Produit s1', change: 'removed' },
+    ]);
+  });
+
+  it('warns before submission about a substance without a usable sheet', () => {
+    const level = (substances: Substance[], documents = [document('d1', 'clean')]) =>
+      preSubmissionChecks(data({ substances, documents }), NOW).find((check) => check.code === 'substances');
+    expect(level([])).toBeUndefined();
+    expect(level([substance('s1', 'd1')])).toMatchObject({ level: 'ok', detail: '1 matière avec sa FDS.' });
+    expect(level([substance('s1', null), substance('s2', 'd1')])).toMatchObject({ level: 'warning' });
+    expect(level([substance('s1', 'd1')], [document('d1', 'pending')])?.level).toBe('warning');
   });
 });
 

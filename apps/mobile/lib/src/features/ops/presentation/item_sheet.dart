@@ -6,19 +6,21 @@ import 'package:etare_ops/src/core/theme/brand.dart';
 import 'package:etare_ops/src/features/ops/application/ops_providers.dart';
 import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
 import 'package:etare_ops/src/features/ops/domain/published_site.dart';
+import 'package:etare_ops/src/features/ops/presentation/document_availability.dart';
 import 'package:etare_ops/src/features/ops/presentation/document_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// Fiche d'un point, d'un risque ou d'une zone (PLAN-03 côté terrain),
-/// ouverte depuis une liste ou depuis le plan.
+/// Fiche d'un point, d'un risque, d'une zone ou d'une matière dangereuse
+/// (PLAN-03 côté terrain), ouverte depuis une liste ou depuis le plan.
 Future<void> showItemSheet(
   BuildContext context,
   PublishedSite site, {
   SiteObject? object,
   SiteRisk? risk,
   SiteZone? zone,
+  SiteSubstance? substance,
   bool fromPlan = false,
 }) => showModalBottomSheet<void>(
   context: context,
@@ -33,6 +35,7 @@ Future<void> showItemSheet(
       object: object,
       risk: risk,
       zone: zone,
+      substance: substance,
       fromPlan: fromPlan,
       controller: controller,
     ),
@@ -45,6 +48,7 @@ class ItemSheet extends StatelessWidget {
     this.object,
     this.risk,
     this.zone,
+    this.substance,
     this.fromPlan = false,
     this.controller,
     super.key,
@@ -52,11 +56,13 @@ class ItemSheet extends StatelessWidget {
 
   static const planButtonKey = Key('item.plan');
   static const reportButtonKey = Key('item.report');
+  static const sheetButtonKey = Key('item.fds');
 
   final PublishedSite site;
   final SiteObject? object;
   final SiteRisk? risk;
   final SiteZone? zone;
+  final SiteSubstance? substance;
   final bool fromPlan;
   final ScrollController? controller;
 
@@ -66,30 +72,37 @@ class ItemSheet extends StatelessWidget {
     final object = this.object;
     final risk = this.risk;
     final zone = this.zone;
+    final substance = this.substance;
 
     final (
       String title,
       String subtitle,
       Color color,
       IconData icon,
-    ) = switch ((object, risk, zone)) {
-      (final SiteObject o, _, _) => (
+    ) = switch ((object, risk, zone, substance)) {
+      (final SiteObject o, _, _, _) => (
         o.title,
         o.typeName,
         objectCategoryColors[o.category] ?? BrandColors.navy,
         Icons.place,
       ),
-      (_, final SiteRisk r, _) => (
+      (_, final SiteRisk r, _, _) => (
         r.title,
         r.typeName,
         severityColor(r.severity),
         Icons.warning_amber_rounded,
       ),
-      (_, _, final SiteZone z) => (
+      (_, _, final SiteZone z, _) => (
         z.name,
         zoneTypeLabels[z.zoneType] ?? z.zoneType,
         zoneTypeColors[z.zoneType] ?? BrandColors.textMuted,
         Icons.crop_square,
+      ),
+      (_, _, _, final SiteSubstance s) => (
+        s.name,
+        'Matière dangereuse',
+        riskColor,
+        Icons.science_outlined,
       ),
       _ => ('Élément', '', BrandColors.textMuted, Icons.help_outline),
     };
@@ -112,6 +125,12 @@ class ItemSheet extends StatelessWidget {
             buildingId: risk.buildingId,
             levelId: risk.levelId,
             zoneId: risk.zoneId,
+          )
+        : substance != null
+        ? site.locationOf(
+            buildingId: substance.buildingId,
+            levelId: substance.levelId,
+            zoneId: substance.zoneId,
           )
         : zone == null
         ? null
@@ -182,6 +201,12 @@ class ItemSheet extends StatelessWidget {
                 'Gravité ${risk.severity} · ${severityLabels[risk.severity]}',
                 severityColor(risk.severity),
               ),
+            if (substance != null)
+              for (final hazardClass in substance.hazardClasses)
+                _Badge(
+                  hazardClassLabels[hazardClass] ?? hazardClass,
+                  riskColor,
+                ),
           ],
         ),
         if (object?.instructions ?? risk?.description case final text?) ...[
@@ -201,7 +226,15 @@ class ItemSheet extends StatelessWidget {
           PhotoStrip(object: object),
         ],
         const SizedBox(height: 12),
+        if (substance?.unNumber case final unNumber?)
+          row('Numéro ONU', 'ONU $unNumber'),
+        if (substance?.physicalState case final state?)
+          row('État physique', physicalStateLabels[state] ?? state),
+        if (substance?.quantityLabel case final quantity?)
+          row('Quantité', quantity),
         if (location != null) row('Emplacement', location),
+        if (substance?.locationNote case final note?)
+          row(location == null ? 'Emplacement' : 'Précision', note),
         if (risk?.quantity case final quantity?)
           row(
             'Quantité',
@@ -224,15 +257,23 @@ class ItemSheet extends StatelessWidget {
           ),
         if (object?.verifiedAt case final verified?)
           row('Vérifié le', formatDateFr(verified)),
+        if (substance != null) ...[
+          const SizedBox(height: 16),
+          _SubstanceSheetButton(site: site, substance: substance),
+        ],
         const SizedBox(height: 16),
         OutlinedButton.icon(
           key: ItemSheet.reportButtonKey,
           onPressed: () {
+            // Le signalement ne désigne que les points, risques et zones ;
+            // pour une matière, il porte sur le site.
             final (type, id) = object != null
                 ? ('object', object.id)
                 : risk != null
                 ? ('risk', risk.id)
-                : ('zone', zone!.id);
+                : zone != null
+                ? ('zone', zone.id)
+                : (null, null);
             Navigator.of(context).pop();
             unawaited(
               context.push<void>(
@@ -346,6 +387,68 @@ class PhotoStrip extends ConsumerWidget {
       },
     ),
   );
+}
+
+/// FDS d'une matière (RISK-03) : ouverte comme depuis la liste des documents
+/// (installée, ou « à la demande » avec le même téléchargement explicite,
+/// DOC-02) ; sinon la fiche dit qu'elle manque.
+class _SubstanceSheetButton extends ConsumerWidget {
+  const _SubstanceSheetButton({required this.site, required this.substance});
+
+  final PublishedSite site;
+  final SiteSubstance substance;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final textTheme = Theme.of(context).textTheme;
+    final document = site.sheetOf(substance);
+    if (document == null) {
+      return Text(
+        substance.fds == null
+            ? 'FDS absente de cette version'
+            : 'FDS non disponible sur la tablette',
+        style: textTheme.bodyMedium?.copyWith(color: BrandColors.textMuted),
+      );
+    }
+    final availability = document.onDemand
+        ? documentAvailability(ref, (
+            siteId: site.siteId,
+            sha256: document.assetSha256,
+          ))
+        : null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        FilledButton.icon(
+          key: ItemSheet.sheetButtonKey,
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (context) => DocumentScreen(
+                title: document.title,
+                sha256: document.assetSha256,
+                mimeType: document.mimeType,
+                onDemandSiteId: document.onDemand ? site.siteId : null,
+              ),
+            ),
+          ),
+          icon: const Icon(Icons.picture_as_pdf_outlined),
+          label: const Text('Fiche de données de sécurité'),
+        ),
+        if (availability case (final text, final color))
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              text,
+              textAlign: TextAlign.center,
+              style: textTheme.bodyMedium?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 }
 
 class _PhotoPlaceholder extends StatelessWidget {

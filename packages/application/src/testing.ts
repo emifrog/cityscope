@@ -118,6 +118,13 @@ export function stubSession(access: ResolvedAccess, overrides: SessionOverrides 
       update: unstubbed('risks.update'),
       ...overrides.risks,
     },
+    substances: {
+      listBySite: unstubbed('substances.listBySite'),
+      get: unstubbed('substances.get'),
+      create: unstubbed('substances.create'),
+      update: unstubbed('substances.update'),
+      ...overrides.substances,
+    },
     etare: {
       dossiers: unstubbed('etare.dossiers'),
       overview: unstubbed('etare.overview'),

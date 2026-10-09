@@ -117,6 +117,7 @@ import {
   riskTypeUpdateSchema,
   riskUpdateSchema,
 } from './risks';
+import { substanceCreateSchema, substanceListSchema, substanceSchema, substanceUpdateSchema } from './substances';
 import {
   memberInvitationSchema,
   memberInviteSchema,
@@ -786,6 +787,41 @@ export const endpoints = {
     concurrency: 'if-match',
     successStatus: 200,
     response: riskSchema,
+  }),
+
+  // ---------------------------------------------------------------- hazardous substances (RISK-03)
+  listSiteSubstances: tenantEndpoint({
+    operationId: 'listSiteSubstances',
+    method: 'get',
+    path: '/sites/{id}/substances',
+    summary: 'Matières dangereuses d’un site, leur localisation et leur fiche de données de sécurité',
+    tags: ['risks'],
+    params: idParamsSchema,
+    successStatus: 200,
+    response: substanceListSchema,
+  }),
+  createSiteSubstance: tenantEndpoint({
+    operationId: 'createSiteSubstance',
+    method: 'post',
+    path: '/sites/{id}/substances',
+    summary: 'Déclarer une matière dangereuse sur un site, avec sa FDS',
+    tags: ['risks'],
+    params: idParamsSchema,
+    body: substanceCreateSchema,
+    successStatus: 201,
+    response: substanceSchema,
+  }),
+  updateSubstance: tenantEndpoint({
+    operationId: 'updateSubstance',
+    method: 'patch',
+    path: '/substances/{id}',
+    summary: 'Modifier ou archiver une matière dangereuse',
+    tags: ['risks'],
+    params: idParamsSchema,
+    body: substanceUpdateSchema,
+    concurrency: 'if-match',
+    successStatus: 200,
+    response: substanceSchema,
   }),
 
   // ---------------------------------------------------------------- ETARE workflow

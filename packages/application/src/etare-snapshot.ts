@@ -13,6 +13,7 @@ import type {
   Plan,
   PlanPosition,
   Risk,
+  Substance,
   SiteDetail,
   Zone,
 } from '@etare/contracts';
@@ -28,12 +29,50 @@ export interface WorkingData {
   readonly zones: readonly Zone[];
   readonly objects: readonly OperationalObject[];
   readonly risks: readonly Risk[];
+  /** Hazardous substances (RISK-03). */
+  readonly substances: readonly Substance[];
   readonly documents: readonly Document[];
   /** Catalogue of the SIS (national and own entries). */
   readonly objectTypes: readonly ObjectType[];
   readonly riskTypes: readonly RiskType[];
   /** Optional sections hidden by the SIS (DEC-05), read in the same transaction. */
   readonly hiddenSections: readonly OptionalSection[];
+}
+
+/** A document ready to be published: active, its latest version checked clean. */
+const publishable = (document: Document) =>
+  document.status === 'active' && document.versions[0]?.asset.scan_status === 'clean';
+
+/**
+ * Hazardous substances with the sheet that travels with them (RISK-03): the FDS is named only when it
+ * is among the published documents, so that the tablets never point at a file they do not have. The
+ * key is omitted when there is none (snapshots made before it stay identical).
+ */
+function snapshotSubstances(data: WorkingData): Pick<EtareSnapshot, 'substances'> {
+  const substances = data.substances
+    .filter((substance) => substance.status === 'active')
+    .sort((left, right) => left.name.localeCompare(right.name, 'fr') || (left.id < right.id ? -1 : 1))
+    .map((substance) => {
+      const sheet = substance.fds_document_id
+        ? data.documents.find((document) => document.id === substance.fds_document_id && publishable(document))
+        : undefined;
+      const version = sheet?.versions[0];
+      return {
+        id: substance.id,
+        name: substance.name,
+        hazard_classes: substance.hazard_classes,
+        un_number: substance.un_number,
+        physical_state: substance.physical_state,
+        quantity: substance.quantity,
+        unit: substance.unit,
+        building_id: substance.building_id,
+        level_id: substance.level_id,
+        zone_id: substance.zone_id,
+        location_note: substance.location_note,
+        fds: sheet && version ? { document_id: sheet.id, title: sheet.title, version_id: version.id } : null,
+      };
+    });
+  return substances.length > 0 ? { substances } : {};
 }
 
 /** Deterministic order: display order first when there is one, then the stable identifier. */
@@ -183,6 +222,7 @@ export function buildSnapshot(data: WorkingData): EtareSnapshot {
         plan_position: placement(risk.plan_position),
         ...(risk.geometry ? { geometry: risk.geometry } : {}),
       })),
+    ...snapshotSubstances(data),
     documents: data.documents
       .filter((document) => document.status === 'active' && document.versions[0]?.asset.scan_status === 'clean')
       .sort(byOrder)
@@ -381,6 +421,24 @@ export function preSubmissionChecks(data: WorkingData, now: Date): EtareCheck[] 
     );
   }
 
+  // Substances without a usable sheet are published without it: said before submission (RISK-03).
+  const substances = data.substances.filter((substance) => substance.status === 'active');
+  const unsheeted = substances.filter(
+    (substance) =>
+      !substance.fds_document_id ||
+      !data.documents.some((document) => document.id === substance.fds_document_id && publishable(document)),
+  );
+  if (substances.length > 0) {
+    add(
+      'substances',
+      unsheeted.length > 0 ? 'warning' : 'ok',
+      'Matières dangereuses',
+      unsheeted.length > 0
+        ? `${unsheeted.map((substance) => substance.name).join(', ')} : sans fiche de données de sécurité prête.`
+        : plural(substances.length, 'matière avec sa FDS', 'matières avec leur FDS') + '.',
+    );
+  }
+
   const water = data.objects.filter((object) => object.status !== 'archived' && object.category === 'water').length;
   add(
     'water',
@@ -428,6 +486,7 @@ const LABELS: Readonly<Record<Exclude<EtareSection, 'site' | 'layout'>, (item: R
   zones: (item) => String(item['name']),
   objects: (item) => [item['type_name'], item['label'] ?? item['name']].filter(Boolean).join(' · '),
   risks: (item) => [item['type_name'], item['label']].filter(Boolean).join(' · '),
+  substances: (item) => String(item['name']),
   documents: (item) => String(item['title']),
 };
 
@@ -441,8 +500,8 @@ export function compareSnapshots(base: EtareSnapshot, next: EtareSnapshot): Etar
     changes.push({ section: 'layout', id: 'layout', label: 'Sections affichées', change: 'modified' });
   }
   for (const section of Object.keys(LABELS) as (keyof typeof LABELS)[]) {
-    const before = new Map<string, Record<string, unknown>>(base[section].map((item) => [item.id, item]));
-    const after = new Map<string, Record<string, unknown>>(next[section].map((item) => [item.id, item]));
+    const before = new Map<string, Record<string, unknown>>((base[section] ?? []).map((item) => [item.id, item]));
+    const after = new Map<string, Record<string, unknown>>((next[section] ?? []).map((item) => [item.id, item]));
     for (const [id, item] of after) {
       const previous = before.get(id);
       if (!previous) changes.push({ section, id, label: LABELS[section](item), change: 'added' });

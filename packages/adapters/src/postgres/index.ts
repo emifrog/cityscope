@@ -22,6 +22,7 @@ export * from './pool';
 export * from './publication-build-store';
 export * from './request-services';
 export * from './risk-repository';
+export * from './substance-repository';
 export * from './session';
 export * from './signature-store';
 export * from './supervision-repository';

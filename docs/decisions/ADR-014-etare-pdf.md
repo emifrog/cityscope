@@ -68,4 +68,7 @@ d’accès. Scanné par l’application OPS, il ouvre la version installée sur 
 il ouvre la page du site du back-office, derrière la connexion. Les modules sont dessinés en vecteurs
 (`qrcode-generator`, MIT), sans image ni police ; la légende « Scanner : ouvrir le site dans FireScape
 OPS » l’accompagne. Sans `APP_BASE_URL`, le worker le dit au démarrage et le PDF reste sans code. Les PDF
-des publications antérieures ne sont pas régénérés (point 2 de l’ADR, gabarit tracé).
+des publications antérieures ne sont pas régénérés (point 2 de l’ADR, gabarit tracé). Le même gabarit
+ajoute à la section Risques les matières dangereuses (RISK-03, ADR-032) : produit, classes CLP, n° ONU,
+état, quantité, localisation et fiche de données de sécurité publiée (« FDS absente de cette version »
+sinon).

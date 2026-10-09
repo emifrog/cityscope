@@ -244,6 +244,7 @@ export const ETARE_SECTION_LABELS: Readonly<Record<string, string>> = {
   zones: 'Zones',
   objects: 'Points opérationnels',
   risks: 'Risques',
+  substances: 'Matières dangereuses',
   documents: 'Documents',
   layout: 'Mise en page',
 };

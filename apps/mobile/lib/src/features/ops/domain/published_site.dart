@@ -356,6 +356,72 @@ final class SiteDocument {
   bool get onTablet => essential || onDemand;
 }
 
+/// Fiche de données de sécurité publiée avec une matière (RISK-03) : le
+/// fichier est celui de l'entrée correspondante des documents de la version.
+@immutable
+final class SubstanceSheet {
+  const SubstanceSheet({
+    required this.documentId,
+    required this.title,
+    required this.versionId,
+  });
+
+  final String documentId;
+  final String title;
+  final String versionId;
+}
+
+/// Matière dangereuse d'un site (RISK-03) : produit, classes de danger CLP,
+/// numéro ONU, quantité et FDS quand la version en publie une.
+@immutable
+final class SiteSubstance {
+  const SiteSubstance({
+    required this.id,
+    required this.name,
+    required this.hazardClasses,
+    this.unNumber,
+    this.physicalState,
+    this.quantity,
+    this.unit,
+    this.buildingId,
+    this.levelId,
+    this.zoneId,
+    this.locationNote,
+    this.fds,
+  });
+
+  final String id;
+  final String name;
+
+  /// Pictogrammes CLP, « GHS01 » à « GHS09 ».
+  final List<String> hazardClasses;
+
+  /// Numéro ONU, chiffres seuls (« 1072 »).
+  final String? unNumber;
+
+  /// `solid`, `liquid` ou `gas`.
+  final String? physicalState;
+  final double? quantity;
+  final String? unit;
+  final String? buildingId;
+  final String? levelId;
+  final String? zoneId;
+  final String? locationNote;
+
+  /// Absente quand aucune FDS n'accompagne cette version.
+  final SubstanceSheet? fds;
+
+  /// « 18 bouteilles », « 2,5 t » ; null sans quantité.
+  String? get quantityLabel {
+    final quantity = this.quantity;
+    if (quantity == null) return null;
+    final text = quantity == quantity.roundToDouble()
+        ? quantity.toInt().toString()
+        : quantity.toString().replaceAll('.', ',');
+    return [text, unit].nonNulls.join(' ');
+  }
+}
+
 /// Champ déclaré par le catalogue pour les propriétés d'un type.
 @immutable
 final class FieldDefinition {
@@ -435,6 +501,7 @@ final class PublishedSite {
     required this.documents,
     required this.objectFields,
     required this.riskFields,
+    this.substances = const [],
     this.revisionNo,
     this.approvedBy,
     this.approvedAt,
@@ -620,6 +687,34 @@ final class PublishedSite {
           expiresAt: date(version, 'expires_at'),
         );
       }),
+      // Absentes des versions publiées avant RISK-03.
+      substances: _each(data['substances'], (item) {
+        final fds = _object(item, 'fds');
+        return SiteSubstance(
+          id: item.requireString('id'),
+          name: item.optionalString('name') ?? 'Matière',
+          hazardClasses: [
+            if (item['hazard_classes'] case final List<Object?> classes)
+              for (final hazardClass in classes)
+                if (hazardClass is String) hazardClass,
+          ],
+          unNumber: item.optionalString('un_number'),
+          physicalState: item.optionalString('physical_state'),
+          quantity: item.optionalNumber('quantity'),
+          unit: item.optionalString('unit'),
+          buildingId: item.optionalString('building_id'),
+          levelId: item.optionalString('level_id'),
+          zoneId: item.optionalString('zone_id'),
+          locationNote: item.optionalString('location_note'),
+          fds: fds == null
+              ? null
+              : SubstanceSheet(
+                  documentId: fds.requireString('document_id'),
+                  title: fds.optionalString('title') ?? 'FDS',
+                  versionId: fds.optionalString('version_id') ?? '',
+                ),
+        );
+      }),
       layoutSections: layout == null
           ? null
           : {
@@ -683,6 +778,10 @@ final class PublishedSite {
   final Map<String, Map<String, FieldDefinition>> objectFields;
   final Map<String, Map<String, FieldDefinition>> riskFields;
 
+  /// Matières dangereuses (RISK-03), dans l'ordre publié (nom) ; vide pour
+  /// une version antérieure.
+  final List<SiteSubstance> substances;
+
   /// Copie sans les documents « à la demande » : un site sensible ouvert ne
   /// garde que ses fichiers obligatoires, chiffrés par son code (PER-02).
   PublishedSite withInstalledDocumentsOnly() => PublishedSite(
@@ -704,6 +803,7 @@ final class PublishedSite {
     ],
     objectFields: objectFields,
     riskFields: riskFields,
+    substances: substances,
     revisionNo: revisionNo,
     approvedBy: approvedBy,
     approvedAt: approvedAt,
@@ -724,6 +824,17 @@ final class PublishedSite {
       if (document.onDemand) document,
   ];
 
+  /// FDS d'une matière, parmi les documents de la version consultée : null
+  /// sans FDS publiée, ou quand le document n'est plus proposé (site sensible
+  /// ouvert sans ses documents « à la demande », PER-02).
+  SiteDocument? sheetOf(SiteSubstance substance) {
+    final documentId = substance.fds?.documentId;
+    if (documentId == null) return null;
+    return documents
+        .where((document) => document.id == documentId && document.onTablet)
+        .firstOrNull;
+  }
+
   /// Points des catégories données, dans l'ordre de l'aperçu et du PDF.
   List<SiteObject> objectsOf(Set<String> categories) => [
     for (final object in objects)
@@ -742,7 +853,8 @@ final class PublishedSite {
 
   /// Nombre d'éléments d'une entrée de la tablette.
   int countOf(OpsSection section) => switch (section) {
-    OpsSection.risks => risks.length + objectsOf(section.categories).length,
+    OpsSection.risks =>
+      risks.length + objectsOf(section.categories).length + substances.length,
     OpsSection.plans => plans.length,
     OpsSection.contacts => contacts.length,
     OpsSection.annexes => tabletDocuments.length,

@@ -27,6 +27,12 @@ const oxygenId = '06000009-0000-4000-8000-000000000002';
 const oxygenRiskId = '0600000b-0000-4000-8000-000000000001';
 const photoId = '0600000e-0000-4000-8000-000000000001';
 
+/// Matières dangereuses (RISK-03) : l'une avec sa FDS (le document essentiel
+/// installé), l'autre sans fiche dans cette version.
+const oxygenSubstanceId = '06000010-0000-4000-8000-000000000001';
+const bleachSubstanceId = '06000010-0000-4000-8000-000000000002';
+const installedDocumentId = '0600000a-0000-4000-8000-0000000000d1';
+
 Map<String, Object?> point(double x, double y) => {
   'plan_revision_id': planRevision,
   'geometry': {
@@ -253,7 +259,7 @@ final payload = {
     ],
     'documents': [
       {
-        'id': '0600000a-0000-4000-8000-0000000000d1',
+        'id': installedDocumentId,
         'title': 'Consignes de sécurité',
         'category': 'instruction',
         'offline_policy': 'always',
@@ -308,6 +314,40 @@ final payload = {
             'sha256': 'c' * 64,
           },
         },
+      },
+    ],
+    'substances': [
+      {
+        'id': oxygenSubstanceId,
+        'name': 'Oxygène liquide',
+        'hazard_classes': ['GHS03', 'GHS04'],
+        'un_number': '1073',
+        'physical_state': 'liquid',
+        'quantity': 2.5,
+        'unit': 'm³',
+        'building_id': '06000003-0000-4000-8000-000000000001',
+        'level_id': levelId,
+        'zone_id': null,
+        'location_note': 'Réserve O₂, accès par la cour',
+        'fds': {
+          'document_id': installedDocumentId,
+          'title': 'Consignes de sécurité',
+          'version_id': documentVersionId,
+        },
+      },
+      {
+        'id': bleachSubstanceId,
+        'name': 'Hypochlorite de sodium',
+        'hazard_classes': ['GHS05', 'GHS09'],
+        'un_number': '1791',
+        'physical_state': 'liquid',
+        'quantity': 200,
+        'unit': 'L',
+        'building_id': null,
+        'level_id': null,
+        'zone_id': null,
+        'location_note': 'Local ménage, sous-sol',
+        'fds': null,
       },
     ],
     'catalog': {

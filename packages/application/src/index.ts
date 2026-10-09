@@ -23,6 +23,7 @@ export * from './publication-build';
 export * from './ports';
 export * from './referential';
 export * from './risks';
+export * from './substances';
 export * from './sectors';
 export * from './signatures';
 export * from './supervision';

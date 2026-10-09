@@ -91,9 +91,14 @@ void main() {
   });
 
   group('sections du registre (MET-05, ADR-026)', () {
-    test('les points à risque rejoignent les risques, comptés ensemble', () {
+    test('les points à risque et les matières rejoignent les risques, '
+        'comptés ensemble', () {
       expect(site.objectsOf(OpsSection.risks.categories).single.id, oxygenId);
-      expect(site.countOf(OpsSection.risks), site.risks.length + 1);
+      expect(
+        site.countOf(OpsSection.risks),
+        site.risks.length + 1 + site.substances.length,
+      );
+      expect(site.countOf(OpsSection.risks), 5);
       expect(
         site.criticalObjects.map((object) => object.id),
         contains(oxygenId),
@@ -158,6 +163,80 @@ void main() {
         compare('3', 'info', 'Bouche', '4', 'info', 'Bouche'),
         lessThan(0),
       );
+    });
+  });
+
+  group('matières dangereuses et FDS (RISK-03)', () {
+    Map<String, Object?> copy() =>
+        jsonDecode(jsonEncode(payload)) as Map<String, Object?>;
+
+    test('lues avec leurs classes, numéro ONU, quantité et FDS', () {
+      expect(site.substances.map((substance) => substance.name), [
+        'Oxygène liquide',
+        'Hypochlorite de sodium',
+      ]);
+      final oxygen = site.substances.first;
+      expect(oxygen.hazardClasses, ['GHS03', 'GHS04']);
+      expect(oxygen.unNumber, '1073');
+      expect(oxygen.physicalState, 'liquid');
+      expect(oxygen.quantityLabel, '2,5 m³');
+      expect(oxygen.locationNote, 'Réserve O₂, accès par la cour');
+      expect(oxygen.fds?.documentId, installedDocumentId);
+      expect(oxygen.fds?.versionId, documentVersionId);
+      expect(site.substances.last.quantityLabel, '200 L');
+      expect(site.substances.last.fds, isNull);
+      expect(hazardClassLabels['GHS09'], 'Dangereux pour l’environnement');
+      expect(physicalStateLabels['gas'], 'Gaz');
+    });
+
+    test('une version publiée avant RISK-03 n’en a aucune', () {
+      final before = copy();
+      (before['data']! as Map<String, Object?>).remove('substances');
+      final parsed = PublishedSite.fromJson(before);
+      expect(parsed.substances, isEmpty);
+      expect(parsed.countOf(OpsSection.risks), 3);
+    });
+
+    test('une matière illisible n’empêche pas la lecture des autres', () {
+      final altered = copy();
+      final data = altered['data']! as Map<String, Object?>;
+      (data['substances']! as List<Object?>).addAll([
+        {'id': 's9', 'name': 'Sans document', 'fds': <String, Object?>{}},
+        {'name': 'Sans identifiant'},
+        'inattendu',
+      ]);
+      expect(PublishedSite.fromJson(altered).substances.map((s) => s.name), [
+        'Oxygène liquide',
+        'Hypochlorite de sodium',
+      ]);
+      data['substances'] = 'inattendu';
+      expect(PublishedSite.fromJson(altered).substances, isEmpty);
+    });
+
+    test('la FDS est le document publié, installé ou à la demande', () {
+      final sheet = site.sheetOf(site.substances.first)!;
+      expect(sheet.id, installedDocumentId);
+      expect(sheet.essential, isTrue);
+      expect(sheet.assetSha256, sha256Hex(tinyPdf));
+      expect(site.sheetOf(site.substances.last), isNull);
+    });
+
+    test('un site sensible ouvert sans ses documents à la demande n’offre '
+        'plus la FDS correspondante (PER-02)', () {
+      final altered = copy();
+      final substances =
+          (altered['data']! as Map<String, Object?>)['substances']!
+              as List<Object?>;
+      (substances.first! as Map<String, Object?>)['fds'] = {
+        'document_id': onDemandDocumentId,
+        'title': 'Plan de prévention',
+        'version_id': onDemandVersionId,
+      };
+      final parsed = PublishedSite.fromJson(altered);
+      expect(parsed.sheetOf(parsed.substances.first)?.onDemand, isTrue);
+      final installedOnly = parsed.withInstalledDocumentsOnly();
+      expect(installedOnly.substances, hasLength(2));
+      expect(installedOnly.sheetOf(installedOnly.substances.first), isNull);
     });
   });
 

@@ -85,6 +85,26 @@ const documentCategoryLabels = <String, String>{
   'other': 'Autre',
 };
 
+/// Classes de danger CLP des matières dangereuses (RISK-03), par pictogramme.
+const hazardClassLabels = <String, String>{
+  'GHS01': 'Explosif',
+  'GHS02': 'Inflammable',
+  'GHS03': 'Comburant',
+  'GHS04': 'Gaz sous pression',
+  'GHS05': 'Corrosif',
+  'GHS06': 'Toxicité aiguë',
+  'GHS07': 'Nocif ou irritant',
+  'GHS08': 'Danger pour la santé',
+  'GHS09': 'Dangereux pour l’environnement',
+};
+
+/// État physique d'une matière dangereuse.
+const physicalStateLabels = <String, String>{
+  'solid': 'Solide',
+  'liquid': 'Liquide',
+  'gas': 'Gaz',
+};
+
 const siteTypeLabels = <String, String>{
   'erp': 'ERP',
   'industrial': 'Industriel',

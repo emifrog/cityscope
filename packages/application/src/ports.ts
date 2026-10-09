@@ -97,6 +97,9 @@ import type {
   FieldReportSubmit,
   FieldReportUpdate,
   SyncReportStatus,
+  Substance,
+  SubstanceCreate,
+  SubstanceUpdate,
 } from '@etare/contracts';
 import type {
   DeviceKeyAlgorithm,
@@ -141,6 +144,7 @@ export interface RequestSession {
   readonly plans: PlanRepository;
   readonly zones: ZoneRepository;
   readonly risks: RiskRepository;
+  readonly substances: SubstanceRepository;
   readonly etare: EtareRepository;
   readonly devices: DeviceRepository;
   readonly sectors: SectorRepository;
@@ -458,6 +462,16 @@ export interface RiskRepository {
   /** Null when the site is not visible. */
   create(siteId: string, input: RiskCreate & { severity: number }): Promise<Risk | null>;
   update(id: string, expectedVersion: number, patch: RiskUpdate): Promise<Risk | null>;
+}
+
+/** Hazardous substances of the sites and their safety data sheets (RISK-03). */
+export interface SubstanceRepository {
+  /** Null when the site is not visible. */
+  listBySite(siteId: string): Promise<Substance[] | null>;
+  get(id: string): Promise<Substance | null>;
+  /** Null when the site is not visible. */
+  create(siteId: string, input: SubstanceCreate): Promise<Substance | null>;
+  update(id: string, expectedVersion: number, patch: SubstanceUpdate): Promise<Substance | null>;
 }
 
 /** Operational objects of the sites, placed on the map and/or on plans. */

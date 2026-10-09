@@ -57,6 +57,7 @@ async function workingData(session: RequestSession, siteId: string): Promise<Wor
   const zones = await session.zones.listBySite(siteId);
   const objects = await session.objects.listBySite(siteId);
   const risks = await session.risks.listBySite(siteId);
+  const substances = await session.substances.listBySite(siteId);
   const documents = await session.documents.listBySite(siteId);
   const objectTypes = await session.objects.types();
   const riskTypes = await session.risks.types({ includeDeprecated: true });
@@ -70,6 +71,7 @@ async function workingData(session: RequestSession, siteId: string): Promise<Wor
     zones: zones ?? [],
     objects: objects ?? [],
     risks: risks ?? [],
+    substances: substances ?? [],
     documents,
     objectTypes,
     riskTypes,

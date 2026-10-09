@@ -119,6 +119,9 @@ import {
   type RiskTypeCreateInput,
   type RiskTypeUpdate,
   type RiskUpdate,
+  type Substance,
+  type SubstanceCreateInput,
+  type SubstanceUpdate,
   type UploadConfirmation,
   type ValidationQueueItem,
   type Zone,
@@ -725,6 +728,25 @@ export const api = {
 
   updateRisk: (options: ApiCallOptions, id: string, version: number, patch: RiskUpdate): Promise<Risk> =>
     call(endpoints.updateRisk.response, pathOf(endpoints.updateRisk.path, { id }), options, {
+      method: 'PATCH',
+      body: patch,
+      ifMatch: version,
+    }),
+
+  // ---------------------------------------------------------------- hazardous substances (RISK-03)
+  listSiteSubstances: (options: ApiCallOptions, siteId: string): Promise<Substance[]> =>
+    itemsOf(
+      call(endpoints.listSiteSubstances.response, pathOf(endpoints.listSiteSubstances.path, { id: siteId }), options),
+    ),
+
+  createSiteSubstance: (options: ApiCallOptions, siteId: string, input: SubstanceCreateInput): Promise<Substance> =>
+    call(endpoints.createSiteSubstance.response, pathOf(endpoints.createSiteSubstance.path, { id: siteId }), options, {
+      method: 'POST',
+      body: input,
+    }),
+
+  updateSubstance: (options: ApiCallOptions, id: string, version: number, patch: SubstanceUpdate): Promise<Substance> =>
+    call(endpoints.updateSubstance.response, pathOf(endpoints.updateSubstance.path, { id }), options, {
       method: 'PATCH',
       body: patch,
       ifMatch: version,

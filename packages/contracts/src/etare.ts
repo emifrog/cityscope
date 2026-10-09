@@ -15,6 +15,7 @@ import { z } from 'zod';
 import { assetSchema, documentSchema, documentVersionSchema } from './documents';
 import { exteriorGeometrySchema } from './objects';
 import { riskGeometrySchema } from './risks';
+import { hazardClassSchema, physicalStateSchema } from './substances';
 import { buildingSchema, classificationSchema, contactSchema, levelSchema } from './referential';
 import { siteDetailSchema } from './resources';
 
@@ -166,6 +167,34 @@ export const etareSnapshotSchema = z
         })
         .meta({ id: 'SnapshotDocument' }),
     ),
+    /**
+     * Hazardous substances (RISK-03) with the sheet published beside them; absent when none, as in
+     * snapshots made before it.
+     */
+    substances: z
+      .array(
+        z
+          .object({
+            id: uuidSchema,
+            name: z.string(),
+            hazard_classes: z.array(hazardClassSchema),
+            un_number: z.string().nullable(),
+            physical_state: physicalStateSchema.nullable(),
+            quantity: z.number().nullable(),
+            unit: z.string().nullable(),
+            building_id: uuidSchema.nullable(),
+            level_id: uuidSchema.nullable(),
+            zone_id: uuidSchema.nullable(),
+            location_note: z.string().nullable(),
+            /** The FDS as published: one of the documents of the snapshot; null when none is ready. */
+            fds: z
+              .object({ document_id: uuidSchema, title: z.string(), version_id: uuidSchema })
+              .meta({ id: 'SnapshotSubstanceSheet' })
+              .nullable(),
+          })
+          .meta({ id: 'SnapshotSubstance' }),
+      )
+      .optional(),
     /** The catalogue entries used, as they were: names and field labels travel with the content. */
     catalog: z
       .object({
@@ -390,6 +419,7 @@ export const ETARE_SECTIONS = [
   'zones',
   'objects',
   'risks',
+  'substances',
   'documents',
   'layout',
 ] as const;

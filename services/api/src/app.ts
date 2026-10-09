@@ -49,6 +49,7 @@ import {
   createRevision,
   createRiskType,
   createSiteRisk,
+  createSiteSubstance,
   createZone,
   decideRevision,
   enrollDevice,
@@ -104,6 +105,7 @@ import {
   revokeDevice,
   submitRevision,
   listSiteRisks,
+  listSiteSubstances,
   listSiteZones,
   listSites,
   updateBuilding,
@@ -127,6 +129,7 @@ import {
   updateObjectPhoto,
   updateRiskType,
   updateSiteRisk,
+  updateSiteSubstance,
   updateZone,
   updateSite,
   archiveSite,
@@ -877,6 +880,31 @@ export function createApiApp(deps: ApiDependencies): Hono<Env> {
     const version = expectedVersion(c);
     const patch = await readBody(c, endpoints.updateRisk.body);
     return respond(c, endpoints.updateRisk, await updateSiteRisk(deps.sessions, context, idOf(c), version, patch));
+  });
+
+  // ---------------------------------------------------------------- hazardous substances (RISK-03)
+  app.get(routerPath(endpoints.listSiteSubstances.path), async (c) => {
+    const context = await requestContext(c, endpoints.listSiteSubstances);
+    return respond(c, endpoints.listSiteSubstances, {
+      items: await listSiteSubstances(deps.sessions, context, idOf(c)),
+    });
+  });
+
+  app.post(routerPath(endpoints.createSiteSubstance.path), async (c) => {
+    const context = await requestContext(c, endpoints.createSiteSubstance);
+    const input = await readBody(c, endpoints.createSiteSubstance.body);
+    return respond(c, endpoints.createSiteSubstance, await createSiteSubstance(deps.sessions, context, idOf(c), input));
+  });
+
+  app.patch(routerPath(endpoints.updateSubstance.path), async (c) => {
+    const context = await requestContext(c, endpoints.updateSubstance);
+    const version = expectedVersion(c);
+    const patch = await readBody(c, endpoints.updateSubstance.body);
+    return respond(
+      c,
+      endpoints.updateSubstance,
+      await updateSiteSubstance(deps.sessions, context, idOf(c), version, patch),
+    );
   });
 
   // ---------------------------------------------------------------- ETARE workflow

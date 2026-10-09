@@ -1,10 +1,10 @@
 import 'package:etare_ops/src/core/formatting/date_formatting.dart';
 import 'package:etare_ops/src/core/routing/app_routes.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
-import 'package:etare_ops/src/features/ops/application/document_downloads.dart';
 import 'package:etare_ops/src/features/ops/application/ops_providers.dart';
 import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
 import 'package:etare_ops/src/features/ops/domain/published_site.dart';
+import 'package:etare_ops/src/features/ops/presentation/document_availability.dart';
 import 'package:etare_ops/src/features/ops/presentation/document_screen.dart';
 import 'package:etare_ops/src/features/ops/presentation/item_sheet.dart';
 import 'package:etare_ops/src/features/ops/presentation/ops_scaffold.dart';
@@ -36,6 +36,12 @@ class SectionScreen extends ConsumerWidget {
           for (final risk in site.risks) _RiskTile(site: site, risk: risk),
           for (final object in site.objectsOf(section.categories))
             _ObjectTile(site: site, object: object),
+          // Matières dangereuses et FDS (RISK-03), après les risques.
+          if (site.substances.isNotEmpty) ...[
+            const _Heading('Matières dangereuses'),
+            for (final substance in site.substances)
+              _SubstanceTile(site: site, substance: substance),
+          ],
         ],
         OpsSection.plans => [
           for (final plan in site.orderedPlans)
@@ -260,7 +266,7 @@ class _DocumentTile extends ConsumerWidget {
         document.expiresAt != null &&
         document.expiresAt!.isBefore(DateTime.now().toUtc());
     final availability = document.onDemand
-        ? _availability(ref, (
+        ? documentAvailability(ref, (
             siteId: site.siteId,
             sha256: document.assetSha256,
           ))
@@ -314,30 +320,72 @@ class _DocumentTile extends ConsumerWidget {
       ),
     );
   }
+}
 
-  /// État d'un document « à la demande » : sur la tablette, à télécharger
-  /// (avec sa taille), en cours ou en échec (DOC-02).
-  static (String, Color) _availability(WidgetRef ref, SiteFile file) {
-    final size = ref.watch(installedFileInfoProvider(file)).value?.sizeBytes;
-    final sizeText = size == null ? '' : ' · ${formatBytesFr(size)}';
-    final present = ref.watch(fileOnTabletProvider(file.sha256)).value ?? false;
-    return switch (ref.watch(documentDownloadProvider(file))) {
-      _ when present => ('Sur la tablette$sizeText', BrandColors.success),
-      DocumentDownloading(:final fraction) => (
-        fraction == null
-            ? 'Téléchargement…'
-            : 'Téléchargement… ${(fraction * 100).round()} %',
-        BrandColors.info,
+/// Titre d'un groupe dans une liste (« Matières dangereuses »).
+class _Heading extends StatelessWidget {
+  const _Heading(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+    child: Text(
+      text,
+      style: Theme.of(context).textTheme.titleSmall
+          ?.copyWith(color: BrandColors.textMuted),
+    ),
+  );
+}
+
+/// Matière dangereuse (RISK-03) : classes de danger, quantité, emplacement ;
+/// la FDS est signalée quand la version en publie une.
+class _SubstanceTile extends StatelessWidget {
+  const _SubstanceTile({required this.site, required this.substance});
+
+  final PublishedSite site;
+  final SiteSubstance substance;
+
+  static Key keyOf(SiteSubstance substance) => Key('substance.${substance.id}');
+
+  @override
+  Widget build(BuildContext context) {
+    final location =
+        site.locationOf(
+          buildingId: substance.buildingId,
+          levelId: substance.levelId,
+          zoneId: substance.zoneId,
+        ) ??
+        substance.locationNote;
+    final classes = [
+      for (final hazardClass in substance.hazardClasses)
+        hazardClassLabels[hazardClass] ?? hazardClass,
+    ].join(', ');
+    return ListTile(
+      key: keyOf(substance),
+      minVerticalPadding: 12,
+      leading: const CircleAvatar(
+        backgroundColor: riskColor,
+        foregroundColor: BrandColors.onDark,
+        child: Icon(Icons.science_outlined),
       ),
-      DocumentDownloadFailed() => (
-        'Téléchargement échoué : touchez pour réessayer',
-        BrandColors.critical,
+      title: Text(
+        substance.name,
+        style: Theme.of(context).textTheme.titleMedium,
       ),
-      DocumentDownloadIdle() => (
-        'À télécharger (réseau nécessaire)$sizeText',
-        BrandColors.important,
+      subtitle: Text(
+        [
+          if (classes.isNotEmpty) classes,
+          ?substance.quantityLabel,
+          ?location,
+        ].join(' · '),
       ),
-    };
+      trailing: substance.fds == null
+          ? null
+          : const Icon(Icons.picture_as_pdf_outlined),
+      onTap: () => showItemSheet(context, site, substance: substance),
+    );
   }
 }
 

@@ -32,6 +32,7 @@ import { PostgresMemberRepository } from './member-repository';
 import { PostgresOperationalObjectRepository } from './operational-object-repository';
 import { PostgresPlanRepository } from './plan-repository';
 import { PostgresRiskRepository } from './risk-repository';
+import { PostgresSubstanceRepository } from './substance-repository';
 import { PostgresSectorRepository } from './sector-repository';
 import { PostgresBasemapRepository } from './basemap-repository';
 import { PostgresSupervisionRepository } from './supervision-repository';
@@ -91,6 +92,7 @@ export class PostgresSessionFactory implements SessionFactory {
         plans: new PostgresPlanRepository(client),
         zones: new PostgresZoneRepository(client),
         risks: new PostgresRiskRepository(client),
+        substances: new PostgresSubstanceRepository(client),
         etare: new PostgresEtareRepository(client),
         devices: new PostgresDeviceRepository(client),
         sectors: new PostgresSectorRepository(client),
@@ -337,6 +339,14 @@ export function translateDatabaseError(error: unknown): unknown {
     case '23503':
       return new NotFound('Élément lié introuvable dans votre SIS.');
     case '23514':
+      if (messageOf(error).includes('SUBSTANCE_FDS_INVALID')) {
+        return new InvalidInput('La fiche de données de sécurité est un document actif du site, classé FDS.', [
+          { path: 'fds_document_id', message: 'Document du site classé FDS attendu.' },
+        ]);
+      }
+      if (messageOf(error).includes('SUBSTANCE_SCOPE_INVALID')) {
+        return new InvalidInput('Le bâtiment, le niveau et la zone de la matière ne se correspondent pas.');
+      }
       if (messageOf(error).includes('FIELD_REPORT_CLOSED')) {
         return new Conflict('Ce signalement a déjà été décidé : la décision est définitive.');
       }

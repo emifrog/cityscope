@@ -197,6 +197,55 @@ function imageOf(document: PDFDocument, page: PDFPage) {
 }
 
 describe('ETARE PDF', () => {
+  it('lists the hazardous substances of the risks section with their sheet (RISK-03)', async () => {
+    const renderer = new PdfLibEtareRenderer();
+    const substance: NonNullable<EtareSnapshot['substances']>[number] = {
+      id: '0600000c-0000-4000-8000-000000000001',
+      name: 'Fioul domestique',
+      hazard_classes: ['GHS02', 'GHS09'],
+      un_number: '1202',
+      physical_state: 'liquid',
+      quantity: 2000,
+      unit: 'L',
+      building_id: null,
+      level_id: null,
+      zone_id: null,
+      location_note: 'Cuve enterrée, parking nord',
+      fds: null,
+    };
+    const bytes = await renderer.render({
+      publication: PUBLICATION,
+      snapshot: {
+        ...snapshot,
+        substances: [
+          substance,
+          {
+            ...substance,
+            id: '0600000c-0000-4000-8000-000000000002',
+            name: 'Oxygène médical',
+            quantity: null,
+            unit: null,
+            fds: { document_id: 'd1', title: 'FDS oxygène', version_id: 'd1-v1' },
+          },
+        ],
+      },
+      planImages: new Map([[REVISION, { bytes: DEMO_PLAN, mimeType: 'image/png' }]]),
+      photoImages: new Map(),
+      siteLink: null,
+    });
+    const document = await PDFDocument.load(bytes);
+    const texts = textsOf(contentOf(document, document.getPage(0)));
+    expect(texts).toContain('MATIÈRES DANGEREUSES');
+    // Standard fonts: the dash and the apostrophe leave WinAnsi as other bytes, matched around them.
+    expect(texts.some((text) => text.startsWith('Fioul domestique') && text.endsWith('2000 L'))).toBe(true);
+    const details = texts.join(' ');
+    for (const part of ['Inflammable, Dangereux pour l', 'environnement', 'ONU 1202', 'Liquide', 'Cuve enterrée']) {
+      expect(details).toContain(part);
+    }
+    expect(texts).toContain('FDS absente de cette version');
+    expect(texts).toContain('FDS : FDS oxygène');
+  });
+
   it('prints the link of the site as a QR code on the first page, beside the title', async () => {
     const renderer = new PdfLibEtareRenderer();
     const render = async (siteLink: string | null) =>

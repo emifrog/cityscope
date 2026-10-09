@@ -1,6 +1,8 @@
 import type { EtarePdfInput, EtarePdfRenderer, PlanImage } from '@etare/application';
 import type { EtareSnapshot } from '@etare/contracts';
 import {
+  HAZARD_CLASS_LABELS,
+  PHYSICAL_STATE_LABELS,
   SECTION_TITLES,
   compareObjects,
   compareRisks,
@@ -686,7 +688,8 @@ export class PdfLibEtareRenderer implements EtarePdfRenderer {
           heading(section);
           const risks = [...snapshot.risks].sort(compareRisks);
           const riskObjects = sectionObjects(snapshot.objects, 'risks');
-          if (risks.length === 0 && riskObjects.length === 0) {
+          const substances = snapshot.substances ?? [];
+          if (risks.length === 0 && riskObjects.length === 0 && substances.length === 0) {
             writer.text('Aucun risque déclaré.', { color: COLORS.muted });
           }
           for (const risk of risks) {
@@ -711,6 +714,37 @@ export class PdfLibEtareRenderer implements EtarePdfRenderer {
             writer.space(3);
           }
           riskObjects.forEach(objectEntry);
+          // Hazardous substances (RISK-03): product, classes, quantity, location, and the sheet published with it.
+          if (substances.length > 0) {
+            writer.space(4);
+            writer.text('MATIÈRES DANGEREUSES', { size: 8.5, bold: true, color: COLORS.navy });
+          }
+          for (const substance of substances) {
+            writer.text(
+              substance.quantity !== null
+                ? `${substance.name} — ${substance.quantity} ${substance.unit ?? ''}`.trimEnd()
+                : substance.name,
+              { bold: true },
+            );
+            writer.text(
+              [
+                substance.hazard_classes.map((hazard) => HAZARD_CLASS_LABELS[hazard]).join(', ') || null,
+                substance.un_number ? `ONU ${substance.un_number}` : null,
+                substance.physical_state ? PHYSICAL_STATE_LABELS[substance.physical_state] : null,
+                scope(substance),
+                substance.location_note,
+              ]
+                .filter(Boolean)
+                .join(' · '),
+              { size: 8, color: COLORS.muted, indent: 10 },
+            );
+            writer.text(substance.fds ? `FDS : ${substance.fds.title}` : 'FDS absente de cette version', {
+              size: 8,
+              indent: 10,
+              color: substance.fds ? COLORS.text : COLORS.critical,
+            });
+            writer.space(3);
+          }
           break;
         }
         case 'access':

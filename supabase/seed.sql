@@ -196,6 +196,15 @@ from (values
 ) as r (id, type_code, building, level, object, severity, description, quantity, unit)
 join app.risk_type t on t.code = r.type_code and t.tenant_id is null;
 
+-- Hazardous substances (RISK-03): the oxygen store and the heating fuel of the EHPAD, no sheet yet.
+insert into app.hazardous_substance (id, tenant_id, site_id, building_id, level_id, name, hazard_classes, un_number, physical_state, quantity, unit, location_note)
+values
+  ('0600000c-0000-4000-8000-000000000001', '06000000-0000-4000-8000-000000000000', '06000002-0000-4000-8000-000000000001',
+   '06000003-0000-4000-8000-000000000001', '06000004-0000-4000-8000-000000000002', 'Oxygène médical (bouteilles B50)',
+   '{GHS03,GHS04}', '1072', 'gas', 18, 'bouteilles', 'Local oxygène, RDC façade C'),
+  ('0600000c-0000-4000-8000-000000000002', '06000000-0000-4000-8000-000000000000', '06000002-0000-4000-8000-000000000001',
+   null, null, 'Fioul domestique', '{GHS02,GHS07,GHS08,GHS09}', '1202', 'liquid', 2000, 'L', 'Cuve enterrée, parking nord');
+
 -- Classifications and contacts (phone numbers from the ranges ARCEP reserves for fiction).
 insert into app.site_classification (tenant_id, site_id, classification_type, code, category, label, valid_from, source) values
   ('06000000-0000-4000-8000-000000000000', '06000002-0000-4000-8000-000000000001',

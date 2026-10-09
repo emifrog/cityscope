@@ -14,6 +14,7 @@ export type VersionedTable =
   | 'app.plan'
   | 'app.zone'
   | 'app.risk_occurrence'
+  | 'app.hazardous_substance'
   | 'app.risk_type'
   | 'app.etare_revision'
   | 'app.field_report'

@@ -14,6 +14,7 @@ import { DocumentsPanel } from './documents-panel';
 import { EtarePanel } from './etare-panel';
 import { LocationPanel } from './location-panel';
 import { PlansPanel } from './plans-panel';
+import { SubstancesPanel } from './substances-panel';
 import { SummaryPanel } from './summary-panel';
 
 const TABS = [
@@ -24,6 +25,7 @@ const TABS = [
   { key: 'classifications', label: 'Classifications' },
   { key: 'contacts', label: 'Contacts' },
   { key: 'documents', label: 'Documents' },
+  { key: 'matieres', label: 'Matières dangereuses' },
   { key: 'etare', label: 'ETARE' },
 ] as const;
 type TabKey = (typeof TABS)[number]['key'];
@@ -77,6 +79,7 @@ export function SiteDetailView({ id }: { id: string }) {
       {tab === 'classifications' ? <ClassificationsPanel siteId={id} /> : null}
       {tab === 'contacts' ? <ContactsPanel siteId={id} /> : null}
       {tab === 'documents' ? <DocumentsPanel siteId={id} /> : null}
+      {tab === 'matieres' ? <SubstancesPanel siteId={id} /> : null}
       {tab === 'etare' ? <EtarePanel site={data} /> : null}
     </>
   );
