@@ -1,8 +1,11 @@
 # Bilan du dépôt — 1er octobre 2026
 
+> Rapport historique du Sprint 4. Pour l’état courant après le Sprint 13 et les outils d’exploitation,
+> consulter le [bilan du 9 octobre](bilan-depot-2026-10-09.md) et la [roadmap](roadmap-developpement.md).
+
 **Référence examinée : `6d8170d11393b72be59ceb6cdd6cbf0747f91ee0` — rapport de livraison du Sprint 4.**
-Le dépôt était propre au début de cette revue. Ce bilan et la
-[roadmap de développement](roadmap-developpement.md) décrivent le code actuel, ses preuves et les travaux restants.
+Le dépôt était propre au début de cette revue. Ce bilan décrit l’état au 1er octobre ; la
+[roadmap de développement](roadmap-developpement.md) évolue avec les livraisons suivantes.
 Le [bilan du 30 septembre](bilan-alignement-2026-09-30.md) reste une photographie du Sprint 3.
 
 ## Conclusion

@@ -4,7 +4,7 @@
 
 > Rapport historique du Sprint 3. Les corrections A à D ont été intégrées dans `dd976d0` et le Sprint 4
 > a livré la consultation OPS hors ligne. Pour l’état courant, consulter le
-> [bilan du 1er octobre](bilan-depot-2026-10-01.md) et la [roadmap](roadmap-developpement.md).
+> [bilan du 9 octobre](bilan-depot-2026-10-09.md) et la [roadmap](roadmap-developpement.md).
 
 ## Avis
 

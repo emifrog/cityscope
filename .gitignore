@@ -31,3 +31,6 @@ apps/web/public/pdfjs/
 # JVM crash dumps can contain secrets and are never source artifacts.
 *.hprof
 hs_err_pid*
+
+# Documents générés depuis docs/ (docx, pdf) : produits à la demande, jamais versionnés.
+output/
