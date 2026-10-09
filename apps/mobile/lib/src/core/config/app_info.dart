@@ -4,7 +4,7 @@ import 'package:flutter/services.dart' show appFlavor;
 /// terminaux, ADMIN-02) et version du format de paquet qu'elle sait lire.
 abstract final class AppInfo {
   /// Doit rester égale à la version de `pubspec.yaml` (vérifié par un test).
-  static const version = '0.5.0';
+  static const version = '0.6.0';
 
   /// Plus haute version de paquet lisible (`min_reader_version` du manifeste).
   static const readerVersion = '1.0.0';
@@ -17,7 +17,7 @@ abstract final class AppInfo {
   /// (`--dart-define=BUILD_COMMIT`) ; vide en développement.
   static const commit = String.fromEnvironment('BUILD_COMMIT');
 
-  /// Version lisible par l'agent et le support : « 0.5.0 · préproduction ·
+  /// Version lisible par l'agent et le support : « 0.6.0 · préproduction ·
   /// 1a2b3c4d ».
   static String describe({String? flavor = flavor, String commit = commit}) => [
     version,

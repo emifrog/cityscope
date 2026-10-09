@@ -80,13 +80,13 @@ leur inscription dans l'historique.
 
 ## Tests
 
-| Suite                              | Résultat                                                                               |
-| ---------------------------------- | -------------------------------------------------------------------------------------- |
-| Unitaires et composants (`vitest`) | 490 tests, 79 fichiers (lien du site, rendu PDF, instantané, export, composants web)   |
-| Base de données (pgTAP)            | 731 tests, 38 fichiers (dont `340_hazardous_substances`, `350_exports`)                |
-| Intégration (Auth → API → RLS)     | 159 tests, 36 fichiers, dont `substances` et `exports` (archive relue de bout en bout) |
-| Flutter (`flutter test`)           | 308 tests, 1 ignoré (lien, scan, matières et FDS)                                      |
-| CI GitHub (5 jobs)                 | au vert sur `a6bbebb` et `6615a57` ; `8af69da` en cours à la rédaction                 |
+| Suite                              | Résultat                                                                                                                             |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Unitaires et composants (`vitest`) | 490 tests, 79 fichiers (lien du site, rendu PDF, instantané, export, composants web)                                                 |
+| Base de données (pgTAP)            | 731 tests, 38 fichiers (dont `340_hazardous_substances`, `350_exports`)                                                              |
+| Intégration (Auth → API → RLS)     | 159 tests, 36 fichiers, dont `substances` et `exports` (archive relue de bout en bout)                                               |
+| Flutter (`flutter test`)           | 308 tests, 1 ignoré (lien, scan, matières et FDS)                                                                                    |
+| CI GitHub (5 jobs)                 | au vert sur `a6bbebb` et `6615a57` ; `8af69da` arrêté au lint du schéma, `60d3b59` au test de la version déclarée ; corrigés ensuite |
 
 Points couverts :
 
