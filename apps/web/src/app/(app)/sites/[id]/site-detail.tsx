@@ -1,10 +1,9 @@
 'use client';
 
-import { Badge, Alert } from '@etare/ui';
+import { Alert } from '@etare/ui';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
-import { PageHeader } from '@/components/page-header';
 import { TabLinks } from '@/components/tab-links';
 import { useSite } from '@/lib/queries';
 import { BuildingsPanel } from './buildings-panel';
@@ -14,6 +13,7 @@ import { DocumentsPanel } from './documents-panel';
 import { EtarePanel } from './etare-panel';
 import { LocationPanel } from './location-panel';
 import { PlansPanel } from './plans-panel';
+import { SiteHeader } from './site-header';
 import { SubstancesPanel } from './substances-panel';
 import { SummaryPanel } from './summary-panel';
 
@@ -52,19 +52,7 @@ export function SiteDetailView({ id }: { id: string }) {
   const data = site.data;
   return (
     <>
-      <PageHeader
-        title={data.name}
-        description={data.address?.label ?? undefined}
-        actions={
-          data.archive ? (
-            <Badge>Site archivé</Badge>
-          ) : data.active_publication ? (
-            <Badge tone="success">Version publiée n° {data.active_publication.publication_number}</Badge>
-          ) : (
-            <Badge tone="important">Aucune version publiée</Badge>
-          )
-        }
-      />
+      <SiteHeader site={data} />
       {data.archive ? (
         <Alert tone="info" className="mb-4">
           Site archivé{data.archive.reason ? <> : « {data.archive.reason} »</> : null}. Son dossier ETARE n’est plus

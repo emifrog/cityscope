@@ -21,8 +21,12 @@ export function TabLinks({
   basePath: string;
 }) {
   return (
-    <nav aria-label="Sections" className="mb-6 border-b border-border">
-      <ul className="-mb-px flex flex-wrap gap-1">
+    // One line, scrolled sideways when narrow (the edges bleed into the page gutter on a phone).
+    <nav
+      aria-label="Sections"
+      className="-mx-4 mb-6 overflow-x-auto border-b border-border px-4 [scrollbar-width:none] md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden"
+    >
+      <ul className="-mb-px flex w-max min-w-full gap-1">
         {tabs.map((tab) => {
           const selected = tab.key === active;
           return (
@@ -32,7 +36,7 @@ export function TabLinks({
                 aria-current={selected ? 'page' : undefined}
                 scroll={false}
                 className={cn(
-                  'inline-block border-b-2 px-4 py-2 text-sm',
+                  'inline-block border-b-2 px-4 py-2 text-sm whitespace-nowrap',
                   selected
                     ? 'border-brand-accent font-semibold text-foreground'
                     : 'border-transparent text-muted hover:text-foreground',

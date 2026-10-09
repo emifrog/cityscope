@@ -1,9 +1,11 @@
 'use client';
 
 import type { SiteDetail } from '@etare/contracts';
-import { Alert, Button, Card, CardContent, CardHeader, CardTitle, Field, Input } from '@etare/ui';
+import { Alert, Button, Field, Input, cn } from '@etare/ui';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
+import { Building2, CalendarCheck, CalendarClock, FileCheck2, Link2, QrCode } from 'lucide-react';
+import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -11,9 +13,12 @@ import { AddressSearch } from '@/components/address-search';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { isStaleVersion } from '@/components/form-helpers';
 import { SENSITIVITY_LABELS, SITE_STATUS_LABELS, SITE_TYPE_LABELS } from '@/components/labels';
+import { SectionCard } from '@/components/section-card';
 import { SiteQrCode } from '@/components/site-qr-code';
 import { api } from '@/lib/api-client';
 import { queryKeys, useApiMutation, useExternalIds, usePermissions } from '@/lib/queries';
+import { agoLabel } from '@/lib/relative-time';
+import { verificationState } from '@/lib/site-verification';
 import { useTenant } from '@/providers/tenant-provider';
 import { SiteForm } from '../site-form';
 
@@ -22,6 +27,52 @@ const dateFormat = new Intl.DateTimeFormat('fr-FR', {
   timeStyle: 'short',
   timeZone: 'Europe/Paris',
 });
+
+/** When the site was last checked on the field, and whether that is recent enough. */
+function VerificationStrip({
+  site,
+  now,
+  canWrite,
+  pending,
+  onVerify,
+}: {
+  site: SiteDetail;
+  now: number;
+  canWrite: boolean;
+  pending: boolean;
+  onVerify: () => void;
+}) {
+  const state = verificationState(site.last_verified_at, now);
+  const ok = state === 'verified';
+  const Icon = ok ? CalendarCheck : CalendarClock;
+  const text =
+    state === 'never'
+      ? 'Jamais vérifié sur le terrain.'
+      : `${ok ? 'Vérifié sur le terrain' : 'À vérifier : dernière vérification'} ${agoLabel(site.last_verified_at ?? '', now)}`;
+  return (
+    <div
+      className={cn(
+        'mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md px-3 py-2 text-sm',
+        ok ? 'bg-success-soft text-success' : 'bg-important-soft text-important',
+      )}
+    >
+      <p className="flex items-center gap-2">
+        <Icon aria-hidden="true" className="size-4 shrink-0" />
+        <span>
+          {text}
+          {site.last_verified_at ? (
+            <span className="opacity-80"> ({dateFormat.format(new Date(site.last_verified_at))})</span>
+          ) : null}
+        </span>
+      </p>
+      {canWrite ? (
+        <Button variant="secondary" size="sm" disabled={pending} onClick={onVerify}>
+          Marquer comme vérifié
+        </Button>
+      ) : null}
+    </div>
+  );
+}
 
 function Item({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -52,24 +103,25 @@ export function SummaryPanel({ site }: { site: SiteDetail }) {
     update.reset();
     await queryClient.invalidateQueries({ queryKey: queryKeys.site(activeTenant?.tenant_id ?? 'none', site.id) });
   };
+  // One instant per mount: the relative dates stay coherent.
+  const [now] = useState(() => Date.now());
+  const canWrite = permissions.has('site:write');
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
-      <Card className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle>Référentiel site</CardTitle>
-          {permissions.has('site:write') && !editing ? (
-            <div className="flex flex-wrap gap-2">
-              <Button variant="ghost" size="sm" disabled={verify.isPending} onClick={() => verify.mutate()}>
-                Marquer comme vérifié
-              </Button>
-              <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
-                Modifier
-              </Button>
-            </div>
-          ) : null}
-        </CardHeader>
-        <CardContent>
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
+      <SectionCard
+        icon={Building2}
+        title="Référentiel site"
+        description="Données de travail : chaque modification est tracée et validée avant diffusion."
+        aside={
+          canWrite && !editing ? (
+            <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+              Modifier
+            </Button>
+          ) : null
+        }
+      >
+        <>
           {editing ? (
             <>
               {isStaleVersion(update.error) ? (
@@ -99,12 +151,19 @@ export function SummaryPanel({ site }: { site: SiteDetail }) {
             </>
           ) : (
             <>
+              <VerificationStrip
+                site={site}
+                now={now}
+                canWrite={canWrite}
+                pending={verify.isPending}
+                onVerify={() => verify.mutate()}
+              />
               {verify.error ? (
                 <div className="mb-4">
                   <ApiErrorAlert error={verify.error} />
                 </div>
               ) : null}
-              <dl className="grid grid-cols-2 gap-4 md:grid-cols-3">
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-5 md:grid-cols-3">
                 <Item label="N° ETARE">{site.etare_number ?? '—'}</Item>
                 <Item label="Type">{SITE_TYPE_LABELS[site.site_type]}</Item>
                 <Item label="Statut">{SITE_STATUS_LABELS[site.status]}</Item>
@@ -113,10 +172,16 @@ export function SummaryPanel({ site }: { site: SiteDetail }) {
                 <Item label="Point de référence">
                   {site.location ? `${site.location.coordinates[1]}, ${site.location.coordinates[0]}` : '—'}
                 </Item>
-                <Item label="Dernière vérification">
-                  {site.last_verified_at ? dateFormat.format(new Date(site.last_verified_at)) : '—'}
+                <Item label="Commune">
+                  {site.address
+                    ? `${site.address.city}${site.address.postal_code ? ` (${site.address.postal_code})` : ''}`
+                    : '—'}
                 </Item>
-                <Item label="Dernière modification">{dateFormat.format(new Date(site.updated_at))}</Item>
+                <Item label="Code INSEE">{site.address?.insee_code ?? '—'}</Item>
+                <Item label="Dernière modification">
+                  {agoLabel(site.updated_at, now)}
+                  <span className="block text-xs text-muted">{dateFormat.format(new Date(site.updated_at))}</span>
+                </Item>
               </dl>
               {site.sensitivity !== 'normal' ? (
                 <p className="mt-4 text-xs text-muted">
@@ -129,43 +194,46 @@ export function SummaryPanel({ site }: { site: SiteDetail }) {
               ) : null}
             </>
           )}
-        </CardContent>
-      </Card>
+        </>
+      </SectionCard>
 
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Publication</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            {site.active_publication ? (
-              <p>
-                Version n° {site.active_publication.publication_number} publiée le{' '}
-                {dateFormat.format(new Date(site.active_publication.published_at))}. C’est la seule version consultée
-                par les intervenants ; elle ne sera jamais modifiée.
-              </p>
-            ) : (
-              <p className="text-muted">Ce site n’a pas encore de version publiée.</p>
-            )}
-            <p className="text-xs text-muted">
-              Vous consultez les données de travail. Chaque modification est tracée et devra être validée avant d’être
-              diffusée.
+      <div className="space-y-4">
+        <SectionCard
+          icon={FileCheck2}
+          title="Publication"
+          description="Ce que les intervenants consultent."
+          contentClassName="space-y-3 px-5 py-4 text-sm"
+        >
+          {site.active_publication ? (
+            <p>
+              <span className="font-semibold text-foreground">
+                Version n° {site.active_publication.publication_number}
+              </span>{' '}
+              publiée {agoLabel(site.active_publication.published_at, now)}, le{' '}
+              {dateFormat.format(new Date(site.active_publication.published_at))}. Elle ne sera jamais modifiée : une
+              nouvelle version la remplacera.
             </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Code QR du site</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <SiteQrCode siteId={site.id} />
-            <p className="text-xs text-muted">
-              Imprimé sur la première page du dossier ETARE. Scanné par l’application OPS, il ouvre la version installée
-              sur la tablette ; il ne contient ni secret ni droit d’accès.
+          ) : (
+            <p className="text-muted">
+              Ce site n’a pas encore de version publiée : les tablettes ne le connaissent pas.
             </p>
-          </CardContent>
-        </Card>
-        <ExternalIdsCard siteId={site.id} canWrite={permissions.has('site:write')} />
+          )}
+          <Link
+            href={`/sites/${site.id}?onglet=etare`}
+            scroll={false}
+            className="inline-block text-sm font-medium text-info hover:underline"
+          >
+            Dossier ETARE, révisions et publications
+          </Link>
+        </SectionCard>
+        <SectionCard icon={QrCode} title="Code QR du site" contentClassName="space-y-3 px-5 py-4 text-sm">
+          <SiteQrCode siteId={site.id} />
+          <p className="text-xs text-muted">
+            Imprimé sur la première page du dossier ETARE. Scanné par l’application OPS, il ouvre la version installée
+            sur la tablette ; il ne contient ni secret ni droit d’accès.
+          </p>
+        </SectionCard>
+        <ExternalIdsCard siteId={site.id} canWrite={canWrite} />
       </div>
     </div>
   );
@@ -197,11 +265,13 @@ function ExternalIdsCard({ siteId, canWrite }: { siteId: string; canWrite: boole
   });
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Identifiants externes</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <SectionCard
+      icon={Link2}
+      title="Identifiants externes"
+      description="Le même site dans le SIG, le SGO ou la DECI."
+      contentClassName="space-y-4 px-5 py-4"
+    >
+      <>
         {ids.isPending ? <LoadingCard lines={1} /> : null}
         {ids.error ? <ApiErrorAlert error={ids.error} /> : null}
         {ids.data?.length === 0 ? <p className="text-sm text-muted">Aucun identifiant externe.</p> : null}
@@ -238,7 +308,7 @@ function ExternalIdsCard({ siteId, canWrite }: { siteId: string; canWrite: boole
             </Button>
           </form>
         ) : null}
-      </CardContent>
-    </Card>
+      </>
+    </SectionCard>
   );
 }
