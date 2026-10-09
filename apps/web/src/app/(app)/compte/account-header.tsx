@@ -2,7 +2,7 @@ import type { Membership } from '@etare/contracts';
 import { Badge } from '@etare/ui';
 import { ShieldAlert, ShieldCheck } from 'lucide-react';
 import { ROLE_LABELS } from '@/components/labels';
-import { displayNameOf, initialsOf } from './identity';
+import { displayNameOf, initialsOf } from '@/lib/identity';
 
 /** Who is signed in, where, with which roles, and whether the account is protected. */
 export function AccountHeader({
