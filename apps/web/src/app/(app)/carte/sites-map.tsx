@@ -2,13 +2,13 @@
 
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { MapSiteFeature, MapSitesResponse } from '@etare/contracts';
-import { OBJECT_CATEGORIES, SITE_STATUSES, SITE_TYPES, type ObjectCategory } from '@etare/domain';
-import { Badge, Button, Card, Input, Label, Select, cn } from '@etare/ui';
+import { OBJECT_CATEGORIES, type ObjectCategory } from '@etare/domain';
+import { Badge, Button, Card, cn } from '@etare/ui';
 import type { GeoJSONSource, LngLatBoundsLike } from 'maplibre-gl';
-import { Info, List, Search, SlidersHorizontal, X } from 'lucide-react';
+import { Info, List, X } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import { ApiErrorAlert } from '@/components/feedback';
 import {
   CRITICALITY_LABELS,
@@ -29,31 +29,10 @@ import {
 import { describeWaterPoint, nearestWaterPoint } from '@/components/map/nearest-water';
 import { riskLayers } from '@/components/map/risk-layers';
 import { useBaseMap, useMapLibre } from '@/components/map/use-map';
-import { RiskFilterFields, riskFiltersFromParams } from '@/components/risk-filter-fields';
+import { SiteFilterBar, useSiteFiltersFromUrl } from '@/components/site-filter-bar';
 import { SITE_TYPE_ICONS } from '@/components/site-type-icon';
-import { useMapCatalog, useMapFeatures, useMapSites, useSiteObjects, type MapSiteFilters } from '@/lib/queries';
+import { useMapCatalog, useMapFeatures, useMapSites, useSiteObjects } from '@/lib/queries';
 import { MapResultsList } from './map-results-list';
-
-const isSiteType = (value: string | null): value is (typeof SITE_TYPES)[number] =>
-  (SITE_TYPES as readonly (string | null)[]).includes(value);
-const isSiteStatus = (value: string | null): value is (typeof SITE_STATUSES)[number] =>
-  (SITE_STATUSES as readonly (string | null)[]).includes(value);
-
-/** Same URL parameters as the site list: a search can move from one view to the other. */
-function useFiltersFromUrl(): MapSiteFilters {
-  const params = useSearchParams();
-  const q = params.get('q')?.trim();
-  const siteType = params.get('type');
-  const status = params.get('statut');
-  const city = params.get('commune')?.trim();
-  return {
-    ...(q && q.length >= 2 ? { q } : {}),
-    ...(isSiteType(siteType) ? { site_type: siteType } : {}),
-    ...(isSiteStatus(status) ? { status } : {}),
-    ...(city ? { city } : {}),
-    ...riskFiltersFromParams(params),
-  };
-}
 
 /** From this zoom (street level), building footprints and operational points are shown (MAP-02). */
 const DETAIL_ZOOM = 15;
@@ -106,10 +85,8 @@ function Legend() {
 }
 
 export function SitesMapView() {
-  const filters = useFiltersFromUrl();
+  const filters = useSiteFiltersFromUrl();
   const filtersKey = JSON.stringify(filters);
-  const router = useRouter();
-  const pathname = usePathname();
   const searchKey = useSearchParams().toString();
   const catalog = useMapCatalog();
   // Null: every matching site at once (clustered). Set only when the SIS has more sites than one answer holds.
@@ -125,9 +102,6 @@ export function SitesMapView() {
   const details = useMapFeatures(detailBbox);
   const [visibleCategories, setVisibleCategories] = useState<readonly ObjectCategory[]>(OBJECT_CATEGORIES);
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
-  // The other criteria stay folded until one is in use.
-  const refinements = Object.keys(filters).filter((key) => key !== 'q').length;
-  const [filtersOpen, setFiltersOpen] = useState(refinements > 0);
   const selectedObject =
     (detailBbox && details.data?.objects.features.find((feature) => feature.id === selectedObjectId)) || null;
   const activeBase = base ?? catalog.data?.default_base ?? null;
@@ -244,19 +218,6 @@ export function SitesMapView() {
     if (loaded) filterObjectLayers(loaded.map, DETAIL_OBJECTS, visibleCategories);
   }, [loaded, visibleCategories]);
 
-  function applyFilters(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const next = new URLSearchParams();
-    for (const key of ['q', 'type', 'statut', 'commune', 'risque', 'gravite']) {
-      const value = String(form.get(key) ?? '').trim();
-      if (value) next.set(key, value);
-    }
-    setBbox(null);
-    setSelectedId(null);
-    router.replace(next.size ? `${pathname}?${next}` : pathname);
-  }
-
   /** A site chosen in the list: selected on the map, the map brought to its street. */
   function focusSite(feature: MapSiteFeature) {
     setSelectedId(feature.id);
@@ -286,77 +247,15 @@ export function SitesMapView() {
           </Link>
         </Button>
       </div>
-      <form
-        key={searchKey}
-        role="search"
-        onSubmit={applyFilters}
-        className="mb-3 space-y-3"
-        aria-label="Filtrer les sites de la carte"
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="relative min-w-56 flex-1">
-            <span className="sr-only">Recherche</span>
-            <Search aria-hidden="true" className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
-            <Input
-              id="map-q"
-              name="q"
-              type="search"
-              defaultValue={filters.q ?? ''}
-              placeholder="Nom, adresse, n° ETARE…"
-              className="pl-9"
-            />
-          </label>
-          <Button
-            type="button"
-            variant={refinements > 0 ? 'primary' : 'secondary'}
-            aria-expanded={filtersOpen}
-            aria-controls="map-filters"
-            onClick={() => setFiltersOpen((open) => !open)}
-          >
-            <SlidersHorizontal aria-hidden="true" className="size-4" />
-            Filtres{refinements > 0 ? ` (${refinements})` : ''}
-          </Button>
-          <Button type="submit" variant={refinements > 0 ? 'secondary' : 'primary'}>
-            Rechercher
-          </Button>
-        </div>
-        {/* Folded fields stay in the form: what was chosen is kept at the next search. */}
-        <div
-          id="map-filters"
-          className={cn(
-            'grid gap-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-5',
-            !filtersOpen && 'hidden',
-          )}
-        >
-          <div>
-            <Label htmlFor="map-type">Type</Label>
-            <Select id="map-type" name="type" defaultValue={filters.site_type ?? ''} className="mt-1">
-              <option value="">Tous</option>
-              {SITE_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {SITE_TYPE_LABELS[type]}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="map-status">Statut</Label>
-            <Select id="map-status" name="statut" defaultValue={filters.status ?? ''} className="mt-1">
-              <option value="">Non archivés</option>
-              {SITE_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {SITE_STATUS_LABELS[status]}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="map-city">Commune</Label>
-            <Input id="map-city" name="commune" defaultValue={filters.city ?? ''} className="mt-1" />
-          </div>
-          <RiskFilterFields prefix="map" riskTypeId={filters.risk_type_id} minSeverity={filters.min_severity} />
-        </div>
-      </form>
+      <SiteFilterBar
+        filters={filters}
+        idPrefix="map"
+        label="Filtrer les sites de la carte"
+        onApply={() => {
+          setBbox(null);
+          setSelectedId(null);
+        }}
+      />
 
       {catalog.error ? <ApiErrorAlert error={catalog.error} /> : null}
       {sites.error ? <ApiErrorAlert error={sites.error} /> : null}
