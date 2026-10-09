@@ -51,7 +51,12 @@ function SessionRow({ session, onRevoke, busy }: { session: AccountSession; onRe
   return (
     <li className="flex flex-wrap items-center justify-between gap-3 py-3">
       <div className="flex items-center gap-3">
-        <Icon aria-hidden="true" className="size-5 text-muted" />
+        <span
+          aria-hidden="true"
+          className="flex size-9 shrink-0 items-center justify-center rounded-md bg-subtle text-muted"
+        >
+          <Icon className="size-5" />
+        </span>
         <div>
           <p className="flex flex-wrap items-center gap-2 text-sm font-semibold">
             {device.label}

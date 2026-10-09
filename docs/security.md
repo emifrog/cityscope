@@ -56,6 +56,8 @@ révèlent rien). Tests : `supabase/tests/database/10_tenant_isolation.test.sql`
   et alerte la personne par e-mail. L'administration du SIS peut réinitialiser le second facteur d'un
   membre, ni le sien ni celui d'une personne membre d'un autre SIS, avec les mêmes effets et une trace.
   Mot de passe oublié par lien e-mail vérifié au clic ; le code d'un compte protégé reste demandé.
+  Changement de mot de passe depuis « Mon compte » (règles du fournisseur, un compte protégé doit être en
+  `aal2`) : les autres sessions sont fermées aussitôt.
 - **Sessions** (ADR-022) : le jeton d'une session fermée (déconnexion, révocation, suspension) est refusé
   dès la requête suivante. Chacun ferme ses autres sessions ; une suspension ferme toutes celles du
   membre. L'administration voit l'invitation en attente, la dernière connexion et le second facteur.
