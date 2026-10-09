@@ -300,10 +300,8 @@ language plpgsql volatile
 security definer
 set search_path = ''
 as $$
-declare
-  v_run app.export_run;
 begin
-  select * into v_run from app.export_run e where e.id = p_export and e.tenant_id = p_tenant and e.status = 'building'
+  perform 1 from app.export_run e where e.id = p_export and e.tenant_id = p_tenant and e.status = 'building'
   for update;
   if not found then return false; end if;
   perform set_config('app.actor_type', 'worker', true);
