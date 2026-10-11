@@ -2,21 +2,20 @@
 
 import type { Asset, Contribution, ContributionUpdate } from '@etare/contracts';
 import { FINAL_CONTRIBUTION_STATUSES } from '@etare/domain';
+import { Alert, Badge, Button, Field, Textarea, cn } from '@etare/ui';
 import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Field,
-  Textarea,
-} from '@etare/ui';
-import { ExternalLink } from 'lucide-react';
+  BadgeCheck,
+  ChevronRight,
+  ClipboardCheck,
+  ExternalLink,
+  FileCheck2,
+  GitCompareArrows,
+  MessagesSquare,
+  Paperclip,
+} from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import { CONTRIBUTION_TARGET_ICONS } from '@/components/contribution-target-icon';
 import { ContributionValues } from '@/components/contribution-values';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import {
@@ -27,10 +26,11 @@ import {
   REVISION_STATUS_LABELS,
   SCAN_STATUS_LABELS,
 } from '@/components/labels';
-import { PageHeader } from '@/components/page-header';
+import { SectionCard } from '@/components/section-card';
 import { api } from '@/lib/api-client';
 import { openInNewTab } from '@/lib/open-link';
 import { queryKeys, useApiMutation, useAssetUrl, useContribution, usePermissions, useSiteEtare } from '@/lib/queries';
+import { agoLabel } from '@/lib/relative-time';
 import { useTenant } from '@/providers/tenant-provider';
 import { CONTRIBUTION_TONES } from '../contributions-list';
 
@@ -92,6 +92,37 @@ function Attachment({ asset }: { asset: Asset }) {
   );
 }
 
+/** One of the four steps of the instruction, numbered, done or not. */
+function Step({
+  number,
+  title,
+  done,
+  children,
+}: {
+  number: number;
+  title: string;
+  done: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <section className="flex gap-3">
+      <span
+        aria-hidden="true"
+        className={cn(
+          'flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold',
+          done ? 'bg-success text-white' : 'border border-border bg-surface text-muted',
+        )}
+      >
+        {number}
+      </span>
+      <div className="min-w-0 flex-1 space-y-2">
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        {children}
+      </div>
+    </section>
+  );
+}
+
 function Instruction({ contribution }: { contribution: Contribution }) {
   const { me } = useTenant();
   const permissions = usePermissions();
@@ -134,100 +165,98 @@ function Instruction({ contribution }: { contribution: Contribution }) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div>
-          <CardTitle className="text-base">Instruction</CardTitle>
-          <CardDescription>
-            Acceptée, la proposition est reportée dans une révision de travail, puis validée par un validateur distinct.
-          </CardDescription>
+    <SectionCard
+      icon={ClipboardCheck}
+      title="Instruction"
+      description="Acceptée, la proposition est reportée dans une révision de travail, puis validée par un validateur distinct."
+      contentClassName="space-y-5 px-5 py-4 text-sm"
+    >
+      {update.error ? <ApiErrorAlert error={update.error} /> : null}
+      {problem ? <Alert tone="critical">{problem}</Alert> : null}
+      <Step number={1} title="Prise en charge" done={contribution.assigned_to !== null}>
+        {contribution.assigned_to ? (
+          <p>Suivie par {contribution.assigned_to.name}.</p>
+        ) : (
+          <p className="text-muted">Personne ne suit encore cette proposition.</p>
+        )}
+        {me && contribution.assigned_to?.id !== me.user.id ? (
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={update.isPending}
+            onClick={() =>
+              update.mutate({
+                ...(contribution.status === 'submitted' ? { status: 'in_review' as const } : {}),
+                assigned_to: me.user.id,
+              })
+            }
+          >
+            {contribution.assigned_to ? 'Reprendre à mon compte' : 'Prendre en charge'}
+          </Button>
+        ) : null}
+      </Step>
+      <Step
+        number={2}
+        title="Échange avec l’exploitant"
+        done={contribution.messages.some((item) => item.side === 'sis')}
+      >
+        <Field label="Message" htmlFor="contribution-message">
+          <Textarea
+            id="contribution-message"
+            rows={3}
+            maxLength={4000}
+            value={message}
+            onChange={(event) => setMessage(event.target.value)}
+          />
+        </Field>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="secondary" disabled={update.isPending} onClick={() => write('info_requested')}>
+            Demander une précision
+          </Button>
+          <Button size="sm" variant="ghost" disabled={update.isPending} onClick={() => write()}>
+            Envoyer sans attendre de réponse
+          </Button>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4 text-sm">
-        {update.error ? <ApiErrorAlert error={update.error} /> : null}
-        {problem ? <p className="text-critical">{problem}</p> : null}
-        <section className="space-y-2">
-          <h3 className="font-semibold">Prise en charge</h3>
-          {contribution.assigned_to ? (
-            <p>Suivie par {contribution.assigned_to.name}.</p>
-          ) : (
-            <p className="text-muted">Personne ne suit encore cette proposition.</p>
-          )}
-          {me && contribution.assigned_to?.id !== me.user.id ? (
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={update.isPending}
-              onClick={() =>
-                update.mutate({
-                  ...(contribution.status === 'submitted' ? { status: 'in_review' as const } : {}),
-                  assigned_to: me.user.id,
-                })
-              }
-            >
-              Prendre en charge
-            </Button>
-          ) : null}
-        </section>
-        <section className="space-y-2">
-          <h3 className="font-semibold">Échange avec l’exploitant</h3>
-          <Field label="Message" htmlFor="contribution-message">
-            <Textarea
-              id="contribution-message"
-              rows={3}
-              maxLength={4000}
-              value={message}
-              onChange={(event) => setMessage(event.target.value)}
-            />
-          </Field>
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="secondary" disabled={update.isPending} onClick={() => write('info_requested')}>
-              Demander une précision
-            </Button>
-            <Button size="sm" variant="ghost" disabled={update.isPending} onClick={() => write()}>
-              Envoyer sans attendre de réponse
-            </Button>
-          </div>
-        </section>
-        <section className="space-y-2">
-          <h3 className="font-semibold">Report dans le dossier</h3>
-          {contribution.resolution ? (
-            <p>
-              Intégrée à la révision n° {contribution.resolution.revision_no} (
-              {(REVISION_STATUS_LABELS as Readonly<Record<string, string>>)[
-                contribution.resolution.revision_status
-              ]?.toLowerCase() ?? contribution.resolution.revision_status}
-              ).
-            </p>
-          ) : draft ? (
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={update.isPending}
-              onClick={() => update.mutate({ revision_id: draft.id })}
-            >
-              Intégrer à la révision n° {draft.revision_no} en brouillon
-            </Button>
-          ) : (
-            <>
-              <p className="text-muted">Aucune révision en brouillon pour ce site.</p>
-              {permissions.has('etare:edit') ? (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={openRevision.isPending}
-                  onClick={() => openRevision.mutate(undefined)}
-                >
-                  Ouvrir une révision
-                </Button>
-              ) : null}
-              {openRevision.error ? <ApiErrorAlert error={openRevision.error} /> : null}
-            </>
-          )}
-          <Link href={`/sites/${contribution.site_id}`} className="block text-info hover:underline">
-            Données de travail du site
-          </Link>
-        </section>
+      </Step>
+      <Step number={3} title="Report dans le dossier" done={contribution.resolution !== null}>
+        {contribution.resolution ? (
+          <p>
+            Intégrée à la révision n° {contribution.resolution.revision_no} (
+            {(REVISION_STATUS_LABELS as Readonly<Record<string, string>>)[
+              contribution.resolution.revision_status
+            ]?.toLowerCase() ?? contribution.resolution.revision_status}
+            ).
+          </p>
+        ) : draft ? (
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={update.isPending}
+            onClick={() => update.mutate({ revision_id: draft.id })}
+          >
+            Intégrer à la révision n° {draft.revision_no} en brouillon
+          </Button>
+        ) : (
+          <>
+            <p className="text-muted">Aucune révision en brouillon pour ce site.</p>
+            {permissions.has('etare:edit') ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={openRevision.isPending}
+                onClick={() => openRevision.mutate(undefined)}
+              >
+                Ouvrir une révision
+              </Button>
+            ) : null}
+            {openRevision.error ? <ApiErrorAlert error={openRevision.error} /> : null}
+          </>
+        )}
+        <Link href={`/sites/${contribution.site_id}`} className="block text-info hover:underline">
+          Données de travail du site
+        </Link>
+      </Step>
+      <Step number={4} title="Décision" done={false}>
         <form
           noValidate
           className="space-y-2"
@@ -236,7 +265,6 @@ function Instruction({ contribution }: { contribution: Contribution }) {
             decide('accepted');
           }}
         >
-          <h3 className="font-semibold">Décision</h3>
           {contribution.conflict ? (
             <Field label="Résolution du conflit" htmlFor="contribution-resolution">
               <Textarea
@@ -287,8 +315,8 @@ function Instruction({ contribution }: { contribution: Contribution }) {
           </div>
           <p className="text-xs text-muted">La décision est définitive.</p>
         </form>
-      </CardContent>
-    </Card>
+      </Step>
+    </SectionCard>
   );
 }
 
@@ -296,6 +324,8 @@ function Instruction({ contribution }: { contribution: Contribution }) {
 export function ContributionDetail({ id }: { id: string }) {
   const permissions = usePermissions();
   const detail = useContribution(id);
+  // One instant per mount: the relative dates stay coherent.
+  const [now] = useState(() => Date.now());
 
   if (!permissions.has('contribution:review')) {
     return <Alert tone="info">Les contributions sont instruites par la Prévision et l’administration du SIS.</Alert>;
@@ -308,132 +338,159 @@ export function ContributionDetail({ id }: { id: string }) {
     contribution.publication !== null &&
     contribution.current_publication_number !== null &&
     contribution.current_publication_number !== contribution.publication.publication_number;
+  const TargetIcon = CONTRIBUTION_TARGET_ICONS[contribution.target_type];
 
   return (
     <>
-      <PageHeader
-        title={`${contribution.title} — ${contribution.site_name}`}
-        description={`Proposée par ${contribution.author.name}${contribution.author.email ? ` (${contribution.author.email})` : ''}, reçue le ${when(contribution.created_at)}.`}
-        actions={
-          <Badge tone={CONTRIBUTION_TONES[contribution.status]}>
-            {CONTRIBUTION_STATUS_LABELS[contribution.status]}
-          </Badge>
-        }
-      />
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
+      <header className="mb-5">
+        <nav aria-label="Fil d’Ariane" className="mb-3 flex items-center gap-1 text-sm text-muted">
+          <Link href="/contributions" className="hover:text-foreground hover:underline">
+            Contributions
+          </Link>
+          <ChevronRight aria-hidden="true" className="size-4" />
+          <span className="truncate text-foreground">{contribution.site_name}</span>
+        </nav>
+        <div className="flex flex-wrap items-start gap-4">
+          <span
+            aria-hidden="true"
+            className={cn(
+              'flex size-14 shrink-0 items-center justify-center rounded-card text-white',
+              contribution.conflict ? 'bg-important' : 'bg-brand-navy',
+            )}
+          >
+            <TargetIcon className="size-7" />
+          </span>
+          <div className="min-w-0 flex-1 basis-64">
+            <h1 className="text-2xl font-bold break-words text-foreground">{contribution.title}</h1>
+            <p className="mt-1 text-sm text-muted">
+              Proposée par {contribution.author.name}
+              {contribution.author.email ? ` (${contribution.author.email})` : ''}{' '}
+              {agoLabel(contribution.created_at, now)}, le {when(contribution.created_at)}, pour{' '}
+              {contribution.site_name}.
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Badge tone={CONTRIBUTION_TONES[contribution.status]}>
+                {CONTRIBUTION_STATUS_LABELS[contribution.status]}
+              </Badge>
+              <Badge>
+                {CONTRIBUTION_OPERATION_LABELS[contribution.operation]} ·{' '}
+                {CONTRIBUTION_TARGET_LABELS[contribution.target_type]}
+              </Badge>
+              {contribution.conflict ? <Badge tone="important">Conflit</Badge> : null}
+              {contribution.etare_number ? <Badge>N° ETARE {contribution.etare_number}</Badge> : null}
+            </div>
+          </div>
+          <Button asChild variant="secondary" size="sm">
+            <Link href={`/sites/${contribution.site_id}`}>
+              <FileCheck2 aria-hidden="true" className="size-4" />
+              Fiche du site
+            </Link>
+          </Button>
+        </div>
+      </header>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem] xl:items-start">
         <div className="min-w-0 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Proposition</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <p className="flex flex-wrap gap-2">
-                <Badge>{CONTRIBUTION_OPERATION_LABELS[contribution.operation]}</Badge>
-                <Badge>{CONTRIBUTION_TARGET_LABELS[contribution.target_type]}</Badge>
-              </p>
-              <p className="rounded-md bg-subtle px-3 py-2 whitespace-pre-wrap">{contribution.description}</p>
-              {contribution.conflict ? (
-                <Alert tone="important">
-                  {contribution.current_value === null
-                    ? 'L’élément visé n’existe plus dans les données de travail.'
-                    : 'Les données de travail ont changé depuis la version vue par l’exploitant.'}{' '}
-                  Comparez les valeurs : accepter demande d’indiquer comment le conflit est résolu.
-                </Alert>
-              ) : null}
-              <ContributionValues
-                base={contribution.base_value}
-                proposed={contribution.proposed_value}
-                current={contribution.operation === 'create' ? undefined : contribution.current_value}
-                removal={contribution.operation === 'delete'}
-              />
-              <p className="text-muted">
-                {contribution.publication
-                  ? `Faite sur la version publiée n° ${contribution.publication.publication_number}.`
-                  : 'Faite alors qu’aucune version n’était publiée.'}
-                {outdated ? ` La version publiée actuelle est la n° ${contribution.current_publication_number}.` : ''}
-              </p>
-            </CardContent>
-          </Card>
+          <SectionCard
+            icon={GitCompareArrows}
+            title="Proposition"
+            description={
+              contribution.publication
+                ? `Faite sur la version publiée n° ${contribution.publication.publication_number}${
+                    outdated
+                      ? ` ; la version publiée actuelle est la n° ${contribution.current_publication_number}`
+                      : ''
+                  }.`
+                : 'Faite alors qu’aucune version n’était publiée.'
+            }
+            contentClassName="space-y-3 px-5 py-4 text-sm"
+          >
+            <p className="rounded-md bg-subtle px-3 py-2 whitespace-pre-wrap">{contribution.description}</p>
+            {contribution.conflict ? (
+              <Alert tone="important">
+                {contribution.current_value === null
+                  ? 'L’élément visé n’existe plus dans les données de travail.'
+                  : 'Les données de travail ont changé depuis la version vue par l’exploitant.'}{' '}
+                Comparez les valeurs : accepter demande d’indiquer comment le conflit est résolu.
+              </Alert>
+            ) : null}
+            <ContributionValues
+              base={contribution.base_value}
+              proposed={contribution.proposed_value}
+              current={contribution.operation === 'create' ? undefined : contribution.current_value}
+              removal={contribution.operation === 'delete'}
+            />
+          </SectionCard>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Pièces jointes ({contribution.attachments.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {contribution.attachments.length === 0 ? (
-                <p className="text-sm text-muted">Aucune pièce jointe.</p>
-              ) : (
-                <ul className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-3">
-                  {contribution.attachments.map((asset) => (
-                    <Attachment key={asset.id} asset={asset} />
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
+          <SectionCard icon={Paperclip} title={`Pièces jointes (${contribution.attachments.length})`}>
+            {contribution.attachments.length === 0 ? (
+              <p className="text-sm text-muted">Aucune pièce jointe.</p>
+            ) : (
+              <ul className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-3">
+                {contribution.attachments.map((asset) => (
+                  <Attachment key={asset.id} asset={asset} />
+                ))}
+              </ul>
+            )}
+          </SectionCard>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Échanges ({contribution.messages.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {contribution.messages.length === 0 ? (
-                <p className="text-sm text-muted">Aucun échange pour l’instant.</p>
-              ) : (
-                <ol className="space-y-3 text-sm">
-                  {contribution.messages.map((message) => (
-                    <li
-                      key={message.id}
-                      className={
-                        message.side === 'sis' ? 'border-l-2 border-info pl-3' : 'border-l-2 border-border pl-3'
-                      }
-                    >
-                      <p className="text-xs text-muted">
-                        {message.author.name} · {when(message.created_at)}
-                        {message.kind === 'info_request' ? ' · demande de précision' : ''}
-                      </p>
-                      <p className="whitespace-pre-wrap">{message.body}</p>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </CardContent>
-          </Card>
+          <SectionCard
+            icon={MessagesSquare}
+            title={`Échanges (${contribution.messages.length})`}
+            description="Les messages du SIS sont lus par l’exploitant sur son portail."
+          >
+            {contribution.messages.length === 0 ? (
+              <p className="text-sm text-muted">Aucun échange pour l’instant.</p>
+            ) : (
+              <ol className="space-y-3 text-sm">
+                {contribution.messages.map((message) => (
+                  <li
+                    key={message.id}
+                    className={cn(
+                      'max-w-[85%] rounded-md px-3 py-2',
+                      message.side === 'sis' ? 'ml-auto bg-info-soft/60' : 'bg-subtle',
+                    )}
+                  >
+                    <p className="text-xs text-muted">
+                      {message.author.name} · {agoLabel(message.created_at, now)}
+                      {message.kind === 'info_request' ? ' · demande de précision' : ''}
+                    </p>
+                    <p className="whitespace-pre-wrap text-foreground">{message.body}</p>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </SectionCard>
         </div>
 
         <aside className="space-y-4">
           {decided ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Décision</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
+            <SectionCard icon={BadgeCheck} title="Décision" contentClassName="space-y-2 px-5 py-4 text-sm">
+              <p>
+                <span className="font-medium text-foreground">{CONTRIBUTION_STATUS_LABELS[contribution.status]}</span>
+                {contribution.status === 'withdrawn'
+                  ? ' par l’exploitant'
+                  : ` par ${contribution.decided_by?.name ?? '—'}`}{' '}
+                le {when(contribution.decided_at)}.
+              </p>
+              {contribution.decision_comment ? (
+                <p className="rounded-md bg-subtle px-3 py-2 whitespace-pre-wrap">{contribution.decision_comment}</p>
+              ) : null}
+              {contribution.conflict_resolution ? (
                 <p>
-                  {CONTRIBUTION_STATUS_LABELS[contribution.status]}
-                  {contribution.status === 'withdrawn'
-                    ? ' par l’exploitant'
-                    : ` par ${contribution.decided_by?.name ?? '—'}`}{' '}
-                  le {when(contribution.decided_at)}.
+                  <span className="font-medium">Résolution du conflit : </span>
+                  {contribution.conflict_resolution}
                 </p>
-                {contribution.decision_comment ? (
-                  <p className="rounded-md bg-subtle px-3 py-2 whitespace-pre-wrap">{contribution.decision_comment}</p>
-                ) : null}
-                {contribution.conflict_resolution ? (
-                  <p>
-                    <span className="font-medium">Résolution du conflit : </span>
-                    {contribution.conflict_resolution}
-                  </p>
-                ) : null}
-                {contribution.resolution ? (
-                  <p>
-                    Intégrée à la révision n° {contribution.resolution.revision_no}
-                    {contribution.resolution.publication_number
-                      ? `, publiée en version n° ${contribution.resolution.publication_number}.`
-                      : ', pas encore publiée.'}
-                  </p>
-                ) : null}
-              </CardContent>
-            </Card>
+              ) : null}
+              {contribution.resolution ? (
+                <p>
+                  Intégrée à la révision n° {contribution.resolution.revision_no}
+                  {contribution.resolution.publication_number
+                    ? `, publiée en version n° ${contribution.resolution.publication_number}.`
+                    : ', pas encore publiée.'}
+                </p>
+              ) : null}
+            </SectionCard>
           ) : (
             <Instruction contribution={contribution} />
           )}
