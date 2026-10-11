@@ -6,7 +6,13 @@ export function Card({ className, ...props }: ComponentProps<'section'>) {
 }
 
 export function CardHeader({ className, ...props }: ComponentProps<'header'>) {
-  return <header className={cn('flex items-center justify-between gap-4 px-5 pt-5', className)} {...props} />;
+  // A description placed beside the title drops under it, full width, actions staying on the title row.
+  return (
+    <header
+      className={cn('flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 pt-5', className)}
+      {...props}
+    />
+  );
 }
 
 export function CardTitle({ className, ...props }: ComponentProps<'h2'>) {
@@ -14,7 +20,7 @@ export function CardTitle({ className, ...props }: ComponentProps<'h2'>) {
 }
 
 export function CardDescription({ className, ...props }: ComponentProps<'p'>) {
-  return <p className={cn('text-sm text-muted', className)} {...props} />;
+  return <p className={cn('basis-full text-sm text-muted', className)} {...props} />;
 }
 
 export function CardContent({ className, ...props }: ComponentProps<'div'>) {

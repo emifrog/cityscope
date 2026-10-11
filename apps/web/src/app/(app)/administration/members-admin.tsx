@@ -2,53 +2,48 @@
 
 import type { Member, MemberInvitation, MemberInvite, MemberUpdate } from '@etare/contracts';
 import { TENANT_WIDE_ROLES, type TenantWideRole } from '@etare/domain';
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Field,
-  Input,
-  Table,
-  TableCell,
-  TableHead,
-  TableHeaderCell,
-  TableRow,
-} from '@etare/ui';
+import { Alert, Badge, Button, Card, Field, Input, cn } from '@etare/ui';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { ShieldAlert, ShieldCheck, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { MEMBERSHIP_STATUS_LABELS, ROLE_DESCRIPTIONS, ROLE_LABELS } from '@/components/labels';
-import { api } from '@/lib/api-client';
+import { SectionCard } from '@/components/section-card';
 import { SitePicker } from '@/components/site-picker';
+import { api } from '@/lib/api-client';
+import { initialsOf } from '@/lib/identity';
 import { queryKeys, useApiMutation, useMembers } from '@/lib/queries';
+import { agoLabel } from '@/lib/relative-time';
 import { SectorChoice, type SectorSelection } from './sector-choice';
 
 const signInFormat = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeZone: 'Europe/Paris' });
 
 /** Invitation accepted or not, last sign-in and second factor (ADR-022). */
-function AccessCell({ member }: { member: Member }) {
+function AccessLine({ member, now }: { member: Member; now: number }) {
   return (
-    <div className="flex flex-col items-start gap-1">
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
       {member.last_sign_in_at === null ? (
         <Badge tone="important">Invitation en attente</Badge>
       ) : (
-        <span className="text-xs text-muted">
-          Dernière connexion le {signInFormat.format(new Date(member.last_sign_in_at))}
+        <span>
+          Dernière connexion {agoLabel(member.last_sign_in_at, now)} ·{' '}
+          {signInFormat.format(new Date(member.last_sign_in_at))}
         </span>
       )}
       {member.second_factor ? (
-        <Badge tone="success">Double authentification</Badge>
+        <span className="inline-flex items-center gap-1 text-success">
+          <ShieldCheck aria-hidden="true" className="size-3.5" />
+          Double authentification
+        </span>
       ) : (
-        <Badge tone="neutral">Sans double authentification</Badge>
+        <span className="inline-flex items-center gap-1">
+          <ShieldAlert aria-hidden="true" className="size-3.5" />
+          Sans double authentification
+        </span>
       )}
-    </div>
+    </p>
   );
 }
 
@@ -342,7 +337,7 @@ function InviteForm({ onClose }: { onClose: (result: MemberInvitation | null) =>
         />
         {errors.roles?.message ? <p className="mt-1 text-sm text-critical">{errors.roles.message}</p> : null}
         <p className="mt-2 text-xs text-muted">
-          Les exploitants sont rattachés à leurs sites depuis le portail exploitant (à venir).
+          Les exploitants sont rattachés à leurs sites depuis la page Exploitants.
         </p>
       </div>
       <div className="md:col-span-2">
@@ -359,6 +354,7 @@ function InviteForm({ onClose }: { onClose: (result: MemberInvitation | null) =>
           size="sm"
           disabled={invite.isPending || (!selectedRoles.includes('SIS_ADMIN') && perimeterIncomplete(perimeter))}
         >
+          <UserPlus aria-hidden="true" className="size-4" />
           {invite.isPending ? 'Envoi…' : 'Inviter'}
         </Button>
         <Button type="button" size="sm" variant="secondary" onClick={() => onClose(null)}>
@@ -369,7 +365,12 @@ function InviteForm({ onClose }: { onClose: (result: MemberInvitation | null) =>
   );
 }
 
-function MemberRow({ member }: { member: Member }) {
+/** A form opened under the row of a member, on its own background. */
+function Drawer({ children }: { children: React.ReactNode }) {
+  return <div className="mt-3 rounded-md bg-subtle/60 p-4">{children}</div>;
+}
+
+function MemberRow({ member, now }: { member: Member; now: number }) {
   const [editing, setEditing] = useState(false);
   const [limiting, setLimiting] = useState(false);
   const [habilitating, setHabilitating] = useState(false);
@@ -386,23 +387,28 @@ function MemberRow({ member }: { member: Member }) {
   );
   const [confirmReset, setConfirmReset] = useState(false);
   const suspended = member.status !== 'active';
+  const name = member.display_name ?? member.email;
 
   return (
-    <>
-      <TableRow className={suspended ? 'opacity-70' : undefined}>
-        <TableCell>
-          <p className="font-semibold">
-            {member.display_name ?? member.email}
-            {member.is_self ? (
-              <Badge tone="info" className="ml-2">
-                Vous
-              </Badge>
-            ) : null}
+    <li className={cn('px-5 py-4', suspended && 'opacity-70')}>
+      <div className="grid gap-3 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-start">
+        <span
+          aria-hidden="true"
+          className={cn(
+            'flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-bold',
+            suspended ? 'bg-subtle text-muted' : 'bg-brand-navy text-white',
+          )}
+        >
+          {initialsOf(member.display_name, member.email)}
+        </span>
+        <div className="min-w-0 space-y-1.5">
+          <p className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold text-foreground">{name}</span>
+            {member.is_self ? <Badge tone="info">Vous</Badge> : null}
+            <Badge tone={suspended ? 'important' : 'success'}>{MEMBERSHIP_STATUS_LABELS[member.status]}</Badge>
           </p>
           {member.display_name ? <p className="text-xs text-muted">{member.email}</p> : null}
-        </TableCell>
-        <TableCell>
-          <div className="flex flex-wrap gap-1">
+          <p className="flex flex-wrap gap-1">
             {member.roles.map((role) => (
               <Badge key={role}>{ROLE_LABELS[role]}</Badge>
             ))}
@@ -414,137 +420,123 @@ function MemberRow({ member }: { member: Member }) {
             {member.roles.length + member.site_roles.length === 0 ? (
               <span className="text-xs text-muted">Aucun rôle</span>
             ) : null}
-          </div>
-          <div className="mt-1 flex flex-wrap gap-1">
             <PerimeterBadge member={member} />
             <SensitiveAccessBadge member={member} />
+          </p>
+          <AccessLine member={member} now={now} />
+        </div>
+        {member.is_self ? (
+          <span className="text-xs text-muted md:text-right">Géré par un autre administrateur</span>
+        ) : (
+          <div className="flex flex-wrap gap-1 md:max-w-56 md:justify-end">
+            <Button size="sm" variant="secondary" onClick={() => setEditing((open) => !open)} aria-expanded={editing}>
+              Rôles
+            </Button>
+            {member.roles.length > 0 ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setLimiting((open) => !open)}
+                aria-expanded={limiting}
+              >
+                Périmètre
+              </Button>
+            ) : null}
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setHabilitating((open) => !open)}
+              aria-expanded={habilitating}
+            >
+              Sites sensibles
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={update.isPending}
+              onClick={() => update.mutate({ status: suspended ? 'active' : 'suspended' })}
+            >
+              {suspended ? 'Réactiver' : 'Suspendre'}
+            </Button>
+            {member.second_factor ? (
+              <Button size="sm" variant="ghost" onClick={() => setConfirmReset((open) => !open)}>
+                Réinitialiser la double authentification
+              </Button>
+            ) : null}
           </div>
-        </TableCell>
-        <TableCell>
-          <AccessCell member={member} />
-        </TableCell>
-        <TableCell>
-          <Badge tone={suspended ? 'important' : 'success'}>{MEMBERSHIP_STATUS_LABELS[member.status]}</Badge>
-        </TableCell>
-        <TableCell className="text-right whitespace-nowrap">
-          {member.is_self ? (
-            <span className="text-xs text-muted">Géré par un autre administrateur</span>
-          ) : (
-            <div className="flex justify-end gap-1">
-              <Button size="sm" variant="ghost" onClick={() => setEditing((open) => !open)} aria-expanded={editing}>
-                Rôles
-              </Button>
-              {member.roles.length > 0 ? (
-                <Button size="sm" variant="ghost" onClick={() => setLimiting((open) => !open)} aria-expanded={limiting}>
-                  Périmètre
-                </Button>
-              ) : null}
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setHabilitating((open) => !open)}
-                aria-expanded={habilitating}
-              >
-                Sites sensibles
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={update.isPending}
-                onClick={() => update.mutate({ status: suspended ? 'active' : 'suspended' })}
-              >
-                {suspended ? 'Réactiver' : 'Suspendre'}
-              </Button>
-              {member.second_factor ? (
-                <Button size="sm" variant="ghost" onClick={() => setConfirmReset((open) => !open)}>
-                  Réinitialiser la double authentification
-                </Button>
-              ) : null}
-            </div>
-          )}
-        </TableCell>
-      </TableRow>
+        )}
+      </div>
       {habilitating ? (
-        <TableRow>
-          <TableCell colSpan={5} className="bg-subtle/40">
-            <SensitiveAccessForm member={member} onDone={() => setHabilitating(false)} />
-          </TableCell>
-        </TableRow>
+        <Drawer>
+          <SensitiveAccessForm member={member} onDone={() => setHabilitating(false)} />
+        </Drawer>
       ) : null}
       {limiting ? (
-        <TableRow>
-          <TableCell colSpan={5} className="bg-subtle/40">
-            <MemberPerimeterForm member={member} onDone={() => setLimiting(false)} />
-          </TableCell>
-        </TableRow>
+        <Drawer>
+          <MemberPerimeterForm member={member} onDone={() => setLimiting(false)} />
+        </Drawer>
       ) : null}
       {confirmReset ? (
-        <TableRow>
-          <TableCell colSpan={5} className="bg-subtle/40">
-            <div className="max-w-2xl space-y-3">
-              {reset.error ? <ApiErrorAlert error={reset.error} /> : null}
-              <p className="text-sm">
-                Vérifiez d’abord l’identité de {member.display_name ?? member.email} (téléphone perdu, appel de vive
-                voix). Sa double authentification et ses sessions seront supprimées ; elle devra en activer une nouvelle
-                à sa prochaine connexion et sera prévenue par e-mail. L’opération est tracée.
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="danger"
-                  disabled={reset.isPending}
-                  onClick={() => reset.mutate(undefined, { onSuccess: () => setConfirmReset(false) })}
-                >
-                  {reset.isPending ? 'Réinitialisation…' : 'Réinitialiser'}
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setConfirmReset(false)}>
-                  Annuler
-                </Button>
-              </div>
+        <Drawer>
+          <div className="max-w-2xl space-y-3">
+            {reset.error ? <ApiErrorAlert error={reset.error} /> : null}
+            <p className="text-sm">
+              Vérifiez d’abord l’identité de {name} (téléphone perdu, appel de vive voix). Sa double authentification et
+              ses sessions seront supprimées ; elle devra en activer une nouvelle à sa prochaine connexion et sera
+              prévenue par e-mail. L’opération est tracée.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="danger"
+                disabled={reset.isPending}
+                onClick={() => reset.mutate(undefined, { onSuccess: () => setConfirmReset(false) })}
+              >
+                {reset.isPending ? 'Réinitialisation…' : 'Réinitialiser'}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setConfirmReset(false)}>
+                Annuler
+              </Button>
             </div>
-          </TableCell>
-        </TableRow>
+          </div>
+        </Drawer>
       ) : null}
       {update.error && !editing ? (
-        <TableRow>
-          <TableCell colSpan={5}>
-            <ApiErrorAlert error={update.error} />
-          </TableCell>
-        </TableRow>
+        <div className="mt-3">
+          <ApiErrorAlert error={update.error} />
+        </div>
       ) : null}
       {editing ? (
-        <TableRow>
-          <TableCell colSpan={5} className="bg-subtle/40">
-            <div className="max-w-2xl space-y-3">
-              {update.error ? <ApiErrorAlert error={update.error} /> : null}
-              <RoleChoices name={`roles-${member.id}`} selected={roles} onChange={setRoles} />
-              {roles.length === 0 && member.site_roles.length === 0 ? (
-                <p className="text-sm text-important">Sans rôle, la personne n’aura plus accès à rien dans ce SIS.</p>
-              ) : null}
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  disabled={update.isPending}
-                  onClick={() => update.mutate({ roles }, { onSuccess: () => setEditing(false) })}
-                >
-                  {update.isPending ? 'Enregistrement…' : 'Enregistrer les rôles'}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => {
-                    update.reset();
-                    setEditing(false);
-                  }}
-                >
-                  Annuler
-                </Button>
-              </div>
+        <Drawer>
+          <div className="max-w-2xl space-y-3">
+            {update.error ? <ApiErrorAlert error={update.error} /> : null}
+            <RoleChoices name={`roles-${member.id}`} selected={roles} onChange={setRoles} />
+            {roles.length === 0 && member.site_roles.length === 0 ? (
+              <p className="text-sm text-important">Sans rôle, la personne n’aura plus accès à rien dans ce SIS.</p>
+            ) : null}
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                disabled={update.isPending}
+                onClick={() => update.mutate({ roles }, { onSuccess: () => setEditing(false) })}
+              >
+                {update.isPending ? 'Enregistrement…' : 'Enregistrer les rôles'}
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  update.reset();
+                  setEditing(false);
+                }}
+              >
+                Annuler
+              </Button>
             </div>
-          </TableCell>
-        </TableRow>
+          </div>
+        </Drawer>
       ) : null}
-    </>
+    </li>
   );
 }
 
@@ -553,78 +545,75 @@ export function MembersAdmin() {
   const members = useMembers();
   const [inviting, setInviting] = useState(false);
   const [result, setResult] = useState<MemberInvitation | null>(null);
+  // One instant per mount: the relative dates stay coherent.
+  const [now] = useState(() => Date.now());
+  const active = members.data?.filter((member) => member.status === 'active').length ?? 0;
+  const waiting = members.data?.filter((member) => member.last_sign_in_at === null).length ?? 0;
 
   return (
-    <>
-      {!inviting && members.data ? (
-        <div className="mb-4 flex justify-end">
-          <Button
-            onClick={() => {
-              setResult(null);
-              setInviting(true);
-            }}
-          >
-            Inviter une personne
-          </Button>
+    <div className="space-y-4">
+      {members.data ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            <Badge tone="success" className="px-3 py-1 text-sm">
+              {active} membre{active > 1 ? 's' : ''} actif{active > 1 ? 's' : ''}
+            </Badge>
+            {waiting > 0 ? (
+              <Badge tone="important" className="px-3 py-1 text-sm">
+                {waiting} invitation{waiting > 1 ? 's' : ''} en attente
+              </Badge>
+            ) : null}
+          </div>
+          {!inviting ? (
+            <Button
+              size="sm"
+              onClick={() => {
+                setResult(null);
+                setInviting(true);
+              }}
+            >
+              <UserPlus aria-hidden="true" className="size-4" />
+              Inviter une personne
+            </Button>
+          ) : null}
         </div>
       ) : null}
-      <div className="space-y-4">
-        {result ? (
-          <Alert tone="info">
-            {result.invitation === 'sent'
-              ? `Invitation envoyée à ${result.member.email} : la personne active son compte depuis le lien reçu.`
-              : `${result.member.email} dispose déjà d’un compte : rattaché à votre SIS, il se connecte avec ses identifiants habituels.`}
-          </Alert>
-        ) : null}
-        {inviting ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Inviter une personne</CardTitle>
-              <CardDescription>
-                Un e-mail d’activation lui est envoyé. Les rôles de validation et d’administration exigent la double
-                authentification.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <InviteForm
-                onClose={(invitation) => {
-                  setResult(invitation);
-                  setInviting(false);
-                }}
-              />
-            </CardContent>
-          </Card>
-        ) : null}
-        {members.isPending ? <LoadingCard lines={5} /> : null}
-        {members.error ? <ApiErrorAlert error={members.error} /> : null}
-        {members.data ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Membres ({members.data.length})</CardTitle>
-              <CardDescription>
-                Personne ne modifie ses propres habilitations ; un SIS garde toujours au moins un administrateur actif.
-                Suspendre un membre ferme aussitôt toutes ses sessions.
-              </CardDescription>
-            </CardHeader>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableHeaderCell>Personne</TableHeaderCell>
-                  <TableHeaderCell>Rôles</TableHeaderCell>
-                  <TableHeaderCell>Accès</TableHeaderCell>
-                  <TableHeaderCell>Statut</TableHeaderCell>
-                  <TableHeaderCell className="text-right">Actions</TableHeaderCell>
-                </TableRow>
-              </TableHead>
-              <tbody>
-                {members.data.map((member) => (
-                  <MemberRow key={`${member.id}-${member.row_version}`} member={member} />
-                ))}
-              </tbody>
-            </Table>
-          </Card>
-        ) : null}
-      </div>
-    </>
+      {result ? (
+        <Alert tone="info">
+          {result.invitation === 'sent'
+            ? `Invitation envoyée à ${result.member.email} : la personne active son compte depuis le lien reçu.`
+            : `${result.member.email} dispose déjà d’un compte : rattaché à votre SIS, il se connecte avec ses identifiants habituels.`}
+        </Alert>
+      ) : null}
+      {inviting ? (
+        <SectionCard
+          icon={UserPlus}
+          title="Inviter une personne"
+          description="Un e-mail d’activation lui est envoyé. Les rôles de validation et d’administration exigent la double authentification."
+        >
+          <InviteForm
+            onClose={(invitation) => {
+              setResult(invitation);
+              setInviting(false);
+            }}
+          />
+        </SectionCard>
+      ) : null}
+      {members.isPending ? <LoadingCard lines={5} /> : null}
+      {members.error ? <ApiErrorAlert error={members.error} /> : null}
+      {members.data ? (
+        <Card>
+          <ul className="divide-y divide-border" aria-label="Membres du SIS">
+            {members.data.map((member) => (
+              <MemberRow key={`${member.id}-${member.row_version}`} member={member} now={now} />
+            ))}
+          </ul>
+          <p className="border-t border-border px-5 py-3 text-xs text-muted">
+            Personne ne modifie ses propres habilitations ; un SIS garde toujours au moins un administrateur actif.
+            Suspendre un membre ferme aussitôt toutes ses sessions.
+          </p>
+        </Card>
+      ) : null}
+    </div>
   );
 }
