@@ -9,6 +9,7 @@ import { useState, type FormEvent } from 'react';
 import { dossierStage } from '@/components/etare/dossier-stage';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { REVISION_STATUS_LABELS } from '@/components/labels';
+import { SegmentedControl } from '@/components/segmented-control';
 import { useEtareDossierPages, usePermissions } from '@/lib/queries';
 import { agoLabel } from '@/lib/relative-time';
 
@@ -31,49 +32,6 @@ const STATES: readonly { value: State; label: string; count: keyof EtareDossierC
   { value: 'unpublished', label: 'Sans version publiée', count: 'unpublished' },
 ];
 const isState = (value: string | null): value is State => STATES.some((state) => state.value === value);
-
-/** The states as a segmented control, each with its count over the whole SIS. */
-function StateTabs({
-  state,
-  counts,
-  onChange,
-}: {
-  state: State;
-  counts: EtareDossierCounts | undefined;
-  onChange: (state: State) => void;
-}) {
-  return (
-    <div role="group" aria-label="Dossiers affichés" className="flex flex-wrap gap-1 rounded-md bg-subtle p-1">
-      {STATES.map((option) => {
-        const selected = state === option.value;
-        return (
-          <button
-            key={option.value}
-            type="button"
-            aria-pressed={selected}
-            onClick={() => onChange(option.value)}
-            className={cn(
-              'flex items-center gap-1.5 rounded px-3 py-1.5 text-sm whitespace-nowrap transition-colors',
-              selected ? 'bg-surface font-semibold text-foreground shadow-sm' : 'text-muted hover:text-foreground',
-            )}
-          >
-            {option.label}
-            {counts ? (
-              <span
-                className={cn(
-                  'rounded-full px-1.5 text-xs tabular-nums',
-                  selected ? 'bg-subtle text-foreground' : 'bg-surface text-muted',
-                )}
-              >
-                {counts[option.count]}
-              </span>
-            ) : null}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 function StageCell({ dossier }: { dossier: EtareDossier }) {
   const stage = dossierStage(dossier);
@@ -169,7 +127,16 @@ export function EtareDossiers() {
       </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <StateTabs state={state} counts={counts} onChange={(etat) => go({ etat })} />
+        <SegmentedControl
+          label="Dossiers affichés"
+          value={state}
+          onChange={(etat) => go({ etat })}
+          options={STATES.map((option) => ({
+            value: option.value,
+            label: option.label,
+            count: counts ? counts[option.count] : undefined,
+          }))}
+        />
         <form key={q ?? ''} role="search" onSubmit={search} className="flex flex-1 items-center gap-2 sm:max-w-md">
           <label className="relative min-w-48 flex-1">
             <span className="sr-only">Recherche</span>
