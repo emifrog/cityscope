@@ -1,13 +1,14 @@
 'use client';
 
 import type { Document, DocumentUpdate, DocumentVersion } from '@etare/contracts';
-import { DOCUMENT_CATEGORIES, OFFLINE_POLICIES, type DocumentCategory, type ScanStatus } from '@etare/domain';
+import { DOCUMENT_CATEGORIES, OFFLINE_POLICIES, type ScanStatus } from '@etare/domain';
 import { Alert, Badge, Button, Card, Field, Input, Select, cn } from '@etare/ui';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ExternalLink, FilePlus2, FileText, FlaskConical, Image, Map, type LucideIcon } from 'lucide-react';
+import { ExternalLink, FilePlus2, FileText } from 'lucide-react';
 import { useState } from 'react';
 import { useForm, type UseFormRegisterReturn } from 'react-hook-form';
 import { z } from 'zod';
+import { DOCUMENT_CATEGORY_ICONS } from '@/components/document-category-icon';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { blankToNull } from '@/components/form-helpers';
 import {
@@ -50,16 +51,6 @@ const SCAN_TONES: Readonly<Record<ScanStatus, 'info' | 'success' | 'critical'>> 
   pending: 'info',
   clean: 'success',
   rejected: 'critical',
-};
-
-/** A pictogram per category of document. */
-const CATEGORY_ICONS: Readonly<Record<DocumentCategory, LucideIcon>> = {
-  fds: FlaskConical,
-  notice: FileText,
-  instruction: FileText,
-  plan: Map,
-  photo: Image,
-  other: FileText,
 };
 
 const datesShape = { valid_from: z.string(), expires_at: z.string() };
@@ -481,7 +472,7 @@ function DocumentRow({
   );
   const archived = document.status === 'archived';
   const [current, ...previous] = document.versions;
-  const Icon = CATEGORY_ICONS[document.category];
+  const Icon = DOCUMENT_CATEGORY_ICONS[document.category];
 
   return (
     <li className={cn('px-5 py-4', archived && 'opacity-70')}>
