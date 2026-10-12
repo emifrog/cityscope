@@ -4,6 +4,7 @@ import 'package:etare_ops/src/core/di/providers.dart';
 import 'package:etare_ops/src/core/formatting/date_formatting.dart';
 import 'package:etare_ops/src/core/routing/app_routes.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
+import 'package:etare_ops/src/core/theme/ui_kit.dart';
 import 'package:etare_ops/src/data/local/app_database.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/ops/application/ops_providers.dart';
@@ -138,15 +139,16 @@ class FreshnessBanner extends ConsumerWidget {
     final now = ref.watch(clockProvider)();
     final (label, color, icon) = syncStatusStyle(status, now);
     final synced = status.lastSyncAt;
+    final textTheme = Theme.of(context).textTheme;
     return Material(
       color: color.withValues(alpha: 0.08),
       child: InkWell(
         onTap: () => context.push(AppRoutes.account),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
           child: Row(
             children: [
-              Icon(icon, color: color),
+              Icon(icon, color: color, size: 28),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -155,11 +157,19 @@ class FreshnessBanner extends ConsumerWidget {
                     Text(
                       synced == null
                           ? label
-                          : '$label · synchronisé le '
-                                '${formatDateTimeFr(synced)}',
-                      style: Theme.of(context).textTheme.bodyLarge
-                          ?.copyWith(color: color, fontWeight: FontWeight.w600),
+                          : '$label · synchronisé ${formatRelativeFr(synced, now)}',
+                      style: textTheme.bodyLarge?.copyWith(
+                        color: color,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
+                    if (synced != null)
+                      Text(
+                        'Dernière synchronisation le ${formatDateTimeFr(synced)}',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: BrandColors.textMuted,
+                        ),
+                      ),
                     // SYN-02 : les données restent lisibles, l'application
                     // doit être mise à jour pour recevoir les nouvelles.
                     if (status.appUpdateRequired)
@@ -167,7 +177,7 @@ class FreshnessBanner extends ConsumerWidget {
                         'Mise à jour de l’application requise : touchez pour '
                         'le détail.',
                         key: FreshnessBanner.updateRequiredKey,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        style: textTheme.bodyMedium?.copyWith(
                           color: BrandColors.important,
                           fontWeight: FontWeight.w600,
                         ),
@@ -176,9 +186,12 @@ class FreshnessBanner extends ConsumerWidget {
                 ),
               ),
               if (run is SyncRunInProgress || run is SyncRunBusy)
-                const SizedBox.square(
-                  dimension: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                const Padding(
+                  padding: EdgeInsets.all(14),
+                  child: SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
                 )
               else
                 IconButton(
@@ -206,6 +219,7 @@ class _SiteSearch extends ConsumerWidget {
     final results = ref.watch(siteResultsProvider);
     final onDemand = ref.watch(onDemandResultsProvider).value ?? const [];
     final query = ref.watch(siteQueryProvider);
+    final textTheme = Theme.of(context).textTheme;
     return Column(
       children: [
         const FreshnessBanner(),
@@ -215,7 +229,7 @@ class _SiteSearch extends ConsumerWidget {
             key: HomeScreen.searchFieldKey,
             onChanged: ref.read(siteQueryProvider.notifier).set,
             textInputAction: TextInputAction.search,
-            style: Theme.of(context).textTheme.titleMedium,
+            style: textTheme.titleMedium,
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.search),
               hintText: 'Nom, adresse, commune ou n° ETARE',
@@ -232,21 +246,41 @@ class _SiteSearch extends ConsumerWidget {
                   ? const _Message.noSite()
                   : const _Message.noResult(),
             AsyncData(value: final List<SiteSearchRow> sites) => ListView(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
               children: [
-                for (final (index, site) in sites.indexed) ...[
-                  if (index > 0) const Divider(height: 1),
-                  _SiteTile(site: site),
-                ],
-                // Sites restreints : listés seulement, ouverts un à un (PER-02).
-                if (onDemand.isNotEmpty) ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-                    child: Text(
-                      'Sites sensibles — à ouvrir à la demande',
-                      style: Theme.of(context).textTheme.titleSmall,
+                if (sites.isNotEmpty)
+                  _SectionTitle(
+                    '${sites.length} site${sites.length > 1 ? 's' : ''} '
+                    'sur la tablette',
+                  ),
+                if (sites.isNotEmpty)
+                  Card(
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      children: [
+                        for (final (index, site) in sites.indexed) ...[
+                          if (index > 0) const Divider(height: 1),
+                          _SiteTile(site: site),
+                        ],
+                      ],
                     ),
                   ),
-                  for (final site in onDemand) _SensitiveTile(site: site),
+                // Sites restreints : listés seulement, ouverts un à un (PER-02).
+                if (onDemand.isNotEmpty) ...[
+                  const _SectionTitle(
+                    'Sites sensibles — à ouvrir à la demande',
+                  ),
+                  Card(
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      children: [
+                        for (final (index, site) in onDemand.indexed) ...[
+                          if (index > 0) const Divider(height: 1),
+                          _SensitiveTile(site: site),
+                        ],
+                      ],
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -259,6 +293,23 @@ class _SiteSearch extends ConsumerWidget {
   }
 }
 
+/// Titre d'un groupe de la liste.
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
+    child: Text(
+      text,
+      style: Theme.of(context).textTheme.titleSmall
+          ?.copyWith(color: BrandColors.textMuted),
+    ),
+  );
+}
+
 class _SiteTile extends StatelessWidget {
   const _SiteTile({required this.site});
 
@@ -266,19 +317,15 @@ class _SiteTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
     final place = addressLine(site.addressLabel, site.city);
-    return ListTile(
-      minVerticalPadding: 12,
-      leading: const Icon(Icons.apartment, size: 32),
-      title: Text(site.name, style: textTheme.titleMedium),
-      subtitle: Text(
-        [
-          if (site.etareNumber != null) 'ETARE ${site.etareNumber}',
-          if (place.isNotEmpty) place,
-        ].join('\n'),
-      ),
-      trailing: const Icon(Icons.chevron_right),
+    return OpsRow(
+      leading: const PictoBox(icon: Icons.apartment_outlined),
+      title: site.name,
+      subtitle: place.isEmpty ? null : place,
+      badges: [
+        if (site.etareNumber case final number?)
+          StatusBadge('ETARE $number', tone: Tone.navy),
+      ],
       onTap: () => context.push(AppRoutes.site(site.siteId)),
     );
   }
@@ -290,22 +337,20 @@ class _SensitiveTile extends StatelessWidget {
   final OnDemandSiteRow site;
 
   @override
-  Widget build(BuildContext context) => ListTile(
+  Widget build(BuildContext context) => OpsRow(
     key: HomeScreen.sensitiveTileKey(site.siteId),
-    minVerticalPadding: 12,
-    leading: const Icon(
-      Icons.shield_outlined,
-      size: 32,
-      color: BrandColors.critical,
-    ),
-    title: Text(site.siteName, style: Theme.of(context).textTheme.titleMedium),
-    subtitle: Text(
-      [
-        if (site.etareNumber != null) 'ETARE ${site.etareNumber}',
-        'Site sensible : code demandé, réseau requis à la première ouverture',
-      ].join('\n'),
-    ),
-    trailing: const Icon(Icons.lock_outline),
+    leading: const PictoBox(icon: Icons.shield_outlined, tone: Tone.critical),
+    title: site.siteName,
+    subtitle: 'Code demandé, réseau requis à la première ouverture',
+    badges: [
+      if (site.etareNumber case final number?)
+        StatusBadge('ETARE $number', tone: Tone.navy),
+      const StatusBadge(
+        'Site sensible',
+        tone: Tone.critical,
+        icon: Icons.lock_outline,
+      ),
+    ],
     onTap: () => context.push(AppRoutes.sensitiveSite(site.siteId)),
   );
 }
@@ -313,43 +358,44 @@ class _SensitiveTile extends StatelessWidget {
 class _Message extends StatelessWidget {
   const _Message.noSite()
     : icon = Icons.inbox_outlined,
+      title = 'Aucun ETARE sur cette tablette',
       text =
           'Aucun ETARE publié sur cette tablette. Synchronisez quand le '
           'réseau est disponible.';
 
   const _Message.noResult()
     : icon = Icons.search_off,
+      title = 'Aucun résultat',
       text = 'Aucun site installé ne correspond à cette recherche.';
 
   const _Message.unreadable()
     : icon = Icons.error_outline,
+      title = 'Index local illisible',
       text = 'Index local illisible : relancez une synchronisation.';
 
   const _Message.syncRequired()
     : icon = Icons.lock_clock,
+      title = 'Synchronisation nécessaire',
       text =
           'Consultation hors ligne non autorisée pour cette session : '
           'synchronisez la tablette (autorisation expirée ou autre '
           'utilisateur).';
 
   final IconData icon;
+  final String title;
   final String text;
 
   @override
   Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.all(24),
+    padding: const EdgeInsets.all(16),
     children: [
-      Icon(icon, size: 48, color: BrandColors.textMuted),
-      const SizedBox(height: 12),
-      Text(
-        text,
-        textAlign: TextAlign.center,
-        style: Theme.of(context).textTheme.bodyLarge,
+      EmptyState(
+        icon: icon,
+        title: title,
+        text: text,
+        tone: icon == Icons.error_outline ? Tone.critical : Tone.navy,
       ),
-      if (icon == Icons.lock_clock) ...[
-        const SizedBox(height: 16),
-        const OfflineStatusCard(),
-      ],
+      if (icon == Icons.lock_clock) const OfflineStatusCard(),
     ],
   );
 }

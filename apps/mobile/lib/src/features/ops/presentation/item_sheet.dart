@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:etare_ops/src/core/formatting/date_formatting.dart';
 import 'package:etare_ops/src/core/routing/app_routes.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
+import 'package:etare_ops/src/core/theme/ui_kit.dart';
 import 'package:etare_ops/src/features/ops/application/ops_providers.dart';
 import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
 import 'package:etare_ops/src/features/ops/domain/published_site.dart';
@@ -142,24 +143,7 @@ class ItemSheet extends StatelessWidget {
         : const <String, FieldDefinition>{};
     final properties = object?.properties ?? risk?.properties ?? const {};
 
-    Widget row(String label, String value) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 150,
-            child: Text(
-              label,
-              style: textTheme.bodyMedium?.copyWith(
-                color: BrandColors.textMuted,
-              ),
-            ),
-          ),
-          Expanded(child: SelectableText(value, style: textTheme.bodyLarge)),
-        ],
-      ),
-    );
+    Widget row(String label, String value) => FieldRow(label, value);
 
     return ListView(
       controller: controller,
@@ -167,7 +151,12 @@ class ItemSheet extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(icon, color: color, size: 36),
+            PictoBox(
+              icon: icon,
+              color: BrandColors.onDark,
+              background: color,
+              size: 48,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -175,7 +164,12 @@ class ItemSheet extends StatelessWidget {
                 children: [
                   Text(title, style: textTheme.titleLarge),
                   if (subtitle.isNotEmpty && subtitle != title)
-                    Text(subtitle, style: textTheme.bodyMedium),
+                    Text(
+                      subtitle,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: BrandColors.textMuted,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -183,29 +177,29 @@ class ItemSheet extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: 6,
+          runSpacing: 6,
           children: [
             if (object != null)
-              _Badge(
+              StatusBadge(
                 criticalityLabels[object.criticality] ?? object.criticality,
-                criticalityColor(object.criticality),
+                tone: _toneOf(criticalityColor(object.criticality)),
               ),
             if (object != null && object.status != 'active')
-              _Badge(
+              StatusBadge(
                 objectStatusLabels[object.status] ?? object.status,
-                BrandColors.critical,
+                tone: Tone.critical,
               ),
             if (risk != null)
-              _Badge(
+              StatusBadge(
                 'Gravité ${risk.severity} · ${severityLabels[risk.severity]}',
-                severityColor(risk.severity),
+                tone: _toneOf(severityColor(risk.severity)),
               ),
             if (substance != null)
               for (final hazardClass in substance.hazardClasses)
-                _Badge(
+                StatusBadge(
                   hazardClassLabels[hazardClass] ?? hazardClass,
-                  riskColor,
+                  tone: Tone.critical,
                 ),
           ],
         ),
@@ -214,9 +208,8 @@ class ItemSheet extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: BrandColors.background,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: BrandColors.border),
+              color: BrandColors.subtle,
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Text(text, style: textTheme.bodyLarge),
           ),
@@ -466,24 +459,9 @@ class _PhotoPlaceholder extends StatelessWidget {
   );
 }
 
-class _Badge extends StatelessWidget {
-  const _Badge(this.text, this.color);
-
-  final String text;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-    decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.1),
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: color),
-    ),
-    child: Text(
-      text,
-      style: Theme.of(context).textTheme.labelLarge
-          ?.copyWith(color: color, fontWeight: FontWeight.w700),
-    ),
-  );
-}
+/// Tonalité de badge pour une couleur de criticité ou de gravité.
+Tone _toneOf(Color color) => switch (color) {
+  BrandColors.critical => Tone.critical,
+  BrandColors.important => Tone.important,
+  _ => Tone.neutral,
+};

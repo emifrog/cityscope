@@ -1,5 +1,5 @@
 import 'package:etare_ops/src/core/formatting/date_formatting.dart';
-import 'package:etare_ops/src/core/theme/brand.dart';
+import 'package:etare_ops/src/core/theme/ui_kit.dart';
 import 'package:etare_ops/src/features/ops/application/ops_providers.dart';
 import 'package:etare_ops/src/features/ops/domain/published_site.dart';
 import 'package:etare_ops/src/features/sync/application/sync_providers.dart';
@@ -64,16 +64,11 @@ class _Blocked extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(),
-    body: Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(
-          message,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyLarge
-              ?.copyWith(color: BrandColors.textMuted),
-        ),
-      ),
+    body: EmptyState(
+      icon: Icons.lock_clock,
+      tone: Tone.important,
+      title: 'Site non consultable',
+      text: message,
     ),
   );
 }

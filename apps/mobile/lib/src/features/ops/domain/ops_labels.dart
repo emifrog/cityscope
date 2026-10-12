@@ -114,6 +114,20 @@ const siteTypeLabels = <String, String>{
   'other': 'Autre',
 };
 
+/// Pictogramme d'un type de site, le même qu'au back-office.
+const siteTypeIcons = <String, IconData>{
+  'erp': Icons.storefront_outlined,
+  'industrial': Icons.factory_outlined,
+  'health': Icons.monitor_heart_outlined,
+  'education': Icons.school_outlined,
+  'heritage': Icons.account_balance_outlined,
+  'other': Icons.apartment_outlined,
+};
+
+/// Pictogramme d'un type de site, ou l'immeuble générique.
+IconData siteTypeIcon(String? siteType) =>
+    siteTypeIcons[siteType] ?? Icons.apartment_outlined;
+
 /// Couleur d'une gravité de risque (1 à 5).
 Color severityColor(int severity) => switch (severity) {
   >= 4 => const Color(0xFFB91C1C),

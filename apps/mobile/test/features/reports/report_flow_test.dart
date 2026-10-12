@@ -59,6 +59,9 @@ void main() {
       200,
       scrollable: scrollOf(SiteScreen),
     );
+    // Construit dans la liste ne veut pas dire à l'écran : on l'y amène.
+    await tester.ensureVisible(find.byKey(SiteScreen.reportButtonKey));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(SiteScreen.reportButtonKey));
     await tester.pumpAndSettle();
     expect(find.byType(ReportFormScreen), findsOneWidget);

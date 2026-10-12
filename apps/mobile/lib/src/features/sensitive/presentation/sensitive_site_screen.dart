@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:etare_ops/src/core/errors/error_messages.dart';
 import 'package:etare_ops/src/core/formatting/date_formatting.dart';
 import 'package:etare_ops/src/core/routing/app_routes.dart';
-import 'package:etare_ops/src/core/theme/brand.dart';
+import 'package:etare_ops/src/core/theme/ui_kit.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/lock/application/lock_controller.dart';
 import 'package:etare_ops/src/features/lock/presentation/code_pad.dart';
@@ -123,10 +123,10 @@ class _SensitiveSiteScreenState extends ConsumerState<SensitiveSiteScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.shield_outlined,
-                    size: 48,
-                    color: BrandColors.critical,
+                  const PictoBox(
+                    icon: Icons.shield_outlined,
+                    tone: Tone.critical,
+                    size: 64,
                   ),
                   const SizedBox(height: 12),
                   Text(

@@ -1,5 +1,6 @@
 import 'package:etare_ops/src/core/errors/error_messages.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
+import 'package:etare_ops/src/core/theme/ui_kit.dart';
 import 'package:etare_ops/src/features/account/application/account_providers.dart';
 import 'package:etare_ops/src/features/sync/application/enrollment_service.dart';
 import 'package:etare_ops/src/features/sync/application/sync_providers.dart';
@@ -75,15 +76,32 @@ class _EnrollmentScreenState extends ConsumerState<EnrollmentScreen> {
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
-            Text(
-              'Saisissez le code à usage unique remis par l’administrateur de '
-              'votre SIS. La tablette crée sa propre clé : aucun secret ne '
-              'transite par ce code.',
-              style: textTheme.bodyLarge,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const PictoBox(icon: Icons.qr_code_2, size: 56),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (tenant != null)
+                        Text(
+                          'SIS : ${tenant.tenantName}',
+                          style: textTheme.titleMedium,
+                        ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Saisissez le code à usage unique remis par '
+                        'l’administrateur de votre SIS. La tablette crée sa '
+                        'propre clé : aucun secret ne transite par ce code.',
+                        style: textTheme.bodyLarge,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            if (tenant != null)
-              Text('SIS : ${tenant.tenantName}', style: textTheme.titleMedium),
             const SizedBox(height: 24),
             TextField(
               key: EnrollmentScreen.codeFieldKey,

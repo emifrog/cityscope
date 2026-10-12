@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:etare_ops/src/core/config/app_info.dart';
 import 'package:etare_ops/src/core/errors/error_messages.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
+import 'package:etare_ops/src/core/theme/ui_kit.dart';
 import 'package:etare_ops/src/features/account/application/account_providers.dart';
 import 'package:etare_ops/src/features/account/domain/role_labels.dart';
 import 'package:etare_ops/src/features/account/domain/user_account.dart';
@@ -30,12 +31,12 @@ class AccountScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           children: const [
             _AccountCard(),
-            SizedBox(height: 16),
+            SizedBox(height: 12),
             OfflineStatusCard(),
-            SizedBox(height: 24),
-            _SignOutButton(),
-            SizedBox(height: 16),
+            SizedBox(height: 12),
             _About(),
+            SizedBox(height: 20),
+            _SignOutButton(),
           ],
         ),
       ),
@@ -48,19 +49,35 @@ class _About extends StatelessWidget {
   const _About();
 
   @override
-  Widget build(BuildContext context) => ListTile(
-    key: AccountScreen.aboutKey,
-    leading: const Icon(Icons.info_outline),
-    title: const Text('À propos de ${Brand.productName}'),
-    subtitle: Text('Version ${AppInfo.describe()} · licences'),
-    onTap: () => showLicensePage(
-      context: context,
-      applicationName: Brand.productName,
-      applicationVersion: AppInfo.describe(),
-      applicationLegalese:
-          'Application des plans ETARE des services d’incendie et de secours.',
+  Widget build(BuildContext context) => Card(
+    clipBehavior: Clip.antiAlias,
+    child: OpsRow(
+      key: AccountScreen.aboutKey,
+      leading: const PictoBox(icon: Icons.info_outline),
+      title: 'À propos de ${Brand.productName}',
+      subtitle: 'Version ${AppInfo.describe()} · licences',
+      onTap: () => showLicensePage(
+        context: context,
+        applicationName: Brand.productName,
+        applicationVersion: AppInfo.describe(),
+        applicationLegalese: 'Application des plans ETARE des services d’incendie et de secours.',
+      ),
     ),
   );
+}
+
+/// Initiales d'un nom affiché ou d'une adresse e-mail.
+String initialsOf(String? displayName, String? email) {
+  final source = (displayName?.trim().isNotEmpty ?? false)
+      ? displayName!.trim()
+      : (email ?? '').split('@').first;
+  final words = source
+      .split(RegExp(r'[\s._-]+'))
+      .where((word) => word.isNotEmpty)
+      .toList();
+  if (words.isEmpty) return '?';
+  final letters = words.take(2).map((word) => word[0].toUpperCase()).join();
+  return letters.isEmpty ? '?' : letters;
 }
 
 class _AccountCard extends ConsumerWidget {
@@ -74,6 +91,8 @@ class _AccountCard extends ConsumerWidget {
     );
     final account = ref.watch(currentAccountProvider);
     final activeTenant = ref.watch(activeTenantControllerProvider);
+    final email = account.value?.email ?? sessionEmail;
+    final name = account.value?.displayName;
 
     return Card(
       child: Padding(
@@ -81,20 +100,46 @@ class _AccountCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Connecté en tant que',
-              style: textTheme.bodyMedium?.copyWith(
-                color: BrandColors.textMuted,
-              ),
+            Row(
+              children: [
+                PictoBox(
+                  size: 56,
+                  color: BrandColors.onDark,
+                  background: BrandColors.navy,
+                  child: Text(
+                    initialsOf(name, email),
+                    style: textTheme.titleLarge?.copyWith(
+                      color: BrandColors.onDark,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Connecté en tant que',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: BrandColors.textMuted,
+                        ),
+                      ),
+                      if (name case final shown?)
+                        Text(shown, style: textTheme.titleMedium),
+                      Text(
+                        email ?? '—',
+                        style: name == null
+                            ? textTheme.titleMedium
+                            : textTheme.bodyMedium?.copyWith(
+                                color: BrandColors.textMuted,
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              account.value?.email ?? sessionEmail ?? '—',
-              style: textTheme.titleMedium,
-            ),
-            if (account.value?.displayName case final name?)
-              Text(name, style: textTheme.bodyLarge),
-            const Divider(height: 32),
+            const Divider(height: 28),
             switch (account) {
               AsyncError(:final error) => _LoadError(
                 message: describeError(error),
@@ -166,11 +211,11 @@ class _TenantSection extends ConsumerWidget {
           Text('Aucun rôle attribué', style: textTheme.bodyLarge)
         else
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: 6,
+            runSpacing: 6,
             children: [
               for (final role in membership.roles)
-                Chip(label: Text(roleLabel(role))),
+                StatusBadge(roleLabel(role), tone: Tone.info),
             ],
           ),
       ],
@@ -310,19 +355,10 @@ class _LoadError extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.error_outline, color: BrandColors.critical),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: Theme.of(context).textTheme.bodyLarge
-                  ?.copyWith(color: BrandColors.critical),
-            ),
-          ),
-        ],
+      NoticeStrip(
+        icon: Icons.error_outline,
+        tone: Tone.critical,
+        text: message,
       ),
       if (onRetry != null) ...[
         const SizedBox(height: 12),

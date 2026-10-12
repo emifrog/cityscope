@@ -1,6 +1,8 @@
 import 'package:etare_ops/src/core/formatting/date_formatting.dart';
 import 'package:etare_ops/src/core/routing/app_routes.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
+import 'package:etare_ops/src/core/theme/ui_kit.dart';
+import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/ops/application/ops_providers.dart';
 import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
 import 'package:etare_ops/src/features/ops/domain/published_site.dart';
@@ -33,13 +35,13 @@ class SiteScreen extends ConsumerWidget {
   );
 }
 
-class _Synthesis extends StatelessWidget {
+class _Synthesis extends ConsumerWidget {
   const _Synthesis({required this.site});
 
   final PublishedSite site;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final textTheme = Theme.of(context).textTheme;
     final critical = site.risks.where((risk) => risk.critical).toList();
     final outOfService = site.objects.where((object) => object.outOfService);
@@ -47,10 +49,14 @@ class _Synthesis extends StatelessWidget {
     final criticalObjects = site.criticalObjects.where(
       (object) => !object.outOfService,
     );
+    final others = [
+      for (final section in OpsSection.others)
+        if (site.shows(section) && site.countOf(section) > 0) section,
+    ];
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _Identity(site: site),
+        _Identity(site: site, now: ref.watch(clockProvider)()),
         const SizedBox(height: 12),
         if (outOfService.isNotEmpty)
           for (final object in outOfService)
@@ -75,7 +81,7 @@ class _Synthesis extends StatelessWidget {
             text: '${object.title} · critique',
             onTap: () => showItemSheet(context, site, object: object),
           ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         LayoutBuilder(
           builder: (context, constraints) => GridView.count(
             crossAxisCount: constraints.maxWidth >= 600 ? 3 : 2,
@@ -83,7 +89,7 @@ class _Synthesis extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
-            childAspectRatio: 1.5,
+            childAspectRatio: 1.6,
             children: [
               for (final section in OpsSection.tiles)
                 if (site.shows(section))
@@ -99,36 +105,41 @@ class _Synthesis extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        _EtarePdfTile(site: site),
-        if (site.location != null)
-          ListTile(
-            key: SiteScreen.mapKey,
-            leading: const Icon(Icons.map_outlined),
-            title: const Text('Situer sur la carte'),
-            subtitle: const Text(
-              'Fond hors ligne du secteur, points extérieurs',
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push(AppRoutes.map(siteId: site.siteId)),
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
+              _EtarePdfTile(site: site),
+              if (site.location != null)
+                OpsRow(
+                  key: SiteScreen.mapKey,
+                  leading: const PictoBox(icon: Icons.map_outlined),
+                  title: 'Situer sur la carte',
+                  subtitle: 'Fond hors ligne du secteur, points extérieurs',
+                  onTap: () => context.push(AppRoutes.map(siteId: site.siteId)),
+                ),
+              for (final section in others) ...[
+                const Divider(height: 1),
+                OpsRow(
+                  key: SiteScreen.tileKey(section),
+                  leading: PictoBox(icon: section.icon),
+                  title: '${section.label} (${site.countOf(section)})',
+                  onTap: () => context.push(
+                    AppRoutes.section(site.siteId, section.name),
+                  ),
+                ),
+              ],
+            ],
           ),
-        for (final section in OpsSection.others)
-          if (site.shows(section) && site.countOf(section) > 0)
-            ListTile(
-              key: SiteScreen.tileKey(section),
-              leading: Icon(section.icon),
-              title: Text('${section.label} (${site.countOf(section)})'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () =>
-                  context.push(AppRoutes.section(site.siteId, section.name)),
-            ),
-        const SizedBox(height: 12),
+        ),
+        const SizedBox(height: 16),
         OutlinedButton.icon(
           key: SiteScreen.reportButtonKey,
           onPressed: () => context.push(AppRoutes.report(site.siteId)),
           icon: const Icon(Icons.flag_outlined),
           label: const Text('Signaler un écart sur ce site'),
         ),
-        const Divider(height: 32),
+        const SizedBox(height: 20),
         Text(
           [
             if (site.lastVerifiedAt case final verified?)
@@ -156,73 +167,125 @@ class _EtarePdfTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final sha256 = ref.watch(etarePdfProvider(site.siteId)).value;
     if (sha256 == null) return const SizedBox.shrink();
-    return ListTile(
-      key: SiteScreen.etarePdfKey,
-      leading: const Icon(Icons.picture_as_pdf_outlined),
-      title: const Text('Dossier ETARE (PDF)'),
-      subtitle: Text(
-        'Version publiée n° ${site.publicationNumber}, lisible sans réseau',
-      ),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => DocumentScreen(
-            title: 'ETARE · ${site.name}',
-            sha256: sha256,
-            mimeType: 'application/pdf',
+    return Column(
+      children: [
+        OpsRow(
+          key: SiteScreen.etarePdfKey,
+          leading: const PictoBox(icon: Icons.picture_as_pdf_outlined),
+          title: 'Dossier ETARE (PDF)',
+          subtitle:
+              'Version publiée n° ${site.publicationNumber}, lisible sans réseau',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (context) => DocumentScreen(
+                title: 'ETARE · ${site.name}',
+                sha256: sha256,
+                mimeType: 'application/pdf',
+              ),
+            ),
           ),
         ),
-      ),
+        if (site.location != null) const Divider(height: 1),
+      ],
     );
   }
 }
 
+/// Identité de la version installée : pictogramme du type, adresse, GPS,
+/// badges de version et de classement.
 class _Identity extends StatelessWidget {
-  const _Identity({required this.site});
+  const _Identity({required this.site, required this.now});
 
   final PublishedSite site;
+  final DateTime now;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final address = site.address;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          [
-            if (site.etareNumber != null) 'ETARE ${site.etareNumber}',
-            'version ${site.publicationNumber}',
-            if (site.publishedAt != null)
-              'publiée le ${formatDateFr(site.publishedAt!)}',
-            'hors ligne ✓',
-          ].join(' • '),
-          style: textTheme.titleSmall?.copyWith(color: BrandColors.textMuted),
-        ),
-        if (address != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              addressLine(address.label, address.city),
-              style: textTheme.bodyLarge,
-            ),
-          ),
-        if (site.location case (final lon, final lat))
-          SelectableText(
-            'GPS ${lat.toStringAsFixed(5)}, ${lon.toStringAsFixed(5)}',
-            style: textTheme.bodyMedium,
-          ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Chip(label: Text(siteTypeLabels[site.siteType] ?? site.siteType)),
-            for (final classification in site.classifications)
-              Chip(label: Text(classification.shortLabel)),
+            PictoBox(
+              icon: siteTypeIcon(site.siteType),
+              size: 56,
+              color: BrandColors.onDark,
+              background: BrandColors.navy,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    [
+                      if (site.etareNumber != null) 'ETARE ${site.etareNumber}',
+                      'version ${site.publicationNumber}',
+                      if (site.publishedAt case final published?)
+                        'publiée ${formatRelativeFr(published, now)}',
+                    ].join(' · '),
+                    style: textTheme.titleSmall?.copyWith(
+                      color: BrandColors.textMuted,
+                    ),
+                  ),
+                  if (address != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(top: 3),
+                            child: Icon(
+                              Icons.place_outlined,
+                              size: 18,
+                              color: BrandColors.textMuted,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              addressLine(address.label, address.city),
+                              style: textTheme.bodyLarge,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (site.location case (final lon, final lat))
+                    SelectableText(
+                      'GPS ${lat.toStringAsFixed(5)}, ${lon.toStringAsFixed(5)}',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: BrandColors.textMuted,
+                      ),
+                    ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      const StatusBadge(
+                        'Hors ligne',
+                        tone: Tone.success,
+                        icon: Icons.offline_pin_outlined,
+                      ),
+                      StatusBadge(
+                        siteTypeLabels[site.siteType] ?? site.siteType,
+                        tone: Tone.info,
+                      ),
+                      for (final classification in site.classifications)
+                        StatusBadge(classification.shortLabel),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -241,20 +304,37 @@ class _Alert extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Card(
-    color: color.withValues(alpha: 0.08),
-    shape: RoundedRectangleBorder(
-      side: BorderSide(color: color),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Material(
+      color: color.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(12),
-    ),
-    child: ListTile(
-      leading: Icon(icon, color: color, size: 32),
-      title: Text(
-        text,
-        style: Theme.of(context).textTheme.titleMedium
-            ?.copyWith(color: color, fontWeight: FontWeight.w700),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          child: Row(
+            children: [
+              PictoBox(
+                icon: icon,
+                color: BrandColors.onDark,
+                background: color,
+                size: 40,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  text,
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(color: color, fontWeight: FontWeight.w700),
+                ),
+              ),
+              Icon(Icons.chevron_right, color: color),
+            ],
+          ),
+        ),
       ),
-      onTap: onTap,
     ),
   );
 }
@@ -274,9 +354,8 @@ class _SectionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final color = section == OpsSection.risks && count > 0
-        ? BrandColors.critical
-        : BrandColors.navy;
+    final alert = section == OpsSection.risks && count > 0;
+    final tone = alert ? Tone.critical : Tone.navy;
     return Semantics(
       button: true,
       label: '${section.label}, $count',
@@ -284,27 +363,43 @@ class _SectionTile extends StatelessWidget {
       child: Material(
         color: BrandColors.surface,
         shape: RoundedRectangleBorder(
-          side: const BorderSide(color: BrandColors.border),
+          side: BorderSide(
+            color: alert ? BrandColors.critical : BrandColors.border,
+          ),
           borderRadius: BorderRadius.circular(16),
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(section.icon, size: 36, color: color),
-                const SizedBox(height: 6),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    PictoBox(icon: section.icon, tone: tone, size: 40),
+                    const Spacer(),
+                    Text(
+                      '$count',
+                      style: textTheme.headlineMedium?.copyWith(
+                        color: count == 0 ? BrandColors.textMuted : tone.color,
+                        fontWeight: FontWeight.w800,
+                        height: 1,
+                      ),
+                    ),
+                  ],
+                ),
                 Text(
-                  section.label.toUpperCase(),
+                  section.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: textTheme.titleMedium?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w700,
+                    color: alert ? BrandColors.critical : BrandColors.text,
                   ),
                 ),
-                Text('$count', style: textTheme.titleLarge),
               ],
             ),
           ),

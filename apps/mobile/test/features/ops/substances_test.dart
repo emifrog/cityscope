@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:etare_ops/src/core/theme/ui_kit.dart' show OpsRow;
 import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
 import 'package:etare_ops/src/features/ops/presentation/document_screen.dart';
 import 'package:etare_ops/src/features/ops/presentation/item_sheet.dart';
@@ -6,7 +7,6 @@ import 'package:etare_ops/src/features/ops/presentation/site_screen.dart';
 import 'package:etare_ops/src/features/sync/data/ed25519_keys.dart';
 import 'package:flutter/widgets.dart' show Navigator, Offset;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart' show ListTile;
 
 import 'ops_app.dart';
 import 'ops_fixtures.dart';
@@ -45,7 +45,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    final tiles = tester.widgetList<ListTile>(find.byType(ListTile)).toList();
+    final tiles = tester.widgetList<OpsRow>(find.byType(OpsRow)).toList();
     expect(tiles, hasLength(5));
 
     // Fiche : classes, ONU, état, quantité, emplacement, puis la FDS.

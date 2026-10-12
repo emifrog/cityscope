@@ -1,6 +1,7 @@
 import 'package:etare_ops/src/core/formatting/date_formatting.dart';
 import 'package:etare_ops/src/core/routing/app_routes.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
+import 'package:etare_ops/src/core/theme/ui_kit.dart';
 import 'package:etare_ops/src/features/ops/application/ops_providers.dart';
 import 'package:etare_ops/src/features/ops/domain/ops_labels.dart';
 import 'package:etare_ops/src/features/ops/domain/published_site.dart';
@@ -60,24 +61,31 @@ class SectionScreen extends ConsumerWidget {
         ],
       };
       if (children.isEmpty) {
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(
-              site.shows(section)
-                  ? 'Aucun élément « ${section.label} » dans la version publiée.'
-                  : 'Section « ${section.label} » masquée par le SIS ; ses points restent sur les plans.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-          ),
+        return EmptyState(
+          icon: section.icon,
+          title: site.shows(section)
+              ? 'Rien dans cette section'
+              : 'Section masquée par le SIS',
+          text: site.shows(section)
+              ? 'Aucun élément « ${section.label} » dans la version publiée.'
+              : 'Section « ${section.label} » masquée par le SIS ; ses points restent sur les plans.',
         );
       }
-      return ListView.separated(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: children.length,
-        separatorBuilder: (context, index) => const Divider(height: 1),
-        itemBuilder: (context, index) => children[index],
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                for (final (index, child) in children.indexed) ...[
+                  if (index > 0 && child is! _Heading) const Divider(height: 1),
+                  child,
+                ],
+              ],
+            ),
+          ),
+        ],
       );
     },
   );
@@ -97,23 +105,28 @@ class _RiskTile extends StatelessWidget {
       levelId: risk.levelId,
       zoneId: risk.zoneId,
     );
-    return ListTile(
-      minVerticalPadding: 12,
-      leading: CircleAvatar(
-        backgroundColor: color,
-        foregroundColor: BrandColors.onDark,
-        child: Text('${risk.severity}'),
+    return OpsRow(
+      leading: PictoBox(
+        color: BrandColors.onDark,
+        background: color,
+        child: Text(
+          '${risk.severity}',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            color: BrandColors.onDark,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
       ),
-      title: Text(risk.title, style: Theme.of(context).textTheme.titleMedium),
-      subtitle: Text(
-        [
-          if (risk.title != risk.typeName) risk.typeName,
-          'gravité ${severityLabels[risk.severity]?.toLowerCase()}',
-          if (risk.outdoor) 'à l’extérieur',
-          ?location,
-        ].join(' · '),
-      ),
-      trailing: risk.placement == null ? null : const Icon(Icons.map_outlined),
+      title: risk.title,
+      subtitle: [
+        if (risk.title != risk.typeName) risk.typeName,
+        'gravité ${severityLabels[risk.severity]?.toLowerCase()}',
+        if (risk.outdoor) 'à l’extérieur',
+        ?location,
+      ].join(' · '),
+      trailing: risk.placement == null
+          ? const Icon(Icons.chevron_right, color: BrandColors.textMuted)
+          : const Icon(Icons.map_outlined, color: BrandColors.navy),
       onTap: () => showItemSheet(context, site, risk: risk),
     );
   }
@@ -133,24 +146,21 @@ class _ObjectTile extends StatelessWidget {
       levelId: object.levelId,
       zoneId: object.zoneId,
     );
-    return ListTile(
-      minVerticalPadding: 12,
-      leading: CircleAvatar(
-        backgroundColor: object.outOfService ? BrandColors.critical : color,
-        foregroundColor: BrandColors.onDark,
-        child: Icon(object.outOfService ? Icons.block : Icons.place),
+    return OpsRow(
+      leading: PictoBox(
+        icon: object.outOfService ? Icons.block : Icons.place,
+        color: BrandColors.onDark,
+        background: object.outOfService ? BrandColors.critical : color,
       ),
-      title: Text(object.title, style: Theme.of(context).textTheme.titleMedium),
-      subtitle: Text(
-        [
-          if (object.title != object.typeName) object.typeName,
-          if (object.outOfService) 'HORS SERVICE',
-          ?location,
-        ].join(' · '),
-      ),
+      title: object.title,
+      subtitle: [
+        if (object.title != object.typeName) object.typeName,
+        if (object.outOfService) 'HORS SERVICE',
+        ?location,
+      ].join(' · '),
       trailing: object.criticality == 'critical'
           ? const Icon(Icons.priority_high, color: BrandColors.critical)
-          : null,
+          : const Icon(Icons.chevron_right, color: BrandColors.textMuted),
       onTap: () => showItemSheet(context, site, object: object),
     );
   }
@@ -175,18 +185,14 @@ class _PlanTile extends StatelessWidget {
         site.risks
             .where((r) => r.placement?.planRevisionId == plan.revisionId)
             .length;
-    return ListTile(
-      minVerticalPadding: 12,
-      leading: const Icon(Icons.map_outlined, size: 32),
-      title: Text(plan.title, style: Theme.of(context).textTheme.titleMedium),
-      subtitle: Text(
-        [
-          planTypeLabels[plan.planType] ?? plan.planType,
-          ?where,
-          '$items élément(s)',
-        ].join(' · '),
-      ),
-      trailing: const Icon(Icons.chevron_right),
+    return OpsRow(
+      leading: const PictoBox(icon: Icons.map_outlined),
+      title: plan.title,
+      subtitle: [
+        planTypeLabels[plan.planType] ?? plan.planType,
+        ?where,
+        '$items élément(s)',
+      ].join(' · '),
       onTap: () => context.push(AppRoutes.plan(site.siteId, plan.id)),
     );
   }
@@ -228,24 +234,42 @@ class _ContactCard extends StatelessWidget {
     );
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(contact.name, style: textTheme.titleMedium),
-          if (contact.role != null)
-            Text(contact.role!, style: textTheme.bodyMedium),
-          const SizedBox(height: 4),
-          if (contact.phone.isNotEmpty) phone(contact.phone),
-          if (contact.phoneAlt case final alt?) phone(alt),
-          if (contact.availability != null)
-            Text('Disponibilité : ${contact.availability}'),
-          if (contact.verifiedAt case final verified?)
-            Text(
-              'Vérifié le ${formatDateFr(verified)}',
-              style: textTheme.bodySmall?.copyWith(
-                color: BrandColors.textMuted,
-              ),
+          const PictoBox(icon: Icons.person_outline),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(contact.name, style: textTheme.titleMedium),
+                if (contact.role case final role?)
+                  Text(
+                    role,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: BrandColors.textMuted,
+                    ),
+                  ),
+                const SizedBox(height: 4),
+                if (contact.phone.isNotEmpty) phone(contact.phone),
+                if (contact.phoneAlt case final alt?) phone(alt),
+                if (contact.email case final email?)
+                  SelectableText(email, style: textTheme.bodyMedium),
+                if (contact.availability case final availability?)
+                  Text('Disponibilité : $availability'),
+                if (contact.verifiedAt case final verified?)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: StatusBadge(
+                      'Vérifié le ${formatDateFr(verified)}',
+                      tone: Tone.success,
+                      icon: Icons.verified_outlined,
+                    ),
+                  ),
+              ],
             ),
+          ),
         ],
       ),
     );
@@ -271,43 +295,9 @@ class _DocumentTile extends ConsumerWidget {
             sha256: document.assetSha256,
           ))
         : null;
-    return ListTile(
+    final textTheme = Theme.of(context).textTheme;
+    return InkWell(
       key: keyOf(document),
-      minVerticalPadding: 12,
-      leading: Icon(
-        document.mimeType.startsWith('image/')
-            ? Icons.image_outlined
-            : Icons.picture_as_pdf_outlined,
-        size: 32,
-      ),
-      title: Text(
-        document.title,
-        style: Theme.of(context).textTheme.titleMedium,
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            [
-              documentCategoryLabels[document.category] ?? document.category,
-              'version ${document.versionNo}',
-              if (document.expiresAt case final expires?)
-                '${expired ? 'expirée le' : 'valable jusqu’au'} ${formatDateFr(expires)}',
-            ].join(' · '),
-            style: expired
-                ? const TextStyle(color: BrandColors.critical)
-                : null,
-          ),
-          if (availability case (final text, final color)) ...[
-            const SizedBox(height: 2),
-            Text(
-              text,
-              style: TextStyle(color: color, fontWeight: FontWeight.w600),
-            ),
-          ],
-        ],
-      ),
-      trailing: const Icon(Icons.chevron_right),
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) => DocumentScreen(
@@ -316,6 +306,54 @@ class _DocumentTile extends ConsumerWidget {
             mimeType: document.mimeType,
             onDemandSiteId: document.onDemand ? site.siteId : null,
           ),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            PictoBox(
+              icon: document.mimeType.startsWith('image/')
+                  ? Icons.image_outlined
+                  : Icons.picture_as_pdf_outlined,
+              tone: expired ? Tone.critical : Tone.navy,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(document.title, style: textTheme.titleMedium),
+                  Text(
+                    [
+                      documentCategoryLabels[document.category] ??
+                          document.category,
+                      'version ${document.versionNo}',
+                      if (document.expiresAt case final expires?)
+                        '${expired ? 'expirée le' : 'valable jusqu’au'} ${formatDateFr(expires)}',
+                    ].join(' · '),
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: expired
+                          ? BrandColors.critical
+                          : BrandColors.textMuted,
+                    ),
+                  ),
+                  if (availability case (final text, final color)) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      text,
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right, color: BrandColors.textMuted),
+          ],
         ),
       ),
     );
@@ -329,8 +367,10 @@ class _Heading extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    color: BrandColors.subtle,
+    padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
     child: Text(
       text,
       style: Theme.of(context).textTheme.titleSmall
@@ -362,28 +402,22 @@ class _SubstanceTile extends StatelessWidget {
       for (final hazardClass in substance.hazardClasses)
         hazardClassLabels[hazardClass] ?? hazardClass,
     ].join(', ');
-    return ListTile(
+    return OpsRow(
       key: keyOf(substance),
-      minVerticalPadding: 12,
-      leading: const CircleAvatar(
-        backgroundColor: riskColor,
-        foregroundColor: BrandColors.onDark,
-        child: Icon(Icons.science_outlined),
+      leading: const PictoBox(
+        icon: Icons.science_outlined,
+        color: BrandColors.onDark,
+        background: riskColor,
       ),
-      title: Text(
-        substance.name,
-        style: Theme.of(context).textTheme.titleMedium,
-      ),
-      subtitle: Text(
-        [
-          if (classes.isNotEmpty) classes,
-          ?substance.quantityLabel,
-          ?location,
-        ].join(' · '),
-      ),
+      title: substance.name,
+      subtitle: [
+        if (classes.isNotEmpty) classes,
+        ?substance.quantityLabel,
+        ?location,
+      ].join(' · '),
       trailing: substance.fds == null
-          ? null
-          : const Icon(Icons.picture_as_pdf_outlined),
+          ? const Icon(Icons.chevron_right, color: BrandColors.textMuted)
+          : const Icon(Icons.picture_as_pdf_outlined, color: BrandColors.navy),
       onTap: () => showItemSheet(context, site, substance: substance),
     );
   }
@@ -401,15 +435,10 @@ class _Gallery extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final photos = site.gallery;
     if (photos.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            'Aucune photo dans la version publiée.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
-        ),
+      return const EmptyState(
+        icon: Icons.photo_library_outlined,
+        title: 'Aucune photo',
+        text: 'Aucune photo dans la version publiée.',
       );
     }
     return GridView.builder(
@@ -431,7 +460,7 @@ class _Gallery extends ConsumerWidget {
           excludeSemantics: true,
           child: InkWell(
             key: photoKey(entry.photo.id),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(12),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (context) => DocumentScreen(
@@ -447,7 +476,7 @@ class _Gallery extends ConsumerWidget {
               children: [
                 Expanded(
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                     child: SizedBox.expand(
                       child: switch (file) {
                         AsyncData(value: final bytes?) => Image.memory(
@@ -460,7 +489,7 @@ class _Gallery extends ConsumerWidget {
                           ),
                         ),
                         AsyncLoading() => const ColoredBox(
-                          color: BrandColors.background,
+                          color: BrandColors.subtle,
                         ),
                         _ => const Icon(
                           Icons.broken_image_outlined,
@@ -470,7 +499,7 @@ class _Gallery extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   caption,
                   maxLines: 1,
@@ -481,7 +510,8 @@ class _Gallery extends ConsumerWidget {
                   '${entry.object.title} · ${entry.section.label}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: BrandColors.textMuted),
                 ),
               ],
             ),

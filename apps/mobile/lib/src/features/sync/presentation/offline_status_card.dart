@@ -2,6 +2,7 @@ import 'package:etare_ops/src/core/config/app_info.dart';
 import 'package:etare_ops/src/core/formatting/date_formatting.dart';
 import 'package:etare_ops/src/core/routing/app_routes.dart';
 import 'package:etare_ops/src/core/theme/brand.dart';
+import 'package:etare_ops/src/core/theme/ui_kit.dart';
 import 'package:etare_ops/src/features/auth/application/auth_controller.dart';
 import 'package:etare_ops/src/features/sync/application/sync_messages.dart';
 import 'package:etare_ops/src/features/sync/application/sync_providers.dart';
@@ -41,6 +42,14 @@ import 'package:material_ui/material_ui.dart';
       )
     : freshnessStyle(status.freshness(now));
 
+/// Tonalité du pictogramme d'état pour une couleur de fraîcheur.
+Tone _toneOf(Color color) => switch (color) {
+  BrandColors.success => Tone.success,
+  BrandColors.important => Tone.important,
+  BrandColors.critical => Tone.critical,
+  _ => Tone.neutral,
+};
+
 /// État hors ligne de la tablette : enrôlement, fraîcheur, autorisation
 /// locale, synchronisation et sa progression (OFF-01, OFF-04, OPS-05).
 class OfflineStatusCard extends ConsumerWidget {
@@ -54,20 +63,25 @@ class OfflineStatusCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final identity = ref.watch(deviceIdentityProvider);
     final run = ref.watch(syncControllerProvider);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: switch (identity) {
-          AsyncData(value: final DeviceIdentity device) => _Enrolled(
-            device: device,
-            run: run,
-          ),
-          AsyncData() => _NotEnrolled(run: run),
-          AsyncError() => const Text('Identité de la tablette illisible.'),
-          _ => const LinearProgressIndicator(),
-        },
+    return switch (identity) {
+      AsyncData(value: final DeviceIdentity device) => _Enrolled(
+        device: device,
+        run: run,
       ),
-    );
+      AsyncData() => _NotEnrolled(run: run),
+      AsyncError() => const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Text('Identité de la tablette illisible.'),
+        ),
+      ),
+      _ => const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: LinearProgressIndicator(),
+        ),
+      ),
+    };
   }
 }
 
@@ -83,41 +97,37 @@ class _NotEnrolled extends StatelessWidget {
       SyncRunFinished(report: final SyncPurged purged) => purged,
       _ => null,
     };
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(Icons.tablet_android, color: BrandColors.important),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text('Tablette non enrôlée', style: textTheme.titleMedium),
+    return SectionCard(
+      icon: Icons.tablet_android,
+      tone: Tone.important,
+      title: 'Tablette non enrôlée',
+      description: 'Sans enrôlement, aucun ETARE n’est installé.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (purge != null)
+            Text(
+              purgeMessage(
+                purge.reason,
+                discardedReports: purge.discardedReports,
+              ),
+              style: textTheme.bodyLarge?.copyWith(color: BrandColors.critical),
+            )
+          else
+            Text(
+              'Pour consulter les ETARE publiés sans réseau, enrôlez la tablette '
+              'avec le code remis par l’administrateur de votre SIS.',
+              style: textTheme.bodyLarge,
             ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        if (purge != null)
-          Text(
-            purgeMessage(
-              purge.reason,
-              discardedReports: purge.discardedReports,
-            ),
-            style: textTheme.bodyLarge?.copyWith(color: BrandColors.critical),
-          )
-        else
-          Text(
-            'Pour consulter les ETARE publiés sans réseau, enrôlez la tablette '
-            'avec le code remis par l’administrateur de votre SIS.',
-            style: textTheme.bodyLarge,
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            key: OfflineStatusCard.enrollButtonKey,
+            onPressed: () => context.push(AppRoutes.enroll),
+            icon: const Icon(Icons.qr_code_2),
+            label: const Text('Enrôler cette tablette'),
           ),
-        const SizedBox(height: 12),
-        FilledButton.icon(
-          key: OfflineStatusCard.enrollButtonKey,
-          onPressed: () => context.push(AppRoutes.enroll),
-          icon: const Icon(Icons.qr_code_2),
-          label: const Text('Enrôler cette tablette'),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -140,117 +150,110 @@ class _Enrolled extends ConsumerWidget {
     final running = run is SyncRunInProgress;
     final canConsult = status.canConsult(userId: userId, now: now);
     final expiresAt = status.authorizationExpiresAt;
+    final notices = ref.watch(removalNoticesProvider).value ?? const [];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, color: color),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                '$label · ${status.installedSites} site(s) hors ligne',
-                style: textTheme.titleMedium?.copyWith(color: color),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Dernière synchronisation réussie : '
-          '${status.lastSyncAt == null ? 'jamais' : formatDateTimeFr(status.lastSyncAt!)}',
-          style: textTheme.bodyLarge,
-        ),
-        Text(
-          '${device.deviceName} · ${device.tenantName}',
-          style: textTheme.bodyMedium?.copyWith(color: BrandColors.textMuted),
-        ),
-        if (ref.watch(removalNoticesProvider).value case final notices?
-            when notices.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Text('Sites retirés de la tablette', style: textTheme.titleSmall),
-          for (final notice in notices.take(3))
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                '${notice.siteName} — ${notice.label.toLowerCase()} le '
-                '${formatDateTimeFr(notice.at)} : « ${notice.reason} »',
-                style: textTheme.bodyMedium,
-              ),
-            ),
-        ],
-        if (status.appUpdateRequired && !running) ...[
-          const SizedBox(height: 12),
-          _UpdateRequired(minVersion: status.requiredAppVersion),
-        ] else if (status.lastError case final error? when !running) ...[
-          const SizedBox(height: 8),
-          Text(
-            error,
-            style: textTheme.bodyMedium?.copyWith(color: BrandColors.critical),
+    return SectionCard(
+      icon: icon,
+      tone: _toneOf(color),
+      title: '$label · ${status.installedSites} site(s) hors ligne',
+      description: '${device.deviceName} · ${device.tenantName}',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          FieldRow(
+            'Dernière synchronisation réussie',
+            status.lastSyncAt == null
+                ? 'jamais'
+                : '${formatRelativeFr(status.lastSyncAt!, now)}, le '
+                      '${formatDateTimeFr(status.lastSyncAt!)}',
+            selectable: false,
           ),
-        ],
-        if (status.installedSites > 0) ...[
-          const SizedBox(height: 8),
-          Text(
-            canConsult && expiresAt != null
-                ? 'Consultation hors ligne autorisée jusqu’au '
-                      '${formatDateTimeFr(expiresAt)}.'
-                : 'Synchronisez pour consulter les données de cette tablette '
-                      '(autorisation expirée ou autre utilisateur).',
-            style: textTheme.bodyMedium?.copyWith(
-              color: canConsult ? BrandColors.textMuted : BrandColors.important,
+          if (status.installedSites > 0)
+            FieldRow(
+              'Consultation hors ligne',
+              canConsult && expiresAt != null
+                  ? 'autorisée jusqu’au ${formatDateTimeFr(expiresAt)}'
+                  : 'synchronisez pour consulter les données de cette tablette '
+                        '(autorisation expirée ou autre utilisateur)',
+              selectable: false,
+            ),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              'Synchronisation automatique '
+              '${ref.watch(backgroundSchedulerProvider).summary}.',
+              style: textTheme.bodySmall?.copyWith(
+                color: BrandColors.textMuted,
+              ),
             ),
           ),
-        ],
-        const SizedBox(height: 12),
-        if (run case SyncRunInProgress(:final progress))
-          _Progress(progress: progress)
-        else if (run is SyncRunBusy)
-          const Row(
-            children: [
-              SizedBox.square(
-                dimension: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Text('Synchronisation en arrière-plan en cours…'),
-              ),
-            ],
-          )
-        else ...[
-          if (run case SyncRunFailed(:final message))
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                message,
-                style: textTheme.bodyMedium?.copyWith(
-                  color: BrandColors.critical,
+          if (notices.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text('Sites retirés de la tablette', style: textTheme.titleSmall),
+            for (final notice in notices.take(3))
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  '${notice.siteName} — ${notice.label.toLowerCase()} le '
+                  '${formatDateTimeFr(notice.at)} : « ${notice.reason} »',
+                  style: textTheme.bodyMedium,
                 ),
               ),
+          ],
+          if (status.appUpdateRequired && !running) ...[
+            const SizedBox(height: 12),
+            _UpdateRequired(minVersion: status.requiredAppVersion),
+          ] else if (status.lastError case final error? when !running) ...[
+            const SizedBox(height: 8),
+            NoticeStrip(
+              icon: Icons.sync_problem,
+              tone: Tone.critical,
+              text: error,
             ),
-          if (run case SyncRunFinished(report: final SyncCompleted report))
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(_summary(report), style: textTheme.bodyMedium),
+          ],
+          const SizedBox(height: 12),
+          if (run case SyncRunInProgress(:final progress))
+            _Progress(progress: progress)
+          else if (run is SyncRunBusy)
+            const Row(
+              children: [
+                SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text('Synchronisation en arrière-plan en cours…'),
+                ),
+              ],
+            )
+          else ...[
+            if (run case SyncRunFailed(:final message))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  message,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: BrandColors.critical,
+                  ),
+                ),
+              ),
+            if (run case SyncRunFinished(report: final SyncCompleted report))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(_summary(report), style: textTheme.bodyMedium),
+              ),
+            OutlinedButton.icon(
+              key: OfflineStatusCard.syncButtonKey,
+              onPressed: () => ref
+                  .read(syncControllerProvider.notifier)
+                  .synchronizeInBackground(),
+              icon: const Icon(Icons.sync),
+              label: const Text('Synchroniser'),
             ),
-          OutlinedButton.icon(
-            key: OfflineStatusCard.syncButtonKey,
-            onPressed: () => ref
-                .read(syncControllerProvider.notifier)
-                .synchronizeInBackground(),
-            icon: const Icon(Icons.sync),
-            label: const Text('Synchroniser'),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Synchronisation automatique '
-            '${ref.watch(backgroundSchedulerProvider).summary}.',
-            style: textTheme.bodySmall?.copyWith(color: BrandColors.textMuted),
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
 
@@ -289,7 +292,7 @@ class _UpdateRequired extends StatelessWidget {
       key: OfflineStatusCard.updateRequiredKey,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border.all(color: BrandColors.important, width: 2),
+        color: BrandColors.importantSoft,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(

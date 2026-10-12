@@ -40,11 +40,18 @@ abstract final class BrandColors {
   static const textMuted = Color(0xFF475569);
   static const border = Color(0xFFCBD5E1);
 
-  // Niveaux de criticité (risques, alertes).
+  /// Fond discret des pictogrammes et des tiroirs (jeton web `subtle`).
+  static const subtle = Color(0xFFEEF2F7);
+
+  // Niveaux de criticité (risques, alertes), avec leur teinte douce de fond.
   static const critical = Color(0xFFB91C1C);
+  static const criticalSoft = Color(0xFFFEE2E2);
   static const important = Color(0xFFB45309);
+  static const importantSoft = Color(0xFFFEF3C7);
   static const info = Color(0xFF1D4ED8);
+  static const infoSoft = Color(0xFFDBEAFE);
   static const success = Color(0xFF15803D);
+  static const successSoft = Color(0xFFDCFCE7);
 
   static const onDark = Color(0xFFFFFFFF);
 }
