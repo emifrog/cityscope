@@ -14,24 +14,13 @@ import {
   type FieldKind,
   type RiskIconKey,
 } from '@etare/domain';
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Field,
-  Input,
-  Select,
-  cn,
-} from '@etare/ui';
+import { Alert, Badge, Button, Field, Input, Select, cn } from '@etare/ui';
+import { Landmark, Plus, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { FIELD_KIND_LABELS, RISK_ICON_LABELS, RISK_SEVERITY_LABELS } from '@/components/labels';
 import { RiskPictogram } from '@/components/plan/risk-pictograms';
+import { SectionCard } from '@/components/section-card';
 import { api } from '@/lib/api-client';
 import { queryKeys, useApiMutation, useRiskTypes } from '@/lib/queries';
 
@@ -322,22 +311,26 @@ function RiskTypeRow({ type, onEdit }: { type: RiskType; onEdit?: (() => void) |
   );
   const fieldCount = fieldsFromSchema(type.properties_schema).length;
   return (
-    <li className={cn('flex flex-wrap items-center gap-3 py-2', type.status === 'deprecated' && 'opacity-60')}>
-      <RiskPictogram iconKey={type.icon_key} />
+    <li className={cn('flex flex-wrap items-center gap-3 px-5 py-3', type.status === 'deprecated' && 'opacity-60')}>
+      <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-md bg-subtle">
+        <RiskPictogram iconKey={type.icon_key} />
+      </span>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium">
-          {type.name} <span className="text-xs font-normal text-muted">{type.code}</span>
+        <p className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="font-semibold text-foreground">{type.name}</span>
+          <Badge>{type.code}</Badge>
+          {type.status === 'deprecated' ? <Badge tone="neutral">Retiré</Badge> : null}
         </p>
         <p className="text-xs text-muted">
-          Gravité par défaut {type.default_severity}
+          Gravité par défaut{' '}
+          {RISK_SEVERITY_LABELS[type.default_severity as keyof typeof RISK_SEVERITY_LABELS] ?? type.default_severity}
           {fieldCount > 0
             ? ` · ${fieldCount} champ${fieldCount > 1 ? 's' : ''} propre${fieldCount > 1 ? 's' : ''}`
             : ''}
         </p>
       </div>
-      {type.status === 'deprecated' ? <Badge tone="neutral">Retiré</Badge> : null}
       {onEdit ? (
-        <div className="flex gap-2">
+        <div className="flex gap-1">
           {type.status === 'active' ? (
             <Button size="sm" variant="secondary" onClick={onEdit}>
               Modifier
@@ -374,53 +367,65 @@ export function RiskCatalogAdmin() {
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          <Badge tone="info" className="px-3 py-1 text-sm">
+            {own.length} type{own.length > 1 ? 's' : ''} propre{own.length > 1 ? 's' : ''} au SIS
+          </Badge>
+          <Badge className="px-3 py-1 text-sm">
+            {national.length} type{national.length > 1 ? 's' : ''} du catalogue national
+          </Badge>
+        </div>
+        {!editing ? (
+          <Button size="sm" onClick={() => setEditing('new')}>
+            <Plus aria-hidden="true" className="size-4" />
+            Ajouter un type de risque
+          </Button>
+        ) : null}
+      </div>
       {editing ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>{editing === 'new' ? 'Nouveau type de risque' : `Modifier « ${editing.name} »`}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RiskTypeForm
-              key={editing === 'new' ? 'new' : editing.id}
-              type={editing === 'new' ? null : editing}
-              onDone={() => setEditing(null)}
-            />
-          </CardContent>
-        </Card>
+        <SectionCard
+          icon={TriangleAlert}
+          title={editing === 'new' ? 'Nouveau type de risque' : `Modifier « ${editing.name} »`}
+          description="Pictogramme, gravité par défaut et champs propres, proposés aux rédacteurs avec le catalogue national."
+        >
+          <RiskTypeForm
+            key={editing === 'new' ? 'new' : editing.id}
+            type={editing === 'new' ? null : editing}
+            onDone={() => setEditing(null)}
+          />
+        </SectionCard>
       ) : null}
-      <Card>
-        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2">
-          <div>
-            <CardTitle>Types propres au SIS ({own.length})</CardTitle>
-            <CardDescription>Proposés aux rédacteurs avec le catalogue national.</CardDescription>
-          </div>
-          {!editing ? <Button onClick={() => setEditing('new')}>Ajouter un type de risque</Button> : null}
-        </CardHeader>
-        <CardContent>
-          {own.length === 0 ? (
+      <SectionCard
+        icon={TriangleAlert}
+        title="Types propres au SIS"
+        description="Proposés aux rédacteurs avec le catalogue national. Un type retiré n’est plus proposé ; ses occurrences restent."
+        contentClassName="px-0 py-0"
+      >
+        {own.length === 0 ? (
+          <div className="px-5 py-4">
             <Alert tone="info">Aucun type propre : le catalogue national suffit pour l’instant.</Alert>
-          ) : (
-            <ul className="divide-y divide-border">
-              {own.map((type) => (
-                <RiskTypeRow key={type.id} type={type} onEdit={() => setEditing(type)} />
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Catalogue national ({national.length})</CardTitle>
-          <CardDescription>Données de référence communes à tous les SIS : non modifiables.</CardDescription>
-        </CardHeader>
-        <CardContent>
+          </div>
+        ) : (
           <ul className="divide-y divide-border">
-            {national.map((type) => (
-              <RiskTypeRow key={type.id} type={type} />
+            {own.map((type) => (
+              <RiskTypeRow key={type.id} type={type} onEdit={() => setEditing(type)} />
             ))}
           </ul>
-        </CardContent>
-      </Card>
+        )}
+      </SectionCard>
+      <SectionCard
+        icon={Landmark}
+        title="Catalogue national"
+        description="Données de référence communes à tous les SIS : non modifiables."
+        contentClassName="px-0 py-0"
+      >
+        <ul className="divide-y divide-border">
+          {national.map((type) => (
+            <RiskTypeRow key={type.id} type={type} />
+          ))}
+        </ul>
+      </SectionCard>
     </div>
   );
 }

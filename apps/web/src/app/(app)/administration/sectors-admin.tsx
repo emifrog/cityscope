@@ -1,25 +1,11 @@
 'use client';
 
 import type { Sector, SectorCommune, SectorSave } from '@etare/contracts';
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Field,
-  Input,
-  Table,
-  TableCell,
-  TableHead,
-  TableHeaderCell,
-  TableRow,
-} from '@etare/ui';
+import { Alert, Badge, Button, Card, Field, Input } from '@etare/ui';
+import { MapPinned, Plus } from 'lucide-react';
 import { useDeferredValue, useState } from 'react';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
+import { SectionCard } from '@/components/section-card';
 import { SitePicker } from '@/components/site-picker';
 import { api } from '@/lib/api-client';
 import { queryKeys, useApiMutation, useSectorCommunes, useSectors } from '@/lib/queries';
@@ -187,74 +173,73 @@ function SectorRow({ sector }: { sector: Sector }) {
   );
   const used = sector.member_count + sector.device_count > 0;
   return (
-    <>
-      <TableRow>
-        <TableCell>
-          <p className="font-semibold">
-            {sector.name} {sector.code ? <span className="text-xs text-muted">({sector.code})</span> : null}
+    <li className="px-5 py-4">
+      <div className="grid gap-3 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-start">
+        <span
+          aria-hidden="true"
+          className="flex size-10 shrink-0 items-center justify-center rounded-md bg-subtle text-brand-navy"
+        >
+          <MapPinned className="size-5" />
+        </span>
+        <div className="min-w-0 space-y-1.5">
+          <p className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold text-foreground">{sector.name}</span>
+            {sector.code ? <Badge>{sector.code}</Badge> : null}
+            <Badge tone="info">{plural(sector.site_count, 'site', 'sites')}</Badge>
           </p>
-          {sector.description ? <p className="text-xs text-muted">{sector.description}</p> : null}
-        </TableCell>
-        <TableCell>
-          <p className="text-sm">
-            {sector.communes.length > 0 ? sector.communes.map((commune) => commune.label).join(', ') : 'Aucune commune'}
+          {sector.description ? <p className="text-sm text-muted">{sector.description}</p> : null}
+          <p className="flex flex-wrap gap-1">
+            {sector.communes.length > 0 ? (
+              sector.communes.map((commune) => <Badge key={commune.insee_code}>{commune.label}</Badge>)
+            ) : (
+              <span className="text-xs text-muted">Aucune commune</span>
+            )}
+            {sector.sites.length > 0 ? (
+              <Badge tone="neutral">+ {plural(sector.sites.length, 'site ajouté', 'sites ajoutés')}</Badge>
+            ) : null}
           </p>
-          {sector.sites.length > 0 ? (
-            <p className="text-xs text-muted">+ {plural(sector.sites.length, 'site ajouté', 'sites ajoutés')}</p>
-          ) : null}
-        </TableCell>
-        <TableCell>{plural(sector.site_count, 'site', 'sites')}</TableCell>
-        <TableCell>
-          <p className="text-sm">{plural(sector.member_count, 'membre', 'membres')}</p>
-          <p className="text-sm">{plural(sector.device_count, 'terminal', 'terminaux')}</p>
-        </TableCell>
-        <TableCell className="text-right whitespace-nowrap">
-          <div className="flex justify-end gap-1">
-            <Button size="sm" variant="ghost" onClick={() => setEditing((open) => !open)} aria-expanded={editing}>
-              Modifier
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={used}
-              title={used ? 'Affectez d’abord ailleurs ses membres et terminaux.' : undefined}
-              onClick={() => setConfirming(true)}
-            >
-              Archiver
-            </Button>
-          </div>
-        </TableCell>
-      </TableRow>
+          <p className="text-xs text-muted">
+            {plural(sector.member_count, 'membre', 'membres')} et {plural(sector.device_count, 'terminal', 'terminaux')}{' '}
+            affectés
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-1 md:justify-end">
+          <Button size="sm" variant="secondary" onClick={() => setEditing((open) => !open)} aria-expanded={editing}>
+            Modifier
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={used}
+            title={used ? 'Affectez d’abord ailleurs ses membres et terminaux.' : undefined}
+            onClick={() => setConfirming(true)}
+          >
+            Archiver
+          </Button>
+        </div>
+      </div>
       {archive.error ? (
-        <TableRow>
-          <TableCell colSpan={5}>
-            <ApiErrorAlert error={archive.error} />
-          </TableCell>
-        </TableRow>
+        <div className="mt-3">
+          <ApiErrorAlert error={archive.error} />
+        </div>
       ) : null}
       {confirming ? (
-        <TableRow>
-          <TableCell colSpan={5} className="bg-subtle/40">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-sm">Archiver « {sector.name} » ? Il ne pourra plus être affecté.</p>
-              <Button size="sm" variant="danger" disabled={archive.isPending} onClick={() => archive.mutate()}>
-                Archiver
-              </Button>
-              <Button size="sm" variant="secondary" onClick={() => setConfirming(false)}>
-                Annuler
-              </Button>
-            </div>
-          </TableCell>
-        </TableRow>
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md bg-subtle/60 p-4">
+          <p className="text-sm">Archiver « {sector.name} » ? Il ne pourra plus être affecté.</p>
+          <Button size="sm" variant="danger" disabled={archive.isPending} onClick={() => archive.mutate()}>
+            Archiver
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => setConfirming(false)}>
+            Annuler
+          </Button>
+        </div>
       ) : null}
       {editing ? (
-        <TableRow>
-          <TableCell colSpan={5} className="bg-subtle/40">
-            <SectorForm sector={sector} onDone={() => setEditing(false)} />
-          </TableCell>
-        </TableRow>
+        <div className="mt-3 rounded-md bg-subtle/60 p-4">
+          <SectorForm sector={sector} onDone={() => setEditing(false)} />
+        </div>
       ) : null}
-    </>
+    </li>
   );
 }
 
@@ -271,6 +256,24 @@ export function SectorsAdmin() {
       {sectors.error ? <ApiErrorAlert error={sectors.error} /> : null}
       {sectors.data ? (
         <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              <Badge tone="info" className="px-3 py-1 text-sm">
+                {plural(sectors.data.items.length, 'secteur', 'secteurs')}
+              </Badge>
+              {sectors.data.sites_outside_sectors > 0 ? (
+                <Badge tone="important" className="px-3 py-1 text-sm">
+                  {plural(sectors.data.sites_outside_sectors, 'site hors secteur', 'sites hors secteur')}
+                </Badge>
+              ) : null}
+            </div>
+            {!creating ? (
+              <Button size="sm" onClick={() => setCreating(true)}>
+                <Plus aria-hidden="true" className="size-4" />
+                Créer un secteur
+              </Button>
+            ) : null}
+          </div>
           {sectors.data.sites_outside_sectors > 0 ? (
             <Alert tone="important">
               {plural(sectors.data.sites_outside_sectors, 'site n’est', 'sites ne sont')} dans aucun secteur : les
@@ -278,57 +281,42 @@ export function SectorsAdmin() {
             </Alert>
           ) : null}
           {creating ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Créer un secteur</CardTitle>
-                <CardDescription>
-                  Un secteur regroupe les sites de ses communes et des sites ajoutés un à un ; un site peut appartenir à
-                  plusieurs secteurs.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <SectorForm sector={null} onDone={() => setCreating(false)} />
-              </CardContent>
+            <SectionCard
+              icon={MapPinned}
+              title="Créer un secteur"
+              description="Un secteur regroupe les sites de ses communes et des sites ajoutés un à un ; un site peut appartenir à plusieurs secteurs."
+            >
+              <SectorForm sector={null} onDone={() => setCreating(false)} />
+            </SectionCard>
+          ) : null}
+          {sectors.data.items.length === 0 ? (
+            <Card className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+              <span
+                aria-hidden="true"
+                className="flex size-12 items-center justify-center rounded-full bg-subtle text-brand-navy"
+              >
+                <MapPinned className="size-6" />
+              </span>
+              <p className="font-semibold text-foreground">
+                Aucun secteur : chaque tablette et chaque membre ont accès à tout le SIS.
+              </p>
+              <p className="text-sm text-muted">
+                Facultatif. Un secteur sert à limiter des tablettes ou des membres à une partie du SIS.
+              </p>
             </Card>
           ) : (
-            <div className="flex justify-end">
-              <Button onClick={() => setCreating(true)}>Créer un secteur</Button>
-            </div>
-          )}
-          <Card>
-            <CardHeader>
-              <CardTitle>Secteurs ({sectors.data.items.length})</CardTitle>
-              <CardDescription>
+            <Card>
+              <ul className="divide-y divide-border" aria-label="Secteurs du SIS">
+                {sectors.data.items.map((sector) => (
+                  <SectorRow key={`${sector.id}-${sector.row_version}`} sector={sector} />
+                ))}
+              </ul>
+              <p className="border-t border-border px-5 py-3 text-xs text-muted">
                 Une tablette reçoit les sites communs à ses secteurs et au périmètre de l’agent connecté. Un changement
                 s’applique à la prochaine synchronisation ; ce qui sort du périmètre est retiré avec un motif.
-              </CardDescription>
-            </CardHeader>
-            {sectors.data.items.length === 0 ? (
-              <CardContent>
-                <p className="text-sm text-muted">
-                  Aucun secteur : chaque tablette et chaque membre ont accès à tout le SIS.{' '}
-                  <Badge tone="info">Facultatif</Badge>
-                </p>
-              </CardContent>
-            ) : (
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableHeaderCell>Secteur</TableHeaderCell>
-                    <TableHeaderCell>Composition</TableHeaderCell>
-                    <TableHeaderCell>Sites</TableHeaderCell>
-                    <TableHeaderCell>Affectés</TableHeaderCell>
-                    <TableHeaderCell className="text-right">Actions</TableHeaderCell>
-                  </TableRow>
-                </TableHead>
-                <tbody>
-                  {sectors.data.items.map((sector) => (
-                    <SectorRow key={`${sector.id}-${sector.row_version}`} sector={sector} />
-                  ))}
-                </tbody>
-              </Table>
-            )}
-          </Card>
+              </p>
+            </Card>
+          )}
         </>
       ) : null}
     </div>

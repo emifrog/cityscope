@@ -2,9 +2,11 @@
 
 import type { TerminalPolicySettings } from '@etare/contracts';
 import { TERMINAL_POLICY_BOUNDS } from '@etare/domain';
-import { Alert, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Field, Input } from '@etare/ui';
+import { Alert, Button, Field, Input, cn } from '@etare/ui';
+import { LockKeyhole } from 'lucide-react';
 import { useState } from 'react';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
+import { SectionCard } from '@/components/section-card';
 import { api } from '@/lib/api-client';
 import { queryKeys, useApiMutation, useTerminalPolicy } from '@/lib/queries';
 
@@ -68,71 +70,72 @@ export function TerminalPolicyCard() {
   const update = (name: string, input: string | boolean) => setDraft({ ...(draft ?? {}), [name]: input });
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Politique des tablettes</CardTitle>
-        <CardDescription>
-          Chaque tablette applique la politique reçue à sa dernière synchronisation. Le code personnel est toujours
-          demandé au démarrage de l’application.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {save.error ? <ApiErrorAlert error={save.error} /> : null}
-        {save.isSuccess && !changed ? (
-          <Alert tone="info">Politique enregistrée et tracée : les tablettes la suivent à leur prochain contact.</Alert>
-        ) : null}
-        <div className="grid gap-4 md:grid-cols-2">
-          {NUMERIC_SETTINGS.map((setting) => {
-            const bounds = TERMINAL_POLICY_BOUNDS[setting.name];
-            const id = `terminal-policy-${setting.name}`;
-            return (
-              <Field
-                key={setting.name}
-                label={`${setting.label} (${setting.unit})`}
-                htmlFor={id}
-                hint={`${setting.hint} Entre ${bounds.min} et ${bounds.max}.`}
-                error={
-                  problems.includes(setting.name) ? `Entre ${bounds.min} et ${bounds.max} ${setting.unit}.` : undefined
-                }
-              >
-                <Input
-                  id={id}
-                  type="number"
-                  inputMode="numeric"
-                  min={bounds.min}
-                  max={bounds.max}
-                  step={1}
-                  value={value(setting.name)}
-                  aria-invalid={problems.includes(setting.name)}
-                  onChange={(event) => update(setting.name, event.target.value)}
-                />
-              </Field>
-            );
-          })}
-        </div>
-        <label className="flex items-start gap-3">
-          <input
-            type="checkbox"
-            className="mt-1 size-4 accent-brand-accent"
-            checked={screenshots}
-            onChange={(event) => update('screenshots_allowed', event.target.checked)}
-          />
-          <span>
-            <span className="font-semibold">Autoriser les captures d’écran</span>
-            <span className="block text-sm text-muted">
-              Déconseillé : une capture copie hors de l’application des données opérationnelles. Sans autorisation,
-              l’aperçu dans la liste des applications récentes est aussi masqué.
-            </span>
+    <SectionCard
+      icon={LockKeyhole}
+      title="Politique des tablettes"
+      description="Chaque tablette applique la politique reçue à sa dernière synchronisation. Le code personnel est toujours demandé au démarrage de l’application."
+      contentClassName="space-y-4 px-5 py-4"
+    >
+      {save.error ? <ApiErrorAlert error={save.error} /> : null}
+      {save.isSuccess && !changed ? (
+        <Alert tone="info">Politique enregistrée et tracée : les tablettes la suivent à leur prochain contact.</Alert>
+      ) : null}
+      <div className="grid gap-4 md:grid-cols-2">
+        {NUMERIC_SETTINGS.map((setting) => {
+          const bounds = TERMINAL_POLICY_BOUNDS[setting.name];
+          const id = `terminal-policy-${setting.name}`;
+          return (
+            <Field
+              key={setting.name}
+              label={`${setting.label} (${setting.unit})`}
+              htmlFor={id}
+              hint={`${setting.hint} Entre ${bounds.min} et ${bounds.max}.`}
+              error={
+                problems.includes(setting.name) ? `Entre ${bounds.min} et ${bounds.max} ${setting.unit}.` : undefined
+              }
+            >
+              <Input
+                id={id}
+                type="number"
+                inputMode="numeric"
+                min={bounds.min}
+                max={bounds.max}
+                step={1}
+                value={value(setting.name)}
+                aria-invalid={problems.includes(setting.name)}
+                onChange={(event) => update(setting.name, event.target.value)}
+              />
+            </Field>
+          );
+        })}
+      </div>
+      <label
+        className={cn(
+          'flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors',
+          screenshots ? 'border-important bg-important-soft/40' : 'border-border hover:bg-subtle',
+        )}
+      >
+        <input
+          type="checkbox"
+          className="mt-1 size-4 accent-brand-accent"
+          checked={screenshots}
+          onChange={(event) => update('screenshots_allowed', event.target.checked)}
+        />
+        <span>
+          <span className="block text-sm font-semibold text-foreground">Autoriser les captures d’écran</span>
+          <span className="block text-xs text-muted">
+            Déconseillé : une capture copie hors de l’application des données opérationnelles. Sans autorisation,
+            l’aperçu dans la liste des applications récentes est aussi masqué.
           </span>
-        </label>
-        <Button
-          size="sm"
-          disabled={!changed || problems.length > 0 || save.isPending}
-          onClick={() => save.mutate(next, { onSuccess: () => setDraft(null) })}
-        >
-          {save.isPending ? 'Enregistrement…' : 'Enregistrer'}
-        </Button>
-      </CardContent>
-    </Card>
+        </span>
+      </label>
+      <Button
+        size="sm"
+        disabled={!changed || problems.length > 0 || save.isPending}
+        onClick={() => save.mutate(next, { onSuccess: () => setDraft(null) })}
+      >
+        {save.isPending ? 'Enregistrement…' : 'Enregistrer'}
+      </Button>
+    </SectionCard>
   );
 }

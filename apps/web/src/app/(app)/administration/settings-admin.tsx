@@ -2,9 +2,11 @@
 
 import type { SecondFactorPolicy } from '@etare/contracts';
 import { OPTIONAL_SECTIONS, SECTION_TITLES, type OptionalSection } from '@etare/domain';
-import { Alert, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@etare/ui';
-import { useState } from 'react';
+import { Alert, Button, cn } from '@etare/ui';
+import { FileText, ShieldCheck, Users } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
+import { SectionCard } from '@/components/section-card';
 import { api } from '@/lib/api-client';
 import {
   queryKeys,
@@ -33,6 +35,20 @@ const POLICIES: readonly { value: SecondFactorPolicy; label: string; help: strin
   },
 ];
 
+/** A choice drawn as a card: the chosen one is outlined. */
+function OptionCard({ selected, children }: { selected: boolean; children: ReactNode }) {
+  return (
+    <label
+      className={cn(
+        'flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors',
+        selected ? 'border-info bg-info-soft/40' : 'border-border hover:bg-subtle',
+      )}
+    >
+      {children}
+    </label>
+  );
+}
+
 /** Second-factor policy of the SIS (ADR-022). Whatever the policy, an enrolled account always uses its code. */
 function SecurityPolicyCard() {
   const settings = useSecuritySettings();
@@ -48,49 +64,46 @@ function SecurityPolicyCard() {
   const changed = current !== settings.data.second_factor_policy;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Double authentification des membres</CardTitle>
-        <CardDescription>
-          Un compte qui a activé la double authentification saisit toujours son code, quel que soit ce réglage.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {save.error ? <ApiErrorAlert error={save.error} /> : null}
-        {save.isSuccess && !changed ? <Alert tone="info">Politique enregistrée et tracée.</Alert> : null}
-        <fieldset className="space-y-3">
-          <legend className="sr-only">Double authentification exigée</legend>
-          {POLICIES.map((option) => (
-            <label key={option.value} className="flex items-start gap-3">
-              <input
-                type="radio"
-                name="second-factor-policy"
-                className="mt-1 size-4 accent-brand-accent"
-                checked={current === option.value}
-                onChange={() => setPolicy(option.value)}
-              />
-              <span>
-                <span className="font-semibold">{option.label}</span>
-                <span className="block text-sm text-muted">{option.help}</span>
-              </span>
-            </label>
-          ))}
-        </fieldset>
-        {current === 'all' && changed ? (
-          <Alert tone="important">
-            Les membres sans double authentification ne pourront plus rien faire avant de l’avoir activée dans « Mon
-            compte ».
-          </Alert>
-        ) : null}
-        <Button
-          size="sm"
-          disabled={!changed || save.isPending}
-          onClick={() => save.mutate({ second_factor_policy: current }, { onSuccess: () => setPolicy(null) })}
-        >
-          {save.isPending ? 'Enregistrement…' : 'Enregistrer'}
-        </Button>
-      </CardContent>
-    </Card>
+    <SectionCard
+      icon={ShieldCheck}
+      title="Double authentification des membres"
+      description="Un compte qui a activé la double authentification saisit toujours son code, quel que soit ce réglage."
+      contentClassName="space-y-4 px-5 py-4"
+    >
+      {save.error ? <ApiErrorAlert error={save.error} /> : null}
+      {save.isSuccess && !changed ? <Alert tone="info">Politique enregistrée et tracée.</Alert> : null}
+      <fieldset className="grid gap-2">
+        <legend className="sr-only">Double authentification exigée</legend>
+        {POLICIES.map((option) => (
+          <OptionCard key={option.value} selected={current === option.value}>
+            <input
+              type="radio"
+              name="second-factor-policy"
+              className="mt-1 size-4 accent-brand-accent"
+              checked={current === option.value}
+              onChange={() => setPolicy(option.value)}
+            />
+            <span>
+              <span className="block text-sm font-semibold text-foreground">{option.label}</span>
+              <span className="block text-xs text-muted">{option.help}</span>
+            </span>
+          </OptionCard>
+        ))}
+      </fieldset>
+      {current === 'all' && changed ? (
+        <Alert tone="important">
+          Les membres sans double authentification ne pourront plus rien faire avant de l’avoir activée dans « Mon
+          compte ».
+        </Alert>
+      ) : null}
+      <Button
+        size="sm"
+        disabled={!changed || save.isPending}
+        onClick={() => save.mutate({ second_factor_policy: current }, { onSuccess: () => setPolicy(null) })}
+      >
+        {save.isPending ? 'Enregistrement…' : 'Enregistrer'}
+      </Button>
+    </SectionCard>
   );
 }
 
@@ -134,43 +147,39 @@ function EtareLayoutCard() {
     setHidden(shown ? current.filter((item) => item !== section) : [...current, section]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Sections de l’ETARE</CardTitle>
-        <CardDescription>
-          Synthèse, Accès, Risques, Eau et Contacts figurent toujours, dans l’ordre national. Le réglage s’applique aux
-          révisions soumises ensuite : une version déjà publiée ne change pas.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {save.error ? <ApiErrorAlert error={save.error} /> : null}
-        {save.isSuccess && !changed ? <Alert tone="info">Réglage enregistré et tracé.</Alert> : null}
-        <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold">Sections affichées</legend>
-          {OPTIONAL_SECTIONS.map((section) => (
-            <label key={section} className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                className="mt-1 size-4 accent-brand-accent"
-                checked={!current.includes(section)}
-                onChange={(event) => toggle(section, event.target.checked)}
-              />
-              <span>
-                <span className="font-semibold">{SECTION_TITLES[section]}</span>
-                <span className="block text-sm text-muted">{SECTION_HELP[section]}</span>
-              </span>
-            </label>
-          ))}
-        </fieldset>
-        <Button
-          size="sm"
-          disabled={!changed || save.isPending}
-          onClick={() => save.mutate({ hidden_sections: [...current] }, { onSuccess: () => setHidden(null) })}
-        >
-          {save.isPending ? 'Enregistrement…' : 'Enregistrer'}
-        </Button>
-      </CardContent>
-    </Card>
+    <SectionCard
+      icon={FileText}
+      title="Sections de l’ETARE"
+      description="Synthèse, Accès, Risques, Eau et Contacts figurent toujours, dans l’ordre national. Le réglage s’applique aux révisions soumises ensuite : une version déjà publiée ne change pas."
+      contentClassName="space-y-4 px-5 py-4"
+    >
+      {save.error ? <ApiErrorAlert error={save.error} /> : null}
+      {save.isSuccess && !changed ? <Alert tone="info">Réglage enregistré et tracé.</Alert> : null}
+      <fieldset className="grid gap-2">
+        <legend className="mb-1 text-sm font-semibold">Sections affichées</legend>
+        {OPTIONAL_SECTIONS.map((section) => (
+          <OptionCard key={section} selected={!current.includes(section)}>
+            <input
+              type="checkbox"
+              className="mt-1 size-4 accent-brand-accent"
+              checked={!current.includes(section)}
+              onChange={(event) => toggle(section, event.target.checked)}
+            />
+            <span>
+              <span className="block text-sm font-semibold text-foreground">{SECTION_TITLES[section]}</span>
+              <span className="block text-xs text-muted">{SECTION_HELP[section]}</span>
+            </span>
+          </OptionCard>
+        ))}
+      </fieldset>
+      <Button
+        size="sm"
+        disabled={!changed || save.isPending}
+        onClick={() => save.mutate({ hidden_sections: [...current] }, { onSuccess: () => setHidden(null) })}
+      >
+        {save.isPending ? 'Enregistrement…' : 'Enregistrer'}
+      </Button>
+    </SectionCard>
   );
 }
 
@@ -188,40 +197,38 @@ function PortalSettingsCard() {
   const changed = current !== settings.data.mfa_required;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Portail exploitant</CardTitle>
-        <CardDescription>
-          Les exploitants invités consultent une partie de la version publiée de leurs sites et proposent des mises à
-          jour, instruites par la Prévision.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {save.error ? <ApiErrorAlert error={save.error} /> : null}
-        {save.isSuccess && !changed ? <Alert tone="info">Réglage enregistré.</Alert> : null}
-        <label className="flex items-start gap-3">
-          <input
-            type="checkbox"
-            className="mt-1 size-4 accent-brand-accent"
-            checked={current}
-            onChange={(event) => setMfaRequired(event.target.checked)}
-          />
-          <span>
-            <span className="font-semibold">Exiger la double authentification des exploitants</span>
-            <span className="block text-sm text-muted">
-              Recommandé. Sans elle, un exploitant accède au portail avec son seul mot de passe. Le changement
-              s’applique à la prochaine requête de chaque exploitant.
-            </span>
+    <SectionCard
+      icon={Users}
+      title="Portail exploitant"
+      description="Les exploitants invités consultent une partie de la version publiée de leurs sites et proposent des mises à jour, instruites par la Prévision."
+      contentClassName="space-y-4 px-5 py-4"
+    >
+      {save.error ? <ApiErrorAlert error={save.error} /> : null}
+      {save.isSuccess && !changed ? <Alert tone="info">Réglage enregistré.</Alert> : null}
+      <OptionCard selected={current}>
+        <input
+          type="checkbox"
+          className="mt-1 size-4 accent-brand-accent"
+          checked={current}
+          onChange={(event) => setMfaRequired(event.target.checked)}
+        />
+        <span>
+          <span className="block text-sm font-semibold text-foreground">
+            Exiger la double authentification des exploitants
           </span>
-        </label>
-        <Button
-          size="sm"
-          disabled={!changed || save.isPending}
-          onClick={() => save.mutate({ mfa_required: current }, { onSuccess: () => setMfaRequired(null) })}
-        >
-          {save.isPending ? 'Enregistrement…' : 'Enregistrer'}
-        </Button>
-      </CardContent>
-    </Card>
+          <span className="block text-xs text-muted">
+            Recommandé. Sans elle, un exploitant accède au portail avec son seul mot de passe. Le changement s’applique
+            à la prochaine requête de chaque exploitant.
+          </span>
+        </span>
+      </OptionCard>
+      <Button
+        size="sm"
+        disabled={!changed || save.isPending}
+        onClick={() => save.mutate({ mfa_required: current }, { onSuccess: () => setMfaRequired(null) })}
+      >
+        {save.isPending ? 'Enregistrement…' : 'Enregistrer'}
+      </Button>
+    </SectionCard>
   );
 }

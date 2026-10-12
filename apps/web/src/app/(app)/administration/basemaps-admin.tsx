@@ -1,26 +1,14 @@
 'use client';
 
 import type { BasemapPackSummary, BasemapSectorState } from '@etare/contracts';
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Table,
-  TableCell,
-  TableHead,
-  TableHeaderCell,
-  TableRow,
-} from '@etare/ui';
+import { Alert, Badge, Button, Card, cn } from '@etare/ui';
+import { Layers } from 'lucide-react';
 import { useState } from 'react';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { BASEMAP_REASON_LABELS, BASEMAP_RIGHTS_LABELS } from '@/components/labels';
 import { api } from '@/lib/api-client';
 import { queryKeys, useApiMutation, useBasemaps } from '@/lib/queries';
+import { agoLabel } from '@/lib/relative-time';
 
 const date = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeZone: 'Europe/Paris' });
 const dateTime = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Europe/Paris' });
@@ -35,19 +23,19 @@ export function formatSize(bytes: number): string {
 function PendingState({ pack }: { pack: BasemapPackSummary }) {
   if (pack.status === 'failed') {
     return (
-      <div className="space-y-0.5">
+      <p className="flex flex-wrap items-center gap-2 text-xs">
         <Badge tone="critical">Échec de la version {pack.version}</Badge>
-        <p className="text-xs text-muted">{pack.error_detail ?? pack.error_code ?? 'Préparation interrompue.'}</p>
-      </div>
+        <span className="text-muted">{pack.error_detail ?? pack.error_code ?? 'Préparation interrompue.'}</span>
+      </p>
     );
   }
   return (
-    <div className="space-y-0.5">
+    <p className="flex flex-wrap items-center gap-2 text-xs">
       <Badge tone="info">{pack.status === 'building' ? 'Préparation en cours' : 'Préparation demandée'}</Badge>
-      <p className="text-xs text-muted">
+      <span className="text-muted">
         Version {pack.version} · {BASEMAP_REASON_LABELS[pack.reason]} · {dateTime.format(new Date(pack.requested_at))}
-      </p>
-    </div>
+      </span>
+    </p>
   );
 }
 
@@ -60,71 +48,67 @@ function SectorRow({ state, usable, now }: { state: BasemapSectorState; usable: 
   const pending = state.latest && ['queued', 'building'].includes(state.latest.status);
   const renewalDue = current?.renew_after ? Date.parse(current.renew_after) < now : false;
   return (
-    <>
-      <TableRow>
-        <TableCell>
-          <p className="font-semibold">
-            {state.sector.name}{' '}
-            {state.sector.code ? <span className="text-xs text-muted">({state.sector.code})</span> : null}
+    <li className="px-5 py-4">
+      <div className="grid gap-3 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-start">
+        <span
+          aria-hidden="true"
+          className={cn(
+            'flex size-10 shrink-0 items-center justify-center rounded-md',
+            !current
+              ? 'bg-subtle text-muted'
+              : renewalDue || state.latest?.status === 'failed'
+                ? 'bg-important-soft text-important'
+                : 'bg-success-soft text-success',
+          )}
+        >
+          <Layers className="size-5" />
+        </span>
+        <div className="min-w-0 space-y-1.5">
+          <p className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold text-foreground">{state.sector.name}</span>
+            {state.sector.code ? <Badge>{state.sector.code}</Badge> : null}
+            {current ? (
+              <Badge tone="success">Version {current.version}</Badge>
+            ) : (
+              <Badge tone="neutral">{state.eligible ? 'Pas encore de fond' : 'Aucune tablette'}</Badge>
+            )}
+            {renewalDue ? <Badge tone="important">Renouvellement dû</Badge> : null}
+            {state.stale && !renewalDue ? <Badge tone="neutral">Sites modifiés depuis</Badge> : null}
           </p>
           <p className="text-xs text-muted">
             {plural(state.site_count, 'site localisé', 'sites localisés')} ·{' '}
             {plural(state.detail_count, 'zone de détail', 'zones de détail')}
+            {current
+              ? ` · fond préparé ${current.built_at ? `${agoLabel(current.built_at, now)} (${date.format(new Date(current.built_at))})` : '—'} · ${
+                  current.total_bytes !== null ? formatSize(current.total_bytes) : '—'
+                }${current.tile_count !== null ? ` · ${current.tile_count.toLocaleString('fr-FR')} tuiles` : ''}`
+              : ''}
           </p>
-        </TableCell>
-        <TableCell>
-          {current ? (
-            <div className="space-y-0.5">
-              <p className="text-sm">
-                Version {current.version} du {current.built_at ? date.format(new Date(current.built_at)) : '—'}
-              </p>
-              <p className="text-xs text-muted">
-                {current.total_bytes !== null ? formatSize(current.total_bytes) : '—'}
-                {current.tile_count !== null ? ` · ${current.tile_count.toLocaleString('fr-FR')} tuiles` : ''}
-              </p>
-              {renewalDue ? <Badge tone="important">Renouvellement dû</Badge> : null}
-              {state.stale && !renewalDue ? <Badge tone="neutral">Sites modifiés depuis</Badge> : null}
-            </div>
-          ) : (
-            <p className="text-sm text-muted">{state.eligible ? 'Pas encore de fond' : 'Aucune tablette'}</p>
-          )}
+          <p className="text-sm">
+            {current
+              ? `${state.devices.installed} / ${plural(state.devices.expected, 'tablette', 'tablettes')} à jour`
+              : plural(state.devices.expected, 'tablette affectée', 'tablettes affectées')}
+          </p>
           {state.latest ? <PendingState pack={state.latest} /> : null}
-        </TableCell>
-        <TableCell>
-          {current ? (
-            <p className="text-sm">
-              {state.devices.installed} / {plural(state.devices.expected, 'tablette', 'tablettes')} à jour
-            </p>
-          ) : (
-            <p className="text-sm text-muted">{plural(state.devices.expected, 'tablette', 'tablettes')}</p>
-          )}
-        </TableCell>
-        <TableCell className="text-right whitespace-nowrap">
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={!usable || pending || build.isPending || state.site_count === 0}
-            title={
-              !usable
-                ? 'Les droits hors ligne de la source ne sont pas validés.'
-                : state.site_count === 0
-                  ? 'Aucun site localisé dans ce secteur.'
-                  : undefined
-            }
-            onClick={() => build.mutate(undefined)}
-          >
-            {build.isPending ? 'Demande…' : 'Préparer maintenant'}
-          </Button>
-        </TableCell>
-      </TableRow>
-      {build.error ? (
-        <TableRow>
-          <TableCell colSpan={4}>
-            <ApiErrorAlert error={build.error} />
-          </TableCell>
-        </TableRow>
-      ) : null}
-    </>
+          {build.error ? <ApiErrorAlert error={build.error} /> : null}
+        </div>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={!usable || pending || build.isPending || state.site_count === 0}
+          title={
+            !usable
+              ? 'Les droits hors ligne de la source ne sont pas validés.'
+              : state.site_count === 0
+                ? 'Aucun site localisé dans ce secteur.'
+                : undefined
+          }
+          onClick={() => build.mutate(undefined)}
+        >
+          {build.isPending ? 'Demande…' : 'Préparer maintenant'}
+        </Button>
+      </div>
+    </li>
   );
 }
 
@@ -140,40 +124,39 @@ export function BasemapsAdmin() {
   const [now] = useState(() => Date.now());
   const data = basemaps.data;
   const source = data?.source ?? null;
+  const ready = data?.sectors.filter((state) => state.current).length ?? 0;
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Fonds de carte des tablettes</CardTitle>
-        <CardDescription>
-          Un fond par secteur, préparé par la plateforme : vue générale jusqu’au zoom 14 sur les sites du secteur et
-          leurs abords, détail jusqu’au zoom 18 autour des sites diffusés. Les tablettes le téléchargent en Wi-Fi ; il
-          est renouvelé tous les six mois et dès que les sites du secteur changent.
-        </CardDescription>
-      </CardHeader>
-      {basemaps.isPending ? (
-        <CardContent>
-          <LoadingCard lines={4} />
-        </CardContent>
-      ) : null}
-      {basemaps.error ? (
-        <CardContent>
-          <ApiErrorAlert error={basemaps.error} />
-        </CardContent>
-      ) : null}
+    <div className="space-y-4">
+      {basemaps.isPending ? <LoadingCard lines={4} /> : null}
+      {basemaps.error ? <ApiErrorAlert error={basemaps.error} /> : null}
       {data ? (
-        <CardContent className="space-y-3">
-          {!source ? (
-            <Alert tone="info">Aucune source de fond de carte n’est configurée sur cette plateforme.</Alert>
-          ) : (
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="font-semibold">{source.product}</span>
-              <Badge tone={source.rights === 'approved' ? 'success' : 'important'}>
-                {BASEMAP_RIGHTS_LABELS[source.rights]}
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge tone="info" className="px-3 py-1 text-sm">
+                {ready} fond{ready > 1 ? 's' : ''} en vigueur sur {plural(data.sectors.length, 'secteur', 'secteurs')}
               </Badge>
-              <span className="text-muted">
-                {source.attribution} · {source.licence_name}
-              </span>
+              {source ? (
+                <>
+                  <span className="text-sm font-semibold text-foreground">{source.product}</span>
+                  <Badge tone={source.rights === 'approved' ? 'success' : 'important'}>
+                    {BASEMAP_RIGHTS_LABELS[source.rights]}
+                  </Badge>
+                </>
+              ) : null}
             </div>
+            <p className="text-xs text-muted">
+              Budget d’une tablette, tous secteurs confondus : {formatSize(data.device_budget_bytes)}.
+            </p>
+          </div>
+          {source ? (
+            <p className="text-xs text-muted">
+              {source.attribution} · {source.licence_name}. Un fond par secteur : vue générale jusqu’au zoom 14 sur les
+              sites du secteur et leurs abords, détail jusqu’au zoom 18 autour des sites diffusés. Les tablettes le
+              téléchargent en Wi-Fi ; il est renouvelé tous les six mois et dès que les sites du secteur changent.
+            </p>
+          ) : (
+            <Alert tone="info">Aucune source de fond de carte n’est configurée sur cette plateforme.</Alert>
           )}
           {source?.synthetic ? (
             <Alert tone="info">
@@ -187,35 +170,30 @@ export function BasemapsAdmin() {
               aucun fond n’est préparé ni diffusé d’ici là.
             </Alert>
           ) : null}
-          <p className="text-xs text-muted">
-            Budget d’une tablette, tous secteurs confondus : {formatSize(data.device_budget_bytes)}.
-          </p>
-        </CardContent>
+          {data.sectors.length === 0 ? (
+            <Card className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+              <span
+                aria-hidden="true"
+                className="flex size-12 items-center justify-center rounded-full bg-subtle text-brand-navy"
+              >
+                <Layers className="size-6" />
+              </span>
+              <p className="font-semibold text-foreground">Aucun secteur, donc aucun fond à préparer.</p>
+              <p className="text-sm text-muted">
+                Composez des secteurs (section « Secteurs ») et affectez-y les tablettes.
+              </p>
+            </Card>
+          ) : (
+            <Card>
+              <ul className="divide-y divide-border" aria-label="Fonds de carte par secteur">
+                {data.sectors.map((state) => (
+                  <SectorRow key={state.sector.id} state={state} usable={source?.usable ?? false} now={now} />
+                ))}
+              </ul>
+            </Card>
+          )}
+        </>
       ) : null}
-      {data && data.sectors.length === 0 ? (
-        <CardContent>
-          <p className="text-sm text-muted">
-            Aucun secteur : composez des secteurs (onglet « Secteurs ») et affectez-y les tablettes.
-          </p>
-        </CardContent>
-      ) : null}
-      {data && data.sectors.length > 0 ? (
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableHeaderCell>Secteur</TableHeaderCell>
-              <TableHeaderCell>Fond en vigueur</TableHeaderCell>
-              <TableHeaderCell>Tablettes</TableHeaderCell>
-              <TableHeaderCell className="text-right">Action</TableHeaderCell>
-            </TableRow>
-          </TableHead>
-          <tbody>
-            {data.sectors.map((state) => (
-              <SectorRow key={state.sector.id} state={state} usable={source?.usable ?? false} now={now} />
-            ))}
-          </tbody>
-        </Table>
-      ) : null}
-    </Card>
+    </div>
   );
 }

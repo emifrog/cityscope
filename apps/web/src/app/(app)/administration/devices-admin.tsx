@@ -2,29 +2,15 @@
 
 import type { Device, DeviceEnrollmentCode, DeviceList } from '@etare/contracts';
 import { isAppVersionBelow, type DeviceState } from '@etare/domain';
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Field,
-  Input,
-  Table,
-  TableCell,
-  TableHead,
-  TableHeaderCell,
-  TableRow,
-  type BadgeProps,
-} from '@etare/ui';
+import { Alert, Badge, Button, Card, CardContent, Field, Input, cn, type BadgeProps } from '@etare/ui';
+import { KeyRound, Plus, Smartphone } from 'lucide-react';
 import { useState } from 'react';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { DEVICE_STATE_LABELS, SYNC_RECEIPT_STATUS_LABELS } from '@/components/labels';
+import { SectionCard } from '@/components/section-card';
 import { api } from '@/lib/api-client';
 import { queryKeys, useApiMutation, useDevices } from '@/lib/queries';
+import { agoLabel } from '@/lib/relative-time';
 import { SectorChoice, type SectorSelection } from './sector-choice';
 import { TerminalPolicyCard } from './terminal-policy-card';
 
@@ -40,28 +26,33 @@ const STATE_TONES: Readonly<Record<DeviceState, BadgeProps['tone']>> = {
   revoked: 'neutral',
 };
 
+const STATE_BOXES: Readonly<Record<DeviceState, string>> = {
+  pending: 'bg-info-soft text-info',
+  never_synced: 'bg-important-soft text-important',
+  up_to_date: 'bg-success-soft text-success',
+  late: 'bg-important-soft text-important',
+  error: 'bg-critical-soft text-critical',
+  revoked: 'bg-subtle text-muted',
+};
+
 function EnrollmentCode({ result, onClose }: { result: DeviceEnrollmentCode; onClose: () => void }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Code d’enrôlement de « {result.device.name} »</CardTitle>
-        <CardDescription>
-          Sur la tablette, connectez-vous à l’application OPS puis saisissez ce code. Il est à usage unique, valable
-          jusqu’au {formatDate(result.expires_at)}, et ne sera plus affiché.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p
-          className="font-mono text-3xl font-bold tracking-widest select-all"
-          aria-label={`Code ${result.enrollment_code.split('').join(' ')}`}
-        >
-          {result.enrollment_code}
-        </p>
-        <Button size="sm" variant="secondary" onClick={onClose}>
-          J’ai transmis le code
-        </Button>
-      </CardContent>
-    </Card>
+    <SectionCard
+      icon={KeyRound}
+      title={`Code d’enrôlement de « ${result.device.name} »`}
+      description={`Sur la tablette, connectez-vous à l’application OPS puis saisissez ce code. Il est à usage unique, valable jusqu’au ${formatDate(result.expires_at)}, et ne sera plus affiché.`}
+      contentClassName="space-y-4 px-5 py-4"
+    >
+      <p
+        className="font-mono text-3xl font-bold tracking-widest select-all"
+        aria-label={`Code ${result.enrollment_code.split('').join(' ')}`}
+      >
+        {result.enrollment_code}
+      </p>
+      <Button size="sm" variant="secondary" onClick={onClose}>
+        J’ai transmis le code
+      </Button>
+    </SectionCard>
   );
 }
 
@@ -210,12 +201,14 @@ function DeviceRow({
   currentGeneration,
   minAppVersion,
   keysetSequence,
+  now,
   onCode,
 }: {
   device: Device;
   currentGeneration: number;
   minAppVersion: string | null;
   keysetSequence: number | null;
+  now: number;
   onCode: (result: DeviceEnrollmentCode) => void;
 }) {
   const [revoking, setRevoking] = useState(false);
@@ -227,14 +220,26 @@ function DeviceRow({
   const waiting = updatesWaiting(device, currentGeneration);
   const revoked = device.status === 'revoked';
   const outdated = !revoked && isAppVersionBelow(device.app_version, minAppVersion);
+  const platform =
+    device.platform === 'android' ? 'Android' : device.platform === 'ios' ? 'iOS' : 'Plateforme inconnue';
 
   return (
-    <>
-      <TableRow className={revoked ? 'opacity-70' : undefined}>
-        <TableCell>
-          <p className="font-semibold">{device.name}</p>
+    <li className={cn('px-5 py-4', revoked && 'opacity-70')}>
+      <div className="grid gap-3 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-start">
+        <span
+          aria-hidden="true"
+          className={cn('flex size-10 shrink-0 items-center justify-center rounded-md', STATE_BOXES[device.state])}
+        >
+          <Smartphone className="size-5" />
+        </span>
+        <div className="min-w-0 space-y-1.5">
+          <p className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold text-foreground">{device.name}</span>
+            <Badge tone={STATE_TONES[device.state]}>{DEVICE_STATE_LABELS[device.state]}</Badge>
+            <Badge>{perimeterLabel(device)}</Badge>
+          </p>
           <p className="text-xs text-muted">
-            {device.platform === 'android' ? 'Android' : device.platform === 'ios' ? 'iOS' : 'Plateforme inconnue'}
+            {platform}
             {device.app_version ? ` · application ${device.app_version}` : ''}
             {device.keyset_sequence !== null ? ` · clés n° ${device.keyset_sequence}` : ''}
             {device.key_algorithm === 'ecdsa-p256'
@@ -242,7 +247,23 @@ function DeviceRow({
               : device.key_algorithm === 'ed25519'
                 ? ' · clé logicielle'
                 : ''}
+            {(device.last_user_name ?? device.enrolled_by_name)
+              ? ` · ${device.last_user_name ?? device.enrolled_by_name}`
+              : ''}
           </p>
+          <p className="text-xs text-muted">
+            {device.last_sync_at
+              ? `Synchronisée ${agoLabel(device.last_sync_at, now)} (${formatDate(device.last_sync_at)})`
+              : 'Jamais synchronisée'}
+            {device.last_sync_status
+              ? ` · ${SYNC_RECEIPT_STATUS_LABELS[device.last_sync_status].toLowerCase()}${
+                  device.last_error_code ? ` (${device.last_error_code})` : ''
+                }`
+              : ''}
+            {device.last_seen_at ? ` · dernier contact ${agoLabel(device.last_seen_at, now)}` : ''}
+            {` · ${device.installed_sites} site${device.installed_sites > 1 ? 's' : ''} installé${device.installed_sites > 1 ? 's' : ''}`}
+          </p>
+          {waiting ? <p className="text-xs font-semibold text-important">{waiting}</p> : null}
           {keysetBehind(device, keysetSequence) ? (
             <p className="text-xs font-semibold text-important">
               Jeu de clés n° {keysetSequence} pas encore reçu : il le sera au prochain contact
@@ -253,202 +274,175 @@ function DeviceRow({
               Application à mettre à jour (version {minAppVersion} exigée) : aucune nouvelle version n’est installée
             </p>
           ) : null}
-        </TableCell>
-        <TableCell>
-          <p className="text-sm">{perimeterLabel(device)}</p>
-        </TableCell>
-        <TableCell>
-          <p className="text-sm">{device.last_user_name ?? device.enrolled_by_name ?? '—'}</p>
-          {device.last_seen_at ? (
-            <p className="text-xs text-muted">dernier contact {formatDate(device.last_seen_at)}</p>
-          ) : null}
-        </TableCell>
-        <TableCell>
-          <p className="text-sm">{formatDate(device.last_sync_at)}</p>
-          {device.last_sync_status ? (
-            <p className="text-xs text-muted">
-              {SYNC_RECEIPT_STATUS_LABELS[device.last_sync_status]}
-              {device.last_error_code ? ` (${device.last_error_code})` : ''}
-            </p>
-          ) : null}
-        </TableCell>
-        <TableCell>
-          <p className="text-sm">{device.installed_sites} site(s)</p>
-          {waiting ? <p className="text-xs text-important">{waiting}</p> : null}
-        </TableCell>
-        <TableCell>
-          <Badge tone={STATE_TONES[device.state]}>{DEVICE_STATE_LABELS[device.state]}</Badge>
           {device.state === 'pending' && device.enrollment_expires_at ? (
-            <p className="mt-1 text-xs text-muted">code valable jusqu’au {formatDate(device.enrollment_expires_at)}</p>
+            <p className="text-xs text-muted">Code valable jusqu’au {formatDate(device.enrollment_expires_at)}</p>
           ) : null}
           {revoked ? (
-            <p className="mt-1 text-xs text-muted">
-              le {formatDate(device.revoked_at)} : {device.revocation_reason}
+            <p className="text-xs text-muted">
+              Révoquée le {formatDate(device.revoked_at)} : {device.revocation_reason}
             </p>
           ) : null}
-        </TableCell>
-        <TableCell className="text-right whitespace-nowrap">
-          {revoked ? null : (
-            <div className="flex justify-end gap-1">
-              {device.status === 'pending' ? (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={renew.isPending}
-                  onClick={() => renew.mutate(undefined, { onSuccess: onCode })}
-                >
-                  Nouveau code
-                </Button>
-              ) : null}
-              <Button size="sm" variant="ghost" onClick={() => setAssigning((open) => !open)} aria-expanded={assigning}>
-                Affectation
+          {renew.error ? <ApiErrorAlert error={renew.error} /> : null}
+        </div>
+        {revoked ? null : (
+          <div className="flex flex-wrap gap-1 md:justify-end">
+            {device.status === 'pending' ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={renew.isPending}
+                onClick={() => renew.mutate(undefined, { onSuccess: onCode })}
+              >
+                Nouveau code
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => setRevoking((open) => !open)} aria-expanded={revoking}>
-                Révoquer
-              </Button>
-            </div>
-          )}
-        </TableCell>
-      </TableRow>
-      {renew.error ? (
-        <TableRow>
-          <TableCell colSpan={7}>
-            <ApiErrorAlert error={renew.error} />
-          </TableCell>
-        </TableRow>
-      ) : null}
+            ) : null}
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setAssigning((open) => !open)}
+              aria-expanded={assigning}
+            >
+              Affectation
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setRevoking((open) => !open)} aria-expanded={revoking}>
+              Révoquer
+            </Button>
+          </div>
+        )}
+      </div>
       {assigning ? (
-        <TableRow>
-          <TableCell colSpan={7} className="bg-subtle/40">
-            <PerimeterForm device={device} onDone={() => setAssigning(false)} />
-          </TableCell>
-        </TableRow>
+        <div className="mt-3 rounded-md bg-subtle/60 p-4">
+          <PerimeterForm device={device} onDone={() => setAssigning(false)} />
+        </div>
       ) : null}
       {revoking ? (
-        <TableRow>
-          <TableCell colSpan={7} className="bg-subtle/40">
-            <RevokeForm device={device} onDone={() => setRevoking(false)} />
-          </TableCell>
-        </TableRow>
+        <div className="mt-3 rounded-md bg-subtle/60 p-4">
+          <RevokeForm device={device} onDone={() => setRevoking(false)} />
+        </div>
       ) : null}
-    </>
+    </li>
   );
 }
 
 function Summary({ list }: { list: DeviceList }) {
   const count = (state: DeviceState) => list.items.filter((device) => device.state === state).length;
-  const cells: { label: string; value: number }[] = [
-    { label: 'À jour', value: count('up_to_date') },
-    { label: 'En retard (plus de 7 jours)', value: count('late') },
-    { label: 'En erreur ou jamais synchronisés', value: count('error') + count('never_synced') },
-    { label: 'Révoqués', value: count('revoked') },
+  const cells: { label: string; value: number; tone: 'success' | 'important' | 'critical' | 'neutral' }[] = [
+    { label: 'À jour', value: count('up_to_date'), tone: 'success' },
+    { label: 'En retard (plus de 7 jours)', value: count('late'), tone: 'important' },
+    { label: 'En erreur ou jamais synchronisés', value: count('error') + count('never_synced'), tone: 'critical' },
+    { label: 'Révoqués', value: count('revoked'), tone: 'neutral' },
   ];
   return (
     <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
       {cells.map((cell) => (
-        <div key={cell.label} className="rounded-lg border border-border bg-surface p-3">
-          <dt className="text-xs text-muted">{cell.label}</dt>
-          <dd className="text-2xl font-bold">{cell.value}</dd>
-        </div>
+        <Card key={cell.label}>
+          <CardContent className="px-4 py-3">
+            <dt className="text-xs text-muted">{cell.label}</dt>
+            <dd
+              className={cn(
+                'text-2xl font-bold',
+                cell.value > 0 && cell.tone === 'important' && 'text-important',
+                cell.value > 0 && cell.tone === 'critical' && 'text-critical',
+              )}
+            >
+              {cell.value}
+            </dd>
+          </CardContent>
+        </Card>
       ))}
     </dl>
   );
 }
+
+const enrolledLabel = (count: number) => (count > 1 ? `${count} terminaux enrôlés` : `${count} terminal enrôlé`);
 
 /** Terminals of the SIS: enrollment codes, synchronization and revocation (ADMIN-02, OFF-04). */
 export function DevicesAdmin() {
   const devices = useDevices();
   const [creating, setCreating] = useState(false);
   const [code, setCode] = useState<DeviceEnrollmentCode | null>(null);
+  // One instant per mount: the relative dates stay coherent.
+  const [now] = useState(() => Date.now());
 
   return (
     <div className="space-y-4">
       {code ? <EnrollmentCode result={code} onClose={() => setCode(null)} /> : null}
-      {!creating && !code && devices.data ? (
-        <div className="flex justify-end">
-          <Button onClick={() => setCreating(true)}>Ajouter un terminal</Button>
+      {devices.data ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Badge tone="info" className="px-3 py-1 text-sm">
+            {enrolledLabel(devices.data.items.filter((device) => device.status !== 'revoked').length)}
+          </Badge>
+          {!creating && !code ? (
+            <Button size="sm" onClick={() => setCreating(true)}>
+              <Plus aria-hidden="true" className="size-4" />
+              Ajouter un terminal
+            </Button>
+          ) : null}
         </div>
       ) : null}
       {creating ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Ajouter un terminal</CardTitle>
-            <CardDescription>
-              Un code d’enrôlement à usage unique, valable 24 heures, est remis à la personne qui installe la tablette.
-              La tablette génère sa propre clé : aucun secret ne transite par ce code.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <CreateDevice
-              onCreated={(result) => {
-                setCode(result);
-                setCreating(false);
-              }}
-            />
-            <Button size="sm" variant="secondary" onClick={() => setCreating(false)}>
-              Annuler
-            </Button>
-          </CardContent>
-        </Card>
+        <SectionCard
+          icon={Smartphone}
+          title="Ajouter un terminal"
+          description="Un code d’enrôlement à usage unique, valable 24 heures, est remis à la personne qui installe la tablette. La tablette génère sa propre clé : aucun secret ne transite par ce code."
+          contentClassName="space-y-3 px-5 py-4"
+        >
+          <CreateDevice
+            onCreated={(result) => {
+              setCode(result);
+              setCreating(false);
+            }}
+          />
+          <Button size="sm" variant="secondary" onClick={() => setCreating(false)}>
+            Annuler
+          </Button>
+        </SectionCard>
       ) : null}
       {devices.isPending ? <LoadingCard lines={5} /> : null}
       {devices.error ? <ApiErrorAlert error={devices.error} /> : null}
       {devices.data ? (
         <>
           <Summary list={devices.data} />
+          <p className="text-xs text-muted">
+            Génération du catalogue du SIS : {devices.data.current_generation}
+            {devices.data.min_app_version ? ` · application ${devices.data.min_app_version} au minimum` : ''}
+            {devices.data.keyset_sequence !== null ? ` · jeu de clés servi n° ${devices.data.keyset_sequence}` : ''}. «
+            À jour » : un accusé d’installation de moins de 7 jours.
+          </p>
           {devices.data.undistributed_publications > 0 ? (
             <Alert tone="info">
               {devices.data.undistributed_publications} version(s) publiée(s) ne sont pas distribuées aux terminaux :
               publiées avant la signature des paquets (republiez le dossier), ou site sensible.
             </Alert>
           ) : null}
-          <Card>
-            <CardHeader>
-              <CardTitle>Terminaux ({devices.data.items.length})</CardTitle>
-              <CardDescription>
-                Génération du catalogue du SIS : {devices.data.current_generation}. Un terminal reçoit les nouvelles
-                versions à sa prochaine synchronisation ; « à jour » signifie un accusé d’installation de moins de 7
-                jours.
-                {devices.data.min_app_version
-                  ? ` Version minimale de l’application exigée : ${devices.data.min_app_version}.`
-                  : ''}
-                {devices.data.keyset_sequence !== null
-                  ? ` Jeu de clés de signature servi : n° ${devices.data.keyset_sequence}.`
-                  : ''}
-              </CardDescription>
-            </CardHeader>
-            {devices.data.items.length === 0 ? (
-              <CardContent>
-                <p className="text-sm text-muted">Aucun terminal : ajoutez-en un pour distribuer les ETARE publiés.</p>
-              </CardContent>
-            ) : (
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableHeaderCell>Terminal</TableHeaderCell>
-                    <TableHeaderCell>Affectation</TableHeaderCell>
-                    <TableHeaderCell>Utilisateur</TableHeaderCell>
-                    <TableHeaderCell>Dernière synchronisation</TableHeaderCell>
-                    <TableHeaderCell>Paquets</TableHeaderCell>
-                    <TableHeaderCell>État</TableHeaderCell>
-                    <TableHeaderCell className="text-right">Actions</TableHeaderCell>
-                  </TableRow>
-                </TableHead>
-                <tbody>
-                  {devices.data.items.map((device) => (
-                    <DeviceRow
-                      key={`${device.id}-${device.row_version}`}
-                      device={device}
-                      currentGeneration={devices.data.current_generation}
-                      minAppVersion={devices.data.min_app_version}
-                      keysetSequence={devices.data.keyset_sequence}
-                      onCode={setCode}
-                    />
-                  ))}
-                </tbody>
-              </Table>
-            )}
-          </Card>
+          {devices.data.items.length === 0 ? (
+            <Card className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+              <span
+                aria-hidden="true"
+                className="flex size-12 items-center justify-center rounded-full bg-subtle text-brand-navy"
+              >
+                <Smartphone className="size-6" />
+              </span>
+              <p className="font-semibold text-foreground">Aucun terminal enrôlé.</p>
+              <p className="text-sm text-muted">Ajoutez-en un pour distribuer les ETARE publiés aux intervenants.</p>
+            </Card>
+          ) : (
+            <Card>
+              <ul className="divide-y divide-border" aria-label="Terminaux du SIS">
+                {devices.data.items.map((device) => (
+                  <DeviceRow
+                    key={`${device.id}-${device.row_version}`}
+                    device={device}
+                    currentGeneration={devices.data.current_generation}
+                    minAppVersion={devices.data.min_app_version}
+                    keysetSequence={devices.data.keyset_sequence}
+                    now={now}
+                    onCode={setCode}
+                  />
+                ))}
+              </ul>
+            </Card>
+          )}
           <TerminalPolicyCard />
         </>
       ) : null}
