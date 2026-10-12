@@ -17,6 +17,7 @@ import type {
 } from '@etare/contracts';
 import { OBJECT_CATEGORIES, type ObjectCategory } from '@etare/domain';
 import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle, Select } from '@etare/ui';
+import { LocateFixed, Shapes, TriangleAlert, Waypoints } from 'lucide-react';
 import type { GeoJSONSource, MapLayerMouseEvent, MapMouseEvent, Marker } from 'maplibre-gl';
 import type { TerraDraw } from 'terra-draw';
 import { useEffect, useRef, useState } from 'react';
@@ -687,7 +688,10 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
 
         <Card>
           <CardHeader>
-            <CardTitle>Risques sur la carte</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <TriangleAlert aria-hidden="true" className="size-4 text-brand-navy" />
+              Risques sur la carte
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <ul className="space-y-2">
@@ -808,7 +812,10 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
 
         <Card>
           <CardHeader>
-            <CardTitle>Points opérationnels</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Waypoints aria-hidden="true" className="size-4 text-brand-navy" />
+              Points opérationnels
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             {presentCategories.length > 0 ? (
@@ -944,7 +951,10 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
 
         <Card>
           <CardHeader>
-            <CardTitle>Point de référence</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <LocateFixed aria-hidden="true" className="size-4 text-brand-navy" />
+              Point de référence
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <p>
@@ -993,7 +1003,10 @@ function LocationEditor({ site, canWrite }: { site: SiteDetail; canWrite: boolea
 
         <Card>
           <CardHeader>
-            <CardTitle>Emprises</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Shapes aria-hidden="true" className="size-4 text-brand-navy" />
+              Emprises
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             {editing.kind === 'surface' ? (

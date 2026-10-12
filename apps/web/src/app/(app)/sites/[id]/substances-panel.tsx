@@ -8,14 +8,15 @@ import {
   PHYSICAL_STATE_LABELS,
   type HazardClass,
 } from '@etare/domain';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Field, Input, Select, Textarea } from '@etare/ui';
+import { Badge, Button, Card, Field, Input, Select, Textarea, cn } from '@etare/ui';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, FlaskConical, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { applyServerFieldErrors, blankToNull, isOptionalNumber, numberOrNull } from '@/components/form-helpers';
+import { SectionCard } from '@/components/section-card';
 import { api } from '@/lib/api-client';
 import { openInNewTab } from '@/lib/open-link';
 import {
@@ -324,7 +325,7 @@ function locationOf(substance: Substance, buildings: readonly Building[], zones:
   );
 }
 
-function SubstanceCard({
+function SubstanceRow({
   siteId,
   substance,
   buildings,
@@ -358,48 +359,55 @@ function SubstanceCard({
   ].filter(Boolean);
 
   return (
-    <Card className={archived ? 'opacity-70' : undefined}>
-      <CardContent className="space-y-3">
-        {editing ? (
-          <SubstanceForm
-            initial={substance}
-            buildings={buildings}
-            zones={zones}
-            documents={documents}
-            submitLabel="Enregistrer"
-            pending={update.isPending}
-            error={update.error}
-            onSubmit={async (payload) => {
-              await update.mutateAsync(payload);
-              setEditing(false);
-            }}
-            onCancel={() => {
-              update.reset();
-              setEditing(false);
-            }}
-          />
-        ) : (
-          <>
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <p className="font-semibold">{substance.name}</p>
-                {details.length > 0 ? <p className="text-sm text-muted">{details.join(' · ')}</p> : null}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {substance.hazard_classes.map((code) => (
-                  <Badge key={code} tone="important" title={code}>
-                    {HAZARD_CLASS_LABELS[code]}
-                  </Badge>
-                ))}
-                {archived ? <Badge>Archivée</Badge> : null}
-              </div>
-            </div>
+    <li className={cn('px-5 py-4', archived && 'opacity-70')}>
+      {editing ? (
+        <SubstanceForm
+          initial={substance}
+          buildings={buildings}
+          zones={zones}
+          documents={documents}
+          submitLabel="Enregistrer"
+          pending={update.isPending}
+          error={update.error}
+          onSubmit={async (payload) => {
+            await update.mutateAsync(payload);
+            setEditing(false);
+          }}
+          onCancel={() => {
+            update.reset();
+            setEditing(false);
+          }}
+        />
+      ) : (
+        <div className="grid gap-3 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-start">
+          <span
+            aria-hidden="true"
+            className={cn(
+              'flex size-10 shrink-0 items-center justify-center rounded-md',
+              substance.fds_document_id ? 'bg-important-soft text-important' : 'bg-critical-soft text-critical',
+            )}
+          >
+            <FlaskConical className="size-5" />
+          </span>
+          <div className="min-w-0 space-y-1.5">
+            <p className="flex flex-wrap items-center gap-2">
+              <span className="font-semibold text-foreground">{substance.name}</span>
+              {details.length > 0 ? <span className="text-sm text-muted">{details.join(' · ')}</span> : null}
+              {archived ? <Badge>Archivée</Badge> : null}
+            </p>
+            <p className="flex flex-wrap gap-1">
+              {substance.hazard_classes.map((code) => (
+                <Badge key={code} tone="important" title={code}>
+                  {HAZARD_CLASS_LABELS[code]}
+                </Badge>
+              ))}
+            </p>
             <p className="text-sm">
               <span className="text-muted">Localisation : </span>
               {locationOf(substance, buildings, zones)}
               {substance.location_note ? <span className="text-muted"> · {substance.location_note}</span> : null}
             </p>
-            <div className="flex flex-wrap items-center gap-2 text-sm">
+            <p className="flex flex-wrap items-center gap-2 text-sm">
               {substance.fds_document_id ? (
                 <>
                   <span>
@@ -416,28 +424,28 @@ function SubstanceCard({
               ) : (
                 <Badge tone="critical">FDS absente</Badge>
               )}
-            </div>
+            </p>
             {substance.notes ? <p className="text-sm whitespace-pre-line text-muted">{substance.notes}</p> : null}
             {update.error ? <ApiErrorAlert error={update.error} /> : null}
-            {canWrite ? (
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
-                  Modifier
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={update.isPending}
-                  onClick={() => update.mutate({ status: archived ? 'active' : 'archived' })}
-                >
-                  {archived ? 'Réactiver' : 'Archiver'}
-                </Button>
-              </div>
-            ) : null}
-          </>
-        )}
-      </CardContent>
-    </Card>
+          </div>
+          {canWrite ? (
+            <div className="flex flex-wrap gap-1 md:justify-end">
+              <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
+                Modifier
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={update.isPending}
+                onClick={() => update.mutate({ status: archived ? 'active' : 'archived' })}
+              >
+                {archived ? 'Réactiver' : 'Archiver'}
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </li>
   );
 }
 
@@ -465,8 +473,9 @@ export function SubstancesPanel({ siteId }: { siteId: string }) {
   const context = { buildings: buildings.data ?? [], zones: zones.data ?? [], documents: documents.data ?? [] };
   const active = substances.data.filter((substance) => substance.status === 'active');
   const archived = substances.data.filter((substance) => substance.status === 'archived');
-  const card = (substance: Substance) => (
-    <SubstanceCard
+  const withoutSheet = active.filter((substance) => !substance.fds_document_id).length;
+  const row = (substance: Substance) => (
+    <SubstanceRow
       key={`${substance.id}-${substance.row_version}`}
       siteId={siteId}
       substance={substance}
@@ -479,45 +488,76 @@ export function SubstancesPanel({ siteId }: { siteId: string }) {
 
   return (
     <div className="space-y-4">
-      {canWrite ? (
-        adding ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Nouvelle matière dangereuse</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <SubstanceForm
-                {...context}
-                submitLabel="Ajouter la matière"
-                pending={create.isPending}
-                error={create.error}
-                onSubmit={async (payload) => {
-                  await create.mutateAsync(payload);
-                  setAdding(false);
-                }}
-                onCancel={() => {
-                  create.reset();
-                  setAdding(false);
-                }}
-              />
-            </CardContent>
-          </Card>
-        ) : (
-          <Button onClick={() => setAdding(true)}>Déclarer une matière dangereuse</Button>
-        )
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          <Badge tone="important" className="px-3 py-1 text-sm">
+            {active.length} matière{active.length > 1 ? 's' : ''} déclarée{active.length > 1 ? 's' : ''}
+          </Badge>
+          {withoutSheet > 0 ? (
+            <Badge tone="critical" className="px-3 py-1 text-sm">
+              {withoutSheet} sans FDS
+            </Badge>
+          ) : null}
+        </div>
+        {canWrite && !adding ? (
+          <Button size="sm" onClick={() => setAdding(true)}>
+            <Plus aria-hidden="true" className="size-4" />
+            Déclarer une matière dangereuse
+          </Button>
+        ) : null}
+      </div>
+      {canWrite && adding ? (
+        <SectionCard
+          icon={FlaskConical}
+          title="Nouvelle matière dangereuse"
+          description="Produit, classes de danger, quantité, localisation et fiche de données de sécurité : repris tels quels dans le dossier ETARE."
+        >
+          <SubstanceForm
+            {...context}
+            submitLabel="Ajouter la matière"
+            pending={create.isPending}
+            error={create.error}
+            onSubmit={async (payload) => {
+              await create.mutateAsync(payload);
+              setAdding(false);
+            }}
+            onCancel={() => {
+              create.reset();
+              setAdding(false);
+            }}
+          />
+        </SectionCard>
       ) : null}
       {download.error ? <ApiErrorAlert error={download.error} /> : null}
       {buildings.error ? <ApiErrorAlert error={buildings.error} /> : null}
       {zones.error ? <ApiErrorAlert error={zones.error} /> : null}
       {documents.error ? <ApiErrorAlert error={documents.error} /> : null}
       {active.length === 0 ? (
-        <p className="text-sm text-muted">Aucune matière dangereuse déclarée sur ce site.</p>
-      ) : null}
-      <div className="grid gap-4 lg:grid-cols-2">{active.map(card)}</div>
+        <Card className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+          <span
+            aria-hidden="true"
+            className="flex size-12 items-center justify-center rounded-full bg-subtle text-brand-navy"
+          >
+            <FlaskConical className="size-6" />
+          </span>
+          <p className="font-semibold text-foreground">Aucune matière dangereuse déclarée sur ce site.</p>
+          <p className="text-sm text-muted">
+            Gaz, liquides inflammables, produits toxiques : ce que les intervenants doivent savoir avant d’entrer.
+          </p>
+        </Card>
+      ) : (
+        <Card>
+          <ul className="divide-y divide-border" aria-label="Matières dangereuses">
+            {active.map(row)}
+          </ul>
+        </Card>
+      )}
       {archived.length > 0 ? (
         <details className="text-sm">
           <summary className="cursor-pointer text-info">Matières archivées ({archived.length})</summary>
-          <div className="mt-3 grid gap-4 lg:grid-cols-2">{archived.map(card)}</div>
+          <Card className="mt-3">
+            <ul className="divide-y divide-border">{archived.map(row)}</ul>
+          </Card>
         </details>
       ) : null}
     </div>
