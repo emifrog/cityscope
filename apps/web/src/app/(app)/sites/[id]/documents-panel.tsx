@@ -1,10 +1,10 @@
 'use client';
 
 import type { Document, DocumentUpdate, DocumentVersion } from '@etare/contracts';
-import { DOCUMENT_CATEGORIES, OFFLINE_POLICIES, type ScanStatus } from '@etare/domain';
-import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle, Field, Input, Select } from '@etare/ui';
+import { DOCUMENT_CATEGORIES, OFFLINE_POLICIES, type DocumentCategory, type ScanStatus } from '@etare/domain';
+import { Alert, Badge, Button, Card, Field, Input, Select, cn } from '@etare/ui';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, FilePlus2, FileText, FlaskConical, Image, Map, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useForm, type UseFormRegisterReturn } from 'react-hook-form';
 import { z } from 'zod';
@@ -16,6 +16,7 @@ import {
   REJECTION_REASON_LABELS,
   SCAN_STATUS_LABELS,
 } from '@/components/labels';
+import { SectionCard } from '@/components/section-card';
 import { api } from '@/lib/api-client';
 import { openInNewTab } from '@/lib/open-link';
 import { UPLOAD_ACCEPT, type UploadStep } from '@/lib/file-upload';
@@ -27,6 +28,7 @@ import {
   usePermissions,
   type DocumentUploadVariables,
 } from '@/lib/queries';
+import { agoLabel } from '@/lib/relative-time';
 
 const sizeFormat = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
 const dateFormat = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeZone: 'Europe/Paris' });
@@ -50,6 +52,16 @@ const SCAN_TONES: Readonly<Record<ScanStatus, 'info' | 'success' | 'critical'>> 
   rejected: 'critical',
 };
 
+/** A pictogram per category of document. */
+const CATEGORY_ICONS: Readonly<Record<DocumentCategory, LucideIcon>> = {
+  fds: FlaskConical,
+  notice: FileText,
+  instruction: FileText,
+  plan: Map,
+  photo: Image,
+  other: FileText,
+};
+
 const datesShape = { valid_from: z.string(), expires_at: z.string() };
 const datesInOrder = (values: { valid_from: string; expires_at: string }) =>
   !values.valid_from || !values.expires_at || values.expires_at >= values.valid_from;
@@ -68,8 +80,6 @@ const versionSchema = z.object(datesShape).refine(datesInOrder, DATES_ERROR);
 type MetaValues = z.infer<typeof metaSchema>;
 type NewDocumentValues = z.infer<typeof newDocumentSchema>;
 type VersionValues = z.infer<typeof versionSchema>;
-
-/** Opens a short-lived URL without giving the new tab access to this page. */
 
 /** File choice and upload progress shared by the "new document" and "new version" forms. */
 function useUploadForm(siteId: string) {
@@ -395,10 +405,12 @@ const formatDay = (day: string) => dateFormat.format(new Date(`${day}T12:00:00Z`
 
 function VersionLine({
   version,
+  now,
   downloading,
   onOpen,
 }: {
   version: DocumentVersion;
+  now: number;
   downloading: boolean;
   onOpen: (assetId: string) => void;
 }) {
@@ -411,13 +423,14 @@ function VersionLine({
     <div className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">
-            Version {version.version_no} · {asset.filename}
+          <p className="truncate text-sm">
+            <span className="font-medium text-foreground">Version {version.version_no}</span>
+            <span className="text-muted"> · {asset.filename}</span>
           </p>
           <p className="text-xs text-muted">
             {[
               formatBytes(asset.size_bytes),
-              `déposée le ${dateFormat.format(new Date(version.created_at))}`,
+              `déposée ${agoLabel(version.created_at, now)} (${dateFormat.format(new Date(version.created_at))})`,
               ...validity,
             ].join(' · ')}
           </p>
@@ -445,16 +458,18 @@ function VersionLine({
   );
 }
 
-function DocumentCard({
+function DocumentRow({
   siteId,
   document,
   canWrite,
+  now,
   downloading,
   onOpen,
 }: {
   siteId: string;
   document: Document;
   canWrite: boolean;
+  now: number;
   downloading: boolean;
   onOpen: (assetId: string) => void;
 }) {
@@ -466,42 +481,54 @@ function DocumentCard({
   );
   const archived = document.status === 'archived';
   const [current, ...previous] = document.versions;
+  const Icon = CATEGORY_ICONS[document.category];
 
   return (
-    <Card className={archived ? 'opacity-70' : undefined}>
-      <CardContent className="space-y-3">
-        {mode === 'edit' ? (
-          <DocumentMetaForm siteId={siteId} document={document} onClose={() => setMode('view')} />
-        ) : (
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <p className="font-semibold">{document.title}</p>
-            <div className="flex flex-wrap gap-2">
+    <li className={cn('px-5 py-4', archived && 'opacity-70')}>
+      <div className="grid gap-3 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-start">
+        <span
+          aria-hidden="true"
+          className={cn(
+            'flex size-10 shrink-0 items-center justify-center rounded-md',
+            document.offline_policy === 'never' ? 'bg-subtle text-brand-navy' : 'bg-info-soft text-info',
+          )}
+        >
+          <Icon className="size-5" />
+        </span>
+        <div className="min-w-0 space-y-2">
+          {mode === 'edit' ? (
+            <DocumentMetaForm siteId={siteId} document={document} onClose={() => setMode('view')} />
+          ) : (
+            <p className="flex flex-wrap items-center gap-2">
+              <span className="font-semibold text-foreground">{document.title}</span>
               <Badge>{DOCUMENT_CATEGORY_LABELS[document.category]}</Badge>
               <Badge tone={document.offline_policy === 'never' ? 'neutral' : 'info'}>
                 {OFFLINE_POLICY_LABELS[document.offline_policy]}
               </Badge>
               {document.portal_visible ? <Badge tone="info">Visible exploitant</Badge> : null}
               {archived ? <Badge>Archivé</Badge> : null}
+            </p>
+          )}
+          {current ? <VersionLine version={current} now={now} downloading={downloading} onOpen={onOpen} /> : null}
+          {previous.length > 0 ? (
+            <details className="text-sm">
+              <summary className="cursor-pointer text-info">Versions précédentes ({previous.length})</summary>
+              <div className="mt-3 space-y-3 border-l-2 border-border pl-3">
+                {previous.map((version) => (
+                  <VersionLine key={version.id} version={version} now={now} downloading={downloading} onOpen={onOpen} />
+                ))}
+              </div>
+            </details>
+          ) : null}
+          {mode === 'version' ? (
+            <div className="rounded-md bg-subtle/60 p-4">
+              <NewVersionForm siteId={siteId} document={document} onClose={() => setMode('view')} />
             </div>
-          </div>
-        )}
-        {current ? <VersionLine version={current} downloading={downloading} onOpen={onOpen} /> : null}
-        {previous.length > 0 ? (
-          <details className="text-sm">
-            <summary className="cursor-pointer text-info">Versions précédentes ({previous.length})</summary>
-            <div className="mt-3 space-y-3 border-l-2 border-border pl-3">
-              {previous.map((version) => (
-                <VersionLine key={version.id} version={version} downloading={downloading} onOpen={onOpen} />
-              ))}
-            </div>
-          </details>
-        ) : null}
-        {mode === 'version' ? (
-          <NewVersionForm siteId={siteId} document={document} onClose={() => setMode('view')} />
-        ) : null}
-        {archive.error ? <ApiErrorAlert error={archive.error} /> : null}
+          ) : null}
+          {archive.error ? <ApiErrorAlert error={archive.error} /> : null}
+        </div>
         {canWrite && mode === 'view' ? (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1 md:max-w-52 md:justify-end">
             {!archived ? (
               <Button size="sm" variant="secondary" onClick={() => setMode('version')}>
                 Nouvelle version
@@ -520,8 +547,8 @@ function DocumentCard({
             </Button>
           </div>
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </li>
   );
 }
 
@@ -529,6 +556,8 @@ export function DocumentsPanel({ siteId }: { siteId: string }) {
   const canWrite = usePermissions().has('site:write');
   const documents = useDocuments(siteId);
   const [adding, setAdding] = useState(false);
+  // One instant per mount: the relative dates stay coherent.
+  const [now] = useState(() => Date.now());
   const download = useApiMutation(
     (options, assetId: string) => api.getAssetDownload(options, assetId),
     () => [],
@@ -537,37 +566,72 @@ export function DocumentsPanel({ siteId }: { siteId: string }) {
 
   if (documents.isPending) return <LoadingCard lines={3} />;
   if (documents.error) return <ApiErrorAlert error={documents.error} />;
+  const active = documents.data.filter((document) => document.status === 'active');
+  const embarked = active.filter((document) => document.offline_policy !== 'never').length;
+  const shared = active.filter((document) => document.portal_visible).length;
 
   return (
     <div className="space-y-4">
-      {canWrite ? (
-        adding ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Nouveau document</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <NewDocumentForm siteId={siteId} onClose={() => setAdding(false)} />
-            </CardContent>
-          </Card>
-        ) : (
-          <Button onClick={() => setAdding(true)}>Déposer un document</Button>
-        )
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          <Badge tone="info" className="px-3 py-1 text-sm">
+            {active.length} document{active.length > 1 ? 's' : ''}
+          </Badge>
+          {embarked > 0 ? <Badge className="px-3 py-1 text-sm">{embarked} sur tablette</Badge> : null}
+          {shared > 0 ? (
+            <Badge className="px-3 py-1 text-sm">
+              {shared} visible{shared > 1 ? 's' : ''} exploitant
+            </Badge>
+          ) : null}
+        </div>
+        {canWrite && !adding ? (
+          <Button size="sm" onClick={() => setAdding(true)}>
+            <FilePlus2 aria-hidden="true" className="size-4" />
+            Déposer un document
+          </Button>
+        ) : null}
+      </div>
+      {canWrite && adding ? (
+        <SectionCard
+          icon={FilePlus2}
+          title="Nouveau document"
+          description="Fiche de données de sécurité, notice, consigne, plan ou photo : contrôlé avant d’être consultable."
+        >
+          <NewDocumentForm siteId={siteId} onClose={() => setAdding(false)} />
+        </SectionCard>
       ) : null}
       {download.error ? <ApiErrorAlert error={download.error} /> : null}
-      {documents.data.length === 0 ? <p className="text-sm text-muted">Aucun document pour ce site.</p> : null}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {documents.data.map((document) => (
-          <DocumentCard
-            key={`${document.id}-${document.row_version}`}
-            siteId={siteId}
-            document={document}
-            canWrite={canWrite}
-            downloading={download.isPending}
-            onOpen={open}
-          />
-        ))}
-      </div>
+      {documents.data.length === 0 ? (
+        <Card className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+          <span
+            aria-hidden="true"
+            className="flex size-12 items-center justify-center rounded-full bg-subtle text-brand-navy"
+          >
+            <FileText className="size-6" />
+          </span>
+          <p className="font-semibold text-foreground">Aucun document pour ce site.</p>
+          <p className="text-sm text-muted">
+            Les fiches de données de sécurité et les consignes rejoignent le dossier ETARE, et les tablettes si vous le
+            décidez.
+          </p>
+        </Card>
+      ) : (
+        <Card>
+          <ul className="divide-y divide-border" aria-label="Documents du site">
+            {documents.data.map((document) => (
+              <DocumentRow
+                key={`${document.id}-${document.row_version}`}
+                siteId={siteId}
+                document={document}
+                canWrite={canWrite}
+                now={now}
+                downloading={download.isPending}
+                onOpen={open}
+              />
+            ))}
+          </ul>
+        </Card>
+      )}
     </div>
   );
 }
