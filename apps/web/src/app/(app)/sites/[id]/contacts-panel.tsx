@@ -2,17 +2,20 @@
 
 import type { Contact, ContactCreateInput } from '@etare/contracts';
 import { CONTACT_VISIBILITIES } from '@etare/domain';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Field, Input, Select } from '@etare/ui';
+import { Badge, Button, Card, Field, Input, Select, cn } from '@etare/ui';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Phone } from 'lucide-react';
+import { CalendarCheck, CalendarClock, Phone, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { blankToNull } from '@/components/form-helpers';
 import { CONTACT_VISIBILITY_LABELS } from '@/components/labels';
+import { SectionCard } from '@/components/section-card';
 import { api } from '@/lib/api-client';
 import { queryKeys, useApiMutation, useContacts, usePermissions } from '@/lib/queries';
+import { agoLabel } from '@/lib/relative-time';
+import { verificationState } from '@/lib/site-verification';
 
 const PHONE = /^(\+?[0-9][0-9 .()-]{5,23})?$/;
 const dateFormat = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeZone: 'Europe/Paris' });
@@ -131,7 +134,34 @@ function ContactForm({
   );
 }
 
-function ContactCard({ siteId, contact, canWrite }: { siteId: string; contact: Contact; canWrite: boolean }) {
+/** When the contact was last confirmed by the SIS; amber past a year or never. */
+function VerificationLine({ contact, now }: { contact: Contact; now: number }) {
+  const state = verificationState(contact.verified_at, now);
+  const ok = state === 'verified';
+  const Icon = ok ? CalendarCheck : CalendarClock;
+  return (
+    <span className={cn('inline-flex items-center gap-1', ok ? 'text-success' : 'text-important')}>
+      <Icon aria-hidden="true" className="size-3.5" />
+      {state === 'never'
+        ? 'Jamais vérifié'
+        : `${ok ? 'Vérifié' : 'À revérifier, vu'} ${agoLabel(contact.verified_at ?? '', now)} (${dateFormat.format(
+            new Date(contact.verified_at ?? 0),
+          )})`}
+    </span>
+  );
+}
+
+function ContactRow({
+  siteId,
+  contact,
+  canWrite,
+  now,
+}: {
+  siteId: string;
+  contact: Contact;
+  canWrite: boolean;
+  now: number;
+}) {
   const [editing, setEditing] = useState(false);
   const update = useApiMutation(
     (options, patch: Parameters<typeof api.updateContact>[3]) =>
@@ -141,80 +171,83 @@ function ContactCard({ siteId, contact, canWrite }: { siteId: string; contact: C
   const archived = contact.status === 'archived';
 
   return (
-    <Card className={archived ? 'opacity-70' : undefined}>
-      <CardContent className="space-y-3">
-        {editing ? (
-          <ContactForm
-            initial={contact}
-            submitLabel="Enregistrer"
-            pending={update.isPending}
-            error={update.error}
-            onSubmit={async (payload) => {
-              await update.mutateAsync(payload);
-              setEditing(false);
-            }}
-            onCancel={() => {
-              update.reset();
-              setEditing(false);
-            }}
-          />
-        ) : (
-          <>
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <p className="font-semibold">{contact.name}</p>
-                {contact.role ? <p className="text-sm text-muted">{contact.role}</p> : null}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Badge tone={contact.visibility === 'ops' ? 'info' : 'neutral'}>
-                  {CONTACT_VISIBILITY_LABELS[contact.visibility]}
-                </Badge>
-                {archived ? <Badge>Archivé</Badge> : null}
-              </div>
-            </div>
-            <p className="flex items-center gap-2 text-sm">
-              <Phone aria-hidden="true" className="size-4 text-muted" />
+    <li className={cn('px-5 py-4', archived && 'opacity-70')}>
+      {editing ? (
+        <ContactForm
+          initial={contact}
+          submitLabel="Enregistrer"
+          pending={update.isPending}
+          error={update.error}
+          onSubmit={async (payload) => {
+            await update.mutateAsync(payload);
+            setEditing(false);
+          }}
+          onCancel={() => {
+            update.reset();
+            setEditing(false);
+          }}
+        />
+      ) : (
+        <div className="grid gap-3 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-start">
+          <span
+            aria-hidden="true"
+            className={cn(
+              'flex size-10 shrink-0 items-center justify-center rounded-md',
+              contact.visibility === 'ops' ? 'bg-info-soft text-info' : 'bg-subtle text-brand-navy',
+            )}
+          >
+            <Phone className="size-5" />
+          </span>
+          <div className="min-w-0 space-y-1">
+            <p className="flex flex-wrap items-center gap-2">
+              <span className="font-semibold text-foreground">{contact.name}</span>
+              {contact.role ? <span className="text-sm text-muted">{contact.role}</span> : null}
+              <Badge tone={contact.visibility === 'ops' ? 'info' : 'neutral'}>
+                {CONTACT_VISIBILITY_LABELS[contact.visibility]}
+              </Badge>
+              {archived ? <Badge>Archivé</Badge> : null}
+            </p>
+            <p className="text-sm">
               <a href={`tel:${contact.phone.replace(/[^+0-9]/g, '')}`} className="font-semibold text-info">
                 {contact.phone}
               </a>
-              {contact.phone_alt ? <span className="text-muted">· {contact.phone_alt}</span> : null}
+              {contact.phone_alt ? <span className="text-muted"> · {contact.phone_alt}</span> : null}
+              {contact.email ? <span className="text-muted"> · {contact.email}</span> : null}
+              {contact.availability ? <span className="text-muted"> · {contact.availability}</span> : null}
             </p>
-            <p className="text-sm text-muted">
-              {[contact.email, contact.availability].filter(Boolean).join(' · ')}
-              {contact.verified_at
-                ? ` · vérifié le ${dateFormat.format(new Date(contact.verified_at))}`
-                : ' · jamais vérifié'}
+            <p className="text-xs">
+              <VerificationLine contact={contact} now={now} />
             </p>
             {update.error ? <ApiErrorAlert error={update.error} /> : null}
-            {canWrite ? (
-              <div className="flex flex-wrap gap-2">
-                {!archived ? (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={update.isPending}
-                    onClick={() => update.mutate({ verified: true })}
-                  >
-                    Marquer comme vérifié
-                  </Button>
-                ) : null}
-                <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
-                  Modifier
-                </Button>
+          </div>
+          {canWrite ? (
+            <div className="flex flex-wrap gap-1 md:max-w-52 md:justify-end">
+              {!archived ? (
                 <Button
                   size="sm"
-                  variant="ghost"
+                  variant="secondary"
                   disabled={update.isPending}
-                  onClick={() => update.mutate({ status: archived ? 'active' : 'archived' })}
+                  onClick={() => update.mutate({ verified: true })}
                 >
-                  {archived ? 'Réactiver' : 'Archiver'}
+                  Marquer comme vérifié
                 </Button>
-              </div>
-            ) : null}
-          </>
-        )}
-      </CardContent>
-    </Card>
+              ) : null}
+              <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+                Modifier
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={update.isPending}
+                onClick={() => update.mutate({ status: archived ? 'active' : 'archived' })}
+              >
+                {archived ? 'Réactiver' : 'Archiver'}
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </li>
   );
 }
 
@@ -222,6 +255,8 @@ export function ContactsPanel({ siteId }: { siteId: string }) {
   const canWrite = usePermissions().has('site:write');
   const contacts = useContacts(siteId);
   const [adding, setAdding] = useState(false);
+  // One instant per mount: the relative dates stay coherent.
+  const [now] = useState(() => Date.now());
   const create = useApiMutation(
     (options, input: ContactCreateInput) => api.createContact(options, siteId, input),
     (tenantId) => [queryKeys.siteRecords(tenantId, siteId, 'contacts')],
@@ -229,43 +264,74 @@ export function ContactsPanel({ siteId }: { siteId: string }) {
 
   if (contacts.isPending) return <LoadingCard lines={3} />;
   if (contacts.error) return <ApiErrorAlert error={contacts.error} />;
+  const active = contacts.data.filter((contact) => contact.status === 'active');
+  const shared = active.filter((contact) => contact.visibility === 'ops').length;
+  const stale = active.filter((contact) => verificationState(contact.verified_at, now) !== 'verified').length;
 
   return (
     <div className="space-y-4">
-      {canWrite ? (
-        adding ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Nouveau contact</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ContactForm
-                submitLabel="Ajouter le contact"
-                pending={create.isPending}
-                error={create.error}
-                onSubmit={async (payload) => {
-                  await create.mutateAsync(payload);
-                  setAdding(false);
-                }}
-                onCancel={() => setAdding(false)}
-              />
-            </CardContent>
-          </Card>
-        ) : (
-          <Button onClick={() => setAdding(true)}>Ajouter un contact</Button>
-        )
-      ) : null}
-      {contacts.data.length === 0 ? <p className="text-sm text-muted">Aucun contact pour ce site.</p> : null}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {contacts.data.map((contact) => (
-          <ContactCard
-            key={`${contact.id}-${contact.row_version}`}
-            siteId={siteId}
-            contact={contact}
-            canWrite={canWrite}
-          />
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          <Badge tone="info" className="px-3 py-1 text-sm">
+            {shared} diffusé{shared > 1 ? 's' : ''} aux intervenants
+          </Badge>
+          {stale > 0 ? (
+            <Badge tone="important" className="px-3 py-1 text-sm">
+              {stale} à vérifier
+            </Badge>
+          ) : null}
+        </div>
+        {canWrite && !adding ? (
+          <Button size="sm" onClick={() => setAdding(true)}>
+            <Plus aria-hidden="true" className="size-4" />
+            Ajouter un contact
+          </Button>
+        ) : null}
       </div>
+      {canWrite && adding ? (
+        <SectionCard
+          icon={Phone}
+          title="Nouveau contact"
+          description="Qui joindre sur place : les intervenants ne voient que les contacts diffusés."
+        >
+          <ContactForm
+            submitLabel="Ajouter le contact"
+            pending={create.isPending}
+            error={create.error}
+            onSubmit={async (payload) => {
+              await create.mutateAsync(payload);
+              setAdding(false);
+            }}
+            onCancel={() => setAdding(false)}
+          />
+        </SectionCard>
+      ) : null}
+      {contacts.data.length === 0 ? (
+        <Card className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+          <span
+            aria-hidden="true"
+            className="flex size-12 items-center justify-center rounded-full bg-subtle text-brand-navy"
+          >
+            <Phone className="size-6" />
+          </span>
+          <p className="font-semibold text-foreground">Aucun contact pour ce site.</p>
+          <p className="text-sm text-muted">PC sécurité, astreinte technique, direction : qui répond à toute heure.</p>
+        </Card>
+      ) : (
+        <Card>
+          <ul className="divide-y divide-border" aria-label="Contacts du site">
+            {contacts.data.map((contact) => (
+              <ContactRow
+                key={`${contact.id}-${contact.row_version}`}
+                siteId={siteId}
+                contact={contact}
+                canWrite={canWrite}
+                now={now}
+              />
+            ))}
+          </ul>
+        </Card>
+      )}
     </div>
   );
 }

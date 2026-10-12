@@ -1,14 +1,16 @@
 'use client';
 
 import type { Building, BuildingCreate } from '@etare/contracts';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Field, Input, Textarea } from '@etare/ui';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Field, Input, Textarea, cn } from '@etare/ui';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Building2, Layers, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { ApiErrorAlert, LoadingCard } from '@/components/feedback';
 import { blankToNull, isOptionalNumber, numberOrNull } from '@/components/form-helpers';
 import { RECORD_STATUS_LABELS } from '@/components/labels';
+import { SectionCard } from '@/components/section-card';
 import { api } from '@/lib/api-client';
 import { queryKeys, useApiMutation, useBuildings, usePermissions } from '@/lib/queries';
 
@@ -42,6 +44,20 @@ const buildingDefaults = (building?: Building): BuildingFormValues => ({
   floors_below: building?.floors_below?.toString() ?? '',
   notes: building?.notes ?? '',
 });
+
+/** « R+3 · 2 sous-sols · 14 m · béton » : the building in one line. */
+export function buildingSummary(building: Building): string {
+  return (
+    [
+      building.floors_above !== null ? `R+${building.floors_above}` : null,
+      building.floors_below ? `${building.floors_below} sous-sol(s)` : null,
+      building.height_m !== null ? `${building.height_m} m` : null,
+      building.construction_type,
+    ]
+      .filter(Boolean)
+      .join(' · ') || 'Caractéristiques non renseignées'
+  );
+}
 
 function BuildingForm({
   initial,
@@ -158,43 +174,46 @@ function BuildingCard({ siteId, building, canWrite }: { siteId: string; building
   });
 
   const archived = building.status === 'archived';
+  const activeLevels = building.levels.filter((level) => level.status !== 'archived').length;
   return (
     <Card className={archived ? 'opacity-70' : undefined}>
-      <CardHeader>
-        <div>
-          <CardTitle>
-            {building.name}
-            {building.code ? <span className="ml-2 text-sm font-normal text-muted">({building.code})</span> : null}
-          </CardTitle>
-          <p className="text-sm text-muted">
-            {[
-              building.floors_above !== null ? `R+${building.floors_above}` : null,
-              building.floors_below ? `${building.floors_below} sous-sol(s)` : null,
-              building.height_m !== null ? `${building.height_m} m` : null,
-              building.construction_type,
-            ]
-              .filter(Boolean)
-              .join(' · ') || 'Caractéristiques non renseignées'}
-          </p>
+      <CardHeader className="items-start">
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            aria-hidden="true"
+            className={cn(
+              'flex size-9 shrink-0 items-center justify-center rounded-md',
+              archived ? 'bg-subtle text-muted' : 'bg-brand-navy text-white',
+            )}
+          >
+            <Building2 className="size-5" />
+          </span>
+          <div className="min-w-0">
+            <CardTitle className="flex flex-wrap items-center gap-2">
+              {building.name}
+              {building.code ? <Badge>{building.code}</Badge> : null}
+              <Badge tone={archived ? 'neutral' : 'success'}>{RECORD_STATUS_LABELS[building.status]}</Badge>
+            </CardTitle>
+            <p className="mt-0.5 text-sm text-muted">
+              {buildingSummary(building)} · {activeLevels} niveau{activeLevels > 1 ? 'x' : ''}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge tone={archived ? 'neutral' : 'success'}>{RECORD_STATUS_LABELS[building.status]}</Badge>
-          {canWrite && !editing ? (
-            <>
-              <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
-                Modifier
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={update.isPending}
-                onClick={() => update.mutate({ status: archived ? 'active' : 'archived' })}
-              >
-                {archived ? 'Réactiver' : 'Archiver'}
-              </Button>
-            </>
-          ) : null}
-        </div>
+        {canWrite && !editing ? (
+          <div className="flex shrink-0 items-center gap-1">
+            <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
+              Modifier
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={update.isPending}
+              onClick={() => update.mutate({ status: archived ? 'active' : 'archived' })}
+            >
+              {archived ? 'Réactiver' : 'Archiver'}
+            </Button>
+          </div>
+        ) : null}
       </CardHeader>
       <CardContent className="space-y-4">
         {editing ? (
@@ -218,34 +237,41 @@ function BuildingCard({ siteId, building, canWrite }: { siteId: string; building
         {building.notes && !editing ? <p className="text-sm whitespace-pre-line">{building.notes}</p> : null}
 
         <div>
-          <h3 className="mb-2 text-sm font-semibold">Niveaux</h3>
-          {building.levels.length === 0 ? <p className="text-sm text-muted">Aucun niveau.</p> : null}
-          <ul className="divide-y divide-border rounded-md border border-border">
-            {building.levels.map((level) => (
-              <li key={level.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
-                <span className={level.status === 'archived' ? 'text-muted line-through' : undefined}>
-                  <strong>{level.label}</strong>
-                  {level.elevation_m !== null ? <span className="text-muted"> · {level.elevation_m} m</span> : null}
-                </span>
-                {canWrite ? (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={archiveLevel.isPending}
-                    onClick={() =>
-                      archiveLevel.mutate({
-                        id: level.id,
-                        row_version: level.row_version,
-                        status: level.status === 'archived' ? 'active' : 'archived',
-                      })
-                    }
-                  >
-                    {level.status === 'archived' ? 'Réactiver' : 'Archiver'}
-                  </Button>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+          <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground">
+            <Layers aria-hidden="true" className="size-4 text-muted" />
+            Niveaux
+          </h3>
+          {building.levels.length === 0 ? (
+            <p className="text-sm text-muted">Aucun niveau : ajoutez RDC, R+1… pour y placer plans et points.</p>
+          ) : null}
+          {building.levels.length > 0 ? (
+            <ul className="divide-y divide-border rounded-md border border-border">
+              {building.levels.map((level) => (
+                <li key={level.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                  <span className={level.status === 'archived' ? 'text-muted line-through' : undefined}>
+                    <strong>{level.label}</strong>
+                    {level.elevation_m !== null ? <span className="text-muted"> · {level.elevation_m} m</span> : null}
+                  </span>
+                  {canWrite ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={archiveLevel.isPending}
+                      onClick={() =>
+                        archiveLevel.mutate({
+                          id: level.id,
+                          row_version: level.row_version,
+                          status: level.status === 'archived' ? 'active' : 'archived',
+                        })
+                      }
+                    >
+                      {level.status === 'archived' ? 'Réactiver' : 'Archiver'}
+                    </Button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
           {archiveLevel.error ? <ApiErrorAlert error={archiveLevel.error} /> : null}
           {canWrite && !archived ? (
             <form
@@ -306,33 +332,62 @@ export function BuildingsPanel({ siteId }: { siteId: string }) {
 
   if (buildings.isPending) return <LoadingCard lines={4} />;
   if (buildings.error) return <ApiErrorAlert error={buildings.error} />;
+  const active = buildings.data.filter((building) => building.status !== 'archived');
+  const levels = active.reduce(
+    (total, building) => total + building.levels.filter((level) => level.status !== 'archived').length,
+    0,
+  );
 
   return (
     <div className="space-y-4">
-      {canWrite ? (
-        adding ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Nouveau bâtiment</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <BuildingForm
-                submitLabel="Ajouter le bâtiment"
-                pending={create.isPending}
-                error={create.error}
-                onSubmit={async (payload) => {
-                  await create.mutateAsync(payload);
-                  setAdding(false);
-                }}
-                onCancel={() => setAdding(false)}
-              />
-            </CardContent>
-          </Card>
-        ) : (
-          <Button onClick={() => setAdding(true)}>Ajouter un bâtiment</Button>
-        )
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          <Badge tone="info" className="px-3 py-1 text-sm">
+            {active.length} bâtiment{active.length > 1 ? 's' : ''}
+          </Badge>
+          <Badge className="px-3 py-1 text-sm">
+            {levels} niveau{levels > 1 ? 'x' : ''}
+          </Badge>
+        </div>
+        {canWrite && !adding ? (
+          <Button size="sm" onClick={() => setAdding(true)}>
+            <Plus aria-hidden="true" className="size-4" />
+            Ajouter un bâtiment
+          </Button>
+        ) : null}
+      </div>
+      {canWrite && adding ? (
+        <SectionCard
+          icon={Building2}
+          title="Nouveau bâtiment"
+          description="Un corps de bâtiment, ses niveaux viennent ensuite."
+        >
+          <BuildingForm
+            submitLabel="Ajouter le bâtiment"
+            pending={create.isPending}
+            error={create.error}
+            onSubmit={async (payload) => {
+              await create.mutateAsync(payload);
+              setAdding(false);
+            }}
+            onCancel={() => setAdding(false)}
+          />
+        </SectionCard>
       ) : null}
-      {buildings.data.length === 0 ? <p className="text-sm text-muted">Aucun bâtiment pour ce site.</p> : null}
+      {buildings.data.length === 0 ? (
+        <Card className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+          <span
+            aria-hidden="true"
+            className="flex size-12 items-center justify-center rounded-full bg-subtle text-brand-navy"
+          >
+            <Building2 className="size-6" />
+          </span>
+          <p className="font-semibold text-foreground">Aucun bâtiment pour ce site.</p>
+          <p className="text-sm text-muted">
+            Les plans et les points opérationnels se rattachent à un bâtiment et à un niveau.
+          </p>
+        </Card>
+      ) : null}
       {buildings.data.map((building) => (
         <BuildingCard
           key={`${building.id}-${building.row_version}`}
