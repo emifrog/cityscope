@@ -245,8 +245,9 @@ production.
 2. `SITE_ADDRESS=preprod.firescape.fr, srv2044690.hstgr.cloud` dans `preprod.env`. Caddy sert alors les
    deux noms : les tablettes déjà configurées avec l'ancien continuent de fonctionner.
 3. Supabase : Site URL `https://preprod.firescape.fr`, et l'ancien nom ajouté aux Redirect URLs.
-4. `APP_BASE_URL=https://preprod.firescape.fr` dans `worker.env` (liens des e-mails), puis
-   `bash infra/preprod/deploy.sh`.
+4. `APP_BASE_URL=https://preprod.firescape.fr` dans `worker.env` (liens des e-mails) et
+   `ALLOWED_ORIGINS=https://preprod.firescape.fr` dans `web.env` (écritures depuis le navigateur :
+   derrière Caddy, l'API ne reconnaît pas d'elle-même le nom public), puis `bash infra/preprod/deploy.sh`.
 
 ## 9. E-mails (Scaleway Transactional Email)
 
