@@ -129,7 +129,8 @@ version réduite à 1 000 sites. Le dépôt compte 44 migrations et 31 ADR. Orig
 EXP-03/EXP-04 sont implémentés. CAR-01 attend le fond IGN réel et la qualification matérielle. Les outils
 EXP-01/EXP-02 sont livrés ; leurs cases restent ouvertes jusqu’à la mise en service et à la recette sur
 l’hébergement. SEC-06, EXP-05/EXP-06 et R5 restent ouverts. La qualification sur la tablette de référence
-(Alldocube iPlay 40H) est à documenter avec une release signée.
+(Alldocube iPlay 40H) suit le [protocole de qualification](exploitation/qualification-tablette.md) avec une
+release signée ; son procès-verbal reste à produire.
 
 Les estimations de l’architecture §32 décrivent le projet initial avec une équipe de trois à quatre
 personnes ; elles ne sont pas une estimation du reste à faire aujourd’hui. Chiffrer chaque lot après

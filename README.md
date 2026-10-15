@@ -116,8 +116,9 @@ docs/               architecture, développement, base, sécurité, ADR
   [Base de données](docs/database.md) · [Sécurité](docs/security.md) ·
   [Clés de signature](docs/exploitation/cles-de-signature.md) · [Supervision](docs/exploitation/supervision.md) ·
   [Sauvegarde et restauration](docs/exploitation/sauvegarde-restauration.md) ·
-  [Livraison mobile](docs/exploitation/livraison-mobile.md) · [Volumétrie](docs/volumetrie/cap-01.md) ·
-  [Gros fichiers](docs/volumetrie/cap-02.md)
+  [Livraison mobile](docs/exploitation/livraison-mobile.md) ·
+  [Qualification de la tablette](docs/exploitation/qualification-tablette.md) ·
+  [Volumétrie](docs/volumetrie/cap-01.md) · [Gros fichiers](docs/volumetrie/cap-02.md)
 - [Déploiement en préproduction](infra/preprod/README.md)
 - [Décisions d’architecture (ADR)](docs/decisions/)
 - [Roadmap complète](docs/roadmap-developpement.md) · [Bilan du dépôt au 09/10/2026](docs/bilan-depot-2026-10-09.md)
