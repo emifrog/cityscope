@@ -1,0 +1,19 @@
+/* FireScape 2.0 - Palette sRGB. Les SVG maîtres restent la référence du logo. */
+:root {
+  --fs-brand-navy: #012B5C;
+  --fs-brand-teal: #0E8A7A;
+  --fs-action: #0B7A75;
+  --fs-action-hover: #075E5B;
+  --fs-white: #FFFFFF;
+  --fs-surface: #F7F9FA;
+  --fs-text: var(--fs-brand-navy);
+  --fs-link: var(--fs-action);
+  --fs-on-action: var(--fs-white);
+  --fs-font-body: "Barlow", Arial, sans-serif;
+  /* Logo et baseline : utiliser les SVG, ne pas recomposer avec une police. */
+}
+.fs-button { background: var(--fs-action); color: var(--fs-on-action); }
+.fs-button:hover { background: var(--fs-action-hover); }
+.fs-button:focus-visible { outline: 3px solid var(--fs-action); outline-offset: 3px; }
+.fs-link { color: var(--fs-link); text-decoration: underline; }
+/* Prévoir un anneau blanc pour le focus sur fond marine. Ne pas employer le teal marque pour le petit texte. */

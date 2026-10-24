@@ -24,7 +24,7 @@ import qrcode from 'qrcode-generator';
  * published and the SHA-256 of the approved content. Standard PDF fonts
  * (WinAnsi): characters they cannot encode are replaced by their closest form.
  */
-export const ETARE_PDF_TEMPLATE_VERSION = 'etare-pdf/5';
+export const ETARE_PDF_TEMPLATE_VERSION = 'etare-pdf/6';
 
 const PORTRAIT: [number, number] = [595.28, 841.89];
 const LANDSCAPE: [number, number] = [841.89, 595.28];
@@ -39,10 +39,10 @@ const hex = (value: string): RGB =>
     Number.parseInt(value.slice(5, 7), 16) / 255,
   );
 
-/** FireScape palette; the accent is the strong orange, readable as text on white. */
+/** FireScape palette (assets/brand/tokens); the accent is the action teal, readable as text on white. */
 const COLORS = {
   navy: hex('#012b5c'),
-  accent: hex('#c84300'),
+  accent: hex('#0b7a75'),
   text: hex('#0f172a'),
   muted: hex('#475569'),
   border: hex('#cbd5e1'),

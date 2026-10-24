@@ -5,11 +5,11 @@
 @theme {
   --color-brand-navy: #012b5c; /* logo navy */
   --color-brand-navy-soft: #0b3b73;
-  /* Logo orange: marks, rings, borders. Never behind white text (3.3:1): actions use the strong shade. */
-  --color-brand-accent: #fe5002;
-  --color-brand-accent-strong: #c84300; /* white text 4.9:1 (WCAG AA) */
-  --color-brand-accent-deep: #a33600; /* hover of the strong shade */
-  --color-background: #f5f7fa;
+  /* Brand teal: marks, rings, borders, large elements. Not for running text (white on it 4.3:1): actions use the strong shade. */
+  --color-brand-accent: #0e8a7a;
+  --color-brand-accent-strong: #0b7a75; /* action teal, white text 5.2:1 (WCAG AA) */
+  --color-brand-accent-deep: #075e5b; /* hover of the strong shade */
+  --color-background: #f7f9fa; /* light background of the brand */
   --color-surface: #ffffff;
   --color-border: #e2e8f0;
   --color-foreground: #0f172a;

@@ -1,0 +1,48 @@
+{
+  "version": "2.0.0",
+  "brand": {
+    "navy": "#012B5C",
+    "teal": "#0E8A7A",
+    "white": "#FFFFFF",
+    "surface": "#F7F9FA"
+  },
+  "semantic": {
+    "text": "#012B5C",
+    "action": "#0B7A75",
+    "actionHover": "#075E5B",
+    "onAction": "#FFFFFF",
+    "link": "#0B7A75",
+    "focusRing": "#0B7A75"
+  },
+  "typography": {
+    "wordmark": "Contours de la référence fournie, police non identifiée",
+    "interface": "Barlow",
+    "baseline": "Contours de la référence fournie"
+  },
+  "restrictions": {
+    "brandTeal": "Marque et grands éléments, pas de texte courant sur blanc.",
+    "alertColors": "Orange et rouge réservés aux risques et alertes, hors palette du logo."
+  },
+  "contrastRatios": {
+    "#012B5C": {
+      "white": 13.987,
+      "light": 13.245,
+      "navy": 1.0
+    },
+    "#0E8A7A": {
+      "white": 4.255,
+      "light": 4.029,
+      "navy": 3.287
+    },
+    "#0B7A75": {
+      "white": 5.179,
+      "light": 4.904,
+      "navy": 2.701
+    },
+    "#075E5B": {
+      "white": 7.605,
+      "light": 7.202,
+      "navy": 1.839
+    }
+  }
+}

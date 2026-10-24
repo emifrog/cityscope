@@ -103,7 +103,7 @@ packages/schemas    briques Zod partagées (GeoJSON, coordonnées locales...)
 packages/config     environnement, tsconfig de base
 packages/ui         composants et jetons de thème
 supabase/           config, migrations (source unique du schéma), seed fictif, tests pgTAP
-assets/brand        originaux du logo FireScape (déclinaisons : pnpm brand:assets)
+assets/brand        identité FireScape 2.0 : SVG, jetons, police (déclinaisons : pnpm brand:assets)
 infra/              images Docker, kit de préproduction, sauvegarde/restauration
 tests/integration   tests d’intégration
 docs/               architecture, développement, base, sécurité, ADR

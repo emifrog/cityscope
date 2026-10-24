@@ -29,7 +29,7 @@ export interface MapColors {
 export function mapColors(style: Pick<CSSStyleDeclaration, 'getPropertyValue'> | null): MapColors {
   const read = (name: string, fallback: string) => style?.getPropertyValue(name).trim() || fallback;
   return {
-    published: read('--color-brand-accent', '#fe5002'),
+    published: read('--color-brand-accent', '#0e8a7a'),
     known: read('--color-muted', '#475569'),
     verified: read('--color-success', '#15803d'),
     cluster: read('--color-brand-navy', '#012b5c'),
@@ -73,7 +73,7 @@ export function baseMapStyle(catalog: MapCatalog, activeBase: string): StyleSpec
   };
 }
 
-/** Clusters, then sites: orange when an ETARE is published, grey otherwise, green ring when recently checked. */
+/** Clusters, then sites: teal when an ETARE is published, grey otherwise, green ring when recently checked. */
 export function siteLayers(colors: MapColors, fontStack: readonly string[]): LayerSpecification[] {
   const isPoint: FilterSpecification = ['!', ['has', 'point_count']];
   return [

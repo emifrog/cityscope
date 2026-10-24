@@ -211,8 +211,9 @@ Principes :
   iOS sont générés par `pnpm brand:assets` depuis les originaux de
   `assets/brand/` à la racine du dépôt.
 - **UX terrain** : cibles tactiles ≥ 48 dp (boutons principaux 56 dp),
-  textes agrandis, contrastes élevés ; jamais de texte blanc sur l'orange du
-  logo (3,3:1) : les actions utilisent l'orange foncé `accentStrong` (4,9:1).
+  textes agrandis, contrastes élevés ; jamais de texte courant sur le teal de
+  marque (blanc à 4,3:1) : les actions utilisent le teal action `accentStrong`
+  (5,2:1).
 
 ## 6. Chiffrement de la base locale
 

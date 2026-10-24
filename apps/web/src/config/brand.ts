@@ -9,8 +9,8 @@ import logoInverse from '@/assets/brand/firescape-logo-inverse.png';
 export const brand = {
   productName: 'FireScape',
   tagline: 'La connaissance opérationnelle du bâtiment.',
-  /** Pictogram and name, for light backgrounds. */
+  /** Horizontal signature (mark and name), for light backgrounds. */
   logo,
-  /** Same logo in white and orange, for the navy bars. */
+  /** Compact signature in white and teal, for the navy bars. */
   logoInverse,
 } as const;

@@ -2,9 +2,9 @@ import 'package:material_ui/material_ui.dart';
 
 /// Identité visuelle FireScape, centralisée ici.
 ///
-/// Les logos sont générés par `pnpm brand:assets` depuis les originaux de
-/// `assets/brand/` à la racine du dépôt ; les couleurs reprennent les jetons
-/// partagés avec l'application web.
+/// Les logos sont générés par `pnpm brand:assets` depuis les SVG maîtres de
+/// `assets/brand/` à la racine du dépôt (identité 2.0) ; les couleurs
+/// reprennent les jetons partagés avec l'application web.
 abstract final class Brand {
   /// Nom commercial du produit.
   static const productName = 'FireScape';
@@ -15,10 +15,10 @@ abstract final class Brand {
   /// Sous-titre de l'application mobile opérationnelle.
   static const appSubtitle = 'Application opérationnelle';
 
-  /// Logo empilé pour fond clair.
+  /// Signature verticale (pictogramme, nom, baseline) pour fond clair.
   static const logoAsset = 'assets/brand/firescape-logo.png';
 
-  /// Logo empilé pour fond marine (pictogramme et nom en blanc).
+  /// Même signature pour fond marine (blanc, « S » et plan en teal).
   static const logoInverseAsset = 'assets/brand/firescape-logo-inverse.png';
 }
 
@@ -27,14 +27,15 @@ abstract final class BrandColors {
   /// Marine du logo : barres d'application, couleur primaire.
   static const navy = Color(0xFF012B5C);
 
-  /// Orange du logo : marques et repères. Texte blanc interdit dessus
-  /// (contraste 3,3:1) : les actions utilisent [accentStrong].
-  static const accent = Color(0xFFFE5002);
+  /// Teal de marque : repères, anneaux, grands éléments. Pas de texte courant
+  /// dessus (blanc à 4,3:1) : les actions utilisent [accentStrong].
+  static const accent = Color(0xFF0E8A7A);
 
-  /// Orange foncé des actions principales : texte blanc à 4,9:1 (WCAG AA).
-  static const accentStrong = Color(0xFFC84300);
+  /// Teal action des boutons principaux : texte blanc à 5,2:1 (WCAG AA).
+  static const accentStrong = Color(0xFF0B7A75);
 
-  static const background = Color(0xFFF5F7FA);
+  /// Fond clair de la marque.
+  static const background = Color(0xFFF7F9FA);
   static const surface = Color(0xFFFFFFFF);
   static const text = Color(0xFF0F172A);
   static const textMuted = Color(0xFF475569);

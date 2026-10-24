@@ -72,3 +72,10 @@ des publications antérieures ne sont pas régénérés (point 2 de l’ADR, gab
 ajoute à la section Risques les matières dangereuses (RISK-03, ADR-032) : produit, classes CLP, n° ONU,
 état, quantité, localisation et fiche de données de sécurité publiée (« FDS absente de cette version »
 sinon).
+
+## Complément du 24 octobre 2026 : identité 2.0 (gabarit `etare-pdf/6`)
+
+Le teal action de l’identité FireScape 2.0 (`#0B7A75`, `assets/brand/README.md`) remplace l’orange foncé
+dans le numéro ETARE, la mention de version publiée et le tampon d’en-tête ; la mise en page ne change pas.
+Le gabarit est incrémenté pour tracer ce rendu ; les PDF des publications antérieures ne sont pas
+régénérés (point 2 de l’ADR).
