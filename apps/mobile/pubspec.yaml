@@ -1,4 +1,4 @@
-﻿name: etare_ops
+name: etare_ops
 description: "Application opérationnelle (OPS) ETARE numérique — squelette Sprint 0."
 # Application privée : ne jamais publier sur pub.dev.
 publish_to: 'none'
