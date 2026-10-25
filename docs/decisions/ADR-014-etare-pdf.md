@@ -76,6 +76,8 @@ sinon).
 ## Complément du 24 octobre 2026 : identité 2.0 (gabarit `etare-pdf/6`)
 
 Le teal action de l’identité FireScape 2.0 (`#0B7A75`, `assets/brand/README.md`) remplace l’orange foncé
-dans le numéro ETARE, la mention de version publiée et le tampon d’en-tête ; la mise en page ne change pas.
+dans le numéro ETARE, la mention de version publiée et le tampon d’en-tête ; la mise en page ne change pas. La
+catégorie « Circulations verticales » passe du teal au vert olive `#4D7C0F` (le teal est désormais la couleur
+d’action de la marque).
 Le gabarit est incrémenté pour tracer ce rendu ; les PDF des publications antérieures ne sont pas
 régénérés (point 2 de l’ADR).

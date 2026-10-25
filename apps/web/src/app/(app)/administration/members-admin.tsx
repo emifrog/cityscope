@@ -25,7 +25,7 @@ function AccessLine({ member, now }: { member: Member; now: number }) {
   return (
     <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
       {member.last_sign_in_at === null ? (
-        <Badge tone="important">Invitation en attente</Badge>
+        <Badge tone="info">Invitation en attente</Badge>
       ) : (
         <span>
           Dernière connexion {agoLabel(member.last_sign_in_at, now)} ·{' '}
@@ -405,7 +405,7 @@ function MemberRow({ member, now }: { member: Member; now: number }) {
           <p className="flex flex-wrap items-center gap-2">
             <span className="font-semibold text-foreground">{name}</span>
             {member.is_self ? <Badge tone="info">Vous</Badge> : null}
-            <Badge tone={suspended ? 'important' : 'success'}>{MEMBERSHIP_STATUS_LABELS[member.status]}</Badge>
+            <Badge tone={suspended ? 'neutral' : 'success'}>{MEMBERSHIP_STATUS_LABELS[member.status]}</Badge>
           </p>
           {member.display_name ? <p className="text-xs text-muted">{member.email}</p> : null}
           <p className="flex flex-wrap gap-1">
@@ -559,7 +559,7 @@ export function MembersAdmin() {
               {active} membre{active > 1 ? 's' : ''} actif{active > 1 ? 's' : ''}
             </Badge>
             {waiting > 0 ? (
-              <Badge tone="important" className="px-3 py-1 text-sm">
+              <Badge tone="info" className="px-3 py-1 text-sm">
                 {waiting} invitation{waiting > 1 ? 's' : ''} en attente
               </Badge>
             ) : null}

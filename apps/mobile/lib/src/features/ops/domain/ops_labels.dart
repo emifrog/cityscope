@@ -22,7 +22,7 @@ const objectCategoryColors = <String, Color>{
   'energy': Color(0xFFB45309),
   'safety': Color(0xFFB91C1C),
   'smoke_control': Color(0xFF7C3AED),
-  'vertical': Color(0xFF0F766E),
+  'vertical': Color(0xFF4D7C0F),
   'risk': Color(0xFFBE185D),
   'refuge': Color(0xFF0891B2),
   'communication': Color(0xFF475569),

@@ -93,7 +93,7 @@ class _PendingNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) => NoticeStrip(
     icon: Icons.outbox_outlined,
-    tone: Tone.important,
+    tone: Tone.info,
     text: count == 1
         ? '1 signalement en attente d’envoi'
         : '$count signalements en attente d’envoi',
@@ -145,7 +145,7 @@ class _ReportCard extends ConsumerWidget {
     final category = ReportCategory.fromWire(report.category);
     final severity = ReportSeverity.fromWire(report.severity);
     final (String label, Tone tone) = switch (state) {
-      AgentReportState.pending => ('En attente d’envoi', Tone.important),
+      AgentReportState.pending => ('En attente d’envoi', Tone.info),
       AgentReportState.received => (
         report.serverStatus == 'triaged' ? 'Reçu, pris en charge' : 'Reçu',
         Tone.info,

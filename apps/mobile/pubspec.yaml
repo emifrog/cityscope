@@ -92,3 +92,16 @@ flutter:
     - assets/map/glyphs/NotoSans-Regular/
     - assets/map/glyphs/NotoSans-Medium/
     - assets/map/glyphs/NotoSans-Italic/
+  # Barlow, police de l'interface (identité 2.0) ; licence OFL 1.1 dans
+  # assets/licenses/barlow-OFL.txt, affichée par la page des licences.
+  fonts:
+    - family: Barlow
+      fonts:
+        - asset: assets/brand/fonts/Barlow-Regular.ttf
+          weight: 400
+        - asset: assets/brand/fonts/Barlow-Medium.ttf
+          weight: 500
+        - asset: assets/brand/fonts/Barlow-SemiBold.ttf
+          weight: 600
+        - asset: assets/brand/fonts/Barlow-Bold.ttf
+          weight: 700

@@ -7,13 +7,13 @@ opérationnelle du bâtiment. » Identité vectorielle **version 2.0** fournie p
 
 ## Originaux
 
-| Dossier    | Contenu                                                                                  |
-| ---------- | ---------------------------------------------------------------------------------------- |
-| `svg/`     | 42 SVG maîtres : 7 compositions × 6 variantes de couleur (voir ci-dessous)               |
-| `icons/`   | icône d’application (carré marine opaque), calques adaptatifs Android, favicon           |
-| `tokens/`  | jetons de couleur du pack (`firescape.tokens.json`, `firescape.css`)                     |
-| `fonts/`   | Barlow (licence OFL 1.1), police d’interface recommandée par le pack — **non appliquée** |
-| `preview/` | planche de synthèse de l’identité                                                        |
+| Dossier    | Contenu                                                                                                  |
+| ---------- | -------------------------------------------------------------------------------------------------------- |
+| `svg/`     | 42 SVG maîtres : 7 compositions × 6 variantes de couleur (voir ci-dessous)                               |
+| `icons/`   | icône d’application (carré marine opaque), calques adaptatifs Android, favicon                           |
+| `tokens/`  | jetons de couleur du pack (`firescape.tokens.json`, `firescape.css`)                                     |
+| `fonts/`   | Barlow (licence OFL 1.1), police de l’interface : les woff2 du web et les TTF de la tablette en dérivent |
+| `preview/` | planche de synthèse de l’identité                                                                        |
 
 Compositions : `primary` (pictogramme, nom et signature), `horizontal` (pictogramme et nom), `vertical`
 (pictogramme au-dessus du nom et de la signature), `compact` (pictogramme simplifié et nom, pour les
@@ -56,7 +56,9 @@ Le fond de l’icône adaptative Android est le marine, déclaré dans `values/c
 | Fond clair  | `#F7F9FA` | fond des pages                                                                                |
 
 L’orange et le rouge sont réservés aux risques et aux alertes (jetons `important`, `critical`) : ils ne
-font plus partie de la palette du logo.
+font plus partie de la palette du logo. Les états de travail en attente (à valider, à traiter, en attente
+d’envoi) sont en bleu `info`, les états pris en charge en marine `navy` : l’ambre signale une alerte, jamais
+une file de travail.
 
 Les jetons sont définis dans `packages/ui/src/styles/globals.css` (web) et
 `apps/mobile/lib/src/core/theme/brand.dart` (mobile) ; le PDF ETARE (`packages/adapters/src/pdf/etare-pdf.ts`),
@@ -73,5 +75,6 @@ et le teal action.
   maîtres autrement que par le script.
 - Le nom du produit reste lisible en texte réel (titres de pages, libellés d’application, textes
   alternatifs) ; sur le back-office, la signature est du texte réel sous le logo.
-- La police d’interface Barlow fournie par le pack n’est pas appliquée : les applications gardent leur
-  police système (lisibilité terrain validée). Son adoption est une décision séparée.
+- Police d’interface Barlow (graisses 400 à 700) : auto-hébergée sur le web (`apps/web/src/assets/fonts/`,
+  woff2 convertis depuis `fonts/`, chargés par `next/font/local`) et embarquée sur la tablette
+  (`apps/mobile/assets/brand/fonts/`, `pubspec.yaml`). Les e-mails et le PDF ETARE restent en polices standard.

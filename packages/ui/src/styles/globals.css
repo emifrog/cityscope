@@ -27,7 +27,8 @@
   --color-success: #15803d;
   --color-success-soft: #dcfce7;
 
-  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Barlow, the interface font of the brand (--font-barlow is set on <html> by apps/web/src/config/fonts.ts). */
+  --font-sans: var(--font-barlow), system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --radius-card: 0.75rem;
 }
 

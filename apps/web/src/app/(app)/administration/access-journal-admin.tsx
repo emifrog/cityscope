@@ -26,7 +26,7 @@ export function AccessJournalAdmin() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         {events.data ? (
-          <Badge tone="important" className="px-3 py-1 text-sm">
+          <Badge tone="info" className="px-3 py-1 text-sm">
             {items.length} accès affiché{items.length > 1 ? 's' : ''}
             {events.hasNextPage ? ', d’autres suivent' : ''}
           </Badge>

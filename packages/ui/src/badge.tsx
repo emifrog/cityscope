@@ -7,6 +7,7 @@ export const badgeVariants = cva('inline-flex items-center rounded-full px-2.5 p
     tone: {
       neutral: 'bg-subtle text-muted',
       info: 'bg-info-soft text-info',
+      navy: 'bg-subtle text-brand-navy',
       success: 'bg-success-soft text-success',
       important: 'bg-important-soft text-important',
       critical: 'bg-critical-soft text-critical',

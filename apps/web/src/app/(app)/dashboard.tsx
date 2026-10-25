@@ -77,7 +77,7 @@ function Tile({
             aria-hidden="true"
             className={cn(
               'flex size-9 shrink-0 items-center justify-center rounded-md',
-              tone === 'pending' && 'bg-important-soft text-important',
+              tone === 'pending' && 'bg-info-soft text-info',
               tone === 'clear' && 'bg-success-soft text-success',
               tone === 'neutral' && 'bg-subtle text-brand-navy',
             )}
@@ -90,7 +90,7 @@ function Tile({
           />
         </div>
         <div>
-          <p className={cn('text-3xl font-bold', tone === 'pending' ? 'text-important' : 'text-foreground')}>{value}</p>
+          <p className={cn('text-3xl font-bold', tone === 'pending' ? 'text-info' : 'text-foreground')}>{value}</p>
           <p className="mt-0.5 text-sm font-medium text-foreground">{label}</p>
           <p className="mt-0.5 text-xs text-muted">{note}</p>
         </div>
@@ -228,8 +228,13 @@ function contributionRows(items: readonly Contribution[], now: number) {
 function DossierBreakdown({ counts }: { counts: EtareDossierCounts }) {
   const rows: readonly { label: string; value: number; href: string; color: string }[] = [
     { label: 'Publiés', value: counts.published, href: '/etare?etat=published', color: 'bg-success' },
-    { label: 'À valider', value: counts.to_validate, href: '/etare?etat=to_validate', color: 'bg-important' },
-    { label: 'En cours de rédaction', value: counts.in_progress, href: '/etare?etat=in_progress', color: 'bg-info' },
+    { label: 'À valider', value: counts.to_validate, href: '/etare?etat=to_validate', color: 'bg-info' },
+    {
+      label: 'En cours de rédaction',
+      value: counts.in_progress,
+      href: '/etare?etat=in_progress',
+      color: 'bg-brand-navy',
+    },
     { label: 'Sans version publiée', value: counts.unpublished, href: '/etare?etat=unpublished', color: 'bg-muted' },
   ];
   return (

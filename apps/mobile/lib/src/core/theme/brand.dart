@@ -20,6 +20,9 @@ abstract final class Brand {
 
   /// Même signature pour fond marine (blanc, « S » et plan en teal).
   static const logoInverseAsset = 'assets/brand/firescape-logo-inverse.png';
+
+  /// Police de l'interface, embarquée (`pubspec.yaml`, `assets/brand/fonts/`).
+  static const fontFamily = 'Barlow';
 }
 
 /// Palette de marque (jetons partagés web / mobile).

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { connection } from 'next/server';
 import type { ReactNode } from 'react';
 import { brand } from '@/config/brand';
+import { barlow } from '@/config/fonts';
 import { AppProviders } from '@/providers/app-providers';
 import './globals.css';
 
@@ -19,7 +20,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // Every page is rendered per request: its scripts carry the nonce of its Content Security Policy.
   await connection();
   return (
-    <html lang="fr">
+    <html lang="fr" className={barlow.variable}>
       <body className="min-h-screen antialiased">
         <AppProviders>{children}</AppProviders>
       </body>

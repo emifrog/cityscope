@@ -3,11 +3,13 @@ import 'package:flutter/services.dart';
 
 /// Licences des composants embarqués que les paquets Dart ne déclarent pas
 /// (EXP-04) : SQLCipher et OpenSSL (bibliothèque native de la base chiffrée),
-/// glyphes Noto Sans de la carte (OFL 1.1), ML Kit du lecteur de QR code.
+/// glyphes Noto Sans de la carte et police Barlow de l’interface (OFL 1.1),
+/// ML Kit du lecteur de QR code.
 /// Affichées par la page des licences avec celles des paquets.
 const bundledLicenses = {
   'SQLCipher Community Edition': 'assets/licenses/sqlcipher.txt',
   'OpenSSL': 'assets/licenses/openssl.txt',
+  'Barlow (police de l’interface)': 'assets/licenses/barlow-OFL.txt',
   'Noto Sans (glyphes de la carte)': 'assets/map/glyphs/OFL.txt',
   'ML Kit Barcode Scanning (lecteur de QR code)':
       'assets/licenses/mlkit-barcode.txt',

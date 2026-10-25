@@ -203,7 +203,8 @@ Principes :
   requête ; un rafraîchissement anticipé a lieu 60 s avant l'expiration.
 - **Navigation** : `/splash` (restauration de session) → `/login` ou
   `/home` selon l'état d'authentification (`resolveRedirect`, testée).
-- **Identité visuelle** : nom, logos et couleurs dans
+- **Identité visuelle** : nom, logos, couleurs et police Barlow (TTF dans
+  `assets/brand/fonts/`, licence sur la page À propos) dans
   `lib/src/core/theme/brand.dart` ; libellés Android
   (`android/app/src/main/res/values/strings.xml`) et iOS
   (`ios/Runner/Info.plist`, `CFBundleDisplayName`) alignés. Logos

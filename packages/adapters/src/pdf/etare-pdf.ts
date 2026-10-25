@@ -59,7 +59,7 @@ const CATEGORY_COLORS: Readonly<Record<ObjectCategory, RGB>> = {
   energy: hex('#b45309'),
   safety: hex('#b91c1c'),
   smoke_control: hex('#7c3aed'),
-  vertical: hex('#0f766e'),
+  vertical: hex('#4d7c0f'),
   risk: hex('#be185d'),
   refuge: hex('#0891b2'),
   communication: hex('#475569'),

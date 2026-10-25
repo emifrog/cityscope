@@ -10,9 +10,9 @@ export interface DossierStageInfo {
 }
 
 const STAGES: Readonly<Record<DossierStage, Omit<DossierStageInfo, 'stage'>>> = {
-  to_validate: { label: 'À valider', dot: 'bg-important' },
-  changes_requested: { label: 'Corrections demandées', dot: 'bg-critical' },
-  in_progress: { label: 'En préparation', dot: 'bg-info' },
+  to_validate: { label: 'À valider', dot: 'bg-info' },
+  changes_requested: { label: 'Corrections demandées', dot: 'bg-important' },
+  in_progress: { label: 'En préparation', dot: 'bg-brand-navy' },
   published: { label: 'Publié', dot: 'bg-success' },
   none: { label: 'Sans version publiée', dot: 'bg-border' },
 };

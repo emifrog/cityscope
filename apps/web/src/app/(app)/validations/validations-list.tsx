@@ -77,7 +77,7 @@ export function ValidationsList() {
           </p>
         </div>
         {count > 0 ? (
-          <Badge tone="important" className="px-3 py-1 text-sm">
+          <Badge tone="info" className="px-3 py-1 text-sm">
             {count} révision{count > 1 ? 's' : ''} en attente
           </Badge>
         ) : null}

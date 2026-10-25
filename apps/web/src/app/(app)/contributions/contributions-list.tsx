@@ -25,10 +25,10 @@ const dateTime = new Intl.DateTimeFormat('fr-FR', {
 
 type View = ContributionListQuery['view'];
 
-export const CONTRIBUTION_TONES: Readonly<Record<ContributionStatus, 'info' | 'important' | 'success' | 'neutral'>> = {
-  submitted: 'important',
-  in_review: 'info',
-  info_requested: 'info',
+export const CONTRIBUTION_TONES: Readonly<Record<ContributionStatus, 'info' | 'navy' | 'success' | 'neutral'>> = {
+  submitted: 'info',
+  in_review: 'navy',
+  info_requested: 'navy',
   accepted: 'success',
   partially_accepted: 'success',
   rejected: 'neutral',
@@ -120,7 +120,7 @@ export function ContributionsList() {
           </p>
         </div>
         {openCount ? (
-          <Badge tone="important" className="px-3 py-1 text-sm">
+          <Badge tone="info" className="px-3 py-1 text-sm">
             {openCount} à traiter
           </Badge>
         ) : null}

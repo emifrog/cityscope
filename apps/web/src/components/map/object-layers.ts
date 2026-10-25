@@ -12,7 +12,7 @@ export const CATEGORY_COLORS: Readonly<Record<ObjectCategory, string>> = {
   energy: '#b45309',
   safety: '#b91c1c',
   smoke_control: '#7c3aed',
-  vertical: '#0f766e',
+  vertical: '#4d7c0f',
   risk: '#be185d',
   refuge: '#0891b2',
   communication: '#475569',

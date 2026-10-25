@@ -37,6 +37,7 @@ abstract final class AppTheme {
     final base = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
+      fontFamily: Brand.fontFamily,
       scaffoldBackgroundColor: BrandColors.background,
       materialTapTargetSize: MaterialTapTargetSize.padded,
       visualDensity: VisualDensity.standard,

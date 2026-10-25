@@ -31,9 +31,9 @@ export const SEVERITY_TONES: Readonly<Record<FieldReport['severity'], 'neutral' 
   urgent: 'critical',
 };
 
-export const STATUS_TONES: Readonly<Record<FieldReport['status'], 'info' | 'important' | 'success' | 'neutral'>> = {
-  new: 'important',
-  triaged: 'info',
+export const STATUS_TONES: Readonly<Record<FieldReport['status'], 'info' | 'navy' | 'success' | 'neutral'>> = {
+  new: 'info',
+  triaged: 'navy',
   resolved: 'success',
   rejected: 'neutral',
 };
@@ -119,7 +119,7 @@ export function FieldReportsList() {
           </p>
         </div>
         {openCount ? (
-          <Badge tone="important" className="px-3 py-1 text-sm">
+          <Badge tone="info" className="px-3 py-1 text-sm">
             {openCount} à traiter
           </Badge>
         ) : null}

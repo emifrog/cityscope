@@ -13,7 +13,7 @@ const dateFormat = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeZ
 const STATUS_TONES: Readonly<Record<SiteSummary['status'], 'success' | 'neutral' | 'important'>> = {
   active: 'success',
   draft: 'neutral',
-  inactive: 'important',
+  inactive: 'neutral',
   archived: 'neutral',
 };
 
