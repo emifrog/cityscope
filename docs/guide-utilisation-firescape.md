@@ -1,10 +1,10 @@
 # Guide de prise en main de FireScape
 
-Utilisation du web du portail exploitant et de la tablette Android
+Utilisation du web, du portail exploitant et de la tablette Android
 
-**Édition du 9 octobre 2026 • Version documentaire 1.0**
+**Édition du 13 octobre 2026 • Version documentaire 1.1**
 
-Ce guide accompagne la première connexion puis les opérations courantes dans FireScape : préparer un site et son ETARE, publier une version, la consulter hors ligne, signaler un écart et proposer une mise à jour. Chaque parcours indique le profil concerné et le résultat à vérifier.
+Ce guide accompagne la première connexion puis les opérations courantes dans FireScape : préparer un site et son ETARE, publier une version, la consulter hors ligne, signaler un écart et proposer une mise à jour. Chaque parcours indique le profil concerné et le résultat à vérifier. Cette édition suit les écrans actuels, le Sprint 14 et la version Android 0.7.0.
 
 Utilisez l’environnement, le compte et l’application remis par votre administrateur SIS. Les fonctions visibles dépendent de vos droits. Les exercices de découverte se font sur des sites fictifs dans la préproduction. Le fond IGN réel, l’environnement hébergé et la tablette retenue doivent être qualifiés avant l’usage pilote prévu par le SIS.
 
@@ -89,13 +89,13 @@ Un menu visible ne donne pas nécessairement le droit d’effectuer toutes ses a
 
 1. Ouvrez **Sites** ou utilisez la recherche de l’en-tête.
 2. Saisissez un nom, une adresse ou un numéro ETARE ; affinez par commune, type ou statut.
-3. Utilisez les filtres de risque et de gravité si vous cherchez une catégorie particulière de sites.
-4. Lancez **Filtrer**, puis ouvrez le résultat correspondant au nom et à l’adresse recherchés.
+3. Ouvrez **Filtres** pour utiliser les critères de risque et de gravité, puis affinez votre sélection.
+4. Lancez **Rechercher**, puis ouvrez le résultat correspondant au nom et à l’adresse recherchés.
 5. Si le site manque, retirez les filtres, vérifiez le SIS et consultez le statut d’archive si nécessaire.
 
 ### Lire la fiche
 
-La fiche propose les onglets **Synthèse**, **Localisation**, **Bâtiments & niveaux**, **Plans**, **Classifications**, **Contacts**, **Documents** et **ETARE**. Le bandeau indique notamment si une version est publiée ou si le site est archivé.
+La fiche propose les onglets **Synthèse**, **Localisation**, **Bâtiments & niveaux**, **Plans**, **Classifications**, **Contacts**, **Documents**, **Matières dangereuses** et **ETARE**. Le bandeau indique notamment si une version est publiée ou si le site est archivé.
 
 Dans la carte web, rapprochez l’adresse, le point de référence et l’emprise du site. Une géolocalisation issue d’une recherche d’adresse doit être contrôlée avant de devenir une référence opérationnelle.
 
@@ -111,7 +111,7 @@ Rassemblez le nom du site, son adresse, sa commune, son numéro ETARE s’il exi
 
 ### Créer la fiche
 
-1. Dans **Sites**, utilisez l’action de création d’un site.
+1. Dans **Sites**, choisissez **Nouveau site**. Cette création nécessite un droit d’édition et un périmètre couvrant tout le SIS ; si le bouton manque, sollicitez l’administrateur.
 2. Renseignez le nom, puis le type, le statut et la sensibilité appropriés.
 3. Saisissez le numéro ETARE et les informations d’adresse disponibles. La commune est nécessaire lorsqu’une adresse est renseignée.
 4. Utilisez la recherche d’adresse ou renseignez ensemble latitude et longitude ; vérifiez la position dans **Localisation**.
@@ -145,7 +145,7 @@ Les risques extérieurs peuvent être placés comme points ou surfaces. Une surf
 
 ### Importer un fond de plan
 
-1. Ouvrez **Plans**, puis **Importer un plan**.
+1. Ouvrez **Plans**, puis **Importer** pour afficher le formulaire **Importer un plan**.
 2. Choisissez le type de plan et, pour un plan de niveau, le niveau auquel il appartient.
 3. Donnez un titre explicite et choisissez le fichier PDF ou image. Si l’interface demande une page du PDF, sélectionnez celle correspondant au plan attendu.
 4. Validez l’import puis attendez la fin du contrôle du fichier.
@@ -161,7 +161,7 @@ Le sélecteur **Révision du fond** permet de consulter les versions conservées
 
 **Résultat attendu :** les fonds sont contrôlés et lisibles, associés au bon bâtiment et au bon niveau. Aucun élément de l’ancien fond n’est laissé sans vérification.
 
-## 6 Placer les objets les zones et les photos
+## 6 Placer les objets, les zones et les photos
 
 **Profil concerné :** personne autorisée à modifier les plans et données du site.
 
@@ -205,7 +205,7 @@ Contrôlez le résultat dans le contenu publié et les espaces concernés. Le po
 
 ### Déposer un document
 
-1. Ouvrez **Documents**, puis **Nouveau document**.
+1. Ouvrez **Documents**, puis **Déposer un document** pour afficher le formulaire **Nouveau document**.
 2. Saisissez le titre et la catégorie, puis choisissez le fichier.
 3. Renseignez les dates de validité lorsqu’elles ont un sens pour cette pièce.
 4. Choisissez sa règle de consultation hors ligne.
@@ -228,7 +228,34 @@ Utilisez **Nouvelle version** pour remplacer le contenu d’un document tout en 
 
 **Résultat attendu :** les pièces utiles sont contrôlées, versionnées et affectées à la bonne politique de diffusion.
 
-## 8 Préparer valider et publier un ETARE
+## 8 Déclarer les matières dangereuses et leurs FDS
+
+**Profils concernés :** Prévision et administration disposant du droit de modification du site.
+
+### Préparer la fiche de données de sécurité
+
+Dans **Documents**, déposez la FDS avec la catégorie **Fiche de données de sécurité**. Choisissez sa règle de consultation hors ligne et attendez le contrôle du fichier. La FDS doit appartenir au même site et être active pour être associée à une matière. Un document nommé « FDS » mais classé autrement ne suffit pas.
+
+### Déclarer le produit
+
+1. Ouvrez **Matières dangereuses**, puis **Déclarer une matière dangereuse**.
+2. Renseignez le **Nom du produit** et les classes de danger connues. Recopiez les informations vérifiées de la source métier ; le logiciel ne les déduit pas automatiquement de la FDS.
+3. Complétez, s’ils sont connus, le numéro ONU à quatre chiffres et l’état physique.
+4. Renseignez ensemble **Quantité** et **Unité**, ou laissez les deux vides si la quantité n’est pas renseignée.
+5. Choisissez le bâtiment, le niveau et la zone cohérents, puis ajoutez une précision de localisation si nécessaire.
+6. Sélectionnez la **Fiche de données de sécurité**, ajoutez les notes utiles puis choisissez **Ajouter la matière**.
+
+Relisez la ligne créée, notamment sa quantité, son unité et le lien vers la bonne FDS. Le compteur des matières sans FDS signale les fiches à compléter. Une matière n’est pas un point dessiné automatiquement sur le plan ; sa localisation actuelle repose sur les rattachements et la note renseignés.
+
+### Diffuser puis consulter
+
+Préparez ensuite une révision ETARE et vérifiez les avertissements concernant les FDS non prêtes. Après publication et synchronisation, les matières apparaissent dans la section **Risques** du PDF et de l’application OPS. Ouvrez la matière puis **Fiche de données de sécurité** ; téléchargez la pièce à l’avance si elle est à la demande.
+
+Utilisez **Enregistrer** pour corriger la fiche et **Archiver** lorsqu’elle ne doit plus faire partie des données actives. Faites publier les changements pour renouveler le dossier diffusé. Les matières ne sont pas présentées dans le portail exploitant.
+
+**Résultat attendu :** le produit, sa quantité et son emplacement sont cohérents ; la FDS associée s’ouvre dans la nouvelle publication et, selon la règle choisie, sans réseau sur tablette.
+
+## 9 Préparer, valider et publier un ETARE
 
 **Profils concernés :** rédacteur prévision puis validateur distinct, avec double authentification.
 
@@ -257,7 +284,7 @@ La diffusion n’est achevée que lorsque la tablette a synchronisé puis instal
 
 **Résultat attendu :** une nouvelle publication est disponible avec un PDF lisible, puis son numéro apparaît sur une tablette autorisée après synchronisation.
 
-## 9 Mettre à jour retirer ou archiver un dossier
+## 10 Mettre à jour, retirer ou archiver un dossier
 
 **Profils concernés :** Prévision pour les données et l’archivage, validateur pour le retrait d’une publication.
 
@@ -287,7 +314,7 @@ Pour reprendre le travail, retrouvez le site avec le filtre des archives puis ch
 
 **Résultat attendu :** le statut et le motif correspondent à la décision métier ; la personne responsable a vérifié les conséquences sur la diffusion.
 
-## 10 Installer et enrôler une tablette
+## 11 Installer et enrôler une tablette
 
 **Profils concernés :** administrateur SIS et intervenant autorisé. **Réseau nécessaire.**
 
@@ -308,6 +335,10 @@ La tablette reçoit les sites communs à son affectation et au périmètre de l�
 
 Un code invalide peut correspondre à un code expiré, déjà utilisé ou destiné à un autre SIS ou environnement. Demandez un nouveau code à l’administrateur plutôt que de réinitialiser l’application.
 
+### Scanner le QR code du site
+
+Depuis l’accueil, ouvrez **Scanner un dossier**, autorisez la caméra puis visez le QR code en haut du PDF ETARE ou dans **Code QR du site** sur le web. La lecture ouvre la version installée du site ou son accès sensible. Elle ne donne aucun droit supplémentaire et ne télécharge pas un site absent. Les PDF anciens peuvent ne pas porter de code. Le numéro de version ouvert peut différer de celui du papier : vérifiez-le.
+
 ### Vérifier la préparation hors ligne
 
 Téléchargez les documents à la demande nécessaires et le fond de secteur disponible. Passez ensuite en mode avion, fermez puis rouvrez l’application, et consultez le site d’essai. Réactivez le réseau après le contrôle.
@@ -316,7 +347,7 @@ Les sites de sensibilité restreinte suivent un accès spécifique à durée lim
 
 **Résultat attendu :** l’administration reconnaît le terminal, le bon compte est connecté et les publications prévues s’ouvrent après un redémarrage sans réseau.
 
-## 11 Consulter les sites et les plans hors ligne
+## 12 Consulter les sites et les plans hors ligne
 
 **Profil concerné :** intervenant OPS disposant d’une tablette enrôlée et synchronisée.
 
@@ -346,7 +377,7 @@ Chaque agent utilise son compte. Le changement de personne exige une connexion e
 
 **Résultat attendu :** vous avez identifié la bonne version et pouvez ouvrir les informations nécessaires sans dépendre du réseau.
 
-## 12 Utiliser la carte les documents et les sites sensibles
+## 13 Utiliser la carte, les documents et les sites sensibles
 
 **Profil concerné :** intervenant OPS. Certains téléchargements et ouvertures nécessitent du réseau.
 
@@ -372,7 +403,7 @@ La durée de consultation est actuellement limitée à 24 heures. Lisez l’éch
 
 **Résultat attendu :** vous distinguez une absence de fond, une pièce non téléchargée et un accès sensible non autorisé, puis utilisez le parcours approprié.
 
-## 13 Signaler un écart depuis le terrain
+## 14 Signaler un écart depuis le terrain
 
 **Profil concerné :** intervenant OPS autorisé. **La saisie peut se faire sans réseau.**
 
@@ -404,7 +435,7 @@ L’importance **Urgent** qualifie le constat dans FireScape. Elle ne remplace p
 
 **Résultat attendu :** le constat passe à « Reçu », puis la décision et, le cas échéant, la nouvelle publication sont retrouvées lors des synchronisations suivantes.
 
-## 14 Utiliser le portail exploitant
+## 15 Utiliser le portail exploitant
 
 **Profil concerné :** exploitant invité par le SIS. **Réseau nécessaire.**
 
@@ -438,7 +469,7 @@ Une acceptation peut précéder la publication du dossier corrigé. Vérifiez la
 
 **Résultat attendu :** la proposition est identifiée et suivie jusqu’à une décision du SIS, sans modification directe de la donnée opérationnelle.
 
-## 15 Instruire les signalements et les contributions
+## 16 Instruire les signalements et les contributions
 
 **Profils concernés :** Prévision, validation ou administration selon les droits attribués. La modification des données exige un rôle d’édition.
 
@@ -467,13 +498,13 @@ Soumettez la révision, faites intervenir un validateur distinct puis vérifiez 
 
 **Résultat attendu :** chaque demande possède un responsable, une décision compréhensible et, si nécessaire, un lien vers la révision qui porte sa correction.
 
-## 16 Administrer les accès et les terminaux
+## 17 Administrer les accès et les terminaux
 
 **Profil concerné :** administrateur SIS avec double authentification. Les opérations de serveur et de sauvegarde relèvent des procédures d’exploitation.
 
 ### Gérer les membres et les secteurs
 
-Dans **Administration > Membres**, utilisez **Inviter une personne**, renseignez l’adresse professionnelle, les rôles et le périmètre. Vérifiez ensuite l’état de l’invitation et de la double authentification. Le rôle de validation doit être attribué explicitement ; l’administration seule ne permet pas de publier.
+Les rubriques de **Administration** sont regroupées par thème, avec une navigation adaptée à la taille de l’écran. Dans **Administration > Membres**, utilisez **Inviter une personne**, renseignez l’adresse professionnelle, les rôles et le périmètre. Vérifiez ensuite l’état de l’invitation et de la double authentification. Le rôle de validation doit être attribué explicitement ; l’administration seule ne permet pas de publier.
 
 Dans **Secteurs**, préparez les groupes de sites puis affectez-y les membres et terminaux concernés. Une personne ne modifie pas ses propres habilitations et le SIS garde au moins un administrateur actif. Si le rôle d’administration SIS est conservé, son périmètre administratif reste celui du SIS entier.
 
@@ -500,7 +531,40 @@ Les exploitants sont invités dans **Exploitants**, avec leurs sites, la validit
 
 **Résultat attendu :** chaque utilisateur et terminal dispose uniquement du périmètre prévu ; les accès obsolètes et les anomalies visibles sont pris en charge.
 
-## 17 Résoudre les difficultés courantes
+## 18 Exporter les données du SIS
+
+**Profil concerné :** administrateur SIS avec double authentification. **Réseau nécessaire.**
+
+### Demander un export de réversibilité
+
+1. Ouvrez **Administration**, puis **Export de réversibilité** dans le thème **Sécurité et exploitation**.
+2. Vérifiez le SIS actif et choisissez **Demander un export**.
+3. Attendez l’état **Prêt**. Un seul export peut être en préparation à la fois pour ce SIS.
+4. Relevez l’échéance affichée puis téléchargez toutes les parties proposées, pas seulement le premier fichier.
+5. Conservez l’ensemble dans l’emplacement autorisé par votre organisation et ouvrez le fichier LISEZMOI pour interpréter le contenu.
+
+Chaque demande et téléchargement est tracé. L’export contient des données opérationnelles : son accès après téléchargement dépend aussi de l’emplacement où vous le conservez et des personnes avec lesquelles vous le partagez.
+
+### Comprendre les fichiers reçus
+
+| Élément                         | Contenu                                                                         |
+| ------------------------------- | ------------------------------------------------------------------------------- |
+| donnees.zip                     | Tables du SIS en JSON, référentiels en CSV, manifeste et notice de lecture      |
+| Archives de fichiers            | Pièces contrôlées et PDF publiés, répartis en plusieurs parties                 |
+| Partie séparée de grande taille | Fichier volumineux livré seul lorsque nécessaire                                |
+| manifeste.json                  | Inventaire, lignes par table, parties et empreintes pour contrôler les fichiers |
+
+L’export exclut les secrets de la plateforme et les fonds de carte des tablettes. Il fournit des données lisibles sans accès direct à la base ; il ne constitue pas une procédure automatique de réimportation ou la sauvegarde technique complète de FireScape.
+
+### Gérer la disponibilité
+
+Les parties restent disponibles pendant sept jours, jusqu’à l’échéance affichée. Les liens de téléchargement sont de courte durée : si un lien expire, revenez dans l’écran et cliquez de nouveau sur la partie pour obtenir un nouvel accès tant que l’export est encore disponible.
+
+Si l’état devient **Échec**, relevez le détail et contactez l’exploitation avant de recommencer. Si l’export est **Expiré**, demandez-en un nouveau selon vos besoins. Contrôlez l’inventaire et les fichiers manquants signalés. La présence de donnees.zip ne suffit pas à prouver que la copie est complète.
+
+**Résultat attendu :** toutes les parties utiles sont récupérées avant échéance et leur contenu peut être identifié à l’aide du manifeste et de la notice.
+
+## 19 Résoudre les difficultés courantes
 
 Vérifiez d’abord le compte, le SIS et l’environnement. Relevez le message exact. Adressez les problèmes de droits à l’administrateur et les erreurs de service à l’exploitation.
 
@@ -525,7 +589,7 @@ Vérifiez d’abord le compte, le SIS et l’environnement. Relevez le message e
 
 **Pour le support :** indiquez l’heure, l’environnement, le SIS, le terminal, la version de l’application et de la publication, l’action, le réseau et le message exact. Joignez uniquement les captures autorisées, sans mot de passe, code ou clé.
 
-## 18 Réaliser un exercice complet de prise en main
+## 20 Réaliser un exercice complet de prise en main
 
 **But :** vérifier le parcours avec plusieurs rôles sur des données fictives, avant les usages pilotes. Préparez un rédacteur, un validateur distinct, un agent OPS, un exploitant invité et une tablette de préproduction.
 
@@ -533,9 +597,9 @@ Vérifiez d’abord le compte, le SIS et l’environnement. Relevez le message e
 
 1. Le rédacteur crée « Site école Démonstration », son adresse fictive de test, un bâtiment et un niveau. Il importe un plan d’exercice, ajoute un accès, un point d’eau, un risque, un contact et un document.
 2. Il prépare une révision, corrige les contrôles, renseigne le résumé et soumet.
-3. Le validateur examine la révision puis publie. Les participants vérifient le PDF et notent le numéro de publication.
+3. Le validateur examine la révision puis publie. Les participants vérifient le PDF, son QR code et le numéro de publication.
 4. L’agent enrôle sa tablette si nécessaire, synchronise et ouvre le dossier. Il télécharge la pièce à la demande prévue dans l’exercice.
-5. Il passe en mode avion, redémarre l’application puis retrouve le site, le plan, une fiche et le PDF.
+5. Il passe en mode avion, redémarre l’application puis retrouve le site, le plan, une fiche et le PDF. Il essaie aussi **Scanner un dossier** sur le QR code imprimé.
 6. Il signale un accès fictivement condamné, avec une photo d’exercice. Le constat apparaît en attente.
 7. Il rétablit le réseau, synchronise et vérifie que le constat est reçu.
 8. La Prévision instruit, corrige le dossier et prépare la révision suivante ; le validateur publie puis l’agent vérifie la nouvelle version.
@@ -555,4 +619,4 @@ Cet exercice prépare la prise en main ; la recette métier, les mesures sur mat
 
 ### Retrouver les ressources
 
-La présentation de FireScape explique le produit et son périmètre. La roadmap et le bilan du 9 octobre suivent les réserves et l’avancement. Les procédures d’exploitation détaillent la livraison Android, les clés, la supervision et la restauration. Demandez à votre SIS l’adresse du service, les coordonnées du support et les consignes locales complémentaires.
+La présentation de FireScape explique le produit et son périmètre. La roadmap, le bilan du 9 octobre et le rapport du Sprint 14 suivent les réserves et l’avancement. Les procédures d’exploitation détaillent la livraison Android, les clés, la supervision et la restauration. Demandez à votre SIS l’adresse du service, les coordonnées du support et les consignes locales complémentaires.

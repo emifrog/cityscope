@@ -1,7 +1,7 @@
 # Documentation de présentation et de prise en main
 
-Édition du 9 octobre 2026, version documentaire 1.0. Périmètre fonctionnel : Sprint 13 et outils
-d’exploitation ajoutés le 8 octobre, examinés au commit `e38b118`.
+Édition du 13 octobre 2026, version documentaire 1.1. Périmètre fonctionnel : Sprint 14, écrans web,
+portail et OPS réorganisés, application Android 0.7.0 ; code examiné au commit `a89d67b`.
 
 | Document                  | Public                                                                       | PDF prêt à diffuser                                          | Word modifiable                                                 | Source dans le dépôt                               |
 | ------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------- | -------------------------------------------------- |
@@ -22,5 +22,5 @@ les sommaires, la pagination et les tableaux. Conserver la cohérence des trois 
 
 Références de contrôle : [bilan du 9 octobre](bilan-depot-2026-10-09.md),
 [roadmap](roadmap-developpement.md), [suivi des exigences](suivi-exigences.md),
-[documents de cadrage](reference/) et rapports de sprint. Les procédures techniques restent dans
+[documents de cadrage](reference/) et [rapport du Sprint 14](sprint-14-report.md). Les procédures techniques restent dans
 [la documentation d’exploitation](exploitation/).

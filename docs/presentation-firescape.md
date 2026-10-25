@@ -2,7 +2,7 @@
 
 Fonctions et déploiement du projet
 
-**Édition du 9 octobre 2026 • Version documentaire 1.0**
+**Édition du 22 octobre 2026 • Version documentaire 1.2**
 
 FireScape permet aux services d’incendie et de secours de préparer, valider et diffuser la connaissance opérationnelle des bâtiments et sites à risques. Les équipes terrain consultent les dossiers ETARE publiés sur tablette Android, y compris sans réseau, puis signalent les écarts constatés. Les exploitants contribuent aux mises à jour sous le contrôle du SIS.
 
@@ -12,7 +12,7 @@ Ce document présente le produit aux responsables de SIS, aux services Prévisio
 
 ### Une connaissance structurée et maintenue
 
-Un dossier opérationnel doit rester utilisable lorsque la situation change ou que le réseau manque. FireScape rassemble l’identité du site, ses bâtiments, ses niveaux, les accès, les ressources en eau, les énergies, les risques, les contacts et les documents dans un même référentiel. Les plans sont reliés à ces informations plutôt que conservés comme de simples fichiers isolés.
+Un dossier opérationnel doit rester utilisable lorsque la situation change ou que le réseau manque. FireScape rassemble l’identité du site, ses bâtiments, ses niveaux, les accès, les ressources en eau, les énergies, les risques, les contacts et les documents dans un même référentiel. Les plans sont reliés à ces informations plutôt que conservés comme de simples fichiers isolés. Les matières dangereuses disposent également de fiches structurées et de liens vers leurs fiches de données de sécurité.
 
 La valeur recherchée est concrète : faciliter la préparation d’un ETARE, rendre sa mise à jour traçable et donner au terrain une version identifiée. Ces bénéfices doivent être mesurés pendant le pilote ; aucun gain de temps ou résultat opérationnel n’est garanti à ce stade.
 
@@ -81,7 +81,9 @@ Remplacer un fond de plan conserve l’ancienne version. La position des objets 
 
 Les fichiers déposés sont contrôlés avant consultation, notamment par antivirus. Les documents peuvent être toujours embarqués, téléchargés à la demande ou exclus de la consultation hors ligne. Le SIS choisit séparément les documents partagés avec l’exploitant.
 
-Les risques peuvent être représentés sur un plan ou sur la carte web du site. La carte mobile affiche les sites et les points opérationnels ; le dessin des risques extérieurs sur cette carte reste à compléter. La mesure de distance, l’import GeoJSON ou CSV et la gestion structurée des matières dangereuses avec leurs FDS appartiennent aux extensions prévues.
+Les risques peuvent être représentés sur un plan ou sur la carte web du site. La carte mobile affiche les sites et les points opérationnels ; le dessin des risques extérieurs sur cette carte reste à compléter. La mesure de distance et l’import GeoJSON ou CSV appartiennent aux extensions prévues.
+
+La gestion des matières dangereuses est livrée : produit, classes de danger, numéro ONU, état physique, quantité et unité, bâtiment, niveau ou zone, puis FDS associée. La fiche doit être un document actif du même site classé FDS. Les matières sont reprises dans la section Risques du dossier et sur tablette. Le placement précis d’une matière sur un plan et la saisie automatique depuis une FDS restent à construire.
 
 ## 4 La préparation et la publication des ETARE
 
@@ -110,6 +112,26 @@ Les anciennes publications sont conservées dans l’historique. Une nouvelle ve
 L’application Android est destinée aux terminaux enrôlés par le SIS. La tablette est associée à un périmètre ; les sites reçus dépendent également des droits de l’agent connecté. Une première connexion, l’enrôlement et la synchronisation nécessitent du réseau.
 
 Une fois installées et autorisées, les données se consultent localement : recherche d’un site, synthèse, risques, accès, eau, coupures, contacts, plans tactiles, fiches d’objets, photos et PDF. Le numéro de version, la date de publication et l’état de synchronisation aident l’agent à comprendre ce qu’il consulte.
+
+### Ouvrir un site par son QR code
+
+L’action « Scanner un dossier » lit le QR code figurant sur les nouveaux PDF ETARE ou sur la fiche web. Elle ouvre la version du site installée sur la tablette, sans donner de droits supplémentaires. Le code désigne le site, pas la version du papier : un ancien dossier imprimé peut donc conduire à une version locale plus récente.
+
+### Une plaque sur la façade, en option
+
+Le même QR code peut être porté par une plaque posée à l’accès du bâtiment, par l’exploitant et avec l’accord du propriétaire. Scannée avec la tablette, elle ouvre la version déjà installée du dossier, sans saisie et sans erreur de bâtiment. La plaque identifie le bâtiment ; elle ne donne aucun accès par elle-même, et l’application refuse un code qui ne provient pas de FireScape. Sur un grand site, une plaque par bâtiment ou par accès est préférable à une plaque par site.
+
+| Élément | Caractéristique |
+| --- | --- |
+| Support | Plaque carrée en acier inoxydable 316L (qualité marine), 100 × 100 mm, 1,5 mm ; très résistante à la corrosion extérieure, aux intempéries et aux agressions chimiques |
+| Repérage de nuit | Face avant recouverte d’une peinture photoluminescente haute performance de classe D (teinte verte), qui stocke la lumière naturelle ou artificielle et reste visible à l’œil plus de huit heures dans l’obscurité totale, sans courant |
+| Marquage | QR code gravé au laser par retrait de matière à travers la couche photoluminescente ; l’inox mis à nu est noirci en profondeur, pour un contraste permanent |
+| Lecture | Lien court (34 caractères au plus), modules de 2 à 2,5 mm, correction d’erreur de niveau H : lecture possible jusqu’à 30 % de surface masquée ou endommagée, par exemple par la suie |
+| Fixation | Adhésif acrylique double face 3M VHB 5952, sans perçage sur support lisse et sain ; perçage sur crépi, pierre poreuse ou support dégradé |
+
+![Maquette de la plaque ; la version de série reçoit un fond photoluminescent vert](images/plaque-facade.jpg)
+
+La lueur sert à repérer la plaque dans le noir ; le scan se fait avec l’éclairage de la tablette. Le vert photoluminescent étant la couleur de la signalétique d’évacuation, la forme et le cadre de la plaque la distinguent des issues de secours. Le lien court nécessaire au format 100 mm reste à mettre en place dans la plateforme. La plaque est proposée en option au pilote, pour les sites prioritaires ; son coût de fabrication et de pose est distinct de l’abonnement.
 
 ### Des transferts adaptés aux coupures
 
@@ -177,6 +199,10 @@ Le kit actuel décrit un serveur VPS pour le web, le traitement des fichiers, l�
 
 Le choix documenté pour les données fictives est un VPS Hostinger en France, une base Supabase en Irlande et des services Scaleway pour la messagerie et les archives. L’hébergement de production, les responsabilités et l’usage de données réelles restent à décider avec le SIS. L’adresse de connexion doit être communiquée par l’administrateur ; l’existence du domaine ne prouve pas la disponibilité du service.
 
+### Reprendre les données du SIS
+
+L’administrateur peut demander un export de réversibilité avec double authentification. Il reçoit les données en JSON et CSV, les fichiers vérifiés et les PDF publiés, avec un manifeste de contrôle. Les parties restent disponibles sept jours et chaque téléchargement est tracé. Les fonds de carte et les secrets de plateforme sont exclus. Cet export destiné au SIS complète la sauvegarde technique de l’ensemble de la plateforme.
+
 ### Sauvegarder et savoir reprendre
 
 Les outils sauvegardent les données, les objets et la configuration dans une archive chiffrée externalisée. Les clés privées de déchiffrement sont gardées hors du serveur. La restauration contrôle la compatibilité des migrations et la fidélité des fichiers. Un exercice de restauration passe en intégration continue.
@@ -185,9 +211,9 @@ La mise en service doit encore prouver une restauration sur un projet hébergé 
 
 ## 9 Le niveau de réalisation et les limites actuelles
 
-### Une progression établie au 9 octobre 2026
+### Une progression établie au 13 octobre 2026
 
-Le développement est arrivé au Sprint 13, complété par les outils de préproduction et de sauvegarde. La matrice du projet comporte 44 exigences fonctionnelles. Elle recense 30 exigences prioritaires implémentées et 5 à qualifier ; les 9 exigences de l’étape suivante sont encore partielles ou à réaliser. Ce classement décrit le code et ses preuves, pas une réception par un SIS.
+Le Sprint 14 a ajouté le QR code du site, les matières dangereuses avec leurs FDS et l’export de réversibilité. Les écrans web, exploitant et OPS ont ensuite été harmonisés ; la version Android déclarée dans le dépôt est 0.7.0. La matrice compte 44 exigences : 30 P0 implémentées et 5 à qualifier ; parmi les 9 P1, 2 sont implémentées, 2 partielles et 5 à faire. Ces états décrivent le développement, pas une réception par un SIS.
 
 | Domaine                          | État du développement                  | Validation restante                         |
 | -------------------------------- | -------------------------------------- | ------------------------------------------- |
@@ -198,13 +224,13 @@ Le développement est arrivé au Sprint 13, complété par les outils de prépro
 | Sécurité et gestion des clés     | Mécanismes présents                    | Cérémonie des clés et analyse de risques    |
 | Déploiement et restauration      | Outils et exercice automatisé présents | Mise en service et reprise hébergée         |
 
-Les contrôles du commit examiné sont réussis : 466 tests web et serveur et 298 tests Flutter relancés localement ; 683 assertions SQL et 154 tests d’intégration dans la chaîne automatisée. Celle-ci vérifie aussi la construction Android et les images des services. Ces nombres attestent des vérifications effectuées ; ils ne mesurent pas à eux seuls la qualité d’usage.
+Le rapport de livraison du Sprint 14 documente des tests unitaires, SQL, d’intégration et Flutter, notamment sur le scan, les matières et la relecture des exports. La chaîne automatisée couvre aussi la construction Android et les images des services. Ces vérifications ne remplacent pas la recette des derniers écrans et de la version 0.7.0 sur le matériel retenu.
 
 Les essais sur 10 000 sites et les gros fichiers apportent de premières mesures. Ils doivent être reproduits dans l’environnement cible et sur l’application Android de livraison. La validation de la disponibilité réelle du service hébergé reste également à établir.
 
 ### Les extensions encore prévues
 
-Imports GeoJSON/CSV, mesures de distance, matières dangereuses structurées, modèles ETARE par SIS, scénarios et consignes, comparaison détaillée, rétention configurable, catalogues d’objets et exports enrichis constituent le MVP+. Les comptes techniques, webhooks et interfaces de localisation doivent être cadrés avant clôture du MVP ou faire l’objet d’un report explicite. Les connecteurs de production et la qualification RRF ne sont pas annoncés comme livrés.
+Imports GeoJSON/CSV, mesures de distance, modèles ETARE par SIS, scénarios et consignes, comparaison détaillée, rétention configurable et catalogues d’objets restent au programme du MVP+. Les matières et la réversibilité sont livrées ; les rapports spécialisés et formats d’échange restent à cadrer. Les comptes techniques, webhooks et interfaces de localisation doivent être cadrés avant clôture du MVP ou faire l’objet d’un report explicite. Les connecteurs de production et la qualification RRF ne sont pas annoncés comme livrés.
 
 ## 10 La préparation du pilote et le modèle de service
 
@@ -257,7 +283,7 @@ La reprise des données, le paramétrage, la formation, les connecteurs et les n
 
 ### Documents complémentaires
 
-Le guide d’utilisation FireScape accompagne les premiers parcours et les gestes quotidiens. La roadmap décrit les travaux réalisés et restants. Le bilan du 9 octobre précise l’origine des vérifications, les réserves et le commit examiné, e38b118.
+Le guide d’utilisation FireScape accompagne les premiers parcours et les gestes quotidiens. La roadmap décrit les travaux réalisés et restants. Le bilan du 9 octobre décrit la situation avant le Sprint 14. Son rapport de livraison complète cet historique. Cette édition intègre les fonctions et libellés présents au commit a89d67b, avec la version Android 0.7.0, au 13 octobre 2026, et décrit la plaque de façade proposée en option.
 
 Références du projet : cahier des charges MVP, modèle de données, modèle économique, maquette produit et architecture technique, édition du 27 septembre 2026, dans le dossier docs/reference. La documentation d’exploitation traite séparément la livraison Android, la supervision, les clés et les sauvegardes.
 
